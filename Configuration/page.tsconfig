@@ -1,0 +1,162 @@
+# =============================================================================
+# Records Grid View - Default Page TSconfig
+# =============================================================================
+#
+# This file provides the default configuration for the Grid View extension.
+# You can override these settings in your site's Page TSconfig.
+#
+# Documentation: EXT:records_list_types/Documentation/Configuration.md
+# =============================================================================
+
+mod.web_list {
+    # =================================================================
+    # View Mode Configuration
+    # =================================================================
+    
+    viewMode {
+        # Default view when no user preference exists
+        # Options: list, grid, compact, teaser, or any custom type
+        default = list
+        
+        # Allowed view modes (comma-separated)
+        # Setting only "list" hides the view toggle entirely
+        allowed = list,grid,compact,teaser
+        
+        # =================================================================
+        # Built-in View Types
+        # =================================================================
+        # The following types are built-in and always available:
+        #
+        # - list    : Standard TYPO3 table view
+        # - grid    : Card-based grid with thumbnails
+        # - compact : Single-line table view
+        # - teaser  : Minimal cards with title, date, teaser
+        
+        # =================================================================
+        # Custom View Type Registration
+        # =================================================================
+        # Register custom view types via types.{id} configuration.
+        # Each type can have its own Fluid template and styling.
+        #
+        # Example: News Teaser List
+        # -------------------------
+        # types {
+        #     newsteaser {
+        #         # Display settings
+        #         label = News Teaser
+        #         icon = content-news
+        #         description = Compact news list with image and teaser
+        #         
+        #         # Template configuration
+        #         template = NewsTeaserView
+        #         partial = NewsTeaserCard
+        #         
+        #         # Custom template paths (optional)
+        #         templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
+        #         partialRootPath = EXT:my_sitepackage/Resources/Private/Backend/Partials/
+        #         
+        #         # Assets (optional)
+        #         css = EXT:my_sitepackage/Resources/Public/Css/news-teaser.css
+        #         js = @my-sitepackage/news-teaser.js
+        #         
+        #         # Column configuration
+        #         # Use TCA columns from user's "Show columns" selection
+        #         columnsFromTCA = 1
+        #         
+        #         # Or specify exact columns to display
+        #         # displayColumns = title,datetime,teaser,categories
+        #     }
+        # }
+        #
+        # Example: Gallery View
+        # ---------------------
+        # types {
+        #     gallery {
+        #         label = Gallery
+        #         icon = actions-image
+        #         description = Image-focused grid view
+        #         template = GalleryView
+        #         partial = GalleryCard
+        #         css = EXT:my_sitepackage/Resources/Public/Css/gallery-view.css
+        #         columnsFromTCA = 0
+        #         displayColumns = title,image
+        #     }
+        # }
+        #
+        # Example: Kanban Board
+        # ---------------------
+        # types {
+        #     kanban {
+        #         label = Kanban Board
+        #         icon = actions-move
+        #         description = Drag-and-drop status board
+        #         template = KanbanView
+        #         partial = KanbanCard
+        #         templateRootPath = EXT:my_kanban/Resources/Private/Templates/
+        #         partialRootPath = EXT:my_kanban/Resources/Private/Partials/
+        #         css = EXT:my_kanban/Resources/Public/Css/kanban.css
+        #         js = @my-kanban/kanban-board.js
+        #     }
+        # }
+    }
+
+    # Legacy configuration (use viewMode instead)
+    allowedViews = list,grid,compact,teaser
+
+    # =================================================================
+    # Grid View Table Configuration
+    # =================================================================
+    gridView {
+        # Number of columns in the grid (Bootstrap row-cols-xl-*)
+        # Valid range: 2-6
+        cols = 4
+
+        # =================================================================
+        # Per-Table Configuration
+        # =================================================================
+        # Configure which fields to use for title, description, and image
+        # for each table type.
+
+        table {
+            # -----------------------------------------------------------------
+            # Pages
+            # -----------------------------------------------------------------
+            pages {
+                titleField = title
+                descriptionField = abstract
+                imageField = media
+                preview = 1
+            }
+
+            # -----------------------------------------------------------------
+            # Content Elements
+            # -----------------------------------------------------------------
+            tt_content {
+                titleField = header
+                descriptionField = bodytext
+                imageField = image
+                preview = 1
+            }
+
+            # -----------------------------------------------------------------
+            # Frontend Users
+            # -----------------------------------------------------------------
+            fe_users {
+                titleField = name
+                descriptionField = email
+                imageField = image
+                preview = 1
+            }
+
+            # -----------------------------------------------------------------
+            # News (EXT:news)
+            # -----------------------------------------------------------------
+            tx_news_domain_model_news {
+                titleField = title
+                descriptionField = teaser
+                imageField = fal_media
+                preview = 1
+            }            
+        }
+    }
+}

@@ -1,0 +1,74 @@
+# =============================================================================
+# Records Grid View - Default Page TSconfig
+# =============================================================================
+#
+# This file provides the default configuration for the Grid View extension.
+# You can override these settings in your site's Page TSconfig.
+#
+# Documentation: EXT:records_list_types/Documentation/Configuration.md
+# =============================================================================
+
+mod.web_list {
+    # Which views are available? Comma-separated: list, grid
+    # Setting only "list" hides the Grid View toggle entirely
+    allowedViews = list,grid
+
+    gridView {
+        # Default view when no user preference exists
+        # Options: list, grid
+        default = list
+
+        # Number of columns in the grid (Bootstrap row-cols-xl-*)
+        # Valid range: 2-6
+        cols = 4
+
+        # =================================================================
+        # Per-Table Configuration Examples
+        # =================================================================
+        # Uncomment and adjust these examples for your tables.
+        # You can also add these in your site's Page TSconfig.
+
+        table {
+            # -----------------------------------------------------------------
+            # Pages
+            # -----------------------------------------------------------------
+            pages {
+                titleField = title
+                descriptionField = abstract
+                imageField = media
+                preview = 1
+            }
+
+            # -----------------------------------------------------------------
+            # Content Elements
+            # -----------------------------------------------------------------
+            tt_content {
+                titleField = header
+                descriptionField = bodytext
+                imageField = image
+                preview = 1
+            }
+
+            # -----------------------------------------------------------------
+            # Frontend Users
+            # -----------------------------------------------------------------
+            fe_users {
+                titleField = name
+                descriptionField = email
+                imageField = image
+                preview = 1
+            }
+
+            # -----------------------------------------------------------------
+            # News (EXT:news)
+            # -----------------------------------------------------------------
+            tx_news_domain_model_news {
+                titleField = title
+                descriptionField = teaser
+                imageField = fal_media
+                preview = 1
+            }
+        }
+    }
+}
+

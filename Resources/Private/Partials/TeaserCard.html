@@ -1,0 +1,124 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Teaser Card - Modern minimal card with elegant status badges.
+    
+    Features:
+    - Clean, modern design with subtle shadows
+    - Prominent status pill for hidden records
+    - Accent bar for hidden state
+    - Hover interactions
+    
+    Expected fields in record.displayValues:
+    - Title (from labelField)
+    - datetime/crdate/tstamp for date
+    - teaser/abstract/bodytext for description
+</f:comment>
+
+<article class="teaserview-card{f:if(condition: record.hidden, then: ' teaserview-card--hidden')}"
+         data-table="{record.tableName}"
+         data-uid="{record.uid}">
+    
+    <div class="teaserview-card__body">
+        <div class="teaserview-card__header">
+            <f:comment>Main content area</f:comment>
+            <div class="teaserview-card__main">
+                <f:comment>Title row with icon, title, badges</f:comment>
+                <div class="teaserview-card__title-row">
+                    <span class="teaserview-card__icon">
+                        <core:icon identifier="{record.iconIdentifier}" size="small" />
+                    </span>
+                    
+                    <h6 class="teaserview-card__title">
+                        <be:link.editRecord uid="{record.uid}" table="{record.tableName}">
+                            <f:if condition="{record.title}">
+                                <f:then>{record.title}</f:then>
+                                <f:else><em>Untitled</em></f:else>
+                            </f:if>
+                        </be:link.editRecord>
+                    </h6>
+                    
+                    <span class="teaserview-badge teaserview-badge--uid">#{record.uid}</span>
+                    
+                    <f:if condition="{record.hidden}">
+                        <span class="teaserview-badge teaserview-badge--hidden">
+                            <core:icon identifier="actions-toggle-off" size="small" />
+                            Hidden
+                        </span>
+                    </f:if>
+                </div>
+                
+                <f:comment>Meta line with date</f:comment>
+                <div class="teaserview-card__meta">
+                    <f:for each="{record.displayValues}" as="fieldData">
+                        <f:if condition="{fieldData.type} == 'datetime' && !{fieldData.isEmpty}">
+                            <span class="teaserview-card__date">
+                                <core:icon identifier="actions-calendar" size="small" />
+                                {fieldData.formatted}
+                            </span>
+                        </f:if>
+                    </f:for>
+                </div>
+                
+                <f:comment>Teaser/Description text</f:comment>
+                <f:for each="{record.displayValues}" as="fieldData">
+                    <f:if condition="{fieldData.type} == 'text' && !{fieldData.isLabelField} && !{fieldData.isEmpty}">
+                        <p class="teaserview-card__teaser">
+                            {fieldData.formatted -> f:format.crop(maxCharacters: 180, append: '…')}
+                        </p>
+                    </f:if>
+                </f:for>
+            </div>
+            
+            <f:comment>Action buttons</f:comment>
+            <div class="teaserview-card__actions">
+                <f:comment>Visibility toggle</f:comment>
+                <f:if condition="{record.hidden}">
+                    <f:then>
+                        <button type="button" 
+                                class="teaserview-action teaserview-action--warning" 
+                                title="Show record"
+                                data-gridview-action="show"
+                                data-table="{record.tableName}"
+                                data-uid="{record.uid}"
+                                data-hidden-field="{tableConfig.hiddenField}">
+                            <core:icon identifier="actions-toggle-off" size="small" />
+                        </button>
+                    </f:then>
+                    <f:else>
+                        <button type="button" 
+                                class="teaserview-action teaserview-action--success" 
+                                title="Hide record"
+                                data-gridview-action="hide"
+                                data-table="{record.tableName}"
+                                data-uid="{record.uid}"
+                                data-hidden-field="{tableConfig.hiddenField}">
+                            <core:icon identifier="actions-toggle-on" size="small" />
+                        </button>
+                    </f:else>
+                </f:if>
+
+                <f:comment>Edit button</f:comment>
+                <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
+                    class="teaserview-action teaserview-action--primary" title="Edit">
+                    <core:icon identifier="actions-open" size="small" />
+                </be:link.editRecord>
+
+                <f:comment>Delete button</f:comment>
+                <button type="button" 
+                        class="teaserview-action teaserview-action--danger"
+                        title="Delete"
+                        data-gridview-action="delete"
+                        data-table="{record.tableName}"
+                        data-uid="{record.uid}">
+                    <core:icon identifier="actions-edit-delete" size="small" />
+                </button>
+            </div>
+        </div>
+    </div>
+</article>
+
+</html>

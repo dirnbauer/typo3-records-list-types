@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" target-language="de" datatype="plaintext" original="messages" date="2024-12-31T12:00:00Z" product-name="records_list_types">
+        <header/>
+        <body>
+            <trans-unit id="viewMode.list" resname="viewMode.list">
+                <source>List View</source>
+                <target>Listenansicht</target>
+            </trans-unit>
+            <trans-unit id="viewMode.grid" resname="viewMode.grid">
+                <source>Grid View</source>
+                <target>Kachelansicht</target>
+            </trans-unit>
+            <trans-unit id="viewMode.compact" resname="viewMode.compact">
+                <source>Compact View</source>
+                <target>Kompaktansicht</target>
+            </trans-unit>
+            <trans-unit id="viewMode.teaser" resname="viewMode.teaser">
+                <source>Teaser List</source>
+                <target>Teaser-Liste</target>
+            </trans-unit>
+            <trans-unit id="viewMode.switch.title" resname="viewMode.switch.title">
+                <source>Switch View Mode</source>
+                <target>Ansichtsmodus wechseln</target>
+            </trans-unit>
+            <trans-unit id="button.viewMode" resname="button.viewMode">
+                <source>View</source>
+                <target>Ansicht</target>
+            </trans-unit>
+            <trans-unit id="noRecords" resname="noRecords">
+                <source>No records found on this page.</source>
+                <target>Keine Datensätze auf dieser Seite gefunden.</target>
+            </trans-unit>
+            <trans-unit id="action.edit" resname="action.edit">
+                <source>Edit record</source>
+                <target>Datensatz bearbeiten</target>
+            </trans-unit>
+            <trans-unit id="action.hide" resname="action.hide">
+                <source>Hide record</source>
+                <target>Datensatz ausblenden</target>
+            </trans-unit>
+            <trans-unit id="action.show" resname="action.show">
+                <source>Show record</source>
+                <target>Datensatz anzeigen</target>
+            </trans-unit>
+            <trans-unit id="action.delete" resname="action.delete">
+                <source>Delete record</source>
+                <target>Datensatz löschen</target>
+            </trans-unit>
+            <trans-unit id="action.newRecord" resname="action.newRecord">
+                <source>Create new record</source>
+                <target>Neuen Datensatz erstellen</target>
+            </trans-unit>
+            <trans-unit id="sorting" resname="sorting">
+                <source>Sorting</source>
+                <target>Sortierung</target>
+            </trans-unit>
+            <trans-unit id="sort.ascending" resname="sort.ascending">
+                <source>Sort ascending</source>
+                <target>Aufsteigend sortieren</target>
+            </trans-unit>
+            <trans-unit id="sort.descending" resname="sort.descending">
+                <source>Sort descending</source>
+                <target>Absteigend sortieren</target>
+            </trans-unit>
+            <trans-unit id="sort.default" resname="sort.default">
+                <source>Default</source>
+                <target>Standard</target>
+            </trans-unit>
+            <trans-unit id="sortingMode.label" resname="sortingMode.label">
+                <source>Order</source>
+                <target>Reihenfolge</target>
+            </trans-unit>
+            <trans-unit id="sortingMode.manual" resname="sortingMode.manual">
+                <source>Drag &amp; Drop</source>
+                <target>Drag &amp; Drop</target>
+            </trans-unit>
+            <trans-unit id="sortingMode.field" resname="sortingMode.field">
+                <source>By Column</source>
+                <target>Nach Spalte</target>
+            </trans-unit>
+            <trans-unit id="sortingMode.manual.title" resname="sortingMode.manual.title">
+                <source>Drag and drop to reorder records</source>
+                <target>Per Drag-and-Drop umsortieren</target>
+            </trans-unit>
+            <trans-unit id="sortingMode.field.title" resname="sortingMode.field.title">
+                <source>Sort by a specific column</source>
+                <target>Nach einer Spalte sortieren</target>
+            </trans-unit>
+            
+            <!-- Drag and Drop Accessibility -->
+            <trans-unit id="drag.title" resname="drag.title">
+                <source>Drag to reorder</source>
+                <target>Ziehen zum Sortieren</target>
+            </trans-unit>
+            <trans-unit id="drag.ariaLabel" resname="drag.ariaLabel">
+                <source>Press Space to grab and reorder</source>
+                <target>Leertaste drücken zum Greifen und Sortieren</target>
+            </trans-unit>
+            <trans-unit id="drag.instructions" resname="drag.instructions">
+                <source>Press Space or Enter to grab item. Use arrow keys to move. Press Space or Enter to drop, Escape to cancel.</source>
+                <target>Leertaste oder Eingabe drücken zum Greifen. Pfeiltasten zum Bewegen. Leertaste oder Eingabe zum Ablegen, Escape zum Abbrechen.</target>
+            </trans-unit>
+            <trans-unit id="drag.grabbed" resname="drag.grabbed">
+                <source>Grabbed. Use arrow keys to move.</source>
+                <target>Gegriffen. Pfeiltasten zum Bewegen.</target>
+            </trans-unit>
+            <trans-unit id="drag.position" resname="drag.position">
+                <source>Position %d of %d</source>
+                <target>Position %d von %d</target>
+            </trans-unit>
+            <trans-unit id="drag.dropped" resname="drag.dropped">
+                <source>Dropped at position %d</source>
+                <target>Abgelegt an Position %d</target>
+            </trans-unit>
+            <trans-unit id="drag.cancelled" resname="drag.cancelled">
+                <source>Reorder cancelled</source>
+                <target>Sortierung abgebrochen</target>
+            </trans-unit>
+            <trans-unit id="drag.moved" resname="drag.moved">
+                <source>Item moved to position %d</source>
+                <target>Element an Position %d verschoben</target>
+            </trans-unit>
+            <trans-unit id="drag.dropHere" resname="drag.dropHere">
+                <source>Drop here</source>
+                <target>Hier ablegen</target>
+            </trans-unit>
+            <trans-unit id="drag.endPosition" resname="drag.endPosition">
+                <source>End position (after last item)</source>
+                <target>Endposition (nach letztem Element)</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>
+

@@ -1,0 +1,57 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Record Actions for Grid View Cards
+    
+    This partial renders the action buttons in the card footer.
+    Actions are collected by the GridViewRecordActionsListener and
+    passed to the template.
+</f:comment>
+
+<div class="btn-group btn-group-sm" role="group">
+    <f:comment>Edit Button (always shown)</f:comment>
+    <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
+        class="btn btn-default" 
+        title="{f:translate(key: 'action.edit', extensionName: 'RecordsListTypes')}">
+        <core:icon identifier="actions-open" size="small" />
+    </be:link.editRecord>
+
+    <f:comment>View/Info Button</f:comment>
+    <a href="#" class="btn btn-default" 
+       data-dispatch-action="TYPO3.InfoWindow.showItem" 
+       data-dispatch-args-list="{record.tableName},{record.uid}"
+       title="{f:translate(key: 'action.info', extensionName: 'RecordsListTypes')}">
+        <core:icon identifier="actions-document-info" size="small" />
+    </a>
+
+    <f:comment>Hide/Unhide Button (if record supports it)</f:comment>
+    <f:if condition="{record.hidden}">
+        <f:then>
+            <a href="#" class="btn btn-default"
+               title="{f:translate(key: 'action.unhide', extensionName: 'RecordsListTypes')}">
+                <core:icon identifier="actions-edit-unhide" size="small" />
+            </a>
+        </f:then>
+        <f:else>
+            <a href="#" class="btn btn-default"
+               title="{f:translate(key: 'action.hide', extensionName: 'RecordsListTypes')}">
+                <core:icon identifier="actions-edit-hide" size="small" />
+            </a>
+        </f:else>
+    </f:if>
+</div>
+
+<f:comment>Additional actions from event listeners (rendered as raw HTML)</f:comment>
+<f:if condition="{record.actions}">
+    <div class="btn-group btn-group-sm ms-1" role="group">
+        <f:for each="{record.actions}" as="actionHtml">
+            <f:format.raw>{actionHtml}</f:format.raw>
+        </f:for>
+    </div>
+</f:if>
+
+</html>
+

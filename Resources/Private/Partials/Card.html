@@ -1,0 +1,285 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Grid View Card - Two-row header layout
+    
+    Header structure:
+    - Row 1: Title (full width, with drag handle and icon)
+    - Row 2: Compact action toolbar
+    
+    State indicators via header background color:
+    - Normal: default gray
+    - Hidden: amber/orange
+    - Workspace new: blue
+    - Workspace modified: purple
+    - Workspace moved: cyan
+    - Workspace deleted: red
+    
+    WCAG 2.1 Accessibility:
+    - role="option" when reorderable (part of listbox pattern)
+    - aria-grabbed for drag state
+    - Keyboard-accessible drag handle with role="button"
+</f:comment>
+
+<f:variable name="cardClasses">gridview-card{f:if(condition: record.hidden, then: ' gridview-card--hidden')}{f:if(condition: record.workspaceState, then: ' gridview-card--ws-{record.workspaceState}')}</f:variable>
+
+<div class="{cardClasses}"
+     draggable="{f:if(condition: canReorder, then: 'true', else: 'false')}"
+     data-table="{record.tableName}"
+     data-uid="{record.uid}"
+     data-pid="{record.pid}"
+     data-can-reorder="{f:if(condition: canReorder, then: '1', else: '0')}"
+     data-record-title="{record.title}"
+     {f:if(condition: canReorder, then: 'role="option" aria-grabbed="false"')}>
+    
+    <f:comment>Card Header - Two rows: Title + Actions</f:comment>
+    <div class="gridview-card__header">
+        <f:comment>Row 1: Title row with full width</f:comment>
+        <div class="gridview-card__header-title">
+            <f:if condition="{canReorder}">
+                <div class="gridview-card__drag" 
+                     role="button"
+                     tabindex="0"
+                     aria-label="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:drag.ariaLabel', default: 'Press Space to grab and reorder')} {record.title}"
+                     title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:drag.title', default: 'Drag to reorder')}">
+                    <core:icon identifier="actions-move" size="small" />
+                </div>
+            </f:if>
+            <div class="gridview-card__icon">
+                <core:icon identifier="{record.iconIdentifier}" size="small" />
+            </div>
+            <div class="gridview-card__title">
+                <be:link.editRecord uid="{record.uid}" table="{record.tableName}">
+                    <f:if condition="{record.title}">
+                        <f:then>{record.title}</f:then>
+                        <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                    </f:if>
+                </be:link.editRecord>
+            </div>
+        </div>
+        
+        <f:comment>Row 2: Compact action toolbar</f:comment>
+        <div class="gridview-card__header-actions">
+            <f:comment>Visibility Toggle</f:comment>
+            <f:if condition="{record.hidden}">
+                <f:then>
+                    <button type="button" 
+                            class="gridview-action-sm gridview-action-sm--warning" 
+                            title="Show record (currently hidden)"
+                            data-gridview-action="show"
+                            data-table="{record.tableName}"
+                            data-uid="{record.uid}"
+                            data-hidden-field="{tableConfig.hiddenField}">
+                        <core:icon identifier="actions-toggle-off" size="small" />
+                    </button>
+                </f:then>
+                <f:else>
+                    <button type="button" 
+                            class="gridview-action-sm gridview-action-sm--success" 
+                            title="Hide record (currently visible)"
+                            data-gridview-action="hide"
+                            data-table="{record.tableName}"
+                            data-uid="{record.uid}"
+                            data-hidden-field="{tableConfig.hiddenField}">
+                        <core:icon identifier="actions-toggle-on" size="small" />
+                    </button>
+                </f:else>
+            </f:if>
+
+            <span class="gridview-action-separator"></span>
+
+            <f:comment>Edit button</f:comment>
+            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
+                class="gridview-action-sm gridview-action-sm--primary" title="Edit">
+                <core:icon identifier="actions-open" size="small" />
+            </be:link.editRecord>
+
+            <f:comment>Delete button</f:comment>
+            <button type="button" 
+                    class="gridview-action-sm gridview-action-sm--danger"
+                    title="Delete"
+                    data-gridview-action="delete"
+                    data-table="{record.tableName}"
+                    data-uid="{record.uid}">
+                <core:icon identifier="actions-edit-delete" size="small" />
+            </button>
+
+            <f:comment>More Actions Dropdown</f:comment>
+            <div class="dropdown">
+                <button type="button" class="gridview-action-sm" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false" 
+                        title="More actions">
+                    <core:icon identifier="actions-menu-alternative" size="small" />
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item" href="#" 
+                           data-gridview-action="info"
+                           data-table="{record.tableName}"
+                           data-uid="{record.uid}">
+                            <core:icon identifier="actions-document-info" size="small" />
+                            <span>Info</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#"
+                           data-gridview-action="history"
+                           data-table="{record.tableName}"
+                           data-uid="{record.uid}">
+                            <core:icon identifier="actions-document-history-open" size="small" />
+                            <span>History</span>
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="#"
+                           data-gridview-action="copy"
+                           data-table="{record.tableName}"
+                           data-uid="{record.uid}">
+                            <core:icon identifier="actions-edit-copy" size="small" />
+                            <span>Copy</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#"
+                           data-gridview-action="cut"
+                           data-table="{record.tableName}"
+                           data-uid="{record.uid}">
+                            <core:icon identifier="actions-edit-cut" size="small" />
+                            <span>Cut</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <f:comment>Card Image - Thumbnail from FAL field</f:comment>
+    <f:if condition="{record.thumbnailUrl}">
+        <div class="gridview-card__image">
+            <be:link.editRecord uid="{record.uid}" table="{record.tableName}">
+                <img src="{record.thumbnailUrl}" 
+                     alt="{record.title}" 
+                     loading="lazy"
+                     class="gridview-card__thumbnail" />
+            </be:link.editRecord>
+        </div>
+    </f:if>
+
+    <f:comment>Card Body - Fields</f:comment>
+    <div class="gridview-card__body">
+        <f:if condition="{record.displayValues}">
+            <div class="gridview-card__fields">
+                <f:for each="{record.displayValues}" as="fieldData">
+                    <f:if condition="!{fieldData.isLabelField}">
+                        <div class="gridview-card__field" data-field="{fieldData.field}" data-type="{fieldData.type}">
+                            <span class="gridview-card__field-label">{fieldData.label}</span>
+                            <span class="gridview-card__field-value">
+                                <f:switch expression="{fieldData.type}">
+                                    
+                                    <f:case value="boolean">
+                                        <f:if condition="{fieldData.raw}">
+                                            <f:then>
+                                                <span class="gv-badge gv-badge--success">
+                                                    <core:icon identifier="actions-check" size="small" />
+                                                    Yes
+                                                </span>
+                                            </f:then>
+                                            <f:else>
+                                                <span class="gv-badge gv-badge--muted">
+                                                    <core:icon identifier="actions-close" size="small" />
+                                                    No
+                                                </span>
+                                            </f:else>
+                                        </f:if>
+                                    </f:case>
+                                    
+                                    <f:case value="datetime">
+                                        <f:if condition="{fieldData.formatted}">
+                                            <f:then>
+                                                <span class="gv-datetime">{fieldData.formatted}</span>
+                                            </f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </f:case>
+                                    
+                                    <f:case value="number">
+                                        <f:if condition="{fieldData.formatted}">
+                                            <f:then>
+                                                <span class="gv-number">{fieldData.formatted}</span>
+                                            </f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </f:case>
+                                    
+                                    <f:case value="relation">
+                                        <f:if condition="{fieldData.formatted}">
+                                            <f:then>
+                                                <span class="gv-relation">
+                                                    <f:if condition="{fieldData.count}">
+                                                        <f:then>
+                                                            <span class="gv-relation__count">{fieldData.count}</span>
+                                                            <span>{fieldData.formatted}</span>
+                                                        </f:then>
+                                                        <f:else>
+                                                            {fieldData.formatted}
+                                                        </f:else>
+                                                    </f:if>
+                                                </span>
+                                            </f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </f:case>
+                                    
+                                    <f:case value="email">
+                                        <f:if condition="{fieldData.formatted}">
+                                            <f:then>
+                                                <a href="mailto:{fieldData.raw}" class="gv-link">{fieldData.formatted}</a>
+                                            </f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </f:case>
+                                    
+                                    <f:case value="link">
+                                        <f:if condition="{fieldData.formatted}">
+                                            <f:then>
+                                                <span class="gv-link">{fieldData.formatted -> f:format.crop(maxCharacters: 40, append: '…')}</span>
+                                            </f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </f:case>
+                                    
+                                    <f:defaultCase>
+                                        <f:if condition="{fieldData.formatted}">
+                                            <f:then>{fieldData.formatted -> f:format.crop(maxCharacters: 80, append: '…')}</f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </f:defaultCase>
+                                    
+                                </f:switch>
+                            </span>
+                        </div>
+                    </f:if>
+                </f:for>
+            </div>
+        </f:if>
+    </div>
+
+    <f:comment>Card Footer with UID and PID</f:comment>
+    <div class="gridview-card__footer">
+        <span class="gridview-card__footer-id">
+            <span class="gridview-card__footer-label">ID</span>
+            <span class="gridview-card__footer-uid">{record.uid}</span>
+        </span>
+        <f:if condition="{record.tableName} != 'pages'">
+            <span class="gridview-card__footer-separator">|</span>
+            <span class="gridview-card__footer-pid">on page {record.pid}</span>
+        </f:if>
+    </div>
+</div>
+
+</html>

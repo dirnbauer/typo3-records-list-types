@@ -1,0 +1,82 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Sorting Dropdown - Allows sorting by field and direction.
+    
+    Arguments:
+    - sortableFields: Array of {field, label} objects
+    - currentSortField: Currently selected sort field
+    - currentSortDirection: 'asc' or 'desc'
+    - pageId: Current page ID
+    - viewMode: Current view mode (grid/compact)
+    - tableName: Current table name (if filtered)
+</f:comment>
+
+<div class="gridview-sorting" data-gridview-sorting>
+    <div class="gridview-sorting__controls">
+        <f:comment>Label before dropdown</f:comment>
+        <label for="sortField-{tableName}" class="gridview-sorting__label">
+            <core:icon identifier="actions-sort-amount-down" size="small" />
+            Sortieren
+        </label>
+        
+        <f:comment>Sort Field Dropdown</f:comment>
+        <div class="gridview-sorting__field">
+            <select id="sortField-{tableName}" 
+                    name="sortField" 
+                    class="form-select form-select-sm gridview-sorting__select"
+                    data-gridview-sort-field
+                    data-page-id="{pageId}"
+                    data-view-mode="{viewMode}"
+                    data-table="{tableName}">
+                <option value="">Standard</option>
+                <f:for each="{sortableFields}" as="field">
+                    <f:if condition="{field.field} == {currentSortField}">
+                        <f:then>
+                            <option value="{field.field}" selected="selected">{field.label}</option>
+                        </f:then>
+                        <f:else>
+                            <option value="{field.field}">{field.label}</option>
+                        </f:else>
+                    </f:if>
+                </f:for>
+            </select>
+        </div>
+
+        <f:comment>Sort Direction Toggle - Single button that toggles direction</f:comment>
+        <div class="gridview-sorting__direction">
+            <f:if condition="{currentSortDirection} == 'desc'">
+                <f:then>
+                    <f:comment>Currently descending - click to switch to ascending</f:comment>
+                    <button type="button" 
+                            class="btn btn-default btn-sm gridview-sorting__direction-btn"
+                            data-gridview-sort-toggle
+                            data-current-direction="desc"
+                            data-page-id="{pageId}"
+                            data-view-mode="{viewMode}"
+                            data-table="{tableName}"
+                            title="Absteigend – klicken für Aufsteigend">
+                        <core:icon identifier="actions-sort-amount-down" size="small" />
+                    </button>
+                </f:then>
+                <f:else>
+                    <f:comment>Currently ascending - click to switch to descending</f:comment>
+                    <button type="button" 
+                            class="btn btn-default btn-sm gridview-sorting__direction-btn"
+                            data-gridview-sort-toggle
+                            data-current-direction="asc"
+                            data-page-id="{pageId}"
+                            data-view-mode="{viewMode}"
+                            data-table="{tableName}"
+                            title="Aufsteigend – klicken für Absteigend">
+                        <core:icon identifier="actions-sort-amount-up" size="small" />
+                    </button>
+                </f:else>
+            </f:if>
+        </div>
+    </div>
+</div>
+
+</html>

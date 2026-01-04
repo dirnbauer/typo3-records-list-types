@@ -1,0 +1,817 @@
+/**
+ * Compact View CSS - Beautiful Table Design
+ * 
+ * Modern table with sticky columns, smooth scrolling, and elegant styling
+ * Inspired by Notion, Linear, and shadcn design systems
+ */
+
+/* =============================================================================
+   Design Tokens
+   ============================================================================= */
+
+.recordlist-compactview-container {
+    /* Colors - light theme */
+    --cv-bg: #ffffff;
+    --cv-bg-muted: #fafafa;
+    --cv-bg-subtle: #f4f4f5;
+    --cv-bg-hidden: #f5f5f5;
+    --cv-border: #e4e4e7;
+    --cv-border-muted: #f0f0f2;
+    --cv-text: #18181b;
+    --cv-text-muted: #71717a;
+    --cv-text-subtle: #a1a1aa;
+    
+    /* Accent */
+    --cv-accent: #3b82f6;
+    --cv-accent-muted: #93c5fd;
+    --cv-accent-bg: #eff6ff;
+    
+    /* Status */
+    --cv-success: #22c55e;
+    --cv-success-bg: #f0fdf4;
+    --cv-danger: #ef4444;
+    --cv-danger-bg: #fef2f2;
+    --cv-warning: #f59e0b;
+    
+    /* Shadows */
+    --cv-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.08);
+    
+    /* Radius */
+    --cv-radius: 0.5rem;
+    --cv-radius-sm: 0.375rem;
+    
+    /* Typography */
+    --cv-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --cv-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    
+    /* Animation */
+    --cv-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --cv-transition-fast: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Fixed column widths */
+    --cv-col-icon: 26px;
+    --cv-col-uid: 40px;
+    --cv-col-title: 160px;
+    --cv-col-status: 28px;
+    --cv-col-action: 26px;
+}
+
+/* Dark mode */
+[data-color-scheme="dark"] .recordlist-compactview-container {
+    --cv-bg: #18181b;
+    --cv-bg-muted: #1f1f23;
+    --cv-bg-subtle: #27272a;
+    --cv-bg-hidden: #2a2a2e;
+    --cv-border: #3f3f46;
+    --cv-border-muted: #2e2e33;
+    --cv-text: #fafafa;
+    --cv-text-muted: #a1a1aa;
+    --cv-text-subtle: #71717a;
+    --cv-accent: #60a5fa;
+    --cv-accent-bg: rgba(59, 130, 246, 0.15);
+    --cv-success-bg: rgba(34, 197, 94, 0.15);
+    --cv-danger-bg: rgba(239, 68, 68, 0.15);
+    --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .recordlist-compactview-container {
+        --cv-bg: #18181b;
+        --cv-bg-muted: #1f1f23;
+        --cv-bg-subtle: #27272a;
+        --cv-bg-hidden: #2a2a2e;
+        --cv-border: #3f3f46;
+        --cv-border-muted: #2e2e33;
+        --cv-text: #fafafa;
+        --cv-text-muted: #a1a1aa;
+        --cv-text-subtle: #71717a;
+        --cv-accent: #60a5fa;
+        --cv-accent-bg: rgba(59, 130, 246, 0.15);
+        --cv-success-bg: rgba(34, 197, 94, 0.15);
+        --cv-danger-bg: rgba(239, 68, 68, 0.15);
+        --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* =============================================================================
+   Container & Heading (matches TYPO3 core exactly)
+   ============================================================================= */
+
+.recordlist-compactview-container {
+    font-family: var(--cv-font-sans);
+}
+
+.recordlist-compactview-container .recordlist {
+    margin-bottom: 1rem;
+}
+
+.recordlist-compactview-container .recordlist-heading {
+    background: var(--cv-bg-muted);
+    border: 1px solid var(--cv-border);
+    border-radius: var(--cv-radius) var(--cv-radius) 0 0;
+    padding: 0.375rem 0.625rem;
+}
+
+.recordlist-compactview-container .recordlist-heading-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.recordlist-compactview-container .recordlist-heading-title {
+    flex: 0 0 auto;
+}
+
+.recordlist-compactview-container .recordlist-heading-title a {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    color: var(--cv-text);
+    text-decoration: none;
+    font-size: 0.8125rem;
+    transition: color 100ms ease;
+}
+
+.recordlist-compactview-container .recordlist-heading-title a:hover {
+    color: var(--cv-accent);
+}
+
+.recordlist-compactview-container .recordlist-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: auto;
+}
+
+/* Sorting label should not wrap */
+.recordlist-compactview-container .gridview-sorting__label {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* =============================================================================
+   Table Wrapper - Horizontal Scroll Container
+   ============================================================================= */
+
+.compactview-table-wrapper {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: visible;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--typo3-component-bg, var(--cv-bg));
+    
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    
+    /* Custom scrollbar - Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: var(--typo3-component-border-color, var(--cv-border)) transparent;
+}
+
+/* Custom scrollbar - Webkit */
+.compactview-table-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.compactview-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+}
+
+.compactview-table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--cv-text-subtle);
+    border-radius: 4px;
+    border: 2px solid var(--cv-bg);
+}
+
+.compactview-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--cv-accent);
+}
+
+/* =============================================================================
+   Table Structure
+   ============================================================================= */
+
+.compactview-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.8125rem;
+    table-layout: auto;
+}
+
+/* =============================================================================
+   Table Header
+   ============================================================================= */
+
+.compactview-thead {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+}
+
+.compactview-th {
+    padding: var(--typo3-list-item-padding-y, 0.25rem) var(--typo3-list-item-padding-x, 0.375rem);
+    text-align: left;
+    font-weight: 600;
+    font-size: inherit;
+    color: var(--typo3-component-color, var(--cv-text));
+    background: var(--typo3-surface-container-default, var(--cv-bg-subtle));
+    border-bottom: var(--typo3-component-border-width, 1px) solid var(--typo3-component-border-color, var(--cv-border));
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.compactview-th:first-child {
+    border-top-left-radius: var(--cv-radius-sm);
+}
+
+.compactview-th:last-child {
+    border-top-right-radius: var(--cv-radius-sm);
+}
+
+/* =============================================================================
+   Sortable Header Dropdowns - Use TYPO3 native styling
+   ============================================================================= */
+
+/* 
+ * Let TYPO3's native dropdown-toggle-link styling work completely.
+ * The .dropdown-static and .dropdown-toggle-link classes from TYPO3 
+ * handle all button styling, chevron icons, and interactions.
+ */
+
+/* Ensure dropdown inherits table header font weight */
+.compactview-th .dropdown-toggle-link {
+    font-weight: inherit;
+}
+
+/* Legacy sortable header styling (for JavaScript-based sorting) */
+.compactview-th--sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--cv-transition-fast), color var(--cv-transition-fast);
+    position: relative;
+}
+
+.compactview-th--sortable:hover {
+    background: var(--cv-accent-bg);
+    color: var(--cv-accent);
+}
+
+.compactview-th--sortable.is-active {
+    color: var(--cv-accent);
+    font-weight: 700;
+}
+
+.compactview-th__sort-icon {
+    display: inline-flex;
+    margin-left: 0.25rem;
+    color: var(--cv-accent);
+    vertical-align: middle;
+}
+
+.compactview-th__sort-icon .icon {
+    width: 12px;
+    height: 12px;
+}
+
+/* Column widths */
+.compactview-th--icon { width: var(--cv-col-icon); }
+.compactview-th--uid { width: var(--cv-col-uid); text-align: right; padding-right: 0.375rem; }
+.compactview-th--title { width: var(--cv-col-title); }
+.compactview-th--status { width: var(--cv-col-status); }
+.compactview-th--action { width: var(--cv-col-action); }
+
+/* =============================================================================
+   Sticky Fixed Columns
+   ============================================================================= */
+
+/* Fixed left columns - ensure proper stacking and masking */
+.compactview-th--fixed-left,
+.compactview-td--fixed-left {
+    position: sticky;
+    /* MUST be opaque solid color to mask scrolled content behind */
+    background-color: var(--cv-bg) !important;
+    z-index: 10;
+}
+
+.compactview-th--fixed-left {
+    background-color: var(--typo3-surface-container-default, var(--cv-bg-subtle)) !important;
+    z-index: 16;
+}
+
+/* Left positions */
+.compactview-th--fixed-left:nth-child(1),
+.compactview-td--fixed-left:nth-child(1) {
+    left: 0;
+}
+
+.compactview-th--fixed-left:nth-child(2),
+.compactview-td--fixed-left:nth-child(2) {
+    left: var(--cv-col-icon);
+}
+
+.compactview-th--fixed-left:nth-child(3),
+.compactview-td--fixed-left:nth-child(3) {
+    left: calc(var(--cv-col-icon) + var(--cv-col-uid));
+}
+
+/* Third fixed left column (title) - separator line and shadow indicator */
+/* Use :nth-child(3) since fixed-left columns are always icon(1), uid(2), title(3) */
+.compactview-th:nth-child(3),
+.compactview-td:nth-child(3) {
+    /* Subtle right border to separate fixed from scrollable */
+    border-right: 1px solid var(--cv-border-muted);
+    /* Shadow on right edge to indicate scroll area */
+    box-shadow: none;
+    transition: box-shadow var(--cv-transition);
+}
+
+/* Apply shadow when container is scrolled */
+.compactview-table-wrapper.is-scrolled .compactview-th:nth-child(3),
+.compactview-table-wrapper.is-scrolled .compactview-td:nth-child(3) {
+    box-shadow: 6px 0 12px -4px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode shadow */
+[data-color-scheme="dark"] .compactview-table-wrapper.is-scrolled .compactview-th:nth-child(3),
+[data-color-scheme="dark"] .compactview-table-wrapper.is-scrolled .compactview-td:nth-child(3) {
+    box-shadow: 6px 0 12px -4px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .compactview-table-wrapper.is-scrolled .compactview-th:nth-child(3),
+    html:not([data-color-scheme="light"]) .compactview-table-wrapper.is-scrolled .compactview-td:nth-child(3) {
+        box-shadow: 6px 0 12px -4px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* Fixed right columns */
+.compactview-th--fixed-right,
+.compactview-td--fixed-right {
+    position: sticky;
+    /* MUST be opaque solid color to mask scrolled content behind */
+    background-color: var(--cv-bg) !important;
+    z-index: 10;
+}
+
+.compactview-th--fixed-right {
+    background-color: var(--typo3-surface-container-default, var(--cv-bg-subtle)) !important;
+    z-index: 16;
+}
+
+/* Right positions */
+.compactview-th--fixed-right:nth-last-child(1),
+.compactview-td--fixed-right:nth-last-child(1) {
+    right: 0;
+}
+
+.compactview-th--fixed-right:nth-last-child(2),
+.compactview-td--fixed-right:nth-last-child(2) {
+    right: var(--cv-col-action);
+}
+
+/* Third from last column (first fixed-right: status) - separator line and shadow indicator */
+.compactview-th:nth-last-child(3),
+.compactview-td:nth-last-child(3) {
+    right: calc(var(--cv-col-action) * 2);
+    /* Subtle left border to separate from scrollable area */
+    border-left: 1px solid var(--cv-border-muted);
+    /* Shadow transition */
+    box-shadow: none;
+    transition: box-shadow var(--cv-transition);
+}
+
+/* Apply shadow when there's content on the right (more content to scroll) */
+.compactview-table-wrapper.has-right-scroll .compactview-th:nth-last-child(3),
+.compactview-table-wrapper.has-right-scroll .compactview-td:nth-last-child(3) {
+    box-shadow: -6px 0 12px -4px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode shadow for right side */
+[data-color-scheme="dark"] .compactview-table-wrapper.has-right-scroll .compactview-th:nth-last-child(3),
+[data-color-scheme="dark"] .compactview-table-wrapper.has-right-scroll .compactview-td:nth-last-child(3) {
+    box-shadow: -6px 0 12px -4px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .compactview-table-wrapper.has-right-scroll .compactview-th:nth-last-child(3),
+    html:not([data-color-scheme="light"]) .compactview-table-wrapper.has-right-scroll .compactview-td:nth-last-child(3) {
+        box-shadow: -6px 0 12px -4px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* =============================================================================
+   Table Body & Rows
+   ============================================================================= */
+
+.compactview-tbody {
+    background: var(--cv-bg);
+}
+
+.compactview-row {
+    transition: background var(--cv-transition-fast);
+}
+
+.compactview-row:last-child .compactview-td:first-child {
+    border-bottom-left-radius: var(--cv-radius-sm);
+}
+
+.compactview-row:last-child .compactview-td:last-child {
+    border-bottom-right-radius: var(--cv-radius-sm);
+}
+
+/* Zebra striping - ensure fixed columns match row background (opaque for masking) */
+.compactview-row:nth-child(even) .compactview-td {
+    background-color: var(--cv-bg-muted);
+}
+
+.compactview-row:nth-child(even) .compactview-td--fixed-left,
+.compactview-row:nth-child(even) .compactview-td--fixed-right {
+    background-color: var(--cv-bg-muted) !important;
+}
+
+/* Hover state - ensure fixed columns match (opaque for masking) */
+.compactview-row:hover .compactview-td {
+    background-color: var(--cv-accent-bg);
+}
+
+.compactview-row:hover .compactview-td--fixed-left,
+.compactview-row:hover .compactview-td--fixed-right {
+    background-color: var(--cv-accent-bg) !important;
+}
+
+/* Ensure headers have solid opaque background for proper masking */
+.compactview-thead .compactview-th--fixed-left,
+.compactview-thead .compactview-th--fixed-right {
+    background-color: var(--typo3-surface-container-default, var(--cv-bg-subtle)) !important;
+}
+
+/* =============================================================================
+   Table Cells
+   ============================================================================= */
+
+.compactview-td {
+    padding: 0.1875rem 0.375rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--cv-border-muted);
+    color: var(--cv-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--cv-bg);
+}
+
+.compactview-row:last-child .compactview-td {
+    border-bottom: none;
+}
+
+/* Column-specific styling */
+.compactview-td--icon {
+    width: var(--cv-col-icon);
+    text-align: center;
+    padding: 0.1875rem 0.125rem;
+}
+
+.compactview-td--uid {
+    width: var(--cv-col-uid);
+    text-align: right;
+    padding-right: 0.375rem;
+}
+
+.compactview-td--title {
+    width: var(--cv-col-title);
+    color: var(--cv-text);
+    font-weight: 500;
+}
+
+.compactview-td--status {
+    width: var(--cv-col-status);
+    text-align: center;
+    padding: 0.1875rem 0.125rem;
+}
+
+.compactview-td--action {
+    width: var(--cv-col-action);
+    text-align: center;
+    padding: 0.1875rem 0.125rem;
+}
+
+/* =============================================================================
+   Row Elements
+   ============================================================================= */
+
+.compactview-row__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cv-text-subtle);
+}
+
+.compactview-row__icon .icon {
+    width: 12px;
+    height: 12px;
+}
+
+.compactview-row__uid {
+    font-family: var(--cv-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--cv-text-subtle);
+}
+
+.compactview-row__title-link {
+    color: var(--cv-text);
+    text-decoration: none;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--cv-transition-fast);
+}
+
+.compactview-row__title-link:hover {
+    color: var(--cv-accent);
+}
+
+/* =============================================================================
+   Hidden Record Styling
+   ============================================================================= */
+
+.compactview-row--hidden .compactview-td {
+    background: var(--cv-bg-hidden);
+}
+
+/* Hidden rows: fixed columns MUST have opaque background to mask scrolled content */
+.compactview-row--hidden .compactview-td--fixed-left,
+.compactview-row--hidden .compactview-td--fixed-right {
+    background: var(--cv-bg-hidden) !important;
+}
+
+.compactview-row--hidden:nth-child(even) .compactview-td,
+.compactview-row--hidden:nth-child(even) .compactview-td--fixed-left,
+.compactview-row--hidden:nth-child(even) .compactview-td--fixed-right {
+    background: var(--cv-bg-hidden) !important;
+}
+
+.compactview-row--hidden:hover .compactview-td,
+.compactview-row--hidden:hover .compactview-td--fixed-left,
+.compactview-row--hidden:hover .compactview-td--fixed-right {
+    background: var(--cv-accent-bg) !important;
+}
+
+.compactview-row--hidden .compactview-row__title-link {
+    color: var(--cv-text-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--cv-text-subtle);
+}
+
+.compactview-row--hidden .compactview-row__icon {
+    opacity: 0.5;
+}
+
+/* =============================================================================
+   Field Type Styling - Using TYPO3 State Colors
+   ============================================================================= */
+
+.cv-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: var(--typo3-font-size-small, 0.75rem);
+}
+
+.cv-badge .icon {
+    width: 12px;
+    height: 12px;
+}
+
+/* Yes/True state - using TYPO3 success color */
+.cv-badge--yes { 
+    color: var(--typo3-state-success-color, var(--cv-success)); 
+}
+
+/* No/False state - subtle muted color */
+.cv-badge--no { 
+    color: var(--typo3-text-color-variant, var(--cv-text-subtle)); 
+}
+
+.cv-datetime {
+    font-family: var(--cv-font-mono);
+    font-size: 0.6875rem;
+    color: var(--cv-text-muted);
+    letter-spacing: -0.01em;
+}
+
+.cv-number {
+    font-family: var(--cv-font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.cv-relation {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--cv-text-muted);
+}
+
+.cv-relation__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0.9375rem;
+    height: 0.9375rem;
+    padding: 0 0.1875rem;
+    background: var(--cv-accent-bg);
+    color: var(--cv-accent);
+    border-radius: 0.1875rem;
+    font-family: var(--cv-font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+}
+
+/* =============================================================================
+   Toggle & Action Buttons
+   ============================================================================= */
+
+.cv-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.1875rem;
+    cursor: pointer;
+    transition: all var(--cv-transition-fast);
+}
+
+.cv-toggle .icon {
+    width: 12px;
+    height: 12px;
+}
+
+.cv-toggle--visible {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #16a34a;
+}
+
+.cv-toggle--visible:hover {
+    background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+    transform: scale(1.05);
+}
+
+.cv-toggle--hidden {
+    background: linear-gradient(135deg, #f4f4f5 0%, #e4e4e7 100%);
+    color: #71717a;
+}
+
+.cv-toggle--hidden:hover {
+    background: linear-gradient(135deg, #e4e4e7 0%, #d4d4d8 100%);
+    transform: scale(1.05);
+}
+
+.cv-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--cv-text-subtle);
+    border-radius: 0.1875rem;
+    cursor: pointer;
+    transition: all var(--cv-transition-fast);
+    text-decoration: none;
+}
+
+.cv-action .icon {
+    width: 12px;
+    height: 12px;
+}
+
+.cv-action:hover {
+    background: var(--cv-bg-subtle);
+    color: var(--cv-text);
+    transform: scale(1.05);
+}
+
+.cv-action--primary:hover {
+    background: var(--cv-accent-bg);
+    color: var(--cv-accent);
+}
+
+.cv-action--danger:hover {
+    background: var(--cv-danger-bg);
+    color: var(--cv-danger);
+}
+
+/* =============================================================================
+   Sorting Controls (reuse grid view classes)
+   ============================================================================= */
+
+.recordlist-compactview-container .gridview-sorting {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.recordlist-compactview-container .gridview-sorting__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.recordlist-compactview-container .gridview-sorting__label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--cv-text-muted);
+    margin: 0;
+}
+
+.recordlist-compactview-container .gridview-sorting__select {
+    min-width: 7rem;
+    max-width: 10rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.125rem 1.25rem 0.125rem 0.375rem;
+    background-color: var(--cv-bg);
+    color: var(--cv-text);
+    border: 1px solid var(--cv-border);
+    border-radius: var(--cv-radius-sm);
+}
+
+.recordlist-compactview-container .gridview-sorting__select:focus {
+    outline: 2px solid var(--cv-accent);
+    outline-offset: 1px;
+}
+
+.recordlist-compactview-container .gridview-sorting__direction {
+    display: flex;
+    border: 1px solid var(--cv-border);
+    border-radius: var(--cv-radius-sm);
+    overflow: hidden;
+}
+
+.recordlist-compactview-container .gridview-sorting__direction-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: none;
+    background: var(--cv-bg);
+    color: var(--cv-text-muted);
+    cursor: pointer;
+    transition: all var(--cv-transition-fast);
+}
+
+.recordlist-compactview-container .gridview-sorting__direction-btn:not(:last-child) {
+    border-right: 1px solid var(--cv-border);
+}
+
+.recordlist-compactview-container .gridview-sorting__direction-btn:hover {
+    background: var(--cv-bg-subtle);
+    color: var(--cv-text);
+}
+
+.recordlist-compactview-container .gridview-sorting__direction-btn.active {
+    background: var(--cv-accent);
+    color: white;
+}
+
+/* =============================================================================
+   Responsive
+   ============================================================================= */
+
+@media (max-width: 768px) {
+    .recordlist-compactview-container {
+        --cv-col-title: 120px;
+    }
+    
+    .compactview-table-wrapper {
+        margin: 0.125rem 0.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .recordlist-compactview-container {
+        --cv-col-title: 100px;
+        --cv-col-uid: 36px;
+    }
+    
+    .compactview-table-wrapper {
+        margin: 0.125rem;
+        border-radius: var(--cv-radius-sm);
+    }
+}

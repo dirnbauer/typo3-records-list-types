@@ -1,0 +1,105 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<div class="recordlist-compactview-container">
+
+    <f:if condition="{tableData}">
+        <f:then>
+            <f:for each="{tableData}" as="table">
+                <div class="recordlist" id="t3-table-{table.tableName}">
+                    <f:comment>Table header - matches native List View styling exactly</f:comment>
+                    <div class="recordlist-heading">
+                        <div class="recordlist-heading-row">
+                            <f:comment>Title section with table name link - identical to core</f:comment>
+                            <div class="recordlist-heading-title">
+                                <f:if condition="{currentTable}">
+                                    <f:then>
+                                        <f:comment>In single table mode - link back to all tables</f:comment>
+                                        <a href="{table.clearTableUrl}">
+                                            <span class="fw-bold">{table.tableLabel}</span>
+                                            <span>({table.recordCount})</span>
+                                            <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
+                                        </a>
+                                    </f:then>
+                                    <f:else>
+                                        <f:comment>In multi-table mode - link to single table view</f:comment>
+                                        <a href="{table.singleTableUrl}">
+                                            <span class="fw-bold">{table.tableLabel}</span>
+                                            <span>({table.recordCount})</span>
+                                            <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
+                                        </a>
+                                    </f:else>
+                                </f:if>
+                            </div>
+
+                            <f:comment>Actions section - matches core structure exactly</f:comment>
+                            <div class="recordlist-heading-actions">
+                                <f:comment>New record button</f:comment>
+                                <f:if condition="{table.actionButtons.newRecordButton}">
+                                    <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                                </f:if>
+                                
+                                <f:comment>Download/Export button</f:comment>
+                                <f:if condition="{table.actionButtons.downloadButton}">
+                                    <f:format.raw>{table.actionButtons.downloadButton}</f:format.raw>
+                                </f:if>
+                                
+                                <f:comment>Column selector button (web component)</f:comment>
+                                <f:if condition="{table.actionButtons.columnSelectorButton}">
+                                    <f:format.raw>{table.actionButtons.columnSelectorButton}</f:format.raw>
+                                </f:if>
+
+                                <f:comment>Collapse/Expand button</f:comment>
+                                <f:if condition="{table.actionButtons.collapseButton}">
+                                    <f:format.raw>{table.actionButtons.collapseButton}</f:format.raw>
+                                </f:if>
+                            </div>
+                        </div>
+                    </div>
+
+                    <f:comment>Records table with sortable column headers (like core list view)</f:comment>
+                    <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
+                        <div class="compactview-table-wrapper" data-scroll-container>
+                            <table class="compactview-table">
+                                <thead class="compactview-thead">
+                                    <tr>
+                                        <f:comment>Icon column (no sorting)</f:comment>
+                                        <th class="compactview-th compactview-th--fixed-left compactview-th--icon"></th>
+                                        
+                                        <f:comment>Sortable column headers rendered by PHP using TYPO3 API</f:comment>
+                                        <f:for each="{table.sortableColumnHeaders}" as="header">
+                                            <th class="compactview-th{f:if(condition: header.isFixed, then: ' compactview-th--fixed-left')} compactview-th--{header.type}">
+                                                <f:format.raw>{header.headerHtml}</f:format.raw>
+                                            </th>
+                                        </f:for>
+                                        
+                                        <f:comment>Fixed right columns: Status, Edit, Delete</f:comment>
+                                        <th class="compactview-th compactview-th--fixed-right compactview-th--status"></th>
+                                        <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
+                                        <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="compactview-tbody">
+                                    <f:for each="{table.records}" as="record">
+                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns}" />
+                                    </f:for>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </f:for>
+        </f:then>
+        <f:else>
+            <div class="callout callout-info">
+                <core:icon identifier="actions-info" size="small" />
+                <span class="ms-2">No records found on this page.</span>
+            </div>
+        </f:else>
+    </f:if>
+
+</div>
+
+</html>

@@ -1,0 +1,165 @@
+/**
+ * View Mode Toggle Buttons
+ * Styling for the list/grid/compact view mode toggle in DocHeader
+ * 
+ * Follows TYPO3 Styleguide for segmented controls/toggles
+ * Supports: Light mode, Dark mode, System preference
+ * Uses TYPO3 CSS variables for proper theming
+ */
+
+/* =============================================================================
+   Button Group Container
+   ============================================================================= */
+
+.module-docheader-bar-buttons .t3js-module-docheader-bar-buttons-right {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* =============================================================================
+   View Mode Buttons - Base
+   Uses TYPO3 CSS variables from the styleguide
+   ============================================================================= */
+
+.btn[data-viewmode] {
+    position: relative;
+    transition: all 0.15s ease;
+    
+    /* Use TYPO3's button variables with fallbacks */
+    --viewmode-btn-bg: var(--typo3-component-bg, var(--bs-secondary-bg, #e9ecef));
+    --viewmode-btn-color: var(--typo3-text-color-base, var(--bs-body-color, #212529));
+    --viewmode-btn-border: var(--typo3-component-border-color, var(--bs-border-color, #dee2e6));
+    --viewmode-btn-hover-bg: var(--typo3-surface-container-high, var(--bs-tertiary-bg, #f8f9fa));
+    
+    /* Active state colors - using TYPO3's primary state */
+    --viewmode-active-bg: var(--typo3-state-default-primary-bg, var(--bs-primary, #0d6efd));
+    --viewmode-active-color: var(--typo3-state-default-primary-contrast-color, #fff);
+    --viewmode-active-border: var(--typo3-state-default-primary-border-color, var(--bs-primary, #0d6efd));
+}
+
+/* =============================================================================
+   Inactive State
+   ============================================================================= */
+
+.btn[data-viewmode-active="0"] {
+    background-color: var(--viewmode-btn-bg);
+    border-color: var(--viewmode-btn-border);
+    color: var(--viewmode-btn-color);
+}
+
+.btn[data-viewmode-active="0"]:hover {
+    background-color: var(--viewmode-btn-hover-bg);
+    border-color: var(--viewmode-btn-border);
+    color: var(--viewmode-btn-color);
+}
+
+.btn[data-viewmode-active="0"] .icon {
+    opacity: 0.7;
+}
+
+.btn[data-viewmode-active="0"]:hover .icon {
+    opacity: 1;
+}
+
+/* =============================================================================
+   Active State
+   ============================================================================= */
+
+.btn[data-viewmode-active="1"],
+.btn[data-viewmode].active {
+    background-color: var(--viewmode-active-bg) !important;
+    border-color: var(--viewmode-active-border) !important;
+    color: var(--viewmode-active-color) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+    z-index: 1;
+}
+
+.btn[data-viewmode-active="1"]:hover,
+.btn[data-viewmode].active:hover {
+    background-color: var(--viewmode-active-bg) !important;
+    border-color: var(--viewmode-active-border) !important;
+    filter: brightness(0.9);
+}
+
+.btn[data-viewmode-active="1"] .icon,
+.btn[data-viewmode].active .icon {
+    opacity: 1;
+}
+
+/* =============================================================================
+   Dark Mode Overrides
+   ============================================================================= */
+
+/* TYPO3 uses data-color-scheme attribute on html element */
+[data-color-scheme="dark"] .btn[data-viewmode] {
+    --viewmode-btn-bg: var(--typo3-component-btn-bg, #2a2a2a);
+    --viewmode-btn-color: var(--typo3-component-btn-color, #e0e0e0);
+    --viewmode-btn-border: var(--typo3-component-btn-border-color, #444);
+    --viewmode-btn-hover-bg: var(--typo3-component-btn-hover-bg, #3a3a3a);
+}
+
+/* Alternative: prefers-color-scheme for system preference */
+@media (prefers-color-scheme: dark) {
+    /* Only apply if TYPO3 is set to follow system preference */
+    html:not([data-color-scheme="light"]) .btn[data-viewmode] {
+        --viewmode-btn-bg: var(--typo3-component-btn-bg, #2a2a2a);
+        --viewmode-btn-color: var(--typo3-component-btn-color, #e0e0e0);
+        --viewmode-btn-border: var(--typo3-component-btn-border-color, #444);
+        --viewmode-btn-hover-bg: var(--typo3-component-btn-hover-bg, #3a3a3a);
+    }
+}
+
+/* =============================================================================
+   Light Mode Overrides (explicit)
+   ============================================================================= */
+
+[data-color-scheme="light"] .btn[data-viewmode] {
+    --viewmode-btn-bg: var(--typo3-component-btn-bg, #f8f9fa);
+    --viewmode-btn-color: var(--typo3-component-btn-color, #212529);
+    --viewmode-btn-border: var(--typo3-component-btn-border-color, #dee2e6);
+    --viewmode-btn-hover-bg: var(--typo3-component-btn-hover-bg, #e9ecef);
+}
+
+/* =============================================================================
+   Tooltip - Uses TYPO3 tooltip styling
+   ============================================================================= */
+
+.btn[data-viewmode]::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -1.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+    background: var(--typo3-surface-inverted, var(--bs-emphasis-color, #212529));
+    color: var(--typo3-text-on-inverted, var(--bs-body-bg, #fff));
+    border-radius: var(--typo3-component-border-radius-sm, var(--bs-border-radius-sm, 0.25rem));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 1000;
+}
+
+.btn[data-viewmode]:hover::after {
+    opacity: 1;
+}
+
+/* Hide tooltip on small screens */
+@media (max-width: 768px) {
+    .btn[data-viewmode]::after {
+        display: none;
+    }
+}
+
+/* =============================================================================
+   Focus States (Accessibility) - WCAG 2.1 compliant
+   ============================================================================= */
+
+.btn[data-viewmode]:focus-visible {
+    outline: 2px solid var(--typo3-state-default-focus-color, var(--viewmode-active-bg));
+    outline-offset: 2px;
+}

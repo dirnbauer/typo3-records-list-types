@@ -1,0 +1,85 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Teaser View - Minimal card layout showing only title, date, and teaser text.
+    Uses Bootstrap 5 styling for a clean, modern look.
+    Ideal for news, blog posts, and similar content types.
+</f:comment>
+
+<div class="recordlist-teaserview-container">
+
+    <f:if condition="{tableData}">
+        <f:then>
+            <f:for each="{tableData}" as="table">
+                <div class="recordlist" id="t3-table-{table.tableName}">
+                    <f:comment>Table header - consistent with other view modes</f:comment>
+                    <div class="recordlist-heading">
+                        <div class="recordlist-heading-row">
+                            <div class="recordlist-heading-title">
+                                <f:if condition="{currentTable}">
+                                    <f:then>
+                                        <a href="{table.clearTableUrl}">
+                                            <span class="fw-bold">{table.tableLabel}</span>
+                                            <span>({table.recordCount})</span>
+                                            <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
+                                        </a>
+                                    </f:then>
+                                    <f:else>
+                                        <a href="{table.singleTableUrl}">
+                                            <span class="fw-bold">{table.tableLabel}</span>
+                                            <span>({table.recordCount})</span>
+                                            <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
+                                        </a>
+                                    </f:else>
+                                </f:if>
+                            </div>
+
+                            <div class="recordlist-heading-actions">
+                                <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
+                                <f:if condition="{table.sortingDropdownHtml}">
+                                    <f:format.raw>{table.sortingDropdownHtml}</f:format.raw>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.newRecordButton}">
+                                    <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                                </f:if>
+                                
+                                <f:if condition="{table.actionButtons.downloadButton}">
+                                    <f:format.raw>{table.actionButtons.downloadButton}</f:format.raw>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.collapseButton}">
+                                    <f:format.raw>{table.actionButtons.collapseButton}</f:format.raw>
+                                </f:if>
+                            </div>
+                        </div>
+                    </div>
+
+                    <f:comment>Teaser cards list</f:comment>
+                    <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
+                        <div class="teaserview-list">
+                            <f:for each="{table.records}" as="record">
+                                <f:render partial="TeaserCard" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName}" />
+                            </f:for>
+                        </div>
+                    </div>
+                </div>
+            </f:for>
+        </f:then>
+        <f:else>
+            <div class="callout callout-info">
+                <div class="callout-body">
+                    <core:icon identifier="actions-info" size="small" />
+                    <span class="ms-2">No records found on this page.</span>
+                </div>
+            </div>
+        </f:else>
+    </f:if>
+
+</div>
+
+</html>
+

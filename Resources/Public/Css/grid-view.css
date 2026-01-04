@@ -1,0 +1,1480 @@
+/**
+ * Grid View CSS - shadcn-inspired design
+ * 
+ * Modern, clean card-based layout with:
+ * - Subtle shadows and borders
+ * - Refined typography hierarchy
+ * - Elegant micro-interactions
+ * - Proper light/dark theme support
+ */
+
+/* =============================================================================
+   Design Tokens
+   ============================================================================= */
+
+.recordlist-gridview-container {
+    /* Colors - light theme */
+    --gv-bg: #ffffff;
+    --gv-bg-muted: #fafafa;
+    --gv-bg-subtle: #f4f4f5;
+    --gv-border: #d4d4d8;
+    --gv-border-muted: #f0f0f2;
+    --gv-text: #18181b;
+    --gv-text-muted: #71717a;
+    --gv-text-subtle: #a1a1aa;
+    
+    /* Accent */
+    --gv-accent: #3b82f6;
+    --gv-accent-muted: #93c5fd;
+    --gv-accent-bg: #eff6ff;
+    
+    /* Status */
+    --gv-success: #22c55e;
+    --gv-success-bg: #f0fdf4;
+    --gv-success-text: #15803d;
+    --gv-danger: #ef4444;
+    --gv-danger-bg: #fef2f2;
+    --gv-danger-text: #b91c1c;
+    --gv-warning: #f59e0b;
+    --gv-warning-bg: #fffbeb;
+    --gv-warning-text: #92400e;
+    
+    /* Shadows */
+    --gv-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --gv-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --gv-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --gv-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    
+    /* Radius */
+    --gv-radius: 0.5rem;
+    --gv-radius-sm: 0.375rem;
+    --gv-radius-lg: 0.75rem;
+    
+    /* Spacing */
+    --gv-space-1: 0.25rem;
+    --gv-space-2: 0.5rem;
+    --gv-space-3: 0.75rem;
+    --gv-space-4: 1rem;
+    --gv-space-5: 1.25rem;
+    --gv-space-6: 1.5rem;
+    
+    /* Typography */
+    --gv-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --gv-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    
+    /* Animation */
+    --gv-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --gv-transition-fast: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark mode - explicit setting */
+[data-color-scheme="dark"] .recordlist-gridview-container {
+    --gv-bg: #18181b;
+    --gv-bg-muted: #1f1f23;
+    --gv-bg-subtle: #27272a;
+    --gv-border: #3f3f46;
+    --gv-border-muted: #2e2e33;
+    --gv-text: #fafafa;
+    --gv-text-muted: #a1a1aa;
+    --gv-text-subtle: #71717a;
+    
+    --gv-accent: #60a5fa;
+    --gv-accent-muted: #1e40af;
+    --gv-accent-bg: rgba(59, 130, 246, 0.15);
+    
+    --gv-success: #22c55e;
+    --gv-success-bg: rgba(34, 197, 94, 0.15);
+    --gv-success-text: #4ade80;
+    --gv-danger: #ef4444;
+    --gv-danger-bg: rgba(239, 68, 68, 0.15);
+    --gv-danger-text: #f87171;
+    --gv-warning: #f59e0b;
+    --gv-warning-bg: rgba(245, 158, 11, 0.15);
+    --gv-warning-text: #fbbf24;
+    
+    --gv-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --gv-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+    --gv-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --gv-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+}
+
+/* Dark mode - system preference (when no explicit setting) */
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .recordlist-gridview-container {
+        --gv-bg: #18181b;
+        --gv-bg-muted: #1f1f23;
+        --gv-bg-subtle: #27272a;
+        --gv-border: #3f3f46;
+        --gv-border-muted: #2e2e33;
+        --gv-text: #fafafa;
+        --gv-text-muted: #a1a1aa;
+        --gv-text-subtle: #71717a;
+        
+        --gv-accent: #60a5fa;
+        --gv-accent-muted: #1e40af;
+        --gv-accent-bg: rgba(59, 130, 246, 0.15);
+        
+        --gv-success: #22c55e;
+        --gv-success-bg: rgba(34, 197, 94, 0.15);
+        --gv-success-text: #4ade80;
+        --gv-danger: #ef4444;
+        --gv-danger-bg: rgba(239, 68, 68, 0.15);
+        --gv-danger-text: #f87171;
+        --gv-warning: #f59e0b;
+        --gv-warning-bg: rgba(245, 158, 11, 0.15);
+        --gv-warning-text: #fbbf24;
+        
+        --gv-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+        --gv-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+        --gv-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+        --gv-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    }
+}
+
+/* =============================================================================
+   Grid Layout
+   ============================================================================= */
+
+.gridview-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--gv-space-4);
+    padding: var(--gv-space-4);
+}
+
+@media (max-width: 400px) {
+    .gridview-card-grid {
+        grid-template-columns: 1fr;
+        padding: var(--gv-space-3);
+        gap: var(--gv-space-3);
+    }
+}
+
+@media (min-width: 1600px) {
+    .gridview-card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    }
+}
+
+/* =============================================================================
+   Card Base
+   ============================================================================= */
+
+.gridview-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--gv-bg);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-lg);
+    box-shadow: var(--gv-shadow-sm);
+    overflow: visible; /* Allow dropdowns to overflow */
+    transition: 
+        transform var(--gv-transition),
+        box-shadow var(--gv-transition),
+        border-color var(--gv-transition);
+    position: relative;
+    color: var(--gv-text);
+    font-family: var(--gv-font-sans);
+}
+
+/* Apply border-radius to first/last children since card overflow is visible */
+.gridview-card__header {
+    border-radius: var(--gv-radius-lg) var(--gv-radius-lg) 0 0;
+}
+
+.gridview-card__footer {
+    border-radius: 0 0 var(--gv-radius-lg) var(--gv-radius-lg);
+}
+
+.gridview-card:hover {
+    box-shadow: var(--gv-shadow-md);
+    border-color: var(--gv-border);
+    transform: translateY(-1px);
+}
+
+.gridview-card:focus-within {
+    outline: 2px solid var(--gv-accent);
+    outline-offset: 2px;
+}
+
+/* =============================================================================
+   Card State Indicators (Hidden + Workspace)
+   ============================================================================= */
+
+/* Hidden state - amber header background */
+.gridview-card--hidden .gridview-card__header {
+    background: var(--gv-warning-bg);
+    border-left: 3px solid var(--gv-warning);
+}
+
+.gridview-card--hidden .gridview-card__header-title {
+    opacity: 0.7;
+}
+
+/* Workspace: New record - blue */
+.gridview-card--ws-new .gridview-card__header {
+    background: var(--gv-accent-bg);
+    border-left: 3px solid var(--gv-accent);
+}
+
+/* Workspace: Modified record - purple */
+.gridview-card--ws-changed .gridview-card__header {
+    --gv-ws-purple: #a855f7;
+    --gv-ws-purple-bg: #faf5ff;
+    background: var(--gv-ws-purple-bg);
+    border-left: 3px solid var(--gv-ws-purple);
+}
+
+/* Workspace: Moved record - cyan */
+.gridview-card--ws-move .gridview-card__header {
+    --gv-ws-cyan: #06b6d4;
+    --gv-ws-cyan-bg: #ecfeff;
+    background: var(--gv-ws-cyan-bg);
+    border-left: 3px solid var(--gv-ws-cyan);
+}
+
+/* Workspace: Deleted placeholder - red with strikethrough */
+.gridview-card--ws-deleted .gridview-card__header {
+    background: var(--gv-danger-bg);
+    border-left: 3px solid var(--gv-danger);
+}
+
+.gridview-card--ws-deleted .gridview-card__title a {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+/* Dark mode workspace colors */
+[data-color-scheme="dark"] .gridview-card--ws-changed .gridview-card__header {
+    --gv-ws-purple-bg: rgba(168, 85, 247, 0.15);
+}
+
+[data-color-scheme="dark"] .gridview-card--ws-move .gridview-card__header {
+    --gv-ws-cyan-bg: rgba(6, 182, 212, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .gridview-card--ws-changed .gridview-card__header {
+        --gv-ws-purple-bg: rgba(168, 85, 247, 0.15);
+    }
+    html:not([data-color-scheme="light"]) .gridview-card--ws-move .gridview-card__header {
+        --gv-ws-cyan-bg: rgba(6, 182, 212, 0.15);
+    }
+}
+
+/* =============================================================================
+   Card Header - Two Row Layout
+   ============================================================================= */
+
+.gridview-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    background: var(--gv-bg-muted);
+    border-bottom: 1px solid var(--gv-border-muted);
+}
+
+/* Row 1: Title row */
+.gridview-card__header-title {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-2);
+    padding: var(--gv-space-2) var(--gv-space-3);
+    cursor: grab;
+}
+
+.gridview-card__header-title:active {
+    cursor: grabbing;
+}
+
+.gridview-card__drag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    color: var(--gv-text-subtle);
+    opacity: 0.5;
+    transition: opacity var(--gv-transition-fast);
+    flex-shrink: 0;
+}
+
+.gridview-card:hover .gridview-card__drag {
+    opacity: 1;
+}
+
+.gridview-card__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--gv-text-muted);
+}
+
+.gridview-card__icon .icon {
+    width: 14px;
+    height: 14px;
+}
+
+.gridview-card__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--gv-text);
+}
+
+.gridview-card__title a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--gv-transition-fast);
+}
+
+.gridview-card__title a:hover {
+    color: var(--gv-accent);
+}
+
+/* Row 2: Compact action toolbar */
+.gridview-card__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: var(--gv-space-1) var(--gv-space-3);
+    background: var(--gv-bg-subtle);
+    border-top: 1px solid var(--gv-border-muted);
+}
+
+/* Small action buttons for toolbar */
+.gridview-action-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--gv-text-subtle);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: 
+        background var(--gv-transition-fast),
+        color var(--gv-transition-fast);
+    text-decoration: none;
+}
+
+.gridview-action-sm .icon {
+    width: 16px;
+    height: 16px;
+}
+
+.gridview-action-sm:hover {
+    background: var(--gv-bg);
+    color: var(--gv-text);
+}
+
+.gridview-action-sm--primary:hover {
+    background: var(--gv-accent-bg);
+    color: var(--gv-accent);
+}
+
+.gridview-action-sm--success {
+    color: var(--gv-success);
+}
+
+.gridview-action-sm--success:hover {
+    background: var(--gv-success-bg);
+    color: var(--gv-success-text);
+}
+
+.gridview-action-sm--warning {
+    color: var(--gv-warning);
+}
+
+.gridview-action-sm--warning:hover {
+    background: var(--gv-warning-bg);
+    color: var(--gv-warning-text);
+}
+
+.gridview-action-sm--danger:hover {
+    background: var(--gv-danger-bg);
+    color: var(--gv-danger-text);
+}
+
+/* Separator between action groups */
+.gridview-action-separator {
+    width: 1px;
+    height: 1rem;
+    background: var(--gv-border);
+    margin: 0 var(--gv-space-1);
+}
+
+/* =============================================================================
+   Card Footer
+   ============================================================================= */
+
+.gridview-card__footer {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-2);
+    padding: var(--gv-space-2) var(--gv-space-4);
+    border-top: 1px solid var(--gv-border-muted);
+    font-size: 0.75rem;
+    color: var(--gv-text-muted);
+}
+
+/* ID section with label and circle number */
+.gridview-card__footer-id {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gv-space-1);
+}
+
+.gridview-card__footer-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gv-text-subtle);
+}
+
+/* UID in circle - dark background, light text */
+.gridview-card__footer-uid {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.375rem;
+    height: 1.375rem;
+    padding: 0 0.375rem;
+    background: var(--gv-text);
+    color: var(--gv-bg);
+    border-radius: 9999px;
+    font-family: var(--gv-font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+}
+
+.gridview-card__footer-separator {
+    color: var(--gv-border);
+    margin: 0 var(--gv-space-2);
+}
+
+.gridview-card__footer-pid {
+    font-size: 0.625rem;
+    color: var(--gv-text-subtle);
+}
+
+/* Simple format for pages table */
+.gridview-card__footer-simple {
+    font-size: 0.625rem;
+    color: var(--gv-text-subtle);
+}
+
+/* =============================================================================
+   Card Image - Thumbnail from FAL
+   ============================================================================= */
+
+.gridview-card__image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--gv-bg-subtle);
+    overflow: hidden; /* Keep hidden to clip image */
+}
+
+.gridview-card__image a {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.gridview-card__thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--gv-transition);
+}
+
+.gridview-card:hover .gridview-card__thumbnail {
+    transform: scale(1.02);
+}
+
+/* Placeholder when no image */
+.gridview-card__image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--gv-text-subtle);
+}
+
+/* =============================================================================
+   Card Body - Fields Display
+   ============================================================================= */
+
+.gridview-card__body {
+    flex: 1;
+    padding: var(--gv-space-4);
+}
+
+.gridview-card__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gv-space-4);
+}
+
+/* Field item */
+.gridview-card__field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Two-column layout for small fields */
+.gridview-card__fields--grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gv-space-3);
+}
+
+/* Compact inline layout for many fields */
+@media (min-width: 400px) {
+    .gridview-card__fields {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--gv-space-4) var(--gv-space-4);
+    }
+    
+    /* Full width for text fields */
+    .gridview-card__field[data-type="text"],
+    .gridview-card__field[data-type="richtext"] {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Field label */
+.gridview-card__field-label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gv-text-subtle);
+    line-height: 1.4;
+}
+
+/* Field value */
+.gridview-card__field-value {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gv-text);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Empty value */
+.gridview-card__field-value:empty::after,
+.gridview-card__field-value:has(> :empty)::after {
+    content: '—';
+    color: var(--gv-text-subtle);
+}
+
+/* =============================================================================
+   Field Type Variants
+   ============================================================================= */
+
+/* Boolean badges */
+.gv-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    width: fit-content;
+}
+
+.gv-badge--success {
+    background: var(--gv-success-bg);
+    color: var(--gv-success-text);
+}
+
+.gv-badge--danger {
+    background: var(--gv-danger-bg);
+    color: var(--gv-danger-text);
+}
+
+.gv-badge--warning {
+    background: var(--gv-warning-bg);
+    color: var(--gv-warning-text);
+}
+
+.gv-badge--muted {
+    background: var(--gv-bg-subtle);
+    color: var(--gv-text-muted);
+}
+
+/* Datetime display */
+.gv-datetime {
+    font-family: var(--gv-font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gv-text-muted);
+    background: var(--gv-bg-subtle);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--gv-radius-sm);
+    display: inline-block;
+}
+
+/* Number display */
+.gv-number {
+    font-family: var(--gv-font-mono);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--gv-text);
+}
+
+/* Relation/count display */
+.gv-relation {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gv-text-muted);
+}
+
+.gv-relation__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.25rem;
+    background: var(--gv-accent-bg);
+    color: var(--gv-accent);
+    border-radius: 9999px;
+    font-family: var(--gv-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+/* Link/URL display */
+.gv-link {
+    color: var(--gv-accent);
+    font-size: 0.75rem;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
+.gv-link:hover {
+    text-decoration: underline;
+}
+
+/* =============================================================================
+   Action Buttons (used in header and dropdowns)
+   ============================================================================= */
+
+.gridview-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--gv-text-subtle);
+    border-radius: var(--gv-radius-sm);
+    cursor: pointer;
+    transition: 
+        background var(--gv-transition-fast),
+        color var(--gv-transition-fast);
+    text-decoration: none;
+}
+
+.gridview-action:hover {
+    background: var(--gv-bg-subtle);
+    color: var(--gv-text);
+}
+
+.gridview-action--danger:hover {
+    background: var(--gv-danger-bg);
+    color: var(--gv-danger-text);
+}
+
+.gridview-action--primary:hover {
+    background: var(--gv-accent-bg);
+    color: var(--gv-accent);
+}
+
+/* Dropdown styling - in header actions */
+.gridview-card__header-actions .dropdown-menu {
+    background: var(--gv-bg);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    box-shadow: var(--gv-shadow-lg);
+    padding: var(--gv-space-1);
+    min-width: 10rem;
+}
+
+.gridview-card__header-actions .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-2);
+    padding: var(--gv-space-2) var(--gv-space-3);
+    font-size: 0.8125rem;
+    color: var(--gv-text);
+    border-radius: var(--gv-radius-sm);
+    transition: background var(--gv-transition-fast);
+    text-decoration: none;
+}
+
+.gridview-card__header-actions .dropdown-item:hover {
+    background: var(--gv-bg-subtle);
+}
+
+.gridview-card__header-actions .dropdown-item--danger {
+    color: var(--gv-danger-text);
+}
+
+.gridview-card__header-actions .dropdown-item--danger:hover {
+    background: var(--gv-danger-bg);
+}
+
+/* Clipboard active state - indicates element is copied/cut */
+.gridview-card__header-actions .dropdown-item.is-clipboard-active {
+    background: var(--gv-accent-bg);
+    color: var(--gv-accent);
+    font-weight: 600;
+}
+
+.gridview-card__header-actions .dropdown-item.is-clipboard-active:hover {
+    background: var(--gv-accent-bg);
+}
+
+.gridview-card__header-actions .dropdown-divider {
+    margin: var(--gv-space-1) 0;
+    border-color: var(--gv-border-muted);
+}
+
+/* =============================================================================
+   Drag and Drop
+   ============================================================================= */
+
+/* Card wrapper needs relative positioning for drop indicators */
+.gridview-card-wrapper {
+    position: relative;
+}
+
+/* Card being dragged */
+.gridview-card.gridview-dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+    box-shadow: var(--gv-shadow-lg);
+}
+
+/* Global drag state */
+body.is-dragging {
+    cursor: grabbing !important;
+    user-select: none;
+}
+
+body.is-dragging .gridview-card {
+    cursor: grabbing !important;
+}
+
+body.is-dragging .gridview-card__header {
+    cursor: grabbing !important;
+}
+
+/* Drop indicators - gap-based approach using pseudo-elements */
+/* This shows a vertical line in the gap between cards */
+
+/* Drop before indicator - vertical line on the left side of the wrapper */
+.gridview-card-wrapper.gridview-drop-before::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--gv-space-4) * -0.5 - 2px);
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--gv-accent);
+    border-radius: 2px;
+    z-index: 10;
+    animation: drop-indicator-pulse 1s ease-in-out infinite;
+}
+
+/* Drop after indicator - vertical line on the right side of the wrapper */
+.gridview-card-wrapper.gridview-drop-after::after {
+    content: '';
+    position: absolute;
+    right: calc(var(--gv-space-4) * -0.5 - 2px);
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--gv-accent);
+    border-radius: 2px;
+    z-index: 10;
+    animation: drop-indicator-pulse 1s ease-in-out infinite;
+}
+
+/* First card in grid - indicator needs to be inside */
+.gridview-card-wrapper:first-child.gridview-drop-before::before {
+    left: 0;
+}
+
+/* Last card in grid - indicator needs to be inside */
+.gridview-card-wrapper:last-child.gridview-drop-after::after {
+    right: 0;
+}
+
+/* Pulse animation for drop indicator */
+@keyframes drop-indicator-pulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scaleY(1);
+    }
+    50% { 
+        opacity: 0.7; 
+        transform: scaleY(0.98);
+    }
+}
+
+/* Card highlight when it's a drop target */
+.gridview-card-wrapper.gridview-drop-before .gridview-card,
+.gridview-card-wrapper.gridview-drop-after .gridview-card {
+    border-color: var(--gv-accent-muted);
+    transition: border-color 0.15s ease;
+}
+
+/* Keyboard drag mode - visual indication */
+.gridview-card.gridview-keyboard-dragging {
+    outline: 2px dashed var(--gv-accent);
+    outline-offset: 4px;
+    box-shadow: var(--gv-shadow-lg);
+}
+
+/* Focus visible on drag handle for keyboard users */
+.gridview-card__drag:focus-visible {
+    outline: 2px solid var(--gv-accent);
+    outline-offset: 2px;
+    border-radius: var(--gv-radius-sm);
+}
+
+/* Note: Drop indicator classes are now applied to .gridview-card-wrapper, not .gridview-card */
+
+/* =============================================================================
+   End Dropzone - Drop target after last item
+   ============================================================================= */
+
+.gridview-end-dropzone {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    border: 2px dashed var(--gv-border);
+    border-radius: var(--gv-radius-lg);
+    background: var(--gv-bg-subtle);
+    color: var(--gv-text-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: 
+        border-color var(--gv-transition),
+        background var(--gv-transition),
+        color var(--gv-transition);
+}
+
+/* Show end dropzone during drag operations */
+body.is-dragging .gridview-end-dropzone {
+    display: flex;
+}
+
+/* Hover state when dragging over */
+.gridview-end-dropzone.gridview-drop-active {
+    border-color: var(--gv-accent);
+    background: var(--gv-accent-bg);
+    color: var(--gv-accent);
+}
+
+.gridview-end-dropzone__label {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-2);
+    pointer-events: none;
+}
+
+/* Keyboard navigation - show during keyboard drag */
+body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
+    display: flex;
+}
+
+/* Active state for keyboard navigation */
+.gridview-end-dropzone.gridview-keyboard-target {
+    border-color: var(--gv-accent);
+    background: var(--gv-accent-bg);
+    color: var(--gv-accent);
+    outline: 2px solid var(--gv-accent);
+    outline-offset: 2px;
+}
+
+/* =============================================================================
+   Table Header - Recordlist styling (matches TYPO3 core exactly)
+   ============================================================================= */
+
+.recordlist-gridview-container .recordlist {
+    margin-bottom: var(--gv-space-6);
+}
+
+.recordlist-gridview-container .recordlist-heading {
+    background: var(--gv-bg);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius) var(--gv-radius) 0 0;
+    padding: var(--gv-space-3) var(--gv-space-4);
+}
+
+.recordlist-gridview-container .recordlist-heading-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-4);
+    flex-wrap: wrap;
+}
+
+.recordlist-gridview-container .recordlist-heading-title {
+    flex: 0 0 auto;
+}
+
+.recordlist-gridview-container .recordlist-heading-title a {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-1);
+    color: var(--gv-text);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color var(--gv-transition-fast);
+}
+
+.recordlist-gridview-container .recordlist-heading-title a:hover {
+    color: var(--gv-accent);
+}
+
+.recordlist-gridview-container .recordlist-heading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--gv-space-3);
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+/* Consistent button sizing in action bar */
+.recordlist-gridview-container .recordlist-heading-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+}
+
+/* Sorting controls inline with actions - with separator */
+.recordlist-gridview-container .recordlist-heading-actions .gridview-sorting-wrapper {
+    display: flex;
+    align-items: center;
+    padding-right: var(--gv-space-3);
+    border-right: 1px solid var(--gv-border);
+}
+
+/* Legacy sorting controls (if used) */
+.recordlist-gridview-container .recordlist-heading-actions .gridview-sorting {
+    margin-right: var(--gv-space-3);
+    padding-right: var(--gv-space-3);
+    border-right: 1px solid var(--gv-border);
+}
+
+/* Button group alignment */
+.recordlist-gridview-container .recordlist-heading-actions .btn-group {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+/* =============================================================================
+   Search Input
+   ============================================================================= */
+
+.gridview-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.gridview-search__input {
+    width: 100%;
+    min-width: 10rem;
+    max-width: 16rem;
+    padding: var(--gv-space-1) var(--gv-space-2) var(--gv-space-1) var(--gv-space-6);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gv-text);
+    background-color: var(--gv-bg);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    transition: border-color var(--gv-transition-fast), box-shadow var(--gv-transition-fast);
+}
+
+.gridview-search__input::placeholder {
+    color: var(--gv-text-subtle);
+    font-weight: 400;
+}
+
+.gridview-search__input:hover {
+    border-color: var(--gv-text-subtle);
+}
+
+.gridview-search__input:focus {
+    outline: none;
+    border-color: var(--gv-accent);
+    box-shadow: 0 0 0 2px var(--gv-accent-bg);
+}
+
+/* Clear button on search input (native) */
+.gridview-search__input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    height: 1rem;
+    width: 1rem;
+    cursor: pointer;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M18 6L6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+.gridview-search__icon {
+    position: absolute;
+    left: var(--gv-space-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gv-text-subtle);
+    pointer-events: none;
+}
+
+.gridview-search__icon .icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* =============================================================================
+   Sorting Controls
+   ============================================================================= */
+
+.gridview-sorting {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-2);
+}
+
+.gridview-sorting__controls {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-2);
+}
+
+.gridview-sorting__label {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-1);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gv-text-muted);
+    white-space: nowrap;
+    margin: 0;
+}
+
+.gridview-sorting__select {
+    min-width: 8rem;
+    max-width: 12rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: var(--gv-space-1) var(--gv-space-6) var(--gv-space-1) var(--gv-space-2);
+    background-color: var(--gv-bg);
+    color: var(--gv-text);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    cursor: pointer;
+    transition: border-color var(--gv-transition-fast);
+}
+
+.gridview-sorting__select:hover {
+    border-color: var(--gv-text-subtle);
+}
+
+.gridview-sorting__select:focus {
+    outline: 2px solid var(--gv-accent);
+    outline-offset: 1px;
+    border-color: var(--gv-accent);
+}
+
+.gridview-sorting__direction {
+    display: flex;
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius-sm);
+    overflow: hidden;
+}
+
+.gridview-sorting__direction-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: none;
+    background: var(--gv-bg);
+    color: var(--gv-text-muted);
+    cursor: pointer;
+    transition: 
+        background var(--gv-transition-fast),
+        color var(--gv-transition-fast);
+}
+
+.gridview-sorting__direction-btn:not(:last-child) {
+    border-right: 1px solid var(--gv-border);
+}
+
+.gridview-sorting__direction-btn:hover {
+    background: var(--gv-bg-subtle);
+    color: var(--gv-text);
+}
+
+.gridview-sorting__direction-btn.active {
+    background: var(--gv-accent);
+    color: white;
+}
+
+.gridview-sorting__active {
+    margin-left: var(--gv-space-2);
+}
+
+.gridview-sorting__active .badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.125rem 0.375rem;
+    background: var(--gv-accent-bg);
+    color: var(--gv-accent);
+    border-radius: var(--gv-radius-sm);
+}
+
+/* Responsive sorting */
+@media (max-width: 600px) {
+    .recordlist-gridview-container .recordlist-heading-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--gv-space-3);
+    }
+    
+    .gridview-sorting {
+        width: 100%;
+    }
+    
+    .gridview-sorting__controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .gridview-sorting__select {
+        flex: 1;
+        max-width: none;
+    }
+}
+
+/* =============================================================================
+   Empty State
+   ============================================================================= */
+
+.gridview-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--gv-space-6);
+    text-align: center;
+    color: var(--gv-text-muted);
+}
+
+.gridview-empty__icon {
+    font-size: 2rem;
+    margin-bottom: var(--gv-space-3);
+    opacity: 0.5;
+}
+
+.gridview-empty__text {
+    font-size: 0.875rem;
+}
+
+/* =========================================================================
+   Sorting Mode Toggle - Segmented Control Style (TYPO3 Styleguide)
+   Uses TYPO3 CSS variables for proper theme integration
+   ========================================================================= */
+
+.gridview-sorting-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gridview-sorting-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--typo3-text-color-variant, #6b7280);
+}
+
+.gridview-sorting-toggle {
+    display: inline-flex;
+    background: var(--typo3-surface-container-low, #e5e7eb);
+    border: 1px solid var(--typo3-component-border-color, transparent);
+    border-radius: var(--typo3-component-border-radius, 6px);
+    padding: 2px;
+    gap: 2px;
+}
+
+.gridview-sorting-toggle__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    border-radius: calc(var(--typo3-component-border-radius, 6px) - 2px);
+    background: transparent;
+    color: var(--typo3-text-color-variant, #6b7280);
+    transition: all 0.15s ease-in-out;
+    cursor: pointer;
+}
+
+.gridview-sorting-toggle__btn .icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+}
+
+.gridview-sorting-toggle__btn:hover {
+    background: var(--typo3-surface-container-high, rgba(255, 255, 255, 0.5));
+    color: var(--typo3-text-color-base, #374151);
+    text-decoration: none;
+}
+
+.gridview-sorting-toggle__btn:hover .icon {
+    opacity: 1;
+}
+
+/* Active state - elevated appearance using TYPO3 variables */
+.gridview-sorting-toggle__btn--active {
+    background: var(--typo3-component-bg, #ffffff);
+    color: var(--typo3-state-default-primary-color, #1d4ed8);
+    box-shadow: var(--typo3-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.1));
+}
+
+.gridview-sorting-toggle__btn--active .icon {
+    opacity: 1;
+}
+
+.gridview-sorting-toggle__btn--active:hover {
+    background: var(--typo3-component-bg, #ffffff);
+    color: var(--typo3-state-hover-primary-color, #1e40af);
+}
+
+/* Remove old button group styling - not needed for pill design */
+.gridview-sorting-toggle > .btn:not(:first-child),
+.gridview-sorting-toggle > a:not(:first-child),
+.gridview-sorting-toggle > .btn-group:not(:first-child) > .btn {
+    margin-left: 0;
+}
+
+.gridview-sorting-toggle > .btn,
+.gridview-sorting-toggle > a {
+    border-radius: 4px;
+}
+
+.gridview-sorting-toggle .btn-group:first-child .btn {
+    border-radius: 4px;
+}
+
+/* Smaller button styling for btn-sm within toggle */
+.gridview-sorting-toggle .btn-sm,
+.gridview-sorting-toggle .btn.btn-sm {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+}
+
+.gridview-sorting-toggle .btn-sm .icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Dropdown menu styling within toggle */
+.gridview-sorting-toggle .dropdown-menu {
+    min-width: 8rem;
+    font-size: 0.75rem;
+    border-radius: var(--typo3-component-border-radius, 4px);
+    box-shadow: var(--typo3-shadow-3, 0 4px 12px rgba(0, 0, 0, 0.15));
+    border: 1px solid var(--typo3-component-border-color, #d1d5db);
+}
+
+.gridview-sorting-toggle .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--typo3-component-color, #374151);
+}
+
+.gridview-sorting-toggle .dropdown-item .icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+}
+
+.gridview-sorting-toggle .dropdown-item:hover {
+    background: var(--typo3-surface-container-default, #f3f4f6);
+}
+
+.gridview-sorting-toggle .dropdown-item.active {
+    background: var(--typo3-surface-container-info, #eff6ff);
+    color: var(--typo3-state-default-info-color, #1d4ed8);
+}
+
+.gridview-sorting-toggle .dropdown-item.active .icon {
+    opacity: 1;
+}
+
+/* Dark mode adjustments - using TYPO3 CSS variables */
+[data-color-scheme="dark"] .gridview-sorting-label {
+    color: var(--typo3-text-color-variant, #9ca3af);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle {
+    background: var(--typo3-surface-container-low, #374151);
+    border-color: var(--typo3-component-border-color, #4b5563);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle__btn {
+    color: var(--typo3-text-color-variant, #9ca3af);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle__btn:hover {
+    background: var(--typo3-surface-container-high, rgba(255, 255, 255, 0.1));
+    color: var(--typo3-text-color-base, #e5e7eb);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle__btn--active {
+    background: var(--typo3-component-bg, #1f2937);
+    color: var(--typo3-state-default-primary-color, #60a5fa);
+    box-shadow: var(--typo3-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.3));
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle__btn--active:hover {
+    color: var(--typo3-state-hover-primary-color, #93c5fd);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle .dropdown-menu {
+    background: var(--typo3-component-bg, #1f2937);
+    border-color: var(--typo3-component-border-color, #374151);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle .dropdown-item {
+    color: var(--typo3-component-color, #e5e7eb);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle .dropdown-item:hover {
+    background: var(--typo3-surface-container-default, #374151);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle .dropdown-item.active {
+    background: var(--typo3-surface-container-info, rgba(59, 130, 246, 0.15));
+    color: var(--typo3-state-default-info-color, #60a5fa);
+}
+
+/* System preference dark mode - mirrors explicit dark mode */
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .gridview-sorting-label {
+        color: var(--typo3-text-color-variant, #9ca3af);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle {
+        background: var(--typo3-surface-container-low, #374151);
+        border-color: var(--typo3-component-border-color, #4b5563);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn {
+        color: var(--typo3-text-color-variant, #9ca3af);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn:hover {
+        background: var(--typo3-surface-container-high, rgba(255, 255, 255, 0.1));
+        color: var(--typo3-text-color-base, #e5e7eb);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn--active {
+        background: var(--typo3-component-bg, #1f2937);
+        color: var(--typo3-state-default-primary-color, #60a5fa);
+        box-shadow: var(--typo3-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.3));
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn--active:hover {
+        color: var(--typo3-state-hover-primary-color, #93c5fd);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle .dropdown-menu {
+        background: var(--typo3-component-bg, #1f2937);
+        border-color: var(--typo3-component-border-color, #374151);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle .dropdown-item {
+        color: var(--typo3-component-color, #e5e7eb);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle .dropdown-item:hover {
+        background: var(--typo3-surface-container-default, #374151);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle .dropdown-item.active {
+        background: var(--typo3-surface-container-info, rgba(59, 130, 246, 0.15));
+        color: var(--typo3-state-default-info-color, #60a5fa);
+    }
+}
+
+/* =========================================================================
+   Sorting Dropdown Disabled State
+   ========================================================================= */
+
+.gridview-sorting-dropdown {
+    display: inline-block;
+}
+
+.gridview-sorting--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.gridview-sorting--disabled .btn,
+.gridview-sorting--disabled .dropdown-toggle {
+    cursor: not-allowed;
+}

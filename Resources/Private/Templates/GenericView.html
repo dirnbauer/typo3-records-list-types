@@ -1,0 +1,154 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Generic View Template
+    
+    This is a base template for custom view types registered via TSconfig.
+    Copy this template to create your own custom view.
+    
+    Available variables:
+    - pageId: Current page ID
+    - tableData: Array of table data, each containing:
+      - tableName: Database table name
+      - tableLabel: Human-readable table label
+      - tableIcon: Icon identifier for the table
+      - tableConfig: Table configuration from TSconfig
+      - records: Array of record data with displayValues
+      - recordCount: Number of records
+      - actionButtons: Rendered action button HTML
+      - singleTableUrl: URL to filter by this table
+      - clearTableUrl: URL to clear table filter
+      - displayColumns: Columns to display
+      - sortableFields: Fields available for sorting
+      - sortField: Current sort field
+      - sortDirection: Current sort direction (asc/desc)
+    - currentTable: Currently filtered table (empty if showing all)
+    - searchTerm: Current search term
+    - viewMode: Current view mode identifier
+    - viewConfig: View type configuration from registry
+</f:comment>
+
+<div class="recordlist-genericview-container">
+
+    <f:if condition="{tableData}">
+        <f:then>
+            <f:for each="{tableData}" as="table">
+                <div class="recordlist" id="t3-table-{table.tableName}">
+                    <f:comment>Table header</f:comment>
+                    <div class="recordlist-heading">
+                        <div class="recordlist-heading-row">
+                            <div class="recordlist-heading-title">
+                                <f:if condition="{currentTable}">
+                                    <f:then>
+                                        <a href="{table.clearTableUrl}">
+                                            <span class="fw-bold">{table.tableLabel}</span>
+                                            <span>({table.recordCount})</span>
+                                            <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
+                                        </a>
+                                    </f:then>
+                                    <f:else>
+                                        <a href="{table.singleTableUrl}">
+                                            <span class="fw-bold">{table.tableLabel}</span>
+                                            <span>({table.recordCount})</span>
+                                            <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
+                                        </a>
+                                    </f:else>
+                                </f:if>
+                            </div>
+
+                            <div class="recordlist-heading-actions">
+                                <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
+                                <f:if condition="{table.sortingDropdownHtml}">
+                                    <f:format.raw>{table.sortingDropdownHtml}</f:format.raw>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.newRecordButton}">
+                                    <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                                </f:if>
+                                
+                                <f:if condition="{table.actionButtons.downloadButton}">
+                                    <f:format.raw>{table.actionButtons.downloadButton}</f:format.raw>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.collapseButton}">
+                                    <f:format.raw>{table.actionButtons.collapseButton}</f:format.raw>
+                                </f:if>
+                            </div>
+                        </div>
+                    </div>
+
+                    <f:comment>Records list - customize this section for your view type</f:comment>
+                    <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
+                        <div class="genericview-list p-3">
+                            <f:for each="{table.records}" as="record">
+                                <f:comment>
+                                    Replace this with your custom card/row partial:
+                                    <f:render partial="MyCustomCard" arguments="{record: record, tableConfig: table.tableConfig}" />
+                                </f:comment>
+                                
+                                <div class="genericview-item card mb-2">
+                                    <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+                                        <f:comment>Icon</f:comment>
+                                        <span class="text-muted">
+                                            <core:icon identifier="{record.iconIdentifier}" size="small" />
+                                        </span>
+                                        
+                                        <f:comment>UID</f:comment>
+                                        <span class="badge bg-secondary bg-opacity-25 text-muted">#{record.uid}</span>
+                                        
+                                        <f:comment>Title with edit link</f:comment>
+                                        <div class="flex-grow-1">
+                                            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" class="text-decoration-none fw-medium">
+                                                {record.title}
+                                            </be:link.editRecord>
+                                        </div>
+                                        
+                                        <f:comment>Display fields</f:comment>
+                                        <f:for each="{record.displayValues}" as="fieldData">
+                                            <f:if condition="!{fieldData.isLabelField} && !{fieldData.isEmpty}">
+                                                <span class="text-muted small" title="{fieldData.label}">
+                                                    {fieldData.formatted -> f:format.crop(maxCharacters: 30, append: '…')}
+                                                </span>
+                                            </f:if>
+                                        </f:for>
+                                        
+                                        <f:comment>Actions</f:comment>
+                                        <div class="btn-group btn-group-sm">
+                                            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
+                                                class="btn btn-outline-primary btn-sm" title="Edit">
+                                                <core:icon identifier="actions-open" size="small" />
+                                            </be:link.editRecord>
+                                            <button type="button" 
+                                                    class="btn btn-outline-danger btn-sm"
+                                                    title="Delete"
+                                                    data-gridview-action="delete"
+                                                    data-table="{record.tableName}"
+                                                    data-uid="{record.uid}">
+                                                <core:icon identifier="actions-edit-delete" size="small" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </f:for>
+                        </div>
+                    </div>
+                </div>
+            </f:for>
+        </f:then>
+        <f:else>
+            <div class="callout callout-info">
+                <div class="callout-body">
+                    <core:icon identifier="actions-info" size="small" />
+                    <span class="ms-2">No records found on this page.</span>
+                </div>
+            </div>
+        </f:else>
+    </f:if>
+
+</div>
+
+</html>
+

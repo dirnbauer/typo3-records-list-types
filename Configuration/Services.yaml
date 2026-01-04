@@ -1,0 +1,56 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  # ==========================================================================
+  # Auto-register all classes in Classes/ directory
+  # Event listeners with #[AsEventListener] attribute are auto-registered
+  # ==========================================================================
+  Webconsulting\RecordsListTypes\:
+    resource: '../Classes/*'
+    exclude:
+      - '../Classes/Domain/Model/*'
+
+  # ==========================================================================
+  # Core Services
+  # ==========================================================================
+
+  # View Mode Resolver - Determines which view to render
+  Webconsulting\RecordsListTypes\Service\ViewModeResolver:
+    public: true
+
+  # Grid Configuration Service - Parses TSconfig for per-table settings
+  Webconsulting\RecordsListTypes\Service\GridConfigurationService:
+    public: true
+
+  # Record Grid Data Provider - Fetches records with FAL resolution
+  Webconsulting\RecordsListTypes\Service\RecordGridDataProvider:
+    public: true
+
+  # Thumbnail Service - Handles image thumbnail generation
+  Webconsulting\RecordsListTypes\Service\ThumbnailService:
+    public: true
+
+  # Middleware Diagnostic Service - Detects potential middleware interference
+  Webconsulting\RecordsListTypes\Service\MiddlewareDiagnosticService:
+    public: true
+
+  # View Type Registry - Manages custom view types from TSconfig
+  Webconsulting\RecordsListTypes\Service\ViewTypeRegistry:
+    public: true
+
+  # ==========================================================================
+  # Controllers
+  # ==========================================================================
+
+  # Extended RecordListController with multiple view types support (XClass)
+  Webconsulting\RecordsListTypes\Controller\RecordListController:
+    public: true
+    tags: ['backend.controller']
+
+  # AJAX Controller for view mode persistence
+  Webconsulting\RecordsListTypes\Controller\Ajax\ViewModeController:
+    public: true
+    tags: ['backend.controller']

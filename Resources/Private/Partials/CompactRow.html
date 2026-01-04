@@ -1,0 +1,149 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Compact View Row - Table row with fixed left/right columns
+</f:comment>
+
+<tr class="compactview-row{f:if(condition: record.hidden, then: ' compactview-row--hidden')}"
+    data-table="{record.tableName}"
+    data-uid="{record.uid}">
+    
+    <f:comment>Fixed left: Icon</f:comment>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
+        <span class="compactview-row__icon">
+            <core:icon identifier="{record.iconIdentifier}" size="small" />
+        </span>
+    </td>
+    
+    <f:comment>Fixed left: UID</f:comment>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--uid">
+        <span class="compactview-row__uid">{record.uid}</span>
+    </td>
+    
+    <f:comment>Fixed left: Title</f:comment>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--title">
+        <f:for each="{record.displayValues}" as="fieldData">
+            <f:if condition="{fieldData.isLabelField}">
+                <be:link.editRecord uid="{record.uid}" table="{record.tableName}" class="compactview-row__title-link">
+                    <f:if condition="{fieldData.formatted}">
+                        <f:then>{fieldData.formatted -> f:format.crop(maxCharacters: 50, append: '…')}</f:then>
+                        <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                    </f:if>
+                </be:link.editRecord>
+            </f:if>
+        </f:for>
+    </td>
+    
+    <f:comment>Scrollable: Dynamic field columns</f:comment>
+    <f:for each="{record.displayValues}" as="fieldData">
+        <f:if condition="!{fieldData.isLabelField}">
+            <td class="compactview-td" data-field="{fieldData.field}" data-type="{fieldData.type}">
+                <f:switch expression="{fieldData.type}">
+                    
+                    <f:case value="boolean">
+                        <f:if condition="{fieldData.raw}">
+                            <f:then>
+                                <span class="cv-badge cv-badge--yes">
+                                    <core:icon identifier="actions-check" size="small" />
+                                </span>
+                            </f:then>
+                            <f:else>
+                                <span class="cv-badge cv-badge--no">
+                                    <core:icon identifier="actions-close" size="small" />
+                                </span>
+                            </f:else>
+                        </f:if>
+                    </f:case>
+                    
+                    <f:case value="datetime">
+                        <f:if condition="{fieldData.formatted}">
+                            <f:then><span class="cv-datetime">{fieldData.formatted}</span></f:then>
+                            <f:else>—</f:else>
+                        </f:if>
+                    </f:case>
+                    
+                    <f:case value="number">
+                        <f:if condition="{fieldData.formatted}">
+                            <f:then><span class="cv-number">{fieldData.formatted}</span></f:then>
+                            <f:else>—</f:else>
+                        </f:if>
+                    </f:case>
+                    
+                    <f:case value="relation">
+                        <f:if condition="{fieldData.formatted}">
+                            <f:then>
+                                <span class="cv-relation">
+                                    <f:if condition="{fieldData.count}">
+                                        <span class="cv-relation__count">{fieldData.count}</span>
+                                    </f:if>
+                                    <span>{fieldData.formatted -> f:format.crop(maxCharacters: 20, append: '…')}</span>
+                                </span>
+                            </f:then>
+                            <f:else>—</f:else>
+                        </f:if>
+                    </f:case>
+                    
+                    <f:defaultCase>
+                        <f:if condition="{fieldData.formatted}">
+                            <f:then>{fieldData.formatted -> f:format.crop(maxCharacters: 25, append: '…')}</f:then>
+                            <f:else>—</f:else>
+                        </f:if>
+                    </f:defaultCase>
+                    
+                </f:switch>
+            </td>
+        </f:if>
+    </f:for>
+    
+    <f:comment>Fixed right: Visibility toggle</f:comment>
+    <td class="compactview-td compactview-td--fixed-right compactview-td--status">
+        <f:if condition="{record.hidden}">
+            <f:then>
+                <button type="button" 
+                        class="cv-toggle cv-toggle--hidden" 
+                        title="Hidden - click to show"
+                        data-gridview-action="show"
+                        data-table="{record.tableName}"
+                        data-uid="{record.uid}"
+                        data-hidden-field="{tableConfig.hiddenField}">
+                    <core:icon identifier="actions-toggle-off" size="small" />
+                </button>
+            </f:then>
+            <f:else>
+                <button type="button" 
+                        class="cv-toggle cv-toggle--visible" 
+                        title="Visible - click to hide"
+                        data-gridview-action="hide"
+                        data-table="{record.tableName}"
+                        data-uid="{record.uid}"
+                        data-hidden-field="{tableConfig.hiddenField}">
+                    <core:icon identifier="actions-toggle-on" size="small" />
+                </button>
+            </f:else>
+        </f:if>
+    </td>
+    
+    <f:comment>Fixed right: Edit</f:comment>
+    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
+        <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
+            class="cv-action cv-action--primary" title="Edit">
+            <core:icon identifier="actions-open" size="small" />
+        </be:link.editRecord>
+    </td>
+    
+    <f:comment>Fixed right: Delete</f:comment>
+    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
+        <button type="button" class="cv-action cv-action--danger" 
+                title="Delete"
+                data-gridview-action="delete"
+                data-table="{record.tableName}"
+                data-uid="{record.uid}">
+            <core:icon identifier="actions-edit-delete" size="small" />
+        </button>
+    </td>
+</tr>
+
+</html>

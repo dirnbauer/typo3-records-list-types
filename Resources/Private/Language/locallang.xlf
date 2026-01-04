@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="messages" date="2024-12-31T12:00:00Z" product-name="records_list_types">
+        <header/>
+        <body>
+            <trans-unit id="viewMode.list" resname="viewMode.list">
+                <source>List View</source>
+            </trans-unit>
+            <trans-unit id="viewMode.grid" resname="viewMode.grid">
+                <source>Grid View</source>
+            </trans-unit>
+            <trans-unit id="viewMode.compact" resname="viewMode.compact">
+                <source>Compact View</source>
+            </trans-unit>
+            <trans-unit id="viewMode.teaser" resname="viewMode.teaser">
+                <source>Teaser List</source>
+            </trans-unit>
+            <trans-unit id="viewMode.switch.title" resname="viewMode.switch.title">
+                <source>Switch View Mode</source>
+            </trans-unit>
+            <trans-unit id="button.viewMode" resname="button.viewMode">
+                <source>View</source>
+            </trans-unit>
+            <trans-unit id="noRecords" resname="noRecords">
+                <source>No records found on this page.</source>
+            </trans-unit>
+            <trans-unit id="action.edit" resname="action.edit">
+                <source>Edit record</source>
+            </trans-unit>
+            <trans-unit id="action.hide" resname="action.hide">
+                <source>Hide record</source>
+            </trans-unit>
+            <trans-unit id="action.show" resname="action.show">
+                <source>Show record</source>
+            </trans-unit>
+            <trans-unit id="action.delete" resname="action.delete">
+                <source>Delete record</source>
+            </trans-unit>
+            <trans-unit id="action.newRecord" resname="action.newRecord">
+                <source>Create new record</source>
+            </trans-unit>
+            <trans-unit id="sorting" resname="sorting">
+                <source>Sorting</source>
+            </trans-unit>
+            <trans-unit id="sort.ascending" resname="sort.ascending">
+                <source>Sort ascending</source>
+            </trans-unit>
+            <trans-unit id="sort.descending" resname="sort.descending">
+                <source>Sort descending</source>
+            </trans-unit>
+            <trans-unit id="sort.default" resname="sort.default">
+                <source>Default</source>
+            </trans-unit>
+            <trans-unit id="sortingMode.label" resname="sortingMode.label">
+                <source>Order</source>
+            </trans-unit>
+            <trans-unit id="sortingMode.manual" resname="sortingMode.manual">
+                <source>Drag &amp; Drop</source>
+            </trans-unit>
+            <trans-unit id="sortingMode.field" resname="sortingMode.field">
+                <source>By Column</source>
+            </trans-unit>
+            <trans-unit id="sortingMode.manual.title" resname="sortingMode.manual.title">
+                <source>Drag and drop to reorder records</source>
+            </trans-unit>
+            <trans-unit id="sortingMode.field.title" resname="sortingMode.field.title">
+                <source>Sort by a specific column</source>
+            </trans-unit>
+            
+            <!-- Drag and Drop Accessibility -->
+            <trans-unit id="drag.title" resname="drag.title">
+                <source>Drag to reorder</source>
+            </trans-unit>
+            <trans-unit id="drag.ariaLabel" resname="drag.ariaLabel">
+                <source>Press Space to grab and reorder</source>
+            </trans-unit>
+            <trans-unit id="drag.instructions" resname="drag.instructions">
+                <source>Press Space or Enter to grab item. Use arrow keys to move. Press Space or Enter to drop, Escape to cancel.</source>
+            </trans-unit>
+            <trans-unit id="drag.grabbed" resname="drag.grabbed">
+                <source>Grabbed. Use arrow keys to move.</source>
+            </trans-unit>
+            <trans-unit id="drag.position" resname="drag.position">
+                <source>Position %d of %d</source>
+            </trans-unit>
+            <trans-unit id="drag.dropped" resname="drag.dropped">
+                <source>Dropped at position %d</source>
+            </trans-unit>
+            <trans-unit id="drag.cancelled" resname="drag.cancelled">
+                <source>Reorder cancelled</source>
+            </trans-unit>
+            <trans-unit id="drag.moved" resname="drag.moved">
+                <source>Item moved to position %d</source>
+            </trans-unit>
+            <trans-unit id="drag.dropHere" resname="drag.dropHere">
+                <source>Drop here</source>
+            </trans-unit>
+            <trans-unit id="drag.endPosition" resname="drag.endPosition">
+                <source>End position (after last item)</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

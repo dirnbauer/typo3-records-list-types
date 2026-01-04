@@ -1,0 +1,29 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    View Switcher Buttons
+    
+    This partial is used for rendering the List/Grid toggle buttons.
+    Note: The actual buttons are injected via GridViewButtonBarListener,
+    this partial is for standalone usage or custom implementations.
+</f:comment>
+
+<div class="btn-group btn-group-sm recordlist-gridview-switcher" role="group" aria-label="View mode">
+    <a href="{listViewUrl}" 
+       class="btn btn-default{f:if(condition: '{currentMode} == \'list\'', then: ' active')}"
+       data-gridview-toggle="list"
+       title="{f:translate(key: 'button.listView', extensionName: 'RecordsListTypes')}">
+        <core:icon identifier="actions-view-list" size="small" />
+    </a>
+    <a href="{gridViewUrl}" 
+       class="btn btn-default{f:if(condition: '{currentMode} == \'grid\'', then: ' active')}"
+       data-gridview-toggle="grid"
+       title="{f:translate(key: 'button.gridView', extensionName: 'RecordsListTypes')}">
+        <core:icon identifier="actions-viewmode-tiles" size="small" />
+    </a>
+</div>
+
+</html>
+
