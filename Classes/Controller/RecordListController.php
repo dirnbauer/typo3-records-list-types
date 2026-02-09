@@ -28,10 +28,14 @@ use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 use Webconsulting\RecordsListTypes\Service\ViewTypeRegistry;
 
 /**
- * Extended RecordListController with Grid View support.
+ * Extended RecordListController with multiple view mode support.
  *
  * This controller extends the core RecordListController to add
- * card-based Grid View rendering when displayMode=grid is set.
+ * alternative view modes (grid, compact, teaser, and custom types)
+ * alongside the standard list view.
+ *
+ * Each view mode has its own rendering method, Fluid template, and CSS.
+ * Custom view types can be registered via TSconfig or PSR-14 events.
  *
  * IMPORTANT: We replicate the parent's mainAction() initialization flow
  * to ensure all DocHeader buttons, clipboard, page context etc. work correctly.
@@ -62,8 +66,10 @@ final class RecordListController extends CoreRecordListController
      *
      * Supported modes:
      * - list: Standard table view (parent controller)
-     * - grid: Card-based grid view
-     * - compact: Compact single-line view
+     * - grid: Card-based grid view with thumbnails, drag-and-drop, and language flags
+     * - compact: Dense single-line table view with fixed columns
+     * - teaser: News-style card view with title, date, and description
+     * - Custom types registered via TSconfig or PSR-14 RegisterViewModesEvent
      *
      * We replicate the parent's initialization to ensure buttons and context are set up.
      */

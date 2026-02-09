@@ -13,7 +13,7 @@ use TYPO3\CMS\Core\SingletonInterface;
  * MiddlewareDiagnosticService - Detects potential middleware interference.
  *
  * This service analyzes the middleware stack and request attributes to identify
- * configurations that might interfere with the Grid View rendering.
+ * configurations that might interfere with alternative view mode rendering.
  *
  * Detection strategies:
  * 1. Static Analysis: Inspects middleware stack for non-core entries

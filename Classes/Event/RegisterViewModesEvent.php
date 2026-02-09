@@ -45,7 +45,7 @@ use InvalidArgumentException;
  * After registering a custom view mode, you need to:
  * 1. Add a template for it in your extension
  * 2. Handle rendering in a custom controller or via XClass
- * 3. Add it to the allowed views in TSconfig: mod.web_list.viewMode.allowed = list,grid,compact,kanban
+ * 3. Add it to the allowed views in TSconfig: mod.web_list.viewMode.allowed = list,grid,compact,teaser,kanban
  *
  * @see \Webconsulting\RecordsListTypes\Service\ViewModeResolver
  */

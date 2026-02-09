@@ -6,6 +6,9 @@
  * - WCAG 2.1 compliant keyboard navigation for drag and drop
  * - Screen reader support with ARIA live regions
  * - Record actions (hide/show, delete, clipboard, info, history)
+ * - Sorting controls (manual drag mode and field-based sorting)
+ * - Client-side search filtering
+ * - Scroll shadow detection for compact view
  */
 
 class GridViewActions {

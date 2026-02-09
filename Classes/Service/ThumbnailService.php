@@ -16,7 +16,7 @@ use TYPO3\CMS\Core\SingletonInterface;
  * ThumbnailService - Handles image thumbnail resolution and generation.
  *
  * Resolves FAL file references from records and prepares them for
- * display as thumbnails in the Grid View cards.
+ * display as thumbnails in Grid and Teaser view cards.
  */
 final class ThumbnailService implements SingletonInterface
 {

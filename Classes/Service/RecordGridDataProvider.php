@@ -19,10 +19,12 @@ use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * RecordGridDataProvider - Fetches records with resolved FAL references for Grid View.
+ * RecordGridDataProvider - Fetches and enriches records for alternative view modes.
  *
- * Provides record data enriched with thumbnails, icons, and other metadata
- * needed for card-based rendering in the Grid View.
+ * Provides record data enriched with thumbnails, icons, workspace state,
+ * and other metadata needed for card-based rendering in Grid, Compact,
+ * and Teaser views. Language information (flag identifiers) is added by
+ * the controller after this provider returns the base record data.
  */
 final class RecordGridDataProvider implements SingletonInterface
 {

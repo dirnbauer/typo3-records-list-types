@@ -8,10 +8,10 @@ use TYPO3\CMS\Backend\View\Event\ModifyDatabaseQueryForRecordListingEvent;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 
 /**
- * GridViewQueryListener - Ensures Grid View respects query modifications.
+ * GridViewQueryListener - Ensures alternative view modes respect query modifications.
  *
  * This listener observes query modifications made by other extensions
- * and ensures the Grid View uses the same modified queries.
+ * and ensures Grid, Compact, and Teaser views use the same modified queries.
  *
  * Note: This listener primarily serves as a marker to ensure compatibility
  * with other extensions that modify record list queries. The actual query

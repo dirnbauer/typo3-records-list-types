@@ -18,9 +18,10 @@ use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
  *
  * Supports multiple view modes:
  * - list: Standard table view (TYPO3 default)
- * - grid: Card-based grid view
- * - compact: Single-line compact view
- * - Custom modes can be registered via RegisterViewModesEvent
+ * - grid: Card-based grid view with thumbnails, drag-and-drop, and language flags
+ * - compact: Dense single-line table view with fixed columns
+ * - teaser: News-style card view with title, date, and description
+ * - Custom modes registered via RegisterViewModesEvent or TSconfig
  *
  * Resolution precedence:
  * 1. Request parameter (?displayMode=grid) - Highest priority, also saves preference
@@ -115,7 +116,7 @@ final class ViewModeResolver implements SingletonInterface
      * Get all registered view modes.
      *
      * Modes are collected from:
-     * 1. Built-in modes (list, grid, compact)
+     * 1. Built-in modes (list, grid, compact, teaser)
      * 2. Custom modes registered via RegisterViewModesEvent
      * 3. Custom modes defined in TSconfig (mod.web_list.viewMode.types.{id})
      *

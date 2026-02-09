@@ -25,8 +25,9 @@ use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 /**
  * GridViewButtonBarListener - Injects view mode toggle buttons into the DocHeader.
  *
- * Adds a dropdown for switching between different view modes (list, grid, compact)
- * when multiple modes are available, or nothing if only one mode is allowed.
+ * Adds a dropdown for switching between view modes (list, grid, compact, teaser,
+ * and any custom types) when multiple modes are available, or nothing if only
+ * one mode is allowed.
  */
 #[AsEventListener(event: ModifyButtonBarEvent::class)]
 final class GridViewButtonBarListener
