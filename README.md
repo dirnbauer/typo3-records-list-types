@@ -324,6 +324,10 @@ records_list_types/
 └── ext_localconf.php
 ```
 
+## Known Limitations
+
+- **Workspace support is experimental.** Visual indicators for workspace states are implemented, but workspace integration has not been extensively tested across all view modes and edge cases (e.g., drag-and-drop reordering within workspaces, publishing changes). If you encounter issues in a workspace environment, please [report them on GitHub](https://github.com/dirnbauer/typo3-records-list-types/issues).
+
 ## Documentation
 
 Comprehensive documentation is available in the `Documentation/` folder:

@@ -79,3 +79,32 @@ This distinction affects how records are displayed in Grid View:
 This is not a limitation of the extension but reflects TYPO3's
 underlying data model where pages serve a dual role as both content
 containers and tree nodes.
+
+.. _known-problems-workspace-support:
+
+Workspace support is experimental
+=================================
+
+While the extension includes visual indicators for workspace states
+(new, modified, moved, deleted records) and applies workspace overlays
+via :php:`BackendUtility::workspaceOL()`, **workspace integration has
+not been extensively tested** across all view modes and edge cases.
+
+Potential areas where issues may occur:
+
+- Drag-and-drop reordering of records within a workspace
+- Display of workspace-specific record states in Compact and Teaser views
+- Publishing or discarding changes made through alternative view modes
+- Records with complex versioning histories (multiple successive edits)
+
+If you encounter unexpected behaviour when using this extension in a
+workspace environment, please report it as an issue on the
+`GitHub issue tracker <https://github.com/dirnbauer/typo3-records-list-types/issues>`__.
+
+Include the following information in your report:
+
+- TYPO3 version and PHP version
+- Active view mode (Grid, Compact, Teaser)
+- Steps to reproduce the issue
+- Expected vs. actual behaviour
+- Any error messages from the TYPO3 log or browser console
