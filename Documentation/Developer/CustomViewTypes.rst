@@ -296,15 +296,17 @@ Configuration reference
     :type: boolean
     :default: ``1``
 
-    Use the editor's "Show columns" selection from TCA.
+    Controls how display columns are determined. See
+    :ref:`custom-view-types-columns` below.
 
 ..  confval:: types.<id>.displayColumns
     :name: conf-type-displaycolumns
     :type: string (comma-separated)
     :default: *(empty)*
 
-    Explicit list of fields. Special names: ``label`` (title field),
-    ``datetime`` (first date field), ``teaser`` (first description field).
+    Explicit list of fields (used when ``columnsFromTCA = 0``).
+    Special names: ``label`` (title field), ``datetime`` (first date
+    field), ``teaser`` (first description field).
 
 ..  confval:: types.<id>.itemsPerPage
     :name: conf-type-itemsperpage
@@ -312,6 +314,80 @@ Configuration reference
     :default: ``100``
 
     Records per page. Set to ``0`` to disable pagination.
+
+.. _custom-view-types-columns:
+
+Column display: columnsFromTCA vs displayColumns
+==================================================
+
+These two options control which fields appear in your view.
+
+columnsFromTCA = 1 (default)
+-----------------------------
+
+The view uses the same column selection as the standard TYPO3 List
+View, resolved in this order:
+
+1.  **Editor's "Show columns" selection** -- editors click the column
+    selector button in the List View header to pick visible columns.
+    Stored per-user per-table. Your custom view respects them
+    automatically.
+2.  **TSconfig showFields** -- fallback if the editor hasn't chosen
+    columns (``mod.web_list.table.<table>.showFields``).
+3.  **TCA searchFields** -- fallback if no TSconfig is set (the table's
+    most relevant fields from ``ctrl.searchFields``).
+4.  **Label field only** -- final fallback: just the record title.
+
+Ideal for **editor-controlled views** where users pick their own
+columns.
+
+columnsFromTCA = 0
+-------------------
+
+The view ignores the editor's column selection and uses the explicit
+``displayColumns`` list instead. The template always receives exactly
+the fields you specified.
+
+Ideal for **fixed-layout views** where the template is designed for
+specific fields.
+
+How the built-in views use it:
+
+-   **Grid** (``columnsFromTCA = 1``) -- editors choose columns via
+    the selector; each card shows those fields.
+-   **Compact** (``columnsFromTCA = 1``) -- editors choose columns;
+    each table row shows those fields.
+-   **Teaser** (``columnsFromTCA = 0``,
+    ``displayColumns = label,datetime,teaser``) -- always shows
+    title + date + description; the template expects exactly these.
+
+Example -- fixed columns:
+
+..  code-block:: typoscript
+    :caption: Page TSconfig
+
+    mod.web_list.viewMode.types.contacts {
+        label = Contact List
+        template = CompactView
+        columnsFromTCA = 0
+        displayColumns = name,email,phone,company
+    }
+
+Always shows name, email, phone, company -- regardless of the
+editor's column selector.
+
+Example -- editor-controlled columns:
+
+..  code-block:: typoscript
+    :caption: Page TSconfig
+
+    mod.web_list.viewMode.types.dashboard {
+        label = Dashboard
+        template = GridView
+        columnsFromTCA = 1
+    }
+
+Editors click "Show columns" to pick which fields appear on the cards.
 
 .. _custom-view-types-assets:
 

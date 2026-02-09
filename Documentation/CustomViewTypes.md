@@ -314,6 +314,56 @@ mod.web_list.gridView.table.sys_file_metadata {
 | `displayColumns` | string | *(empty)* | Comma-separated field list |
 | `itemsPerPage` | int | `100` | Records per page (`0` = no pagination) |
 
+### Column Display: `columnsFromTCA` vs `displayColumns`
+
+These two options control which fields appear in your view.
+
+**`columnsFromTCA = 1`** (default) -- the view uses the same column selection as the standard TYPO3 List View, resolved in this order:
+
+1. **Editor's "Show columns" selection** -- editors click the column selector button in the List View header to pick visible columns. These are stored per-user per-table. Your custom view automatically respects them.
+2. **TSconfig `showFields`** -- fallback if the editor hasn't chosen columns (`mod.web_list.table.<table>.showFields`).
+3. **TCA `searchFields`** -- fallback if no TSconfig is set (the table's most relevant fields).
+4. **Label field only** -- final fallback: just the record title field.
+
+This is ideal for **editor-controlled views** where users pick their own columns.
+
+**`columnsFromTCA = 0`** -- the view ignores the editor's column selection and uses the explicit `displayColumns` list instead. The template always receives exactly the fields you specified.
+
+This is ideal for **fixed-layout views** where the template is designed for specific fields.
+
+**How the built-in views use it:**
+
+| View | `columnsFromTCA` | `displayColumns` | Result |
+|------|:-:|---|---|
+| Grid | `1` | *(not set)* | Editors choose columns via selector; cards show those fields |
+| Compact | `1` | *(not set)* | Editors choose columns; table rows show those fields |
+| Teaser | `0` | `label,datetime,teaser` | Always title + date + description (template expects exactly these) |
+
+**Example -- fixed columns:**
+
+```tsconfig
+mod.web_list.viewMode.types.contacts {
+    label = Contact List
+    template = CompactView
+    columnsFromTCA = 0
+    displayColumns = name,email,phone,company
+}
+```
+
+Always shows exactly name, email, phone, company -- regardless of what the editor has selected in the column selector.
+
+**Example -- editor-controlled columns:**
+
+```tsconfig
+mod.web_list.viewMode.types.dashboard {
+    label = Dashboard
+    template = GridView
+    columnsFromTCA = 1
+}
+```
+
+Editors can click "Show columns" to pick which fields appear on the cards.
+
 ### Special Column Names
 
 When using `displayColumns`, these names are resolved automatically:
