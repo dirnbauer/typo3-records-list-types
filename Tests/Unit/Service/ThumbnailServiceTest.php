@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use stdClass;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\FileReference;
@@ -167,7 +168,7 @@ final class ThumbnailServiceTest extends TestCase
         // Simulate a non-FileReference object in the array
         $this->fileRepositoryMock
             ->method('findByRelation')
-            ->willReturn([new \stdClass()]);
+            ->willReturn([new stdClass()]);
 
         self::assertNull($this->subject->getFirstImage('tt_content', 1, 'image'));
     }
