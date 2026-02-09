@@ -249,28 +249,18 @@ final class ViewTypeRegistry implements SingletonInterface
     /**
      * Get CSS files for a view type.
      *
-     * Always includes base.css first (shared pagination, heading, sorting
-     * styles), followed by the view-specific CSS file(s).
+     * Always includes base.css first, followed by the view-specific CSS.
      *
      * @return array<int, string>
      */
     public function getCssFiles(string $typeId, int $pageId): array
     {
         $config = $this->getViewType($typeId, $pageId);
-        if ($config === null) {
-            return [self::BASE_CSS];
-        }
+        $css = (string)($config['css'] ?? '');
 
-        $files = [self::BASE_CSS];
-        $css = $config['css'] ?? null;
-        if ($css !== null && $css !== '' && $css !== []) {
-            $viewFiles = is_array($css)
-                ? array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $css)
-                : (is_scalar($css) ? [(string) $css] : []);
-            $files = array_merge($files, $viewFiles);
-        }
-
-        return array_values(array_unique($files));
+        return $css !== ''
+            ? [self::BASE_CSS, $css]
+            : [self::BASE_CSS];
     }
 
     /**
