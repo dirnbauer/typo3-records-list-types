@@ -7,7 +7,6 @@ namespace Webconsulting\RecordsListTypes\Service;
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Package\PackageManager;
-use TYPO3\CMS\Core\Service\DependencyOrderingService;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
@@ -41,7 +40,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
 
     public function __construct(
         private readonly PackageManager $packageManager,
-        private readonly DependencyOrderingService $dependencyOrderingService,
+        // DependencyOrderingService kept for potential future use
     ) {}
 
     /**
@@ -56,7 +55,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
 
         // 1. Check required request attributes (runtime check)
         $missingAttributes = $this->checkRequiredAttributes($request);
-        if (!empty($missingAttributes)) {
+        if ($missingAttributes !== []) {
             $warnings[] = sprintf(
                 'Missing required request attributes: %s. This may indicate middleware interference.',
                 implode(', ', $missingAttributes),
@@ -65,7 +64,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
 
         // 2. Check for non-core middlewares (static analysis)
         $nonCoreMiddlewares = $this->detectNonCoreMiddlewares();
-        if (!empty($nonCoreMiddlewares)) {
+        if ($nonCoreMiddlewares !== []) {
             // Only warn if there are many custom middlewares
             if (count($nonCoreMiddlewares) > 5) {
                 $warnings[] = sprintf(
@@ -81,7 +80,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         $uri = $request->getUri()->withQuery(http_build_query($queryParams));
 
         return [
-            'hasRisk' => !empty($warnings),
+            'hasRisk' => $warnings !== [],
             'warnings' => $warnings,
             'forceListViewUrl' => (string) $uri,
         ];
@@ -195,7 +194,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             ['normalizedParams', 'applicationType'],
         );
 
-        return !empty($criticalMissing);
+        return $criticalMissing !== [];
     }
 
     /**

@@ -16,6 +16,7 @@ use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Backend\Routing\Route;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Constants;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
@@ -113,7 +114,13 @@ final class GridViewButtonBarListener
         $lang = $this->getLanguageService();
 
         // Get current mode config for the dropdown label
-        $currentModeConfig = $allowedModes[$currentMode] ?? reset($allowedModes);
+        $currentModeConfig = $allowedModes[$currentMode] ?? null;
+        if ($currentModeConfig === null) {
+            $currentModeConfig = reset($allowedModes);
+        }
+        if ($currentModeConfig === false) {
+            return GeneralUtility::makeInstance(ComponentFactory::class)->createDropDownButton();
+        }
 
         $componentFactory = $this->getComponentFactory();
 
@@ -163,7 +170,11 @@ final class GridViewButtonBarListener
      */
     private function getLanguageService(): LanguageService
     {
-        return $GLOBALS['LANG'];
+        $lang = $GLOBALS['LANG'] ?? null;
+        if (!$lang instanceof LanguageService) {
+            throw new \RuntimeException('LanguageService not available', 1735600100);
+        }
+        return $lang;
     }
 
     /**
@@ -172,7 +183,7 @@ final class GridViewButtonBarListener
     private function isRecordsModule(ServerRequestInterface $request): bool
     {
         $route = $request->getAttribute('route');
-        if ($route !== null) {
+        if ($route instanceof \TYPO3\CMS\Core\Routing\Route) {
             $routePath = $route->getPath();
             if (str_contains($routePath, '/module/content/records')
                 || str_contains($routePath, '/module/web/list')) {
@@ -180,11 +191,12 @@ final class GridViewButtonBarListener
             }
 
             $moduleName = $route->getOption('moduleName');
-            if ($moduleName !== null && in_array($moduleName, Constants::MODULE_IDENTIFIERS, true)) {
+            if (is_string($moduleName) && in_array($moduleName, Constants::MODULE_IDENTIFIERS, true)) {
                 return true;
             }
 
-            $routeIdentifier = $route->getOption('_identifier') ?? '';
+            $routeIdentifier = $route->getOption('_identifier');
+            $routeIdentifier = is_string($routeIdentifier) ? $routeIdentifier : '';
             foreach (Constants::MODULE_IDENTIFIERS as $identifier) {
                 if (str_starts_with($routeIdentifier, $identifier)) {
                     return true;
@@ -193,8 +205,9 @@ final class GridViewButtonBarListener
         }
 
         $module = $request->getAttribute('module');
-        if ($module !== null && method_exists($module, 'getIdentifier')) {
-            $moduleIdentifier = $module->getIdentifier();
+        if (is_object($module) && method_exists($module, 'getIdentifier')) {
+            /** @var object $module */
+            $moduleIdentifier = (string) $module->getIdentifier();
             if (in_array($moduleIdentifier, Constants::MODULE_IDENTIFIERS, true)) {
                 return true;
             }
@@ -210,8 +223,9 @@ final class GridViewButtonBarListener
     {
         $queryParams = $request->getQueryParams();
 
-        if (isset($queryParams['id'])) {
-            return (int) $queryParams['id'];
+        $idParam = $queryParams['id'] ?? null;
+        if ($idParam !== null) {
+            return (int) $idParam;
         }
 
         $routeParams = $request->getAttribute('routing');

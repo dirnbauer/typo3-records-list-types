@@ -15,7 +15,6 @@ use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\FileReference;
 use TYPO3\CMS\Core\Resource\FileRepository;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
-use TYPO3\CMS\Core\Resource\ResourceFactory;
 use Webconsulting\RecordsListTypes\Service\ThumbnailService;
 
 /**
@@ -24,7 +23,6 @@ use Webconsulting\RecordsListTypes\Service\ThumbnailService;
 final class ThumbnailServiceTest extends TestCase
 {
     private FileRepository&MockObject $fileRepositoryMock;
-    private ResourceFactory&MockObject $resourceFactoryMock;
     private ThumbnailService $subject;
 
     protected function setUp(): void
@@ -32,11 +30,9 @@ final class ThumbnailServiceTest extends TestCase
         parent::setUp();
 
         $this->fileRepositoryMock = $this->createMock(FileRepository::class);
-        $this->resourceFactoryMock = $this->createMock(ResourceFactory::class);
 
         $this->subject = new ThumbnailService(
             $this->fileRepositoryMock,
-            $this->resourceFactoryMock,
         );
     }
 

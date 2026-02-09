@@ -14,6 +14,7 @@ use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
+use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -64,11 +65,6 @@ final class RecordGridDataProvider implements SingletonInterface
             $queryBuilder->setFirstResult($offset);
         }
 
-        // Note: We skip dispatching ModifyDatabaseQueryForRecordListingEvent here
-        // because it requires a DatabaseRecordList instance. The Grid View uses
-        // its own query building logic. Extensions that need to filter records
-        // should also listen to TCA restrictions or use other mechanisms.
-
         $result = $queryBuilder->executeQuery();
         $records = [];
 
@@ -117,7 +113,8 @@ final class RecordGridDataProvider implements SingletonInterface
                 ),
             );
 
-        return (int) $queryBuilder->executeQuery()->fetchOne();
+        $result = $queryBuilder->executeQuery()->fetchOne();
+        return is_int($result) || is_string($result) ? (int) $result : 0;
     }
 
     /**
@@ -128,13 +125,39 @@ final class RecordGridDataProvider implements SingletonInterface
     private function getBackendUserAuthentication(): BackendUserAuthentication
     {
         $backendUser = $GLOBALS['BE_USER'] ?? null;
-        if ($backendUser === null) {
+        if (!$backendUser instanceof BackendUserAuthentication) {
             throw new RuntimeException(
                 'No backend user available. RecordGridDataProvider requires an authenticated backend user.',
                 1735700000,
             );
         }
         return $backendUser;
+    }
+
+    /**
+     * Get the language service.
+     */
+    private function getLanguageService(): ?LanguageService
+    {
+        $lang = $GLOBALS['LANG'] ?? null;
+        return $lang instanceof LanguageService ? $lang : null;
+    }
+
+    /**
+     * Get TCA configuration for a table with proper typing.
+     *
+     * @return array{ctrl: array<string, mixed>, columns: array<string, array<string, mixed>>}
+     */
+    private function getTca(string $table): array
+    {
+        $tca = $GLOBALS['TCA'][$table] ?? [];
+        if (!is_array($tca)) {
+            return ['ctrl' => [], 'columns' => []];
+        }
+        $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
+        $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
+
+        return ['ctrl' => $ctrl, 'columns' => $columns];
     }
 
     /**
@@ -186,7 +209,8 @@ final class RecordGridDataProvider implements SingletonInterface
             $queryBuilder->orderBy($sortField, $direction);
         } else {
             // Default ordering by TCA default sortby or uid
-            $sortBy = $GLOBALS['TCA'][$table]['ctrl']['default_sortby'] ?? 'uid DESC';
+            $tca = $this->getTca($table);
+            $sortBy = (string) ($tca['ctrl']['default_sortby'] ?? 'uid DESC');
             $sortBy = str_replace('ORDER BY ', '', $sortBy);
             $sortParts = GeneralUtility::trimExplode(',', $sortBy);
 
@@ -222,14 +246,14 @@ final class RecordGridDataProvider implements SingletonInterface
         }
 
         // Check TCA ctrl fields that might exist
-        $tca = $GLOBALS['TCA'][$table] ?? [];
-        $ctrl = $tca['ctrl'] ?? [];
+        $tca = $this->getTca($table);
+        $ctrl = $tca['ctrl'];
 
         // Check if field is defined as a ctrl field (crdate, tstamp, sortby, etc.)
         $ctrlFields = [
-            'crdate' => $ctrl['crdate'] ?? null,
-            'tstamp' => $ctrl['tstamp'] ?? null,
-            'sorting' => $ctrl['sortby'] ?? null,
+            'crdate' => isset($ctrl['crdate']) && is_string($ctrl['crdate']) ? $ctrl['crdate'] : null,
+            'tstamp' => isset($ctrl['tstamp']) && is_string($ctrl['tstamp']) ? $ctrl['tstamp'] : null,
+            'sorting' => isset($ctrl['sortby']) && is_string($ctrl['sortby']) ? $ctrl['sortby'] : null,
         ];
 
         foreach ($ctrlFields as $alias => $actualField) {
@@ -254,9 +278,10 @@ final class RecordGridDataProvider implements SingletonInterface
     public function getSortableFields(string $table): array
     {
         $fields = [];
-        $tca = $GLOBALS['TCA'][$table] ?? [];
-        $ctrl = $tca['ctrl'] ?? [];
-        $tcaColumns = $tca['columns'] ?? [];
+        $tca = $this->getTca($table);
+        $ctrl = $tca['ctrl'];
+        $tcaColumns = $tca['columns'];
+        $langService = $this->getLanguageService();
 
         // Excluded fields (workspace, versioning, internal fields)
         $excludedFields = [
@@ -276,9 +301,10 @@ final class RecordGridDataProvider implements SingletonInterface
         ];
 
         // Add label field (title)
-        $labelField = $ctrl['label'] ?? '';
+        $labelField = is_string($ctrl['label'] ?? null) ? $ctrl['label'] : '';
         if ($labelField !== '' && isset($tcaColumns[$labelField])) {
-            $label = $tcaColumns[$labelField]['label'] ?? $labelField;
+            $colConfig = $tcaColumns[$labelField];
+            $label = is_string($colConfig['label'] ?? null) ? $colConfig['label'] : $labelField;
             $label = $this->translateLabel($label, $labelField);
             $fields[] = [
                 'field' => $labelField,
@@ -287,26 +313,38 @@ final class RecordGridDataProvider implements SingletonInterface
         }
 
         // Add creation date (use actual field name from TCA)
-        if (!empty($ctrl['crdate'])) {
+        $crdateField = is_string($ctrl['crdate'] ?? null) ? $ctrl['crdate'] : '';
+        if ($crdateField !== '') {
+            $translatedLabel = $langService !== null
+                ? $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.creationDate')
+                : '';
             $fields[] = [
-                'field' => $ctrl['crdate'],
-                'label' => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.creationDate') ?: 'Created',
+                'field' => $crdateField,
+                'label' => $translatedLabel !== '' ? $translatedLabel : 'Created',
             ];
         }
 
         // Add modification date (use actual field name from TCA)
-        if (!empty($ctrl['tstamp'])) {
+        $tstampField = is_string($ctrl['tstamp'] ?? null) ? $ctrl['tstamp'] : '';
+        if ($tstampField !== '') {
+            $translatedLabel = $langService !== null
+                ? $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.timestamp')
+                : '';
             $fields[] = [
-                'field' => $ctrl['tstamp'],
-                'label' => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.timestamp') ?: 'Modified',
+                'field' => $tstampField,
+                'label' => $translatedLabel !== '' ? $translatedLabel : 'Modified',
             ];
         }
 
         // Add sorting field if available
-        if (isset($ctrl['sortby'])) {
+        $sortbyField = is_string($ctrl['sortby'] ?? null) ? $ctrl['sortby'] : '';
+        if ($sortbyField !== '') {
+            $translatedLabel = $langService !== null
+                ? $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.sorting')
+                : '';
             $fields[] = [
-                'field' => $ctrl['sortby'],
-                'label' => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.sorting') ?: 'Sorting',
+                'field' => $sortbyField,
+                'label' => $translatedLabel !== '' ? $translatedLabel : 'Sorting',
             ];
         }
 
@@ -322,8 +360,8 @@ final class RecordGridDataProvider implements SingletonInterface
                 continue;
             }
 
-            $config = $fieldConfig['config'] ?? [];
-            $type = $config['type'] ?? '';
+            $config = is_array($fieldConfig['config'] ?? null) ? $fieldConfig['config'] : [];
+            $type = is_string($config['type'] ?? null) ? $config['type'] : '';
 
             // Skip excluded field types
             if (in_array($type, $excludedTypes, true)) {
@@ -331,17 +369,18 @@ final class RecordGridDataProvider implements SingletonInterface
             }
 
             // Skip relations with MM tables (complex to sort)
-            if (!empty($config['MM'])) {
+            $mm = $config['MM'] ?? null;
+            if (is_string($mm) && $mm !== '') {
                 continue;
             }
 
             // Skip large text fields (not useful for sorting)
-            if ($type === 'text' && ($config['rows'] ?? 1) > 3) {
+            if ($type === 'text' && ((int) ($config['rows'] ?? 1)) > 3) {
                 continue;
             }
 
             // Get field label and translate it
-            $label = $fieldConfig['label'] ?? $fieldName;
+            $label = is_string($fieldConfig['label'] ?? null) ? $fieldConfig['label'] : $fieldName;
             $label = $this->translateLabel($label, $fieldName);
 
             // Limit label length
@@ -372,20 +411,27 @@ final class RecordGridDataProvider implements SingletonInterface
     {
         // Empty label - return fallback
         if ($label === '') {
-            return $fallback ?: $label;
+            return $fallback !== '' ? $fallback : $label;
         }
+
+        $langService = $this->getLanguageService();
 
         // Traditional LLL: format
         if (str_starts_with($label, 'LLL:')) {
-            $translated = $GLOBALS['LANG']->sL($label);
-            return $translated !== '' ? $translated : ($fallback ?: $label);
+            if ($langService !== null) {
+                $translated = $langService->sL($label);
+                return $translated !== '' ? $translated : ($fallback !== '' ? $fallback : $label);
+            }
+            return $fallback !== '' ? $fallback : $label;
         }
 
         // TYPO3 v12+ translation domain format (contains a colon but doesn't start with LLL:)
-        // Examples: 'frontend.db.tt_content:header', 'core.messages:labels.depth_0'
         if (str_contains($label, ':')) {
-            $translated = $GLOBALS['LANG']->sL($label);
-            return $translated !== '' ? $translated : ($fallback ?: $label);
+            if ($langService !== null) {
+                $translated = $langService->sL($label);
+                return $translated !== '' ? $translated : ($fallback !== '' ? $fallback : $label);
+            }
+            return $fallback !== '' ? $fallback : $label;
         }
 
         // Plain string - return as-is
@@ -395,22 +441,19 @@ final class RecordGridDataProvider implements SingletonInterface
     /**
      * Apply search filter to the query builder.
      *
-     * Searches in the fields defined in TCA ctrl.searchFields, or falls back
-     * to the label field if no searchFields are defined.
-     *
      * @param QueryBuilder $queryBuilder The query builder to modify
      * @param string $table The database table name
      * @param string $searchTerm The search term
      */
     private function applySearchFilter(QueryBuilder $queryBuilder, string $table, string $searchTerm): void
     {
-        $tca = $GLOBALS['TCA'][$table] ?? [];
-        $ctrl = $tca['ctrl'] ?? [];
+        $tca = $this->getTca($table);
+        $ctrl = $tca['ctrl'];
 
         // Get searchable fields from TCA ctrl.searchFields or fall back to label field
-        $searchFieldsString = $ctrl['searchFields'] ?? '';
+        $searchFieldsString = is_string($ctrl['searchFields'] ?? null) ? $ctrl['searchFields'] : '';
         if ($searchFieldsString === '') {
-            $searchFieldsString = $ctrl['label'] ?? 'uid';
+            $searchFieldsString = is_string($ctrl['label'] ?? null) ? $ctrl['label'] : 'uid';
         }
 
         $searchFields = GeneralUtility::trimExplode(',', $searchFieldsString, true);
@@ -445,7 +488,7 @@ final class RecordGridDataProvider implements SingletonInterface
             }
         }
 
-        if (!empty($searchConstraints)) {
+        if ($searchConstraints !== []) {
             $queryBuilder->andWhere(
                 $queryBuilder->expr()->or(...$searchConstraints),
             );
@@ -463,10 +506,10 @@ final class RecordGridDataProvider implements SingletonInterface
      */
     private function enrichRecord(string $table, array $row, array $tableConfig, int $pageId): array
     {
-        $uid = (int) $row['uid'];
+        $uid = (int) ($row['uid'] ?? 0);
 
         // Get title
-        $titleField = $tableConfig['titleField'];
+        $titleField = is_string($tableConfig['titleField'] ?? null) ? $tableConfig['titleField'] : 'uid';
         $title = $row[$titleField] ?? '[No title]';
         if (is_array($title)) {
             $title = reset($title);
@@ -475,8 +518,9 @@ final class RecordGridDataProvider implements SingletonInterface
 
         // Get description
         $description = null;
-        if (!empty($tableConfig['descriptionField']) && isset($row[$tableConfig['descriptionField']])) {
-            $description = $row[$tableConfig['descriptionField']];
+        $descriptionField = is_string($tableConfig['descriptionField'] ?? null) ? $tableConfig['descriptionField'] : '';
+        if ($descriptionField !== '' && isset($row[$descriptionField])) {
+            $description = $row[$descriptionField];
             if (is_array($description)) {
                 $description = reset($description);
             }
@@ -487,11 +531,12 @@ final class RecordGridDataProvider implements SingletonInterface
         // Get thumbnail
         $thumbnail = null;
         $thumbnailUrl = null;
-        if ($tableConfig['preview'] && !empty($tableConfig['imageField'])) {
+        $imageField = is_string($tableConfig['imageField'] ?? null) ? $tableConfig['imageField'] : '';
+        if (($tableConfig['preview'] ?? false) === true && $imageField !== '') {
             $thumbnailData = $this->thumbnailService->getThumbnailData(
                 $table,
                 $uid,
-                $tableConfig['imageField'],
+                $imageField,
             );
             $thumbnail = $thumbnailData['file'];
             $thumbnailUrl = $thumbnailData['url'];
@@ -501,16 +546,17 @@ final class RecordGridDataProvider implements SingletonInterface
         $iconIdentifier = $this->getIconIdentifier($table, $row);
 
         // Check hidden status
-        $hiddenField = $GLOBALS['TCA'][$table]['ctrl']['enablecolumns']['disabled'] ?? null;
-        $hidden = $hiddenField ? (bool) ($row[$hiddenField] ?? false) : false;
+        $tca = $this->getTca($table);
+        $enableColumns = is_array($tca['ctrl']['enablecolumns'] ?? null) ? $tca['ctrl']['enablecolumns'] : [];
+        $hiddenField = is_string($enableColumns['disabled'] ?? null) ? $enableColumns['disabled'] : null;
+        $hidden = ($hiddenField !== null) ? (bool) ($row[$hiddenField] ?? false) : false;
 
         // Detect workspace state for visual indicators
-        // t3ver_state values: 0=default, 1=new, 2=deleted, 3=moved placeholder, 4=move pointer
         $workspaceState = $this->getWorkspaceState($row);
 
         return [
             'uid' => $uid,
-            'pid' => (int) $row['pid'],
+            'pid' => (int) ($row['pid'] ?? 0),
             'tableName' => $table,
             'title' => $title,
             'description' => $description,
@@ -540,9 +586,6 @@ final class RecordGridDataProvider implements SingletonInterface
     /**
      * Determine workspace state for visual indicators.
      *
-     * Returns a string identifier for the workspace state that can be used
-     * as a CSS class modifier for card styling.
-     *
      * @param array<string, mixed> $row The raw database row
      * @return string|null Workspace state: 'new', 'changed', 'move', 'deleted', or null for live/unchanged
      */
@@ -557,12 +600,6 @@ final class RecordGridDataProvider implements SingletonInterface
         // Check t3ver_state field
         $t3verState = (int) ($row['t3ver_state'] ?? 0);
 
-        // t3ver_state values (from TYPO3 VersionState):
-        // 0 = DEFAULT_STATE (live or unchanged in workspace)
-        // 1 = NEW_PLACEHOLDER (new record created in workspace)
-        // 2 = DELETE_PLACEHOLDER (record deleted in workspace)
-        // 3 = MOVE_PLACEHOLDER (original location of moved record)
-        // 4 = MOVE_POINTER (new location of moved record)
         return match ($t3verState) {
             1 => 'new',
             2 => 'deleted',
@@ -574,15 +611,11 @@ final class RecordGridDataProvider implements SingletonInterface
     /**
      * Check if a record has been modified in the current workspace.
      *
-     * A record is considered "changed" if it has a t3ver_oid pointing to a live record
-     * and t3ver_state is 0 (meaning it's a modified version, not new/deleted/moved).
-     *
      * @param array<string, mixed> $row The raw database row
      * @return bool True if the record is a workspace modification
      */
     private function isChangedInWorkspace(array $row): bool
     {
-        // If t3ver_oid > 0, this is a workspace version of a live record
         $t3verOid = (int) ($row['t3ver_oid'] ?? 0);
         return $t3verOid > 0;
     }
@@ -613,7 +646,7 @@ final class RecordGridDataProvider implements SingletonInterface
         $records = $this->getRecordsForTable($table, $pageId, $limit, $offset, $searchTerm, $sortField, $sortDirection);
 
         foreach ($records as &$record) {
-            $uid = $record['uid'];
+            $uid = (int) $record['uid'];
             $record['actions'] = $actionsMap[$uid] ?? [];
         }
 

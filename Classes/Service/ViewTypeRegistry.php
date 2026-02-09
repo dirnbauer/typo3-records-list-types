@@ -77,7 +77,7 @@ final class ViewTypeRegistry implements SingletonInterface
 
     /**
      * Cached view types per page
-     * @var array<int, array<string, array>>
+     * @var array<int, array<string, array<string, mixed>>>
      */
     private array $cache = [];
 
@@ -89,7 +89,7 @@ final class ViewTypeRegistry implements SingletonInterface
      * Get all registered view types for a page.
      *
      * @param int $pageId The page ID for TSconfig resolution
-     * @return array<string, array> Map of view type ID => configuration
+     * @return array<string, array<string, mixed>> Map of view type ID => configuration
      */
     public function getViewTypes(int $pageId): array
     {
@@ -134,7 +134,7 @@ final class ViewTypeRegistry implements SingletonInterface
      *
      * @param string $typeId The view type identifier
      * @param int $pageId The page ID for TSconfig resolution
-     * @return array|null The type configuration or null if not found
+     * @return array<string, mixed>|null The type configuration or null if not found
      */
     public function getViewType(string $typeId, int $pageId): ?array
     {
@@ -154,7 +154,7 @@ final class ViewTypeRegistry implements SingletonInterface
      * Get allowed view types for a page.
      *
      * @param int $pageId The page ID
-     * @return array<string, array> Filtered map of allowed view types
+     * @return array<string, array<string, mixed>> Filtered map of allowed view types
      */
     public function getAllowedViewTypes(int $pageId): array
     {
@@ -197,7 +197,7 @@ final class ViewTypeRegistry implements SingletonInterface
      *
      * @param string $typeId The view type identifier
      * @param int $pageId The page ID
-     * @return array{template: string, partial: string, templatePaths: array, partialPaths: array}
+     * @return array{template: string, partial: string, templateRootPaths: array<int, string>, partialRootPaths: array<int, string>, layoutRootPaths: array<int, string>}
      */
     public function getTemplatePaths(string $typeId, int $pageId): array
     {
@@ -214,19 +214,22 @@ final class ViewTypeRegistry implements SingletonInterface
         $layoutPaths = ['EXT:records_list_types/Resources/Private/Layouts/'];
 
         // Add custom paths from TSconfig if specified
-        if (!empty($config['templateRootPath'])) {
-            array_unshift($templatePaths, $config['templateRootPath']);
+        $templateRootPath = $config['templateRootPath'] ?? null;
+        if (is_string($templateRootPath) && $templateRootPath !== '') {
+            array_unshift($templatePaths, $templateRootPath);
         }
-        if (!empty($config['partialRootPath'])) {
-            array_unshift($partialPaths, $config['partialRootPath']);
+        $partialRootPath = $config['partialRootPath'] ?? null;
+        if (is_string($partialRootPath) && $partialRootPath !== '') {
+            array_unshift($partialPaths, $partialRootPath);
         }
-        if (!empty($config['layoutRootPath'])) {
-            array_unshift($layoutPaths, $config['layoutRootPath']);
+        $layoutRootPath = $config['layoutRootPath'] ?? null;
+        if (is_string($layoutRootPath) && $layoutRootPath !== '') {
+            array_unshift($layoutPaths, $layoutRootPath);
         }
 
         return [
-            'template' => $config['template'] ?? $this->getDefaultTemplateName($typeId),
-            'partial' => $config['partial'] ?? 'Card',
+            'template' => (string) ($config['template'] ?? $this->getDefaultTemplateName($typeId)),
+            'partial' => (string) ($config['partial'] ?? 'Card'),
             'templateRootPaths' => $templatePaths,
             'partialRootPaths' => $partialPaths,
             'layoutRootPaths' => $layoutPaths,
@@ -235,6 +238,8 @@ final class ViewTypeRegistry implements SingletonInterface
 
     /**
      * Get CSS files for a view type.
+     *
+     * @return array<int, string>
      */
     public function getCssFiles(string $typeId, int $pageId): array
     {
@@ -244,8 +249,9 @@ final class ViewTypeRegistry implements SingletonInterface
         }
 
         $files = [];
-        if (!empty($config['css'])) {
-            $files = is_array($config['css']) ? $config['css'] : [$config['css']];
+        $css = $config['css'] ?? null;
+        if ($css !== null && $css !== '' && $css !== []) {
+            $files = is_array($css) ? array_map('strval', $css) : [(string) $css];
         }
 
         return $files;
@@ -253,6 +259,8 @@ final class ViewTypeRegistry implements SingletonInterface
 
     /**
      * Get JS modules for a view type.
+     *
+     * @return array<int, string>
      */
     public function getJsModules(string $typeId, int $pageId): array
     {
@@ -262,8 +270,9 @@ final class ViewTypeRegistry implements SingletonInterface
         }
 
         $modules = ['@webconsulting/records-list-types/GridViewActions.js']; // Always include base
-        if (!empty($config['js'])) {
-            $custom = is_array($config['js']) ? $config['js'] : [$config['js']];
+        $js = $config['js'] ?? null;
+        if ($js !== null && $js !== '' && $js !== []) {
+            $custom = is_array($js) ? array_map('strval', $js) : [(string) $js];
             $modules = array_merge($modules, $custom);
         }
 
@@ -273,7 +282,7 @@ final class ViewTypeRegistry implements SingletonInterface
     /**
      * Get display columns configuration for a view type.
      *
-     * @return array{columns: string[], fromTCA: bool}
+     * @return array{columns: array<int, string>, fromTCA: bool}
      */
     public function getDisplayColumnsConfig(string $typeId, int $pageId): array
     {
@@ -284,10 +293,13 @@ final class ViewTypeRegistry implements SingletonInterface
         }
 
         $columns = [];
-        if (!empty($config['displayColumns'])) {
-            $columns = is_array($config['displayColumns'])
-                ? $config['displayColumns']
-                : GeneralUtility::trimExplode(',', $config['displayColumns'], true);
+        $displayColumns = $config['displayColumns'] ?? null;
+        if ($displayColumns !== null && $displayColumns !== '' && $displayColumns !== []) {
+            if (is_array($displayColumns)) {
+                $columns = array_map('strval', $displayColumns);
+            } else {
+                $columns = GeneralUtility::trimExplode(',', (string) $displayColumns, true);
+            }
         }
 
         $fromTCA = (bool) ($config['columnsFromTCA'] ?? true);
@@ -303,7 +315,7 @@ final class ViewTypeRegistry implements SingletonInterface
      */
     public function isBuiltinType(string $typeId): bool
     {
-        return isset(self::BUILTIN_TYPES[$typeId]) && !empty(self::BUILTIN_TYPES[$typeId]['builtin']);
+        return isset(self::BUILTIN_TYPES[$typeId]) && (self::BUILTIN_TYPES[$typeId]['builtin'] ?? false) === true;
     }
 
     /**
@@ -317,6 +329,9 @@ final class ViewTypeRegistry implements SingletonInterface
 
     /**
      * Normalize TSconfig to internal format.
+     *
+     * @param array<string, mixed> $config
+     * @return array<string, mixed>
      */
     private function normalizeConfig(array $config, string $typeId): array
     {

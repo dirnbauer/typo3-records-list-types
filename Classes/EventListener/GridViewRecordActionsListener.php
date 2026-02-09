@@ -23,23 +23,18 @@ use TYPO3\CMS\Core\SingletonInterface;
 #[AsEventListener]
 final class GridViewRecordActionsListener implements SingletonInterface
 {
-    /** @var array<string, array<int, array<string, mixed>>> Cached actions per table and record */
+    /** @var array<string, array<string, mixed>> Cached actions per table and record */
     private array $actionsCache = [];
 
     public function __invoke(ModifyRecordListRecordActionsEvent $event): void
     {
-        // In TYPO3 v14, we use getActions() to get the current actions
-        // and store them for potential Grid View usage
+        // In TYPO3 v14, we store event info for potential Grid View usage
         try {
-            $actions = $event->getActions();
-
-            // Store actions with a timestamp-based key for debugging
-            // The actual record context will be retrieved from the DatabaseRecordList
+            // Store a timestamp-based record for the latest action event
             $this->actionsCache['_latest'] = [
-                'actions' => $actions,
                 'timestamp' => time(),
             ];
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             // Silently fail - action caching is not critical
         }
     }
@@ -57,7 +52,7 @@ final class GridViewRecordActionsListener implements SingletonInterface
     /**
      * Get all cached actions.
      *
-     * @return array<string, array<int, array<string, mixed>>>
+     * @return array<string, array<string, mixed>>
      */
     public function getAllCachedActions(): array
     {
@@ -85,10 +80,13 @@ final class GridViewRecordActionsListener implements SingletonInterface
         // Filter to primary actions only
         $primaryActionKeys = ['edit', 'view', 'hide', 'unhide'];
         $actions = [];
+        $cachedActions = $cached['actions'] ?? [];
 
-        foreach ($cached['actions'] ?? [] as $key => $actionHtml) {
-            if (in_array($key, $primaryActionKeys, true) && is_string($actionHtml)) {
-                $actions[] = $actionHtml;
+        if (is_array($cachedActions)) {
+            foreach ($cachedActions as $key => $actionHtml) {
+                if (in_array($key, $primaryActionKeys, true) && is_string($actionHtml)) {
+                    $actions[] = $actionHtml;
+                }
             }
         }
 
@@ -112,9 +110,13 @@ final class GridViewRecordActionsListener implements SingletonInterface
         }
 
         $actions = [];
-        foreach ($cached['actions'] ?? [] as $actionHtml) {
-            if (is_string($actionHtml)) {
-                $actions[] = $actionHtml;
+        $cachedActions = $cached['actions'] ?? [];
+
+        if (is_array($cachedActions)) {
+            foreach ($cachedActions as $actionHtml) {
+                if (is_string($actionHtml)) {
+                    $actions[] = $actionHtml;
+                }
             }
         }
 
