@@ -69,11 +69,16 @@ final class RecordActionsViewHelper extends AbstractViewHelper
      */
     public function render(): string|array
     {
-        $table = (string) $this->arguments['table'];
-        $uid = (int) $this->arguments['uid'];
-        $group = (string) ($this->arguments['group'] ?? 'all');
-        $asArray = (bool) ($this->arguments['asArray'] ?? false);
-        $separator = (string) ($this->arguments['separator'] ?? '');
+        $tableRaw = $this->arguments['table'] ?? '';
+        $table = is_string($tableRaw) ? $tableRaw : '';
+        $uidRaw = $this->arguments['uid'] ?? 0;
+        $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+        $groupRaw = $this->arguments['group'] ?? 'all';
+        $group = is_string($groupRaw) ? $groupRaw : 'all';
+        $asArrayRaw = $this->arguments['asArray'] ?? false;
+        $asArray = $asArrayRaw === true;
+        $separatorRaw = $this->arguments['separator'] ?? '';
+        $separator = is_string($separatorRaw) ? $separatorRaw : '';
 
         // Get the actions listener (singleton)
         $listener = GeneralUtility::makeInstance(GridViewRecordActionsListener::class);

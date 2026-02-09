@@ -47,7 +47,11 @@ final class RecordListController extends CoreRecordListController
     protected function getViewTypeRegistry(): ViewTypeRegistry
     {
         if ($this->viewTypeRegistry === null) {
-            $this->viewTypeRegistry = GeneralUtility::getContainer()->get(ViewTypeRegistry::class);
+            $registry = GeneralUtility::getContainer()->get(ViewTypeRegistry::class);
+            if (!$registry instanceof ViewTypeRegistry) {
+                throw new \RuntimeException('ViewTypeRegistry not available from container', 1735600200);
+            }
+            $this->viewTypeRegistry = $registry;
         }
         return $this->viewTypeRegistry;
     }
@@ -121,24 +125,22 @@ final class RecordListController extends CoreRecordListController
             );
             $request = $request->withAttribute('pageContext', $this->pageContext);
         }
-        $this->moduleData?->set('languages', $languagesToDisplay);
+        $this->moduleData->set('languages', $languagesToDisplay);
 
         $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
-        if ($this->moduleData !== null) {
-            $backendUser->pushModuleData($this->moduleData->getModuleIdentifier(), $this->moduleData->toArray());
-        }
+        $backendUser->pushModuleData($this->moduleData->getModuleIdentifier(), $this->moduleData->toArray());
 
         // Load module configuration
         $this->modTSconfig = $this->pageContext->getModuleTsConfig('web_list');
 
         // Clipboard settings
         if (($this->modTSconfig['enableClipBoard'] ?? '') === 'activated') {
-            $this->moduleData?->set('clipBoard', true);
+            $this->moduleData->set('clipBoard', true);
             $this->allowClipboard = false;
         } elseif (($this->modTSconfig['enableClipBoard'] ?? '') === 'selectable') {
             $this->allowClipboard = true;
         } elseif (($this->modTSconfig['enableClipBoard'] ?? '') === 'deactivated') {
-            $this->moduleData?->set('clipBoard', false);
+            $this->moduleData->set('clipBoard', false);
             $this->allowClipboard = false;
         }
 
@@ -146,18 +148,20 @@ final class RecordListController extends CoreRecordListController
         $this->allowSearch = !(bool) ($this->modTSconfig['disableSearchBox'] ?? false);
         if ($this->searchTerm !== '') {
             $this->allowSearch = true;
-            $this->moduleData?->set('searchBox', true);
+            $this->moduleData->set('searchBox', true);
         }
         $searchLevelConfig = $this->modTSconfig['searchLevel'] ?? null;
-        $searchLevelDefault = is_array($searchLevelConfig) ? (int) ($searchLevelConfig['default'] ?? 0) : 0;
+        $searchLevelDefault = 0;
+        if (is_array($searchLevelConfig)) {
+            $rawDefault = $searchLevelConfig['default'] ?? 0;
+            $searchLevelDefault = is_numeric($rawDefault) ? (int) $rawDefault : 0;
+        }
         $searchLevels = (int) ($parsedBodyArray['search_levels'] ?? $queryParams['search_levels'] ?? $searchLevelDefault);
 
         // Create DatabaseRecordList (needed for URL building and other parent methods)
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
-        if ($this->moduleData !== null) {
-            $dbList->setModuleData($this->moduleData);
-        }
+        $dbList->setModuleData($this->moduleData);
         $dbList->calcPerms = $this->pageContext->pagePermissions;
         $dbList->returnUrl = $this->returnUrl;
         $dbList->showClipboardActions = true;
@@ -165,11 +169,14 @@ final class RecordListController extends CoreRecordListController
         $dbList->listOnlyInSingleTableMode = (bool) ($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
         $dbList->hideTables = (string) ($this->modTSconfig['hideTables'] ?? '');
         $dbList->hideTranslations = (string) ($this->modTSconfig['hideTranslations'] ?? '');
-        $dbList->tableTSconfigOverTCA = is_array($this->modTSconfig['table'] ?? null) ? $this->modTSconfig['table'] : [];
+        $tableOverTca = is_array($this->modTSconfig['table'] ?? null) ? $this->modTSconfig['table'] : [];
+        /** @var array<string, array<string>> $tableOverTca */
+        $dbList->tableTSconfigOverTCA = $tableOverTca;
         $dbList->allowedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['allowedNewTables'] ?? ''), true);
         $dbList->deniedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['deniedNewTables'] ?? ''), true);
+        /** @var array<string> $pageRecord */
         $pageRecord = $this->pageContext->pageRecord ?? [];
-        $dbList->pageRow = is_array($pageRecord) ? $pageRecord : [];
+        $dbList->pageRow = $pageRecord;
         $dbList->modTSconfig = $this->modTSconfig;
         $dbList->setLanguagesAllowedForUser($siteLanguages);
         $clickTitleMode = trim((string) ($this->modTSconfig['clickTitleMode'] ?? ''));
@@ -180,7 +187,7 @@ final class RecordListController extends CoreRecordListController
         }
 
         // Initialize clipboard
-        $clipboard = $this->initializeClipboard($request, (bool) ($this->moduleData?->get('clipBoard') ?? false));
+        $clipboard = $this->initializeClipboard($request, (bool) $this->moduleData->get('clipBoard'));
         $dbList->clipObj = $clipboard;
 
         // Dispatch additional content event
@@ -218,7 +225,8 @@ final class RecordListController extends CoreRecordListController
         if ($this->pageContext->pageId === 0) {
             $typo3ConfVars = is_array($GLOBALS['TYPO3_CONF_VARS'] ?? null) ? $GLOBALS['TYPO3_CONF_VARS'] : [];
             $sysConfig = is_array($typo3ConfVars['SYS'] ?? null) ? $typo3ConfVars['SYS'] : [];
-            $title = (string) ($sysConfig['sitename'] ?? '');
+            $sitenameVal = $sysConfig['sitename'] ?? '';
+            $title = is_string($sitenameVal) ? $sitenameVal : '';
         } else {
             $title = $this->pageContext->getPageTitle();
         }
@@ -231,20 +239,20 @@ final class RecordListController extends CoreRecordListController
 
         // Search box - use full searchLevels (grid/compact now support search properly)
         $searchBoxHtml = '';
-        if ($this->allowSearch && (bool) ($this->moduleData?->get('searchBox') ?? false)) {
+        if ($this->allowSearch && (bool) $this->moduleData->get('searchBox')) {
             $searchBoxHtml = $this->renderSearchBox($request, $dbList, $this->searchTerm, $searchLevels);
         }
 
         // Clipboard
         $clipboardHtml = '';
-        if ((bool) ($this->moduleData?->get('clipBoard') ?? false) && ($customContent !== '' || $clipboard->hasElements())) {
+        if ((bool) $this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
             $clipboardHtml = '<hr class="spacer"><typo3-backend-clipboard-panel return-url="' . htmlspecialchars((string) $dbList->listURL()) . '"></typo3-backend-clipboard-panel>';
         }
 
         // Set page title
         $view->setTitle(
-            (string) ($languageService->translate('title', 'backend.modules.list') ?? ''),
-            (string) $title,
+            $languageService->translate('title', 'backend.modules.list') ?? '',
+            $title,
         );
 
         // Add page breadcrumb
@@ -379,11 +387,13 @@ final class RecordListController extends CoreRecordListController
             // Check if table has sortby field for manual sorting
             $tcaForTable = $this->getTcaForTable($tableName);
             $tcaCtrl = $tcaForTable['ctrl'];
-            $sortbyFieldName = (string) ($tcaCtrl['sortby'] ?? '');
+            $sortbyVal = $tcaCtrl['sortby'] ?? '';
+            $sortbyFieldName = is_string($sortbyVal) ? $sortbyVal : '';
             $hasSortbyField = $sortbyFieldName !== '';
 
             // Get per-table sorting mode (manual or field)
-            $sortingMode = (string) ($sortingModeParams[$tableName] ?? '');
+            $sortingModeVal = $sortingModeParams[$tableName] ?? '';
+            $sortingMode = is_string($sortingModeVal) ? $sortingModeVal : '';
             // Default to 'manual' if table has sortby field and no custom sort is set
             if ($sortingMode === '' && $hasSortbyField) {
                 $sortingMode = 'manual';
@@ -393,8 +403,10 @@ final class RecordListController extends CoreRecordListController
 
             // Get per-table sorting parameters
             $tableSortParams = is_array($sortParams[$tableName] ?? null) ? $sortParams[$tableName] : [];
-            $sortField = (string) ($tableSortParams['field'] ?? '');
-            $sortDirection = (string) ($tableSortParams['direction'] ?? 'asc');
+            $sortFieldVal = $tableSortParams['field'] ?? '';
+            $sortField = is_string($sortFieldVal) ? $sortFieldVal : '';
+            $sortDirVal = $tableSortParams['direction'] ?? 'asc';
+            $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
             $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
 
             // When in manual sorting mode, use the sortby field
@@ -492,6 +504,13 @@ final class RecordListController extends CoreRecordListController
                         . '</div></div></div>';
                 }
 
+                // Compute last record UID for end dropzone (drag after last item)
+                $lastRecordUid = '';
+                if ($enrichedRecords !== []) {
+                    $lastUidVal = $enrichedRecords[array_key_last($enrichedRecords)]['uid'] ?? 0;
+                    $lastRecordUid = is_scalar($lastUidVal) ? (string) $lastUidVal : '';
+                }
+
                 $tableData[] = [
                     'tableName' => $tableName,
                     'tableIdentifier' => $tableIdentifier,
@@ -500,8 +519,7 @@ final class RecordListController extends CoreRecordListController
                     'tableConfig' => $tableConfig,
                     'records' => $enrichedRecords,
                     'recordCount' => $recordCount,
-                    // Last record UID for end dropzone (drag after last item)
-                    'lastRecordUid' => $enrichedRecords !== [] ? (string) $enrichedRecords[array_key_last($enrichedRecords)]['uid'] : '',
+                    'lastRecordUid' => $lastRecordUid,
                     // Action buttons rendered via TYPO3 API
                     'actionButtons' => $actionButtons,
                     // Sorting dropdown rendered via TYPO3 API
@@ -585,8 +603,10 @@ final class RecordListController extends CoreRecordListController
 
             // Get per-table sorting parameters
             $tableSortParams = is_array($sortParams[$tableName] ?? null) ? $sortParams[$tableName] : [];
-            $sortField = (string) ($tableSortParams['field'] ?? '');
-            $sortDirection = (string) ($tableSortParams['direction'] ?? 'asc');
+            $sortFieldVal = $tableSortParams['field'] ?? '';
+            $sortField = is_string($sortFieldVal) ? $sortFieldVal : '';
+            $sortDirVal = $tableSortParams['direction'] ?? 'asc';
+            $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
             $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
 
             // Use DatabaseRecordList's query builder for search (handles searchLevels properly)
@@ -737,8 +757,10 @@ final class RecordListController extends CoreRecordListController
 
             // Get per-table sorting parameters
             $tableSortParams = is_array($sortParams[$tableName] ?? null) ? $sortParams[$tableName] : [];
-            $sortField = (string) ($tableSortParams['field'] ?? '');
-            $sortDirection = (string) ($tableSortParams['direction'] ?? 'asc');
+            $sortFieldVal = $tableSortParams['field'] ?? '';
+            $sortField = is_string($sortFieldVal) ? $sortFieldVal : '';
+            $sortDirVal = $tableSortParams['direction'] ?? 'asc';
+            $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
             $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
 
             // Use DatabaseRecordList's query builder for search
@@ -868,7 +890,8 @@ final class RecordListController extends CoreRecordListController
         $tcaColumns = $tcaForTable['columns'];
 
         // 1. Label field (title) - always first
-        $labelField = (string) ($ctrl['label'] ?? 'uid');
+        $labelVal = $ctrl['label'] ?? 'uid';
+        $labelField = is_string($labelVal) ? $labelVal : 'uid';
         if (isset($tcaColumns[$labelField])) {
             $columns[] = [
                 'field' => $labelField,
@@ -888,8 +911,11 @@ final class RecordListController extends CoreRecordListController
             }
         }
         // Fall back to crdate if available
-        if ($dateField === null && ($ctrl['crdate'] ?? '') !== '') {
-            $dateField = (string) $ctrl['crdate'];
+        if ($dateField === null) {
+            $crdateVal = $ctrl['crdate'] ?? '';
+            if (is_string($crdateVal) && $crdateVal !== '') {
+                $dateField = $crdateVal;
+            }
         }
         if ($dateField !== null) {
             $columns[] = [
@@ -971,8 +997,10 @@ final class RecordListController extends CoreRecordListController
 
             // Get per-table sorting parameters
             $tableSortParams = is_array($sortParams[$tableName] ?? null) ? $sortParams[$tableName] : [];
-            $sortField = (string) ($tableSortParams['field'] ?? '');
-            $sortDirection = (string) ($tableSortParams['direction'] ?? 'asc');
+            $sortFieldVal = $tableSortParams['field'] ?? '';
+            $sortField = is_string($sortFieldVal) ? $sortFieldVal : '';
+            $sortDirVal = $tableSortParams['direction'] ?? 'asc';
+            $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
             $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
 
             // Get records using the standard method
@@ -1106,11 +1134,8 @@ final class RecordListController extends CoreRecordListController
      * Get specific display columns by field names.
      *
      * @param string $tableName The table name
-     * @param array $fieldNames Array of field names to include
+     * @param array<int, string> $fieldNames Array of field names to include
      * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
-     */
-    /**
-     * @param array<int, string> $fieldNames
      */
     protected function getSpecificDisplayColumns(string $tableName, array $fieldNames): array
     {
@@ -1118,7 +1143,8 @@ final class RecordListController extends CoreRecordListController
         $tcaForTable = $this->getTcaForTable($tableName);
         $ctrl = $tcaForTable['ctrl'];
         $tcaColumns = $tcaForTable['columns'];
-        $labelField = (string) ($ctrl['label'] ?? 'uid');
+        $labelVal = $ctrl['label'] ?? 'uid';
+        $labelField = is_string($labelVal) ? $labelVal : 'uid';
 
         foreach ($fieldNames as $field) {
             // Handle special field names
@@ -1133,8 +1159,11 @@ final class RecordListController extends CoreRecordListController
                         break;
                     }
                 }
-                if ($field === 'datetime' && ($ctrl['crdate'] ?? '') !== '') {
-                    $field = (string) $ctrl['crdate'];
+                if ($field === 'datetime') {
+                    $crdateFieldVal = $ctrl['crdate'] ?? '';
+                    if (is_string($crdateFieldVal) && $crdateFieldVal !== '') {
+                        $field = $crdateFieldVal;
+                    }
                 }
             } elseif ($field === 'teaser') {
                 // Find first teaser field
@@ -1355,11 +1384,13 @@ final class RecordListController extends CoreRecordListController
 
                 // Get title field
                 $tcaForTableRecords = $this->getTcaForTable($tableName);
-                $titleField = (string) ($tableConfig['titleField'] ?? $tcaForTableRecords['ctrl']['label'] ?? 'uid');
-                $title = $row[$titleField] ?? '[No title]';
-                if (is_array($title)) {
-                    $title = reset($title);
+                $titleFieldVal = $tableConfig['titleField'] ?? $tcaForTableRecords['ctrl']['label'] ?? 'uid';
+                $titleField = is_string($titleFieldVal) ? $titleFieldVal : 'uid';
+                $titleRaw = $row[$titleField] ?? '[No title]';
+                if (is_array($titleRaw)) {
+                    $titleRaw = reset($titleRaw);
                 }
+                $title = is_scalar($titleRaw) ? (string) $titleRaw : '[No title]';
 
                 // Get icon identifier
                 $icon = $iconFactory->getIconForRecord($tableName, $row, \TYPO3\CMS\Core\Imaging\IconSize::SMALL);
@@ -1367,14 +1398,15 @@ final class RecordListController extends CoreRecordListController
 
                 // Check hidden status
                 $enableColsRecords = is_array($tcaForTableRecords['ctrl']['enablecolumns'] ?? null) ? $tcaForTableRecords['ctrl']['enablecolumns'] : [];
-                $hiddenField = $enableColsRecords['disabled'] ?? null;
-                $hidden = $hiddenField ? (bool) ($row[$hiddenField] ?? false) : false;
+                $hiddenFieldVal = $enableColsRecords['disabled'] ?? null;
+                $hiddenField = is_string($hiddenFieldVal) ? $hiddenFieldVal : null;
+                $hidden = ($hiddenField !== null && $hiddenField !== '') ? (bool) ($row[$hiddenField] ?? false) : false;
 
                 $records[] = [
                     'uid' => $uid,
                     'pid' => $recordPid,
                     'tableName' => $tableName,
-                    'title' => (string) $title,
+                    'title' => $title,
                     'description' => null,
                     'thumbnail' => null,
                     'thumbnailUrl' => null,
@@ -1952,7 +1984,8 @@ final class RecordListController extends CoreRecordListController
         $tcaForTable = $this->getTcaForTable($tableName);
         $tcaColumns = $tcaForTable['columns'];
         $ctrl = $tcaForTable['ctrl'];
-        $labelField = (string) ($ctrl['label'] ?? 'uid');
+        $labelVal = $ctrl['label'] ?? 'uid';
+        $labelField = is_string($labelVal) ? $labelVal : 'uid';
 
         // UID column (always first fixed column)
         $headers[] = [
@@ -2031,7 +2064,8 @@ final class RecordListController extends CoreRecordListController
     protected function getTableLabel(string $tableName): string
     {
         $tcaForTable = $this->getTcaForTable($tableName);
-        $label = (string) ($tcaForTable['ctrl']['title'] ?? $tableName);
+        $labelTitleVal = $tcaForTable['ctrl']['title'] ?? $tableName;
+        $label = is_string($labelTitleVal) ? $labelTitleVal : $tableName;
 
         if (str_starts_with($label, 'LLL:')) {
             $langService = $this->getLanguageService();
@@ -2069,7 +2103,8 @@ final class RecordListController extends CoreRecordListController
         $backendUser = $this->getBackendUserAuthentication();
 
         // Get the label field (title) - always first
-        $labelField = (string) ($ctrl['label'] ?? 'uid');
+        $labelVal = $ctrl['label'] ?? 'uid';
+        $labelField = is_string($labelVal) ? $labelVal : 'uid';
 
         // Priority 1: User's selected columns from "Show columns" selector
         $displayFields = $backendUser->getModuleData('list/displayFields');
@@ -2083,13 +2118,15 @@ final class RecordListController extends CoreRecordListController
             // Priority 2: TSconfig showFields
             $modTableConfig = is_array($this->modTSconfig['table'] ?? null) ? $this->modTSconfig['table'] : [];
             $tableConfigArr = is_array($modTableConfig[$tableName] ?? null) ? $modTableConfig[$tableName] : [];
-            $showFields = (string) ($tableConfigArr['showFields'] ?? '');
+            $showFieldsVal = $tableConfigArr['showFields'] ?? '';
+            $showFields = is_string($showFieldsVal) ? $showFieldsVal : '';
 
             if ($showFields !== '') {
                 $fieldList = GeneralUtility::trimExplode(',', $showFields, true);
             } else {
                 // Priority 3: TCA searchFields or label field as fallback
-                $searchFields = (string) ($ctrl['searchFields'] ?? '');
+                $searchFieldsVal = $ctrl['searchFields'] ?? '';
+                $searchFields = is_string($searchFieldsVal) ? $searchFieldsVal : '';
                 if ($searchFields !== '') {
                     $fieldList = GeneralUtility::trimExplode(',', $searchFields, true);
                 } else {
@@ -2104,7 +2141,11 @@ final class RecordListController extends CoreRecordListController
         }
 
         // Build column configuration
-        foreach ($fieldList as $field) {
+        foreach ($fieldList as $rawField) {
+            $field = is_string($rawField) ? $rawField : '';
+            if ($field === '') {
+                continue;
+            }
             // Skip internal fields
             $skipFields = [
                 't3ver_oid', 't3ver_wsid', 't3ver_state', 't3ver_stage',
@@ -2166,7 +2207,8 @@ final class RecordListController extends CoreRecordListController
     {
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
         if (isset($fieldDef['label'])) {
-            $label = (string) $fieldDef['label'];
+            $labelRawVal = $fieldDef['label'];
+            $label = is_string($labelRawVal) ? $labelRawVal : '';
             return $this->translateTcaLabel($label, $field);
         }
 
@@ -2262,7 +2304,8 @@ final class RecordListController extends CoreRecordListController
         // TCA-configured type
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
         $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
-        $type = (string) ($config['type'] ?? '');
+        $typeVal = $config['type'] ?? '';
+        $type = is_string($typeVal) ? $typeVal : '';
 
         return match ($type) {
             'check' => 'boolean',
@@ -2341,51 +2384,55 @@ final class RecordListController extends CoreRecordListController
 
         switch ($type) {
             case 'boolean':
-                return $value ? 'yes' : 'no';
+                return (bool) $value ? 'yes' : 'no';
 
             case 'datetime':
                 if (is_numeric($value) && $value > 0) {
                     return date('d.m.Y H:i', (int) $value);
                 }
-                return (string) $value;
+                return is_scalar($value) ? (string) $value : '';
 
             case 'number':
-                return (string) $value;
+                return is_scalar($value) ? (string) $value : '';
 
             case 'select':
                 // Try to resolve select value to label
                 $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
                 $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
                 $items = is_array($config['items'] ?? null) ? $config['items'] : [];
+                $valueStr = is_scalar($value) ? (string) $value : '';
                 foreach ($items as $item) {
                     if (!is_array($item)) {
                         continue;
                     }
                     // TYPO3 v12+ item format: ['label' => ..., 'value' => ...]
                     $itemValue = $item['value'] ?? $item[1] ?? null;
-                    $itemLabel = (string) ($item['label'] ?? $item[0] ?? '');
-                    if ((string) $itemValue === (string) $value) {
+                    $itemLabelVal = $item['label'] ?? $item[0] ?? '';
+                    $itemLabel = is_string($itemLabelVal) ? $itemLabelVal : (is_scalar($itemLabelVal) ? (string) $itemLabelVal : '');
+                    $itemValueStr = is_scalar($itemValue) ? (string) $itemValue : '';
+                    if ($itemValueStr === $valueStr) {
                         if (str_starts_with($itemLabel, 'LLL:')) {
                             $langService = $this->getLanguageService();
                             $translated = $langService->sL($itemLabel);
-                            return $translated !== '' ? $translated : (string) $value;
+                            return $translated !== '' ? $translated : $valueStr;
                         }
                         return $itemLabel;
                     }
                 }
-                return (string) $value;
+                return $valueStr;
 
             case 'relation':
                 // For relations, just show count or basic info
                 if (is_numeric($value)) {
                     return $value > 0 ? $value . ' item(s)' : '';
                 }
-                return (string) $value;
+                return is_scalar($value) ? (string) $value : '';
 
             default:
                 // Text - strip HTML and limit length
-                $text = strip_tags(html_entity_decode((string) $value));
-                $text = (string) preg_replace('/\s+/', ' ', $text); // Normalize whitespace
+                $textInput = is_scalar($value) ? (string) $value : '';
+                $text = strip_tags(html_entity_decode($textInput));
+                $text = preg_replace('/\s+/', ' ', $text) ?? $text;
                 $text = trim($text);
                 return $text;
         }
@@ -2402,7 +2449,9 @@ final class RecordListController extends CoreRecordListController
         if (!is_array($tca)) {
             return ['ctrl' => [], 'columns' => []];
         }
+        /** @var array<string, mixed> $ctrl */
         $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
+        /** @var array<string, array<string, mixed>> $columns */
         $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
         return ['ctrl' => $ctrl, 'columns' => $columns];
     }

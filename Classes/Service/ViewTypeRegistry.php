@@ -227,9 +227,12 @@ final class ViewTypeRegistry implements SingletonInterface
             array_unshift($layoutPaths, $layoutRootPath);
         }
 
+        $templateName = $config['template'] ?? null;
+        $partialName = $config['partial'] ?? null;
+
         return [
-            'template' => (string) ($config['template'] ?? $this->getDefaultTemplateName($typeId)),
-            'partial' => (string) ($config['partial'] ?? 'Card'),
+            'template' => is_string($templateName) ? $templateName : $this->getDefaultTemplateName($typeId),
+            'partial' => is_string($partialName) ? $partialName : 'Card',
             'templateRootPaths' => $templatePaths,
             'partialRootPaths' => $partialPaths,
             'layoutRootPaths' => $layoutPaths,
@@ -251,7 +254,9 @@ final class ViewTypeRegistry implements SingletonInterface
         $files = [];
         $css = $config['css'] ?? null;
         if ($css !== null && $css !== '' && $css !== []) {
-            $files = is_array($css) ? array_map('strval', $css) : [(string) $css];
+            $files = is_array($css)
+                ? array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $css)
+                : (is_scalar($css) ? [(string) $css] : []);
         }
 
         return $files;
@@ -272,7 +277,9 @@ final class ViewTypeRegistry implements SingletonInterface
         $modules = ['@webconsulting/records-list-types/GridViewActions.js']; // Always include base
         $js = $config['js'] ?? null;
         if ($js !== null && $js !== '' && $js !== []) {
-            $custom = is_array($js) ? array_map('strval', $js) : [(string) $js];
+            $custom = is_array($js)
+                ? array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $js)
+                : (is_scalar($js) ? [(string) $js] : []);
             $modules = array_merge($modules, $custom);
         }
 
@@ -296,13 +303,14 @@ final class ViewTypeRegistry implements SingletonInterface
         $displayColumns = $config['displayColumns'] ?? null;
         if ($displayColumns !== null && $displayColumns !== '' && $displayColumns !== []) {
             if (is_array($displayColumns)) {
-                $columns = array_map('strval', $displayColumns);
+                $columns = array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $displayColumns);
             } else {
-                $columns = GeneralUtility::trimExplode(',', (string) $displayColumns, true);
+                $columns = GeneralUtility::trimExplode(',', is_scalar($displayColumns) ? (string) $displayColumns : '', true);
             }
         }
 
-        $fromTCA = (bool) ($config['columnsFromTCA'] ?? true);
+        $fromTCARaw = $config['columnsFromTCA'] ?? true;
+        $fromTCA = $fromTCARaw === true || $fromTCARaw === 1 || $fromTCARaw === '1';
 
         return [
             'columns' => $columns,
@@ -315,7 +323,7 @@ final class ViewTypeRegistry implements SingletonInterface
      */
     public function isBuiltinType(string $typeId): bool
     {
-        return isset(self::BUILTIN_TYPES[$typeId]) && (self::BUILTIN_TYPES[$typeId]['builtin'] ?? false) === true;
+        return isset(self::BUILTIN_TYPES[$typeId]);
     }
 
     /**
@@ -347,7 +355,9 @@ final class ViewTypeRegistry implements SingletonInterface
             'partialRootPath' => $config['partialRootPath'] ?? null,
             'layoutRootPath' => $config['layoutRootPath'] ?? null,
             'displayColumns' => $config['displayColumns'] ?? null,
-            'columnsFromTCA' => isset($config['columnsFromTCA']) ? (bool) $config['columnsFromTCA'] : true,
+            'columnsFromTCA' => isset($config['columnsFromTCA'])
+                ? ($config['columnsFromTCA'] === true || $config['columnsFromTCA'] === 1 || $config['columnsFromTCA'] === '1')
+                : true,
             'builtin' => false,
         ];
     }

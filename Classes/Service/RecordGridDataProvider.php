@@ -154,7 +154,9 @@ final class RecordGridDataProvider implements SingletonInterface
         if (!is_array($tca)) {
             return ['ctrl' => [], 'columns' => []];
         }
+        /** @var array<string, mixed> $ctrl */
         $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
+        /** @var array<string, array<string, mixed>> $columns */
         $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
 
         return ['ctrl' => $ctrl, 'columns' => $columns];
@@ -210,7 +212,8 @@ final class RecordGridDataProvider implements SingletonInterface
         } else {
             // Default ordering by TCA default sortby or uid
             $tca = $this->getTca($table);
-            $sortBy = (string) ($tca['ctrl']['default_sortby'] ?? 'uid DESC');
+            $defaultSortByRaw = $tca['ctrl']['default_sortby'] ?? null;
+            $sortBy = is_string($defaultSortByRaw) ? $defaultSortByRaw : 'uid DESC';
             $sortBy = str_replace('ORDER BY ', '', $sortBy);
             $sortParts = GeneralUtility::trimExplode(',', $sortBy);
 
@@ -375,7 +378,8 @@ final class RecordGridDataProvider implements SingletonInterface
             }
 
             // Skip large text fields (not useful for sorting)
-            if ($type === 'text' && ((int) ($config['rows'] ?? 1)) > 3) {
+            $configRows = $config['rows'] ?? 1;
+            if ($type === 'text' && (is_numeric($configRows) ? (int) $configRows : 1) > 3) {
                 continue;
             }
 
@@ -506,7 +510,8 @@ final class RecordGridDataProvider implements SingletonInterface
      */
     private function enrichRecord(string $table, array $row, array $tableConfig, int $pageId): array
     {
-        $uid = (int) ($row['uid'] ?? 0);
+        $uidRaw = $row['uid'] ?? 0;
+        $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
 
         // Get title
         $titleField = is_string($tableConfig['titleField'] ?? null) ? $tableConfig['titleField'] : 'uid';
@@ -514,7 +519,7 @@ final class RecordGridDataProvider implements SingletonInterface
         if (is_array($title)) {
             $title = reset($title);
         }
-        $title = (string) $title;
+        $title = is_scalar($title) ? (string) $title : '[No title]';
 
         // Get description
         $description = null;
@@ -525,7 +530,7 @@ final class RecordGridDataProvider implements SingletonInterface
                 $description = reset($description);
             }
             // Strip HTML and limit length
-            $description = strip_tags((string) $description);
+            $description = strip_tags(is_scalar($description) ? (string) $description : '');
         }
 
         // Get thumbnail
@@ -549,14 +554,14 @@ final class RecordGridDataProvider implements SingletonInterface
         $tca = $this->getTca($table);
         $enableColumns = is_array($tca['ctrl']['enablecolumns'] ?? null) ? $tca['ctrl']['enablecolumns'] : [];
         $hiddenField = is_string($enableColumns['disabled'] ?? null) ? $enableColumns['disabled'] : null;
-        $hidden = ($hiddenField !== null) ? (bool) ($row[$hiddenField] ?? false) : false;
+        $hidden = ($hiddenField !== null) && !empty($row[$hiddenField]);
 
         // Detect workspace state for visual indicators
         $workspaceState = $this->getWorkspaceState($row);
 
         return [
             'uid' => $uid,
-            'pid' => (int) ($row['pid'] ?? 0),
+            'pid' => (isset($row['pid']) && is_numeric($row['pid'])) ? (int) $row['pid'] : 0,
             'tableName' => $table,
             'title' => $title,
             'description' => $description,
@@ -598,7 +603,8 @@ final class RecordGridDataProvider implements SingletonInterface
         }
 
         // Check t3ver_state field
-        $t3verState = (int) ($row['t3ver_state'] ?? 0);
+        $t3verStateRaw = $row['t3ver_state'] ?? 0;
+        $t3verState = is_numeric($t3verStateRaw) ? (int) $t3verStateRaw : 0;
 
         return match ($t3verState) {
             1 => 'new',
@@ -616,7 +622,8 @@ final class RecordGridDataProvider implements SingletonInterface
      */
     private function isChangedInWorkspace(array $row): bool
     {
-        $t3verOid = (int) ($row['t3ver_oid'] ?? 0);
+        $t3verOidRaw = $row['t3ver_oid'] ?? 0;
+        $t3verOid = is_numeric($t3verOidRaw) ? (int) $t3verOidRaw : 0;
         return $t3verOid > 0;
     }
 
@@ -646,7 +653,7 @@ final class RecordGridDataProvider implements SingletonInterface
         $records = $this->getRecordsForTable($table, $pageId, $limit, $offset, $searchTerm, $sortField, $sortDirection);
 
         foreach ($records as &$record) {
-            $uid = (int) $record['uid'];
+            $uid = isset($record['uid']) && is_numeric($record['uid']) ? (int) $record['uid'] : 0;
             $record['actions'] = $actionsMap[$uid] ?? [];
         }
 

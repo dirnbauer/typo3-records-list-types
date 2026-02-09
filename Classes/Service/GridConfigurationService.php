@@ -15,20 +15,8 @@ use TYPO3\CMS\Core\SingletonInterface;
  */
 final class GridConfigurationService implements SingletonInterface
 {
-    /** @var array<string, array<string, mixed>> Runtime cache for table configurations */
+    /** @var array<string, array{titleField: ?string, descriptionField: ?string, imageField: ?string, preview: bool, hiddenField: string}> Runtime cache for table configurations */
     private array $tableConfigCache = [];
-
-    /**
-     * Default configuration applied when no TSconfig is specified.
-     *
-     * @var array{titleField: ?string, descriptionField: ?string, imageField: ?string, preview: bool}
-     */
-    private const DEFAULT_CONFIG = [
-        'titleField' => null,      // Will fall back to TCA label
-        'descriptionField' => null,
-        'imageField' => null,
-        'preview' => true,
-    ];
 
     /** Default number of columns in the grid. */
     private const DEFAULT_COLS = 4;
@@ -60,11 +48,18 @@ final class GridConfigurationService implements SingletonInterface
         $enableColumns = is_array($tcaCtrl['enablecolumns'] ?? null) ? $tcaCtrl['enablecolumns'] : [];
         $hiddenField = $enableColumns['disabled'] ?? 'hidden';
 
+        $descriptionFieldRaw = $tableConfig['descriptionField'] ?? null;
+        $imageFieldRaw = $tableConfig['imageField'] ?? null;
+        $previewRaw = $tableConfig['preview'] ?? '1';
+        $preview = (is_string($previewRaw) || is_int($previewRaw) || is_bool($previewRaw))
+            ? $this->parseBoolean($previewRaw)
+            : true;
+
         $config = [
             'titleField' => $this->getTitleField($table, $tableConfig),
-            'descriptionField' => $tableConfig['descriptionField'] ?? null,
-            'imageField' => $tableConfig['imageField'] ?? null,
-            'preview' => $this->parseBoolean($tableConfig['preview'] ?? '1'),
+            'descriptionField' => is_string($descriptionFieldRaw) ? $descriptionFieldRaw : null,
+            'imageField' => is_string($imageFieldRaw) ? $imageFieldRaw : null,
+            'preview' => $preview,
             'hiddenField' => $hiddenField,
         ];
 
@@ -182,7 +177,7 @@ final class GridConfigurationService implements SingletonInterface
     public function hasImageField(string $table, int $pageId): bool
     {
         $config = $this->getTableConfig($table, $pageId);
-        return isset($config['imageField']) && $config['imageField'] !== null && $config['imageField'] !== '';
+        return $config['imageField'] !== null && $config['imageField'] !== '';
     }
 
     /**

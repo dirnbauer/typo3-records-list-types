@@ -7,6 +7,7 @@ namespace Webconsulting\RecordsListTypes\EventListener;
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
+use TYPO3\CMS\Backend\Module\ModuleInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\Components\Buttons\DropDownButton;
@@ -183,7 +184,7 @@ final class GridViewButtonBarListener
     private function isRecordsModule(ServerRequestInterface $request): bool
     {
         $route = $request->getAttribute('route');
-        if ($route instanceof \TYPO3\CMS\Core\Routing\Route) {
+        if ($route instanceof \TYPO3\CMS\Backend\Routing\Route) {
             $routePath = $route->getPath();
             if (str_contains($routePath, '/module/content/records')
                 || str_contains($routePath, '/module/web/list')) {
@@ -205,9 +206,8 @@ final class GridViewButtonBarListener
         }
 
         $module = $request->getAttribute('module');
-        if (is_object($module) && method_exists($module, 'getIdentifier')) {
-            /** @var object $module */
-            $moduleIdentifier = (string) $module->getIdentifier();
+        if ($module instanceof ModuleInterface) {
+            $moduleIdentifier = $module->getIdentifier();
             if (in_array($moduleIdentifier, Constants::MODULE_IDENTIFIERS, true)) {
                 return true;
             }
@@ -225,12 +225,13 @@ final class GridViewButtonBarListener
 
         $idParam = $queryParams['id'] ?? null;
         if ($idParam !== null) {
-            return (int) $idParam;
+            return is_numeric($idParam) ? (int) $idParam : 0;
         }
 
         $routeParams = $request->getAttribute('routing');
         if (is_array($routeParams) && isset($routeParams['id'])) {
-            return (int) $routeParams['id'];
+            $idValue = $routeParams['id'];
+            return is_numeric($idValue) ? (int) $idValue : 0;
         }
 
         return 0;

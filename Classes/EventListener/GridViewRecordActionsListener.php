@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\EventListener;
 
-use Throwable;
 use TYPO3\CMS\Backend\RecordList\Event\ModifyRecordListRecordActionsEvent;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\SingletonInterface;
@@ -28,15 +27,9 @@ final class GridViewRecordActionsListener implements SingletonInterface
 
     public function __invoke(ModifyRecordListRecordActionsEvent $event): void
     {
-        // In TYPO3 v14, we store event info for potential Grid View usage
-        try {
-            // Store a timestamp-based record for the latest action event
-            $this->actionsCache['_latest'] = [
-                'timestamp' => time(),
-            ];
-        } catch (Throwable) {
-            // Silently fail - action caching is not critical
-        }
+        $this->actionsCache['_latest'] = [
+            'timestamp' => time(),
+        ];
     }
 
     /**
