@@ -424,7 +424,6 @@
 .gridview-card__footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: var(--gv-space-2);
     padding: var(--gv-space-2) var(--gv-space-4);
     border-top: 1px solid var(--gv-border-muted);
@@ -432,30 +431,27 @@
     color: var(--gv-text-muted);
 }
 
-/* Footer left section (ID + PID) */
-.gridview-card__footer-left {
-    display: flex;
-    align-items: center;
-    gap: var(--gv-space-2);
-}
-
-/* Footer language flag (bottom right) */
+/* Footer language flag with subtle border */
 .gridview-card__footer-lang {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    opacity: 0.8;
-    transition: opacity var(--gv-transition-fast);
 }
 
 .gridview-card__footer-lang .icon {
     width: 16px;
     height: 16px;
+    border: 1px solid var(--gv-border);
+    border-radius: 2px;
 }
 
-.gridview-card:hover .gridview-card__footer-lang {
-    opacity: 1;
+/* Vertical divider between footer items */
+.gridview-card__footer-separator {
+    width: 1px;
+    height: 1rem;
+    background: var(--gv-border);
+    flex-shrink: 0;
 }
 
 /* ID section with label and circle number */
@@ -487,11 +483,6 @@
     font-family: var(--gv-font-mono);
     font-size: 0.625rem;
     font-weight: 600;
-}
-
-.gridview-card__footer-separator {
-    color: var(--gv-border);
-    margin: 0 var(--gv-space-2);
 }
 
 .gridview-card__footer-pid {
