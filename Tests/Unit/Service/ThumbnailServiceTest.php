@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\FileRepository;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
@@ -138,7 +139,7 @@ final class ThumbnailServiceTest extends TestCase
     {
         $this->fileRepositoryMock
             ->method('findByRelation')
-            ->willThrowException(new \RuntimeException('DB error'));
+            ->willThrowException(new RuntimeException('DB error'));
 
         self::assertNull($this->subject->getFirstImage('tt_content', 1, 'image'));
     }
@@ -148,7 +149,7 @@ final class ThumbnailServiceTest extends TestCase
     {
         $this->fileRepositoryMock
             ->method('findByRelation')
-            ->willThrowException(new \RuntimeException('DB error'));
+            ->willThrowException(new RuntimeException('DB error'));
 
         self::assertSame([], $this->subject->getAllImages('tt_content', 1, 'image'));
     }
@@ -168,7 +169,7 @@ final class ThumbnailServiceTest extends TestCase
     {
         $this->fileRepositoryMock
             ->method('findByRelation')
-            ->willThrowException(new \RuntimeException('DB error'));
+            ->willThrowException(new RuntimeException('DB error'));
 
         self::assertNull($this->subject->getFirstFileReference('tt_content', 1, 'image'));
     }

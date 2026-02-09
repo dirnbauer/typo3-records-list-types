@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Tests\Unit\Controller\Ajax;
 
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use Webconsulting\RecordsListTypes\Controller\Ajax\ViewModeController;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
@@ -30,7 +30,7 @@ final class ViewModeControllerTest extends TestCase
 
         $request = $this->createMock(ServerRequestInterface::class);
         $request->method('getParsedBody')
-            ->willThrowException(new \RuntimeException('Test error'));
+            ->willThrowException(new RuntimeException('Test error'));
 
         $controller = new ViewModeController(
             new ViewModeResolver(),
@@ -56,7 +56,7 @@ final class ViewModeControllerTest extends TestCase
 
         $request = $this->createMock(ServerRequestInterface::class);
         $request->method('getQueryParams')
-            ->willThrowException(new \RuntimeException('Request error'));
+            ->willThrowException(new RuntimeException('Request error'));
 
         $controller = new ViewModeController(
             new ViewModeResolver(),
