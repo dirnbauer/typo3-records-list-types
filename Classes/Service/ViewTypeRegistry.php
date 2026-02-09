@@ -256,7 +256,7 @@ final class ViewTypeRegistry implements SingletonInterface
     public function getCssFiles(string $typeId, int $pageId): array
     {
         $config = $this->getViewType($typeId, $pageId);
-        $css = (string)($config['css'] ?? '');
+        $css = (string) ($config['css'] ?? '');
 
         return $css !== ''
             ? [self::BASE_CSS, $css]
