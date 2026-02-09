@@ -2464,14 +2464,14 @@ final class RecordListController extends CoreRecordListController
         $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
 
         // Check top-level invertStateDisplay (config.invertStateDisplay)
-        if (!empty($config['invertStateDisplay'])) {
+        if (isset($config['invertStateDisplay']) && (bool) $config['invertStateDisplay']) {
             return true;
         }
 
         // Check per-item invertStateDisplay (config.items[n].invertStateDisplay)
         $items = is_array($config['items'] ?? null) ? $config['items'] : [];
         foreach ($items as $item) {
-            if (is_array($item) && !empty($item['invertStateDisplay'])) {
+            if (is_array($item) && isset($item['invertStateDisplay']) && (bool) $item['invertStateDisplay']) {
                 return true;
             }
         }
