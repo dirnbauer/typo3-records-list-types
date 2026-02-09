@@ -78,6 +78,7 @@ class GridViewActions {
         this.initializeSorting();
         this.initializeSearch();
         this.initializeScrollShadows();
+        this.initializePaginationInputs();
     }
 
     // =========================================================================
@@ -1334,6 +1335,64 @@ class GridViewActions {
             // Also update on window resize
             window.addEventListener('resize', updateScrollState, { passive: true });
         });
+    }
+
+    // =========================================================================
+    // Pagination Page Input
+    // =========================================================================
+
+    /**
+     * Initialize pagination page number inputs.
+     * Navigates to the entered page on Enter or blur.
+     */
+    initializePaginationInputs() {
+        const inputs = document.querySelectorAll('[data-pagination-input]');
+
+        if (inputs.length === 0) {
+            return;
+        }
+
+        inputs.forEach(input => {
+            const originalValue = input.value;
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.navigateToPage(input);
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                if (input.value !== originalValue) {
+                    this.navigateToPage(input);
+                }
+            });
+        });
+    }
+
+    /**
+     * Navigate to the page number entered in the pagination input.
+     * @param {HTMLInputElement} input - The pagination input element
+     */
+    navigateToPage(input) {
+        const page = parseInt(input.value, 10);
+        const min = parseInt(input.min, 10) || 1;
+        const max = parseInt(input.max, 10) || 1;
+
+        if (isNaN(page) || page < min || page > max) {
+            // Reset to current value on invalid input
+            input.value = input.defaultValue;
+            return;
+        }
+
+        const baseUrl = input.dataset.paginationUrl;
+        const table = input.dataset.paginationTable;
+
+        if (!baseUrl || !table) {
+            return;
+        }
+
+        window.location.href = baseUrl + '&pointer[' + encodeURIComponent(table) + ']=' + page;
     }
 
     // =========================================================================

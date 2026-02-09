@@ -56,9 +56,11 @@ Pagination
 ==========
 
 All alternative view modes (Grid, Compact, Teaser, and custom types) support
-pagination. When the number of records exceeds the configured
-``itemsPerPage``, a pagination bar is shown at the top and bottom of the
-record list -- similar to the classic List View's "Expand table" behavior.
+pagination matching the standard TYPO3 Core list view navigation style.
+When the number of records exceeds the configured ``itemsPerPage``, a
+pagination bar is shown at the top and bottom of the record list with
+a record range indicator, first/previous/next/last buttons, a page
+number input field for direct navigation, and a reload button.
 
 .. _configuration-pagination-items-per-page:
 

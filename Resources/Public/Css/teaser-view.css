@@ -423,3 +423,45 @@
     width: 1rem;
     height: 1rem;
 }
+
+/* =============================================================================
+   Pagination - matches TYPO3 Core list view navigation
+   ============================================================================= */
+
+.recordlist-teaserview-container .recordlist-pagination {
+    padding: 0.5rem 0.75rem;
+}
+
+.recordlist-teaserview-container .recordlist-pagination-input {
+    width: 3.5em;
+    padding: 0.125rem 0.25rem;
+    margin: 0 0.25rem;
+    font-size: inherit;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid var(--tv-border, #d4d4d8);
+    border-radius: 3px;
+    background: var(--tv-bg, #fff);
+    color: var(--tv-text, #18181b);
+    line-height: 1.4;
+    -moz-appearance: textfield;
+}
+
+.recordlist-teaserview-container .recordlist-pagination-input::-webkit-outer-spin-button,
+.recordlist-teaserview-container .recordlist-pagination-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.recordlist-teaserview-container .recordlist-pagination-input:focus {
+    outline: 2px solid var(--tv-accent, #3b82f6);
+    outline-offset: -1px;
+    border-color: var(--tv-accent, #3b82f6);
+}
+
+.recordlist-teaserview-container .recordlist-pagination-pages {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+}

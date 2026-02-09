@@ -106,9 +106,14 @@ mod.web_list.gridView.table.tt_content {
 ## Pagination
 
 All alternative view modes (Grid, Compact, Teaser, and custom types) support
-pagination using TYPO3's Core Pagination API (`SlidingWindowPagination`).
+pagination matching the standard TYPO3 Core list view navigation style.
 When the number of records exceeds the configured `itemsPerPage`, a
-pagination bar is shown at the top and bottom of the record list.
+pagination bar is shown at the top and bottom of the record list with:
+
+- **Record range** indicator ("Records 1 - 100")
+- **First / Previous / Next / Last** navigation buttons
+- **Page input** field for direct page navigation ("Page [1] of 121")
+- **Reload** button
 
 ### Global Default
 

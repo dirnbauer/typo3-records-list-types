@@ -3,10 +3,9 @@
       data-namespace-typo3-fluid="true">
 
 <f:comment>
-    Pagination partial using TYPO3 Core Pagination API.
+    Pagination partial matching TYPO3 Core list view navigation.
     
-    Follows the same pattern as EXT:backend/Resources/Private/Templates/ListNavigation.fluid.html
-    but adapted for non-table contexts (Grid View, Teaser View, etc.).
+    Renders: Records X - Y | |< < | Page [input] of N | > >| | reload
     
     Arguments:
     - paginator: DatabasePaginator (implements PaginatorInterface)
@@ -19,12 +18,10 @@
 <f:if condition="{paginator.numberOfPages} > 1">
     <nav class="recordlist-pagination" aria-label="Table pagination ({position})">
         <ul class="pagination pagination-sm mb-0">
-            <f:comment>Range indicator (e.g. "1-100 of 250")</f:comment>
+            <f:comment>Range indicator: "Records 1 - 100"</f:comment>
             <li class="page-item">
                 <span class="page-link">
-                    {pagination.startRecordNumber}–{pagination.endRecordNumber}
-                    <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:pagination.of" default="of" />
-                    {paginator.totalItems}
+                    <f:format.printf arguments="{0: pagination.startRecordNumber, 1: pagination.endRecordNumber}"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:rangeIndicator" default="Records %1$d - %2$d" /></f:format.printf>
                 </span>
             </li>
 
@@ -64,27 +61,24 @@
                 </f:else>
             </f:if>
 
-            <f:comment>Page numbers (sliding window)</f:comment>
-            <f:if condition="{pagination.hasLessPages}">
-                <li class="page-item disabled" aria-hidden="true"><span class="page-link">&hellip;</span></li>
-            </f:if>
-            <f:for each="{pagination.allPageNumbers}" as="pageNumber">
-                <f:if condition="{pageNumber} == {paginator.currentPageNumber}">
-                    <f:then>
-                        <li class="page-item active">
-                            <span class="page-link" aria-current="page">{pageNumber}</span>
-                        </li>
-                    </f:then>
-                    <f:else>
-                        <li class="page-item">
-                            <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pageNumber}">{pageNumber}</a>
-                        </li>
-                    </f:else>
-                </f:if>
-            </f:for>
-            <f:if condition="{pagination.hasMorePages}">
-                <li class="page-item disabled" aria-hidden="true"><span class="page-link">&hellip;</span></li>
-            </f:if>
+            <f:comment>Page input: "Page [input] of N"</f:comment>
+            <li class="page-item">
+                <span class="page-link recordlist-pagination-pages">
+                    <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:page" default="Page" />
+                    <input type="number"
+                           class="recordlist-pagination-input"
+                           value="{paginator.currentPageNumber}"
+                           min="1"
+                           max="{paginator.numberOfPages}"
+                           size="3"
+                           data-pagination-input="true"
+                           data-pagination-url="{paginationUrl}"
+                           data-pagination-table="{tableName}"
+                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:page', default: 'Page')}" />
+                    <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:pagination.of" default="of" />
+                    {paginator.numberOfPages}
+                </span>
+            </li>
 
             <f:comment>Next page</f:comment>
             <f:if condition="{pagination.nextPageNumber}">
@@ -122,7 +116,7 @@
                 </f:else>
             </f:if>
 
-            <f:comment>Reload button (same as Core ListNavigation)</f:comment>
+            <f:comment>Reload button</f:comment>
             <li class="page-item">
                 <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={paginator.currentPageNumber}"
                    title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:reload')}"
