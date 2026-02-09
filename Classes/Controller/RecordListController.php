@@ -2745,7 +2745,8 @@ final class RecordListController extends CoreRecordListController
 
         $pointer = $queryParams['pointer'] ?? $parsedBodyArray['pointer'] ?? [];
         if (is_array($pointer) && isset($pointer[$tableName])) {
-            return max(1, (int) $pointer[$tableName]);
+            $value = $pointer[$tableName];
+            return is_numeric($value) ? max(1, (int) $value) : 1;
         }
 
         return 1;
