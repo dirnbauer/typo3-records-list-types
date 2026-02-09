@@ -386,22 +386,142 @@ Each field in `displayValues`:
 | `formatted` | Formatted display value |
 | `isEmpty` | Whether value is empty |
 
-## Adding Custom JavaScript
+## Assets: CSS, JavaScript, Images
 
-Register ES6 modules for custom interactivity:
+### What is loaded automatically
+
+Every view type automatically receives:
+
+| Asset | Source | Purpose |
+|-------|--------|---------|
+| `base.css` | Extension | Shared heading, pagination, sorting styles |
+| `GridViewActions.js` | Extension | Drag-drop, record actions, pagination input, sorting, search |
+| `column-selector-button.js` | TYPO3 Core | Column selector web component |
+
+You only need to add your own assets for view-specific styling or behavior.
+
+### CSS
+
+Add a CSS file via the `css` option. It is loaded **after** `base.css`, so you can use all shared styles and override them if needed:
 
 ```tsconfig
-mod.web_list.viewMode.types.myview.js = @my-sitepackage/my-custom-view.js
+mod.web_list.viewMode.types.kanban {
+    css = EXT:my_sitepackage/Resources/Public/Css/kanban.css
+}
 ```
 
-Register the module in `Configuration/JavaScriptModules.php`:
+Your CSS file can reference TYPO3 CSS variables for automatic dark mode support:
+
+```css
+.kanban-column {
+    background: var(--typo3-component-bg, #fff);
+    border: 1px solid var(--typo3-component-border-color, #d4d4d8);
+    color: var(--typo3-text-color-base, #18181b);
+}
+```
+
+### JavaScript
+
+Add custom JavaScript modules via the `js` option. Your module is loaded alongside the base `GridViewActions.js`:
+
+```tsconfig
+mod.web_list.viewMode.types.kanban {
+    js = @my-sitepackage/kanban-board.js
+}
+```
+
+Register the ES module path in your extension's `Configuration/JavaScriptModules.php`:
 
 ```php
+<?php
+
 return [
     'imports' => [
         '@my-sitepackage/' => 'EXT:my_sitepackage/Resources/Public/JavaScript/',
     ],
 ];
+```
+
+Your module can use TYPO3 backend APIs:
+
+```javascript
+// Resources/Public/JavaScript/kanban-board.js
+import Notification from '@typo3/backend/notification.js';
+
+class KanbanBoard {
+    constructor() {
+        document.querySelectorAll('.kanban-card').forEach(card => {
+            card.addEventListener('dragend', () => {
+                Notification.success('Moved', 'Card moved to new column');
+            });
+        });
+    }
+}
+
+new KanbanBoard();
+```
+
+### Images and Icons
+
+Static images (logos, illustrations) can be referenced directly in templates using `EXT:` paths:
+
+```html
+<img src="{f:uri.resource(path: 'Icons/my-icon.svg', extensionName: 'my_sitepackage')}" alt="" />
+```
+
+For record icons and view switcher icons, use TYPO3's icon registry. Register custom icons in `Configuration/Icons.php`:
+
+```php
+<?php
+
+return [
+    'my-kanban-icon' => [
+        'provider' => \TYPO3\CMS\Core\Imaging\IconProvider\SvgIconProvider::class,
+        'source' => 'EXT:my_sitepackage/Resources/Public/Icons/kanban.svg',
+    ],
+];
+```
+
+Then reference it in TSconfig:
+
+```tsconfig
+mod.web_list.viewMode.types.kanban.icon = my-kanban-icon
+```
+
+### Complete file structure for a custom view type
+
+```
+my_sitepackage/
+├── Configuration/
+│   ├── Icons.php                          # Custom icon registration (optional)
+│   ├── JavaScriptModules.php              # ES module paths (only if using js)
+│   └── TsConfig/
+│       └── Page/
+│           └── mod.tsconfig               # View type TSconfig
+├── Resources/
+│   ├── Private/
+│   │   └── Backend/
+│   │       ├── Templates/
+│   │       │   └── KanbanView.html        # Main Fluid template
+│   │       └── Partials/
+│   │           └── KanbanCard.html        # Card partial (optional)
+│   └── Public/
+│       ├── Css/
+│       │   └── kanban.css                 # View-specific styles
+│       ├── JavaScript/
+│       │   └── kanban-board.js            # Custom JS module (optional)
+│       └── Icons/
+│           └── kanban.svg                 # Custom icon (optional)
+```
+
+### Asset loading order
+
+```
+1. base.css                          ← Always (shared heading, pagination, sorting)
+2. your-view.css                     ← Your css option
+3. GridViewActions.js                ← Always (drag-drop, actions, pagination input)
+4. column-selector-button.js         ← Always (TYPO3 column selector)
+5. your-module.js                    ← Your js option
 ```
 
 ## Method 2: PSR-14 Event (for extensions)

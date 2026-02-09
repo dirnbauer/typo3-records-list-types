@@ -313,6 +313,127 @@ Configuration reference
 
     Records per page. Set to ``0`` to disable pagination.
 
+.. _custom-view-types-assets:
+
+Assets: CSS, JavaScript, Images
+================================
+
+What is loaded automatically
+-----------------------------
+
+Every view type automatically receives:
+
+-   ``base.css`` -- shared heading, pagination, sorting styles
+-   ``GridViewActions.js`` -- drag-drop, record actions, pagination,
+    sorting, search
+-   ``column-selector-button.js`` -- TYPO3 column selector web component
+
+You only need to add assets for view-specific styling or behavior.
+
+CSS
+---
+
+Add a CSS file via the ``css`` option. It loads **after** ``base.css``:
+
+..  code-block:: typoscript
+    :caption: Page TSconfig
+
+    mod.web_list.viewMode.types.kanban {
+        css = EXT:my_sitepackage/Resources/Public/Css/kanban.css
+    }
+
+Use TYPO3 CSS variables for automatic dark mode support:
+
+..  code-block:: css
+
+    .kanban-column {
+        background: var(--typo3-component-bg, #fff);
+        border: 1px solid var(--typo3-component-border-color, #d4d4d8);
+    }
+
+JavaScript
+----------
+
+Add custom JS modules via the ``js`` option. Your module loads alongside
+the base ``GridViewActions.js``:
+
+..  code-block:: typoscript
+    :caption: Page TSconfig
+
+    mod.web_list.viewMode.types.kanban {
+        js = @my-sitepackage/kanban-board.js
+    }
+
+Register the module path in
+:file:`Configuration/JavaScriptModules.php`:
+
+..  code-block:: php
+
+    <?php
+
+    return [
+        'imports' => [
+            '@my-sitepackage/' => 'EXT:my_sitepackage/Resources/Public/JavaScript/',
+        ],
+    ];
+
+Images and Icons
+-----------------
+
+Reference static images in templates:
+
+..  code-block:: html
+
+    <img src="{f:uri.resource(path: 'Icons/my-icon.svg', extensionName: 'my_sitepackage')}" alt="" />
+
+Register custom icons for the view switcher in
+:file:`Configuration/Icons.php`:
+
+..  code-block:: php
+
+    <?php
+
+    return [
+        'my-kanban-icon' => [
+            'provider' => \TYPO3\CMS\Core\Imaging\IconProvider\SvgIconProvider::class,
+            'source' => 'EXT:my_sitepackage/Resources/Public/Icons/kanban.svg',
+        ],
+    ];
+
+Then reference in TSconfig:
+
+..  code-block:: typoscript
+
+    mod.web_list.viewMode.types.kanban.icon = my-kanban-icon
+
+File structure for a custom view type
+--------------------------------------
+
+..  code-block:: text
+
+    my_sitepackage/
+    ├── Configuration/
+    │   ├── Icons.php                      # Custom icon (optional)
+    │   ├── JavaScriptModules.php          # ES module paths (if using js)
+    │   └── TsConfig/Page/mod.tsconfig    # View type TSconfig
+    └── Resources/
+        ├── Private/Backend/
+        │   ├── Templates/KanbanView.html  # Main Fluid template
+        │   └── Partials/KanbanCard.html   # Card partial (optional)
+        └── Public/
+            ├── Css/kanban.css             # View-specific styles
+            ├── JavaScript/kanban-board.js  # Custom JS (optional)
+            └── Icons/kanban.svg           # Custom icon (optional)
+
+Asset loading order
+--------------------
+
+1.  ``base.css`` -- always (shared components)
+2.  Your ``css`` file -- view-specific styles
+3.  ``GridViewActions.js`` -- always (core interactions)
+4.  ``column-selector-button.js`` -- always (TYPO3 component)
+5.  Your ``js`` module -- custom behavior
+
 .. _custom-view-types-psr14:
 
 Method 2: PSR-14 event (for extensions)
