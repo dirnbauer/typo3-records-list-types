@@ -134,8 +134,14 @@ final class MiddlewareDiagnosticService implements SingletonInterface
 
                 // Check if package has backend middlewares
                 $middlewareFile = $package->getPackagePath() . 'Configuration/RequestMiddlewares.php';
-                if (file_exists($middlewareFile)) {
-                    $middlewares = include $middlewareFile;
+                // Validate the file path is within the package directory (defense-in-depth)
+                $realMiddlewarePath = realpath($middlewareFile);
+                $realPackagePath = realpath($package->getPackagePath());
+                if ($realMiddlewarePath !== false
+                    && $realPackagePath !== false
+                    && str_starts_with($realMiddlewarePath, $realPackagePath)
+                ) {
+                    $middlewares = include $realMiddlewarePath;
                     if (isset($middlewares['backend']) && is_array($middlewares['backend'])) {
                         foreach (array_keys($middlewares['backend']) as $middlewareName) {
                             $nonCore[] = $packageKey . '/' . $middlewareName;

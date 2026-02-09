@@ -35,7 +35,7 @@ use Webconsulting\RecordsListTypes\Service\ViewTypeRegistry;
  * IMPORTANT: We replicate the parent's mainAction() initialization flow
  * to ensure all DocHeader buttons, clipboard, page context etc. work correctly.
  */
-class RecordListController extends CoreRecordListController
+final class RecordListController extends CoreRecordListController
 {
     private ?ViewTypeRegistry $viewTypeRegistry = null;
 

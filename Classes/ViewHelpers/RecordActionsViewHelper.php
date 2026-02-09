@@ -22,7 +22,7 @@ use Webconsulting\RecordsListTypes\EventListener\GridViewRecordActionsListener;
  *     {action -> f:format.raw()}
  * </f:for>
  */
-class RecordActionsViewHelper extends AbstractViewHelper
+final class RecordActionsViewHelper extends AbstractViewHelper
 {
     /** Do not escape output - actions contain HTML. */
     protected $escapeOutput = false;
