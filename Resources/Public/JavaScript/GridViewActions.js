@@ -855,24 +855,47 @@ class GridViewActions {
     }
     
     /**
-     * Execute the delete operation after confirmation
+     * Execute the delete operation after confirmation.
+     *
+     * Uses TYPO3's AjaxDataHandler.process() which handles notifications
+     * and events, then reloads the page to ensure consistent state
+     * (record counts, pagination, empty tables).
      */
     executeDelete(table, uid, card) {
+        // Animate out immediately for visual feedback
+        const wrapper = card?.closest('.gridview-card-wrapper') || card;
+        if (wrapper) {
+            wrapper.style.transition = 'all 0.2s';
+            wrapper.style.opacity = '0';
+            wrapper.style.transform = 'scale(0.9)';
+        }
+
+        const params = { cmd: { [table]: { [uid]: { delete: 1 } } } };
+
+        // Prefer TYPO3 AjaxDataHandler (handles notifications + events)
+        if (this.AjaxDataHandler) {
+            this.AjaxDataHandler.process(params).then(() => {
+                window.location.reload();
+            });
+            return;
+        }
+
+        // Fallback: raw fetch if AjaxDataHandler is not available
         const url = TYPO3?.settings?.ajaxUrls?.record_process;
         if (!url) {
             console.error('[GridView] No AJAX URL available');
             return;
         }
-        
+
         const fullUrl = new URL(url, window.location.origin);
         fullUrl.searchParams.set(`cmd[${table}][${uid}][delete]`, '1');
-        
-        fetch(fullUrl.toString(), { 
+
+        fetch(fullUrl.toString(), {
             method: 'GET',
             credentials: 'same-origin',
-            headers: { 
+            headers: {
                 'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest' 
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
             .then(r => r.json())
@@ -880,19 +903,23 @@ class GridViewActions {
                 if (data.hasErrors) {
                     const msg = data.messages?.[0]?.message || 'Unknown error';
                     this.showNotification('Delete failed', msg, 'error');
-                } else {
-                    const wrapper = card?.closest('.gridview-card-wrapper') || card;
+                    // Restore card visibility on error
                     if (wrapper) {
-                        wrapper.style.transition = 'all 0.2s';
-                        wrapper.style.opacity = '0';
-                        wrapper.style.transform = 'scale(0.9)';
-                        setTimeout(() => wrapper.remove(), 200);
+                        wrapper.style.opacity = '1';
+                        wrapper.style.transform = '';
                     }
+                } else {
+                    window.location.reload();
                 }
             })
             .catch(err => {
                 console.error('[GridView] Delete error:', err);
                 this.showNotification('Request failed', err.message, 'error');
+                // Restore card visibility on error
+                if (wrapper) {
+                    wrapper.style.opacity = '1';
+                    wrapper.style.transform = '';
+                }
             });
     }
 
