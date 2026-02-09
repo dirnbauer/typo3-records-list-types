@@ -135,6 +135,12 @@
                 <source>of</source>
                 <target>von</target>
             </trans-unit>
+            
+            <!-- Image hint -->
+            <trans-unit id="image.previewOnly" resname="image.previewOnly">
+                <source>Preview only — may not appear on the frontend for this record type.</source>
+                <target>Nur Vorschau — wird möglicherweise nicht im Frontend für diesen Datensatztyp angezeigt.</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

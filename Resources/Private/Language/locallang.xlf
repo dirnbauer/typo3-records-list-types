@@ -103,6 +103,11 @@
             <trans-unit id="pagination.of" resname="pagination.of">
                 <source>of</source>
             </trans-unit>
+            
+            <!-- Image hint -->
+            <trans-unit id="image.previewOnly" resname="image.previewOnly">
+                <source>Preview only — may not appear on the frontend for this record type.</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

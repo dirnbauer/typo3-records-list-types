@@ -571,6 +571,7 @@ final class RecordGridDataProvider implements SingletonInterface
             'description' => $description,
             'thumbnail' => $thumbnail,
             'thumbnailUrl' => $thumbnailUrl,
+            'imageField' => $imageField,
             'iconIdentifier' => $iconIdentifier,
             'hidden' => $hidden,
             'workspaceState' => $workspaceState,

@@ -530,6 +530,25 @@
     transform: scale(1.02);
 }
 
+/* Image preview hint */
+.gridview-card__image-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-1);
+    padding: var(--gv-space-1) var(--gv-space-3);
+    font-size: 0.625rem;
+    color: var(--gv-text-subtle);
+    background: var(--gv-bg-subtle);
+    border-bottom: 1px solid var(--gv-border-muted);
+    opacity: 0.7;
+}
+
+.gridview-card__image-hint .icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
 /* Placeholder when no image */
 .gridview-card__image-placeholder {
     display: flex;
