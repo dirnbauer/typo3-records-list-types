@@ -69,24 +69,28 @@ The extension has **comprehensive content** covering architecture, configuration
 
 ---
 
-## Recommended Changes
+## Changes Applied
 
-### Immediate
+### Completed
 
-1. **Create `guides.xml`** - Required for docs.typo3.org rendering
-2. **Create `Includes.rst.txt`** - Required for shared RST includes
-3. **Create `Documentation/.editorconfig`** - Consistent RST formatting
-4. **Create `Index.rst`** - Main entry point with metadata and toctree
-5. **Create `Introduction/Index.rst`** - From README.md content
-6. **Create `Installation/Index.rst`** - Extracted from README.md
-7. **Create `Configuration/Index.rst`** - From Configuration.md with `confval` directives
-8. **Create `Developer/Index.rst`** - From Architecture.md, CustomViewTypes.md, Extending.md
+1. **Created `guides.xml`** - With project metadata, extension name, GitHub edit links, Core API interlinks
+2. **Created `Includes.rst.txt`** - Shared substitutions for extension key, name, Composer name
+3. **Created `Documentation/.editorconfig`** - 4-space indent, UTF-8, 80-char line length
+4. **Created `Index.rst`** - Main entry point with metadata, toctree, and Sitemap
+5. **Created `Introduction/Index.rst`** - Features, requirements, view mode descriptions
+6. **Created `Installation/Index.rst`** - Composer install, verification, default config
+7. **Created `Configuration/Index.rst`** - Full TSconfig reference with `confval` directives
+8. **Created `Developer/Index.rst`** - Hub for Architecture, CustomViewTypes, Extending
+9. **Created `Developer/Architecture.rst`** - Services, event listeners, resolution precedence
+10. **Created `Developer/CustomViewTypes.rst`** - PSR-14 and TSconfig registration, template variables
+11. **Created `Developer/Extending.rst`** - Actions, thumbnails, CSS, JS hooks, troubleshooting
+12. **Created `Sitemap.rst`** - Auto-generated sitemap page
 
-### Future
+### Remaining
 
-9. Add real screenshots (PNG, 72 DPI) replacing ASCII art
-10. Add interlinks to TYPO3 Core API documentation
-11. Register with docs.typo3.org via Intercept webhook
+13. Add real screenshots (PNG, 72 DPI) replacing ASCII art
+14. Register with docs.typo3.org via Intercept webhook
+15. Remove legacy Markdown files once RST docs are verified
 
 ---
 
