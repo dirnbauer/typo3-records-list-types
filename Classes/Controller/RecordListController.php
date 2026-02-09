@@ -7,6 +7,7 @@ namespace Webconsulting\RecordsListTypes\Controller;
 use Exception;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use RuntimeException;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
@@ -49,7 +50,7 @@ final class RecordListController extends CoreRecordListController
         if ($this->viewTypeRegistry === null) {
             $registry = GeneralUtility::getContainer()->get(ViewTypeRegistry::class);
             if (!$registry instanceof ViewTypeRegistry) {
-                throw new \RuntimeException('ViewTypeRegistry not available from container', 1735600200);
+                throw new RuntimeException('ViewTypeRegistry not available from container', 1735600200);
             }
             $this->viewTypeRegistry = $registry;
         }
