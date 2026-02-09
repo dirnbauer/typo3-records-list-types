@@ -504,8 +504,13 @@
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
-    background: var(--gv-bg-subtle);
     overflow: hidden; /* Keep hidden to clip image */
+    border-top: 1px solid var(--gv-border-muted);
+    border-bottom: 1px solid var(--gv-border-muted);
+    /* Checkerboard for transparent images */
+    background:
+        repeating-conic-gradient(var(--gv-bg-subtle) 0% 25%, var(--gv-bg) 0% 50%)
+        50% / 16px 16px;
 }
 
 .gridview-card__image a {
