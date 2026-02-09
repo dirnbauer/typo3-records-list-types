@@ -55,12 +55,32 @@ View mode settings
 Pagination
 ==========
 
-All alternative view modes (Grid, Compact, Teaser, and custom types) support
-pagination matching the standard TYPO3 Core list view navigation style.
-When the number of records exceeds the configured ``itemsPerPage``, a
-pagination bar is shown at the top and bottom of the record list with
-a record range indicator, first/previous/next/last buttons, a page
-number input field for direct navigation, and a reload button.
+Pagination matches TYPO3 Core List View behavior:
+
+-   **Multi-table mode** (default page view): Shows a limited number
+    of records per table (default 20). If a table has more records, an
+    "Expand table" button links to single-table mode. No pagination
+    controls are shown.
+-   **Single-table mode** (after clicking a table name or "Expand
+    table"): Full pagination at top and bottom with record range
+    indicator, page input field, first/prev/next/last buttons, and
+    reload button.
+
+.. _configuration-pagination-limit-per-table:
+
+..  confval:: mod.web_list.viewMode.itemsLimitPerTable
+    :name: conf-viewmode-limitpertable
+    :type: int
+    :default: ``20``
+
+    Maximum records shown per table in multi-table mode. Falls back
+    to ``mod.web_list.itemsLimitPerTable`` (TYPO3 Core setting) if
+    not set.
+
+    ..  code-block:: typoscript
+        :caption: Page TSconfig
+
+        mod.web_list.viewMode.itemsLimitPerTable = 30
 
 .. _configuration-pagination-items-per-page:
 

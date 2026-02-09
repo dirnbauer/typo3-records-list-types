@@ -105,15 +105,22 @@ mod.web_list.gridView.table.tt_content {
 
 ## Pagination
 
-All alternative view modes (Grid, Compact, Teaser, and custom types) support
-pagination matching the standard TYPO3 Core list view navigation style.
-When the number of records exceeds the configured `itemsPerPage`, a
-pagination bar is shown at the top and bottom of the record list with:
+Pagination matches TYPO3 Core List View behavior:
 
-- **Record range** indicator ("Records 1 - 100")
-- **First / Previous / Next / Last** navigation buttons
-- **Page input** field for direct page navigation ("Page [1] of 121")
-- **Reload** button
+- **Multi-table mode** (default page view): Shows a limited number of records per table (default 20). If a table has more records, an "Expand table" button links to single-table mode. No pagination controls are shown.
+- **Single-table mode** (after clicking a table name or "Expand table"): Full pagination at top and bottom with record range indicator, page input field, first/prev/next/last buttons, and reload button.
+
+This is the same pattern used by TYPO3's built-in List View.
+
+### Items limit per table (multi-table mode)
+
+```typoscript
+mod.web_list.viewMode {
+    # Max records shown per table in multi-table mode (default: 20)
+    # Falls back to mod.web_list.itemsLimitPerTable if not set
+    itemsLimitPerTable = 20
+}
+```
 
 ### Global Default
 

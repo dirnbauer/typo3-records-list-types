@@ -15,7 +15,9 @@ A TYPO3 extension that transforms the backend **Records** module with multiple v
 - **Per-Table Config** -- Configure title, description, image, and display fields via TSconfig
 - **User Preferences** -- View mode is persisted per backend user via AJAX
 - **Sorting Controls** -- Manual drag ordering and field-based sorting with direction toggle
-- **Pagination** -- TYPO3 Core list view style navigation with record range, page input, and first/prev/next/last buttons
+- **Pagination** -- Matches TYPO3 Core: multi-table mode shows limited records with "Expand table" button, single-table mode shows full pagination (record range, page input, first/prev/next/last)
+- **Image Preview Hint** -- Subtle notice below thumbnails reminding editors that the image may not appear on the frontend for certain record types
+- **Zero-PHP Extensibility** -- Add new view types with just TSconfig + Fluid template + CSS, no PHP classes needed
 - **Search** -- Client-side search filtering across all view modes
 - **Accessibility** -- WCAG 2.1 compliant keyboard navigation, ARIA labels, and screen reader support
 
