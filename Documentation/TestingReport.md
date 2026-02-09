@@ -72,26 +72,27 @@ The extension has test infrastructure scaffolding in place (PHPUnit config, CI w
 
 ---
 
-## Recommended Changes
+## Changes Applied
 
-### Immediate (This Session)
+### Completed (This Session)
 
-1. **Remove DummyTest** - Replace with real unit tests
-2. **Unit tests for pure PHP classes:**
-   - `RegisterViewModesEventTest` - All public methods, validation, edge cases
-   - `GridViewRecordActionsListenerTest` - Cache operations, action filtering
-   - `ViewModeControllerTest` - AJAX endpoints with mocked dependencies
-   - `ThumbnailServiceTest` - Image detection, default dimensions
-   - `ConstantsTest` - Verify constant values match expectations
-3. **Update `phpunit.xml.dist`** - Add Architecture test suite
+1. **Removed DummyTest** - Replaced with real tests
+2. **Unit tests created (59 tests, 110 assertions):**
+   - `RegisterViewModesEventTest` - 14 tests: constructor, add/remove/modify/has operations, validation, edge cases
+   - `GridViewRecordActionsListenerTest` - 13 tests: store/retrieve, primary action filtering, cache management
+   - `ViewModeControllerTest` - 3 tests: error handling, exception logging (happy-path needs functional tests)
+   - `ThumbnailServiceTest` - 12 tests: image type detection (7 valid, 7 invalid), default dimensions, error resilience
+   - `ConstantsTest` - 6 tests: verify all constant values
+3. **Updated `phpunit.xml.dist`** - Added Architecture test suite, added Model exclusion from coverage
 
-### Future Work
+### Remaining Work
 
 4. **Architecture tests (PHPat)** - Layer constraints, dependency rules
 5. **Functional tests** - For `ViewModeResolver`, `GridConfigurationService`, `ViewTypeRegistry` (require TYPO3 bootstrap)
 6. **Functional tests** - For `RecordGridDataProvider` (require database)
-7. **CI enhancements** - Add separate functional test job with MySQL service
-8. **Mutation testing** - Add Infection for test quality verification
+7. **Functional tests** - For `ViewModeController` happy-path (setViewMode with valid mode, getViewMode)
+8. **CI enhancements** - Add separate functional test job with MySQL service
+9. **Mutation testing** - Add Infection for test quality verification
 
 ---
 

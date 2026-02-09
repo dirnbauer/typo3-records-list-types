@@ -14,6 +14,9 @@
         <testsuite name="Functional">
             <directory>Tests/Functional</directory>
         </testsuite>
+        <testsuite name="Architecture">
+            <directory>Tests/Architecture</directory>
+        </testsuite>
     </testsuites>
     <coverage>
         <report>
@@ -25,5 +28,8 @@
         <include>
             <directory>Classes</directory>
         </include>
+        <exclude>
+            <directory>Classes/Domain/Model</directory>
+        </exclude>
     </source>
 </phpunit>
