@@ -1,0 +1,11 @@
+includes:
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/saschaegerer/phpstan-typo3/extension.neon
+
+parameters:
+    level: 9
+    paths:
+        - Classes
+    excludePaths:
+        - Classes/Domain/Model/*
+    treatPhpDocTypesAsCertain: false

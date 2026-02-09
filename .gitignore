@@ -30,3 +30,4 @@ public/typo3conf/ext/
 *.cache
 .php-cs-fixer.cache
 .phpunit.result.cache
+.phpunit.cache/
