@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# IDE / Editor settings
+.idea/
+.vscode/
+
+# Cursor AI skills and rules (local configuration)
+.cursor/
+.claude/
+.codex/
+.opencode/
+.agents/
+.agent/
+
+# Local agent configuration
+AGENTS.md
+
+# Local skills collections
+webconsulting-skills/
+
+# TYPO3 / Composer
+vendor/
+var/
+public/typo3/
+public/typo3conf/ext/
+.Build/
+
+# PHP
+*.cache
+.php-cs-fixer.cache
+.phpunit.result.cache
