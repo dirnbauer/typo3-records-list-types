@@ -91,8 +91,10 @@
 
                     <f:comment>Grid content - with WCAG 2.1 ARIA attributes for drag and drop</f:comment>
                     <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
-                        <f:comment>Pagination - top</f:comment>
-                        <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+                        <f:comment>Pagination - only in single table mode (matches TYPO3 Core)</f:comment>
+                        <f:if condition="{currentTable}">
+                            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+                        </f:if>
 
                         <div class="gridview-card-grid"
                              data-table="{table.tableName}"
@@ -118,8 +120,20 @@
                             </f:if>
                         </div>
 
-                        <f:comment>Pagination - bottom</f:comment>
-                        <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
+                        <f:comment>Expand table button - multi-table mode with more records</f:comment>
+                        <f:if condition="!{currentTable} && {table.hasMore}">
+                            <div class="text-center py-2 border-top">
+                                <a href="{table.singleTableUrl}" class="btn btn-sm btn-default">
+                                    <core:icon identifier="actions-caret-down" size="small" />
+                                    <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.expandTable" default="Expand table" />
+                                </a>
+                            </div>
+                        </f:if>
+
+                        <f:comment>Pagination - only in single table mode</f:comment>
+                        <f:if condition="{currentTable}">
+                            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
+                        </f:if>
                     </div>
                 </div>
             </f:for>

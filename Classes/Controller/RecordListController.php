@@ -423,11 +423,20 @@ final class RecordListController extends CoreRecordListController
                 $sortField = $sortbyFieldName;
             }
 
-            // Pagination
-            $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
-            $currentPointer = $this->getCurrentPointer($request, $tableName);
+            $isSingleTableMode = ($table !== '');
             $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
-            $offset = ($currentPointer - 1) * $itemsPerPage;
+
+            // Pagination: only in single-table mode (matches TYPO3 Core List View).
+            // Multi-table mode shows limited records with an "Expand table" button.
+            if ($isSingleTableMode) {
+                $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
+                $currentPointer = $this->getCurrentPointer($request, $tableName);
+                $offset = ($currentPointer - 1) * $itemsPerPage;
+            } else {
+                $itemsPerPage = $this->getItemsLimitPerTable($pageId);
+                $currentPointer = 1;
+                $offset = 0;
+            }
 
             // Fetch records
             if ($searchTerm !== '') {
@@ -441,7 +450,7 @@ final class RecordListController extends CoreRecordListController
             }
 
             $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
-            $isSingleTableMode = ($table !== '');
+            $hasMore = $recordCount > count($records);
 
             // Pagination
             $paginationData = $this->buildPagination(
@@ -556,6 +565,7 @@ final class RecordListController extends CoreRecordListController
                 'tableConfig' => $tableConfig,
                 'records' => $enrichedRecords,
                 'recordCount' => $recordCount,
+                'hasMore' => $hasMore,
                 'lastRecordUid' => $lastRecordUid,
                 'actionButtons' => $actionButtons,
                 'sortingDropdownHtml' => $sortingDropdownHtml,
@@ -2109,6 +2119,35 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * Get the maximum number of records shown per table in multi-table mode.
+     *
+     * In multi-table mode (no specific table selected), each table shows
+     * at most this many records with an "Expand table" button for more.
+     * This matches TYPO3 Core's itemsLimitPerTable behavior.
+     *
+     * @param int $pageId The page ID for TSconfig resolution
+     * @return int Number of records to show per table (default: 20)
+     */
+    protected function getItemsLimitPerTable(int $pageId): int
+    {
+        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
+
+        // Check extension-specific setting first
+        $extLimit = $tsConfig['mod.']['web_list.']['viewMode.']['itemsLimitPerTable'] ?? null;
+        if ($extLimit !== null && is_numeric($extLimit)) {
+            return max(1, (int) $extLimit);
+        }
+
+        // Fall back to TYPO3 Core's itemsLimitPerTable
+        $coreLimit = $tsConfig['mod.']['web_list.']['itemsLimitPerTable'] ?? null;
+        if ($coreLimit !== null && is_numeric($coreLimit)) {
+            return max(1, (int) $coreLimit);
+        }
+
+        return 20;
+    }
+
+    /**
      * Build pagination objects for a table using TYPO3's Core Pagination API.
      *
      * Uses DatabasePaginator (extending AbstractPaginator) with SlidingWindowPagination
@@ -2146,8 +2185,10 @@ final class RecordListController extends CoreRecordListController
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $queryParams = $request->getQueryParams();
 
-        $urlParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        $preserveParams = ['table', 'searchTerm', 'search_levels'];
+        // Always include table in pagination URLs so clicking any pagination
+        // link switches to single-table mode (matches TYPO3 Core behavior).
+        $urlParams = ['id' => $pageId, 'displayMode' => $viewMode, 'table' => $tableName];
+        $preserveParams = ['searchTerm', 'search_levels'];
         foreach ($preserveParams as $param) {
             if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
                 $urlParams[$param] = $queryParams[$param];
