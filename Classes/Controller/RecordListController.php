@@ -2348,13 +2348,20 @@ final class RecordListController extends CoreRecordListController
                 $type = $column['type'];
                 $rawValue = $rawRecord[$field] ?? null;
 
+                // For boolean/check fields, invert display value when TCA has invertStateDisplay
+                // (e.g., hidden field labeled "Enabled": hidden=0 should display as Yes/true)
+                $displayRaw = $rawValue;
+                if ($type === 'boolean' && $this->shouldInvertBooleanDisplay($field, $tcaColumns)) {
+                    $displayRaw = ((bool) $rawValue) ? 0 : 1;
+                }
+
                 $displayValues[$field] = [
                     'field' => $field,
                     'label' => $column['label'],
                     'type' => $type,
                     'isLabelField' => $column['isLabelField'] ?? false,
-                    'raw' => $rawValue,
-                    'formatted' => $this->formatFieldValue($rawValue, $type, $field, $tcaColumns, $tableName),
+                    'raw' => $displayRaw,
+                    'formatted' => $this->formatFieldValue($displayRaw, $type, $field, $tcaColumns, $tableName),
                     'isEmpty' => $rawValue === null || $rawValue === '' || $rawValue === 0 || $rawValue === '0',
                 ];
             }
@@ -2438,6 +2445,38 @@ final class RecordListController extends CoreRecordListController
                 $text = trim($text);
                 return $text;
         }
+    }
+
+    /**
+     * Check if a boolean/check field should invert its display value.
+     *
+     * Respects TCA `invertStateDisplay` at both the config level and per-item level.
+     * This is commonly used for the `hidden` field, where the label says "Enabled"
+     * but the DB value 1 means hidden (disabled), so the display must be inverted.
+     *
+     * @param string $field The field name
+     * @param array<string, mixed> $tcaColumns TCA columns configuration
+     * @return bool True if the display value should be inverted
+     */
+    protected function shouldInvertBooleanDisplay(string $field, array $tcaColumns): bool
+    {
+        $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
+        $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
+
+        // Check top-level invertStateDisplay (config.invertStateDisplay)
+        if (!empty($config['invertStateDisplay'])) {
+            return true;
+        }
+
+        // Check per-item invertStateDisplay (config.items[n].invertStateDisplay)
+        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
+        foreach ($items as $item) {
+            if (is_array($item) && !empty($item['invertStateDisplay'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
