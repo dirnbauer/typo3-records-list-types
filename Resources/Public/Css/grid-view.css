@@ -421,11 +421,38 @@
 .gridview-card__footer {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--gv-space-2);
     padding: var(--gv-space-2) var(--gv-space-4);
     border-top: 1px solid var(--gv-border-muted);
     font-size: 0.75rem;
     color: var(--gv-text-muted);
+}
+
+/* Footer left section (ID + PID) */
+.gridview-card__footer-left {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-2);
+}
+
+/* Footer language flag (bottom right) */
+.gridview-card__footer-lang {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    opacity: 0.8;
+    transition: opacity var(--gv-transition-fast);
+}
+
+.gridview-card__footer-lang .icon {
+    width: 16px;
+    height: 16px;
+}
+
+.gridview-card:hover .gridview-card__footer-lang {
+    opacity: 1;
 }
 
 /* ID section with label and circle number */

@@ -269,15 +269,22 @@
         </f:if>
     </div>
 
-    <f:comment>Card Footer with UID and PID</f:comment>
+    <f:comment>Card Footer with UID, PID and Language Flag</f:comment>
     <div class="gridview-card__footer">
-        <span class="gridview-card__footer-id">
-            <span class="gridview-card__footer-label">ID</span>
-            <span class="gridview-card__footer-uid">{record.uid}</span>
+        <span class="gridview-card__footer-left">
+            <span class="gridview-card__footer-id">
+                <span class="gridview-card__footer-label">ID</span>
+                <span class="gridview-card__footer-uid">{record.uid}</span>
+            </span>
+            <f:if condition="{record.tableName} != 'pages'">
+                <span class="gridview-card__footer-separator">|</span>
+                <span class="gridview-card__footer-pid">on page {record.pid}</span>
+            </f:if>
         </span>
-        <f:if condition="{record.tableName} != 'pages'">
-            <span class="gridview-card__footer-separator">|</span>
-            <span class="gridview-card__footer-pid">on page {record.pid}</span>
+        <f:if condition="{record.languageFlagIdentifier}">
+            <span class="gridview-card__footer-lang" title="{record.languageTitle}">
+                <core:icon identifier="{record.languageFlagIdentifier}" size="small" />
+            </span>
         </f:if>
     </div>
 </div>

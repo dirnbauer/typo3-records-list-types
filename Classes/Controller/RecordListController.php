@@ -462,6 +462,9 @@ final class RecordListController extends CoreRecordListController
                 // Enrich each record with display values for all columns
                 $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
 
+                // Enrich records with language flag info (sys_language_uid -> flag identifier)
+                $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
+
                 // Get sortable fields for this table
                 $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
 
@@ -2367,6 +2370,53 @@ final class RecordListController extends CoreRecordListController
             }
 
             $record['displayValues'] = $displayValues;
+        }
+
+        return $records;
+    }
+
+    /**
+     * Enrich records with language information (flag identifier, language title).
+     *
+     * Resolves the sys_language_uid from each record's raw data to the corresponding
+     * site language flag identifier, so the card can display the language flag.
+     *
+     * @param array<int, array<string, mixed>> $records The enriched records
+     * @param string $tableName The table name
+     * @return array<int, array<string, mixed>> Records with language info added
+     */
+    protected function enrichRecordsWithLanguageInfo(array $records, string $tableName): array
+    {
+        $tcaForTable = $this->getTcaForTable($tableName);
+        $languageField = $tcaForTable['ctrl']['languageField'] ?? null;
+
+        // If no language field is defined for this table, skip
+        if (!is_string($languageField) || $languageField === '') {
+            return $records;
+        }
+
+        // Get available site languages
+        $backendUser = $this->getBackendUserAuthentication();
+        $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
+
+        foreach ($records as &$record) {
+            /** @var array<string, mixed> $rawRecord */
+            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
+            $langUidRaw = $rawRecord[$languageField] ?? 0;
+            $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
+
+            $record['sysLanguageUid'] = $langUid;
+            $record['languageFlagIdentifier'] = '';
+            $record['languageTitle'] = '';
+
+            // Resolve flag identifier from site languages
+            foreach ($siteLanguages as $siteLanguage) {
+                if ($siteLanguage->getLanguageId() === $langUid) {
+                    $record['languageFlagIdentifier'] = $siteLanguage->getFlagIdentifier();
+                    $record['languageTitle'] = $siteLanguage->getTitle();
+                    break;
+                }
+            }
         }
 
         return $records;
