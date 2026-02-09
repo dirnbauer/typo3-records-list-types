@@ -1,5 +1,6 @@
 includes:
     - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpat/phpat/extension.neon
     # saschaegerer/phpstan-typo3 does not yet support TYPO3 v14
     # Re-enable once v14 support is released
 
@@ -7,6 +8,7 @@ parameters:
     level: 9
     paths:
         - Classes
+        - Tests/Architecture
     excludePaths:
         - Classes/Domain/Model/*
     treatPhpDocTypesAsCertain: false

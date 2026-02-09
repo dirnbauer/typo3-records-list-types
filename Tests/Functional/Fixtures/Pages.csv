@@ -1,0 +1,21 @@
+"pages"
+,"uid","pid","title","slug","TSconfig","deleted","hidden"
+,1,0,"Root Page","/","",0,0
+,2,1,"Page with TSconfig","/page-with-tsconfig","mod.web_list.viewMode.default = grid
+mod.web_list.viewMode.allowed = list,grid,compact",0,0
+,3,1,"Page with grid config","/page-with-grid-config","mod.web_list.gridView.cols = 3
+mod.web_list.gridView.table.tt_content.titleField = header
+mod.web_list.gridView.table.tt_content.descriptionField = bodytext
+mod.web_list.gridView.table.tt_content.imageField = image
+mod.web_list.gridView.table.pages.titleField = title",0,0
+,4,1,"Page with single view","/page-single-view","mod.web_list.viewMode.allowed = grid",0,0
+,5,1,"Page with custom type","/page-custom-type","mod.web_list.viewMode.types.kanban.label = Kanban
+mod.web_list.viewMode.types.kanban.icon = content-text
+mod.web_list.viewMode.types.kanban.description = Kanban board
+mod.web_list.viewMode.types.kanban.template = KanbanView
+mod.web_list.viewMode.types.kanban.partial = KanbanCard
+mod.web_list.viewMode.types.kanban.css = EXT:my_ext/Resources/Public/Css/kanban.css
+mod.web_list.viewMode.types.kanban.displayColumns = title,status
+mod.web_list.viewMode.types.kanban.columnsFromTCA = 0",0,0
+,6,1,"Page with preview disabled","/page-preview-disabled","mod.web_list.gridView.table.tt_content.preview = 0
+mod.web_list.gridView.table.tt_content.imageField = image",0,0
