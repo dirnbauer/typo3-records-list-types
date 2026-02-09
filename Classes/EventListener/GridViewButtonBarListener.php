@@ -6,6 +6,7 @@ namespace Webconsulting\RecordsListTypes\EventListener;
 
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;
+use RuntimeException;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\Components\Buttons\DropDownButton;
@@ -16,7 +17,6 @@ use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
-use TYPO3\CMS\Backend\Routing\Route;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Constants;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
@@ -172,7 +172,7 @@ final class GridViewButtonBarListener
     {
         $lang = $GLOBALS['LANG'] ?? null;
         if (!$lang instanceof LanguageService) {
-            throw new \RuntimeException('LanguageService not available', 1735600100);
+            throw new RuntimeException('LanguageService not available', 1735600100);
         }
         return $lang;
     }
