@@ -36,7 +36,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         'typo3/cms-install',
     ];
 
-    /** @var array<string, bool> Cache for diagnostic results */
+    /** @var array<string, string[]> Cache for diagnostic results */
     private array $diagnosticCache = [];
 
     public function __construct(

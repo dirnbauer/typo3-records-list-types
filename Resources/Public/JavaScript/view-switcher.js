@@ -18,9 +18,8 @@ function getAjaxUrl() {
         }
     }
 
-    // Fallback: Try to construct URL from known pattern
-    const baseUrl = document.querySelector('base')?.href || '/';
-    return baseUrl + 'typo3/ajax/records-list-types/set-view-mode';
+    // No AJAX URL available — caller handles null gracefully
+    return null;
 }
 
 /**
