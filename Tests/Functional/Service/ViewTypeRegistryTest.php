@@ -183,20 +183,31 @@ final class ViewTypeRegistryTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function getCssFilesReturnsFileForGridType(): void
+    public function getCssFilesAlwaysIncludesBaseCss(): void
     {
         $files = $this->subject->getCssFiles('grid', 1);
 
         self::assertNotEmpty($files);
-        self::assertStringContainsString('grid-view.css', $files[0]);
+        self::assertStringContainsString('base.css', $files[0]);
     }
 
     #[Test]
-    public function getCssFilesReturnsEmptyForUnknownType(): void
+    public function getCssFilesReturnsGridViewCssAfterBase(): void
+    {
+        $files = $this->subject->getCssFiles('grid', 1);
+
+        self::assertCount(2, $files);
+        self::assertStringContainsString('base.css', $files[0]);
+        self::assertStringContainsString('grid-view.css', $files[1]);
+    }
+
+    #[Test]
+    public function getCssFilesReturnsOnlyBaseForUnknownType(): void
     {
         $files = $this->subject->getCssFiles('nonexistent', 1);
 
-        self::assertSame([], $files);
+        self::assertCount(1, $files);
+        self::assertStringContainsString('base.css', $files[0]);
     }
 
     #[Test]
@@ -205,8 +216,9 @@ final class ViewTypeRegistryTest extends FunctionalTestCase
         // Page 5 has kanban type with css = EXT:my_ext/Resources/Public/Css/kanban.css
         $files = $this->subject->getCssFiles('kanban', 5);
 
-        self::assertNotEmpty($files);
-        self::assertStringContainsString('kanban.css', $files[0]);
+        self::assertCount(2, $files);
+        self::assertStringContainsString('base.css', $files[0]);
+        self::assertStringContainsString('kanban.css', $files[1]);
     }
 
     #[Test]
