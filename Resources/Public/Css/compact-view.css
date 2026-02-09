@@ -281,12 +281,12 @@
     height: 12px;
 }
 
-/* Column widths */
-.compactview-th--icon { width: var(--cv-col-icon); }
-.compactview-th--uid { width: var(--cv-col-uid); text-align: right; padding-right: 0.375rem; }
+/* Column widths - max-width prevents stretching with few scrollable columns */
+.compactview-th--icon { width: var(--cv-col-icon); max-width: var(--cv-col-icon); }
+.compactview-th--uid { width: var(--cv-col-uid); max-width: var(--cv-col-uid); text-align: right; padding-right: 0.375rem; }
 .compactview-th--title { width: var(--cv-col-title); }
-.compactview-th--status { width: var(--cv-col-status); }
-.compactview-th--action { width: var(--cv-col-action); }
+.compactview-th--status { width: var(--cv-col-status); max-width: var(--cv-col-status); }
+.compactview-th--action { width: var(--cv-col-action); max-width: var(--cv-col-action); }
 
 /* =============================================================================
    Sticky Fixed Columns
@@ -472,15 +472,19 @@
     border-bottom: none;
 }
 
-/* Column-specific styling */
+/* Column-specific styling
+   Fixed-size columns use max-width to prevent table-layout:auto from
+   stretching them when few scrollable columns are present. */
 .compactview-td--icon {
     width: var(--cv-col-icon);
+    max-width: var(--cv-col-icon);
     text-align: center;
     padding: 0.1875rem 0.125rem;
 }
 
 .compactview-td--uid {
     width: var(--cv-col-uid);
+    max-width: var(--cv-col-uid);
     text-align: right;
     padding-right: 0.375rem;
 }
@@ -493,12 +497,14 @@
 
 .compactview-td--status {
     width: var(--cv-col-status);
+    max-width: var(--cv-col-status);
     text-align: center;
     padding: 0.1875rem 0.125rem;
 }
 
 .compactview-td--action {
     width: var(--cv-col-action);
+    max-width: var(--cv-col-action);
     text-align: center;
     padding: 0.1875rem 0.125rem;
 }
