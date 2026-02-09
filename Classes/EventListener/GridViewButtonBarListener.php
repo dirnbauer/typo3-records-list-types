@@ -125,11 +125,12 @@ final class GridViewButtonBarListener
 
         $componentFactory = $this->getComponentFactory();
 
-        // Create dropdown button
+        // Create dropdown button showing the active view mode label
         $dropdownButton = $componentFactory->createDropDownButton()
             ->setLabel($lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:button.viewMode'))
             ->setIcon($this->iconFactory->getIcon($currentModeConfig['icon'], IconSize::SMALL))
-            ->setShowLabelText(true);
+            ->setShowLabelText(true)
+            ->setShowActiveLabelText(true);
 
         // Add radio items for each view mode
         foreach ($allowedModes as $modeId => $modeConfig) {

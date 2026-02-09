@@ -24,8 +24,8 @@
                 <target>Ansichtsmodus wechseln</target>
             </trans-unit>
             <trans-unit id="button.viewMode" resname="button.viewMode">
-                <source>View</source>
-                <target>Ansicht</target>
+                <source>List Type</source>
+                <target>Listentyp</target>
             </trans-unit>
             <trans-unit id="noRecords" resname="noRecords">
                 <source>No records found on this page.</source>

@@ -19,7 +19,7 @@
                 <source>Switch View Mode</source>
             </trans-unit>
             <trans-unit id="button.viewMode" resname="button.viewMode">
-                <source>View</source>
+                <source>List Type</source>
             </trans-unit>
             <trans-unit id="noRecords" resname="noRecords">
                 <source>No records found on this page.</source>

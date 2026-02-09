@@ -48,6 +48,7 @@ PSR-14 extensibility.
     Installation/Index
     Configuration/Index
     Developer/Index
+    KnownProblems/Index
 
 ..  toctree::
     :hidden:
