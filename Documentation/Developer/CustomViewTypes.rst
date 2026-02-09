@@ -10,6 +10,13 @@ Adding a new view type requires **zero PHP**. You provide TSconfig and a
 Fluid template -- the extension handles record fetching, pagination,
 sorting, action buttons, and asset loading.
 
+..  tip::
+
+    Install the companion extension
+    `Records List Examples <https://github.com/dirnbauer/typo3-records-list-examples>`__
+    to get 6 ready-to-use view types (Timeline, Catalog, Address Book,
+    Event List, Gallery, Dashboard) with full templates and CSS.
+
 .. _custom-view-types-quickstart:
 
 Quick start: 3 steps

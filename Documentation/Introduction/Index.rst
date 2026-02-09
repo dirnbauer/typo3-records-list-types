@@ -20,7 +20,9 @@ Features
     sortable columns
 -   **Teaser View**: News-style cards with title, date, and description
 -   **Custom Views**: Register your own view types via PSR-14 events or
-    TSconfig
+    TSconfig (see `Records List Examples
+    <https://github.com/dirnbauer/typo3-records-list-examples>`__
+    for 6 ready-to-use examples)
 -   **User preferences**: Selected view mode is persisted per user
 -   **Dark mode**: Full compatibility with TYPO3's dark mode
 -   **Per-table config**: Configure which fields to display via TSconfig

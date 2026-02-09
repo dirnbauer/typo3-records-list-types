@@ -134,6 +134,8 @@ Restrict a view type to a specific page using TSconfig conditions:
 
 See [Custom View Types](Documentation/CustomViewTypes.md) for full documentation with step-by-step guide, real-world examples, and template variable reference.
 
+For ready-to-use examples, install the companion extension [Records List Examples](https://github.com/dirnbauer/typo3-records-list-examples) which adds 6 additional view types (Timeline, Catalog, Address Book, Event List, Gallery, Dashboard) with zero PHP.
+
 ## Configuration
 
 ### Per-Table Field Configuration
@@ -389,6 +391,7 @@ Comprehensive documentation is available in the `Documentation/` folder:
 | [Configuration.md](Documentation/Configuration.md) | Complete TSconfig reference |
 | [CustomViewTypes.md](Documentation/CustomViewTypes.md) | Creating custom view types |
 | [Extending.md](Documentation/Extending.md) | Extension points and PSR-14 events |
+| [Records List Examples](https://github.com/dirnbauer/typo3-records-list-examples) | Companion extension with 6 ready-to-use example view types |
 
 ## License
 
