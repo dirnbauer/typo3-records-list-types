@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Tests\Unit\Pagination;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Webconsulting\RecordsListTypes\Pagination\DatabasePaginator;
@@ -156,7 +157,7 @@ final class DatabasePaginatorTest extends TestCase
     public function currentPageZeroThrowsException(): void
     {
         // TYPO3's AbstractPaginator requires currentPageNumber > 0
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         new DatabasePaginator([], 100, 0, 10);
     }
