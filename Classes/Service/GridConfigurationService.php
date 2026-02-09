@@ -40,8 +40,10 @@ final class GridConfigurationService implements SingletonInterface
         $tableConfig = $tsConfig['mod.']['web_list.']['gridView.']['table.'][$table . '.'] ?? [];
 
         // Get the hidden field from TCA
-        /** @var array<string, array<string, mixed>> $tca */
-        $tca = $GLOBALS['TCA'][$table] ?? [];
+        /** @var array<string, array<string, mixed>> $allTca */
+        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
+        /** @var array<string, mixed> $tca */
+        $tca = is_array($allTca[$table] ?? null) ? $allTca[$table] : [];
         /** @var array<string, mixed> $tcaCtrl */
         $tcaCtrl = $tca['ctrl'] ?? [];
         /** @var array<string, string> $enableColumns */
@@ -118,8 +120,9 @@ final class GridConfigurationService implements SingletonInterface
         }
 
         // Fall back to TCA label field
-        /** @var array<string, mixed>|null $tca */
-        $tca = $GLOBALS['TCA'][$table] ?? null;
+        /** @var array<string, array<string, mixed>> $allTcaLabel */
+        $allTcaLabel = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
+        $tca = is_array($allTcaLabel[$table] ?? null) ? $allTcaLabel[$table] : null;
         if (is_array($tca)) {
             /** @var array<string, mixed> $ctrl */
             $ctrl = $tca['ctrl'] ?? [];

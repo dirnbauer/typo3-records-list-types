@@ -150,7 +150,9 @@ final class RecordGridDataProvider implements SingletonInterface
      */
     private function getTca(string $table): array
     {
-        $tca = $GLOBALS['TCA'][$table] ?? [];
+        /** @var array<string, mixed> $allTca */
+        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
+        $tca = $allTca[$table] ?? [];
         if (!is_array($tca)) {
             return ['ctrl' => [], 'columns' => []];
         }
@@ -554,7 +556,7 @@ final class RecordGridDataProvider implements SingletonInterface
         $tca = $this->getTca($table);
         $enableColumns = is_array($tca['ctrl']['enablecolumns'] ?? null) ? $tca['ctrl']['enablecolumns'] : [];
         $hiddenField = is_string($enableColumns['disabled'] ?? null) ? $enableColumns['disabled'] : null;
-        $hidden = ($hiddenField !== null) && !empty($row[$hiddenField]);
+        $hidden = ($hiddenField !== null) && isset($row[$hiddenField]) && (bool) $row[$hiddenField];
 
         // Detect workspace state for visual indicators
         $workspaceState = $this->getWorkspaceState($row);

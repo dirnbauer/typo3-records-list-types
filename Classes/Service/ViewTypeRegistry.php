@@ -110,18 +110,22 @@ final class ViewTypeRegistry implements SingletonInterface
         $tsTypes = $tsConfig['mod.']['web_list.']['viewMode.']['types.'] ?? [];
 
         foreach ($tsTypes as $typeId => $config) {
-            $typeId = rtrim($typeId, '.');
+            $typeId = rtrim((string) $typeId, '.');
             if (!is_array($config)) {
                 continue;
             }
 
+            // Cast TSconfig array keys to string (they come as mixed from BackendUtility)
+            /** @var array<string, mixed> $typedConfig */
+            $typedConfig = $config;
+
             // Merge with existing type or create new
             if (isset($types[$typeId])) {
                 // Override existing type's config
-                $types[$typeId] = array_merge($types[$typeId], $this->normalizeConfig($config, $typeId));
+                $types[$typeId] = array_merge($types[$typeId], $this->normalizeConfig($typedConfig, $typeId));
             } else {
                 // New custom type
-                $types[$typeId] = $this->normalizeConfig($config, $typeId);
+                $types[$typeId] = $this->normalizeConfig($typedConfig, $typeId);
             }
         }
 

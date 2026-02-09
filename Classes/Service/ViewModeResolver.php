@@ -145,10 +145,13 @@ final class ViewModeResolver implements SingletonInterface
             foreach ($customModes as $modeId => $config) {
                 $modeId = rtrim((string) $modeId, '.');
                 if (is_array($config) && !isset($modes[$modeId])) {
+                    $labelVal = $config['label'] ?? $modeId;
+                    $iconVal = $config['icon'] ?? 'actions-viewmode-list';
+                    $descVal = $config['description'] ?? '';
                     $modes[$modeId] = [
-                        'label' => (string) ($config['label'] ?? $modeId),
-                        'icon' => (string) ($config['icon'] ?? 'actions-viewmode-list'),
-                        'description' => (string) ($config['description'] ?? ''),
+                        'label' => is_string($labelVal) ? $labelVal : $modeId,
+                        'icon' => is_string($iconVal) ? $iconVal : 'actions-viewmode-list',
+                        'description' => is_string($descVal) ? $descVal : '',
                     ];
                 }
             }

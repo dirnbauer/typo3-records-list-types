@@ -240,13 +240,13 @@ final class RecordListController extends CoreRecordListController
 
         // Search box - use full searchLevels (grid/compact now support search properly)
         $searchBoxHtml = '';
-        if ($this->allowSearch && (bool) $this->moduleData->get('searchBox')) {
+        if ($this->allowSearch && $this->moduleData !== null && (bool) $this->moduleData->get('searchBox')) {
             $searchBoxHtml = $this->renderSearchBox($request, $dbList, $this->searchTerm, $searchLevels);
         }
 
         // Clipboard
         $clipboardHtml = '';
-        if ((bool) $this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
+        if ($this->moduleData !== null && (bool) $this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
             $clipboardHtml = '<hr class="spacer"><typo3-backend-clipboard-panel return-url="' . htmlspecialchars((string) $dbList->listURL()) . '"></typo3-backend-clipboard-panel>';
         }
 
@@ -2340,7 +2340,8 @@ final class RecordListController extends CoreRecordListController
 
         foreach ($records as &$record) {
             $displayValues = [];
-            $rawRecord = $record['rawRecord'] ?? [];
+            /** @var array<string, mixed> $rawRecord */
+            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
 
             foreach ($displayColumns as $column) {
                 $field = $column['field'];
@@ -2446,7 +2447,9 @@ final class RecordListController extends CoreRecordListController
      */
     private function getTcaForTable(string $tableName): array
     {
-        $tca = $GLOBALS['TCA'][$tableName] ?? [];
+        /** @var array<string, mixed> $allTca */
+        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
+        $tca = $allTca[$tableName] ?? [];
         if (!is_array($tca)) {
             return ['ctrl' => [], 'columns' => []];
         }
