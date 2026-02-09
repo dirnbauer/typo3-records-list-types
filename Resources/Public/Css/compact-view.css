@@ -567,8 +567,6 @@
 
 .compactview-row--hidden .compactview-row__title-link {
     color: var(--cv-text-muted);
-    text-decoration: line-through;
-    text-decoration-color: var(--cv-text-subtle);
 }
 
 .compactview-row--hidden .compactview-row__icon {
