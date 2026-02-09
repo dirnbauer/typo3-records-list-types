@@ -93,6 +93,35 @@ request to :php:`ViewModeController::setViewModeAction()` which
 stores the preference in the backend user configuration. The page
 then reloads to show the selected view.
 
+.. _architecture-css:
+
+CSS architecture
+=================
+
+The extension uses a **base + view-specific** CSS pattern.
+``base.css`` is loaded automatically for all view modes (including
+custom types) and contains shared components:
+
+-   **Recordlist heading** -- table header bar with title and action
+    buttons
+-   **Pagination** -- Core list view navigation (record range, page
+    input, first/prev/next/last buttons)
+-   **Sorting mode toggle** -- segmented control for manual vs.
+    field-based sorting
+-   **Sorting dropdown** -- field sorting dropdown and disabled state
+
+View-specific files only contain styles unique to that view:
+
+-   ``grid-view.css`` -- card layout, drag-drop, field type formatting,
+    workspace state indicators
+-   ``compact-view.css`` -- table structure, sticky columns, zebra
+    striping, scroll shadows
+-   ``teaser-view.css`` -- teaser cards, status badges, meta information
+
+``base.css`` is prepended by :php:`ViewTypeRegistry::getCssFiles()`.
+Custom view types receive it automatically -- they only need to provide
+their own view-specific CSS.
+
 .. _architecture-bootstrap:
 
 Bootstrap 5 integration

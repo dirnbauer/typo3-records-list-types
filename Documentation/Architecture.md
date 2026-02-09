@@ -194,6 +194,31 @@ corrupted, please verify middleware stack configuration.
 [Force List View]
 ```
 
+## CSS Architecture
+
+The extension uses a **base + view-specific** CSS pattern:
+
+```
+base.css              ← Loaded for ALL view modes (always first)
+├── grid-view.css     ← Grid-only: cards, drag-drop, field types
+├── compact-view.css  ← Compact-only: table, sticky columns, zebra striping
+├── teaser-view.css   ← Teaser-only: teaser cards, badges, meta
+└── view-mode-toggle.css ← DocHeader toggle buttons (always loaded)
+```
+
+**`base.css`** contains shared components used by every view mode:
+
+| Component | Description |
+|-----------|-------------|
+| Recordlist heading | Table header bar with title and action buttons |
+| Pagination | Core list view navigation (record range, page input, nav buttons) |
+| Sorting mode toggle | Segmented control for manual/field sorting modes |
+| Sorting dropdown | Field sorting dropdown and disabled state |
+
+**View-specific files** contain only styles unique to that view -- design tokens, layout, and component styling. They use TYPO3 CSS variables (`--typo3-*`) with hardcoded fallbacks.
+
+`base.css` is automatically prepended by `ViewTypeRegistry::getCssFiles()`. Custom view types registered via TSconfig or PSR-14 events also receive `base.css` automatically -- they only need to provide their own view-specific CSS.
+
 ## Bootstrap 5 Integration
 
 The Grid View uses Bootstrap 5 components included in the TYPO3 v14 backend.

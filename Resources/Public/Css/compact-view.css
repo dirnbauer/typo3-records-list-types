@@ -95,54 +95,11 @@
 }
 
 /* =============================================================================
-   Container & Heading (matches TYPO3 core exactly)
+   Container (heading base styles are in base.css)
    ============================================================================= */
 
 .recordlist-compactview-container {
     font-family: var(--cv-font-sans);
-}
-
-.recordlist-compactview-container .recordlist {
-    margin-bottom: 1rem;
-}
-
-.recordlist-compactview-container .recordlist-heading {
-    background: var(--cv-bg-muted);
-    border: 1px solid var(--cv-border);
-    border-radius: var(--cv-radius) var(--cv-radius) 0 0;
-    padding: 0.375rem 0.625rem;
-}
-
-.recordlist-compactview-container .recordlist-heading-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.recordlist-compactview-container .recordlist-heading-title {
-    flex: 0 0 auto;
-}
-
-.recordlist-compactview-container .recordlist-heading-title a {
-    display: flex;
-    align-items: center;
-    gap: 0.125rem;
-    color: var(--cv-text);
-    text-decoration: none;
-    font-size: 0.8125rem;
-    transition: color 100ms ease;
-}
-
-.recordlist-compactview-container .recordlist-heading-title a:hover {
-    color: var(--cv-accent);
-}
-
-.recordlist-compactview-container .recordlist-heading-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-left: auto;
 }
 
 /* Sorting label should not wrap */
@@ -720,121 +677,8 @@
     color: var(--cv-danger);
 }
 
-/* =============================================================================
-   Sorting Controls (reuse grid view classes)
-   ============================================================================= */
-
-.recordlist-compactview-container .gridview-sorting {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.recordlist-compactview-container .gridview-sorting__controls {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.recordlist-compactview-container .gridview-sorting__label {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--cv-text-muted);
-    margin: 0;
-}
-
-.recordlist-compactview-container .gridview-sorting__select {
-    min-width: 7rem;
-    max-width: 10rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    padding: 0.125rem 1.25rem 0.125rem 0.375rem;
-    background-color: var(--cv-bg);
-    color: var(--cv-text);
-    border: 1px solid var(--cv-border);
-    border-radius: var(--cv-radius-sm);
-}
-
-.recordlist-compactview-container .gridview-sorting__select:focus {
-    outline: 2px solid var(--cv-accent);
-    outline-offset: 1px;
-}
-
-.recordlist-compactview-container .gridview-sorting__direction {
-    display: flex;
-    border: 1px solid var(--cv-border);
-    border-radius: var(--cv-radius-sm);
-    overflow: hidden;
-}
-
-.recordlist-compactview-container .gridview-sorting__direction-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    border: none;
-    background: var(--cv-bg);
-    color: var(--cv-text-muted);
-    cursor: pointer;
-    transition: all var(--cv-transition-fast);
-}
-
-.recordlist-compactview-container .gridview-sorting__direction-btn:not(:last-child) {
-    border-right: 1px solid var(--cv-border);
-}
-
-.recordlist-compactview-container .gridview-sorting__direction-btn:hover {
-    background: var(--cv-bg-subtle);
-    color: var(--cv-text);
-}
-
-.recordlist-compactview-container .gridview-sorting__direction-btn.active {
-    background: var(--cv-accent);
-    color: white;
-}
-
-/* =============================================================================
-   Pagination - matches TYPO3 Core list view navigation
-   ============================================================================= */
-
-.recordlist-compactview-container .recordlist-pagination {
-    padding: 0.5rem 0.75rem;
-}
-
-.recordlist-compactview-container .recordlist-pagination-input {
-    width: 3.5em;
-    padding: 0.125rem 0.25rem;
-    margin: 0 0.25rem;
-    font-size: inherit;
-    font-weight: 600;
-    text-align: center;
-    border: 1px solid var(--cv-border, #d4d4d8);
-    border-radius: 3px;
-    background: var(--cv-bg, #fff);
-    color: var(--cv-text, #18181b);
-    line-height: 1.4;
-    -moz-appearance: textfield;
-}
-
-.recordlist-compactview-container .recordlist-pagination-input::-webkit-outer-spin-button,
-.recordlist-compactview-container .recordlist-pagination-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.recordlist-compactview-container .recordlist-pagination-input:focus {
-    outline: 2px solid var(--cv-accent, #3b82f6);
-    outline-offset: -1px;
-    border-color: var(--cv-accent, #3b82f6);
-}
-
-.recordlist-compactview-container .recordlist-pagination-pages {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    white-space: nowrap;
-}
+/* Note: Sorting toggle, pagination, and recordlist heading base styles
+   are in base.css which is loaded automatically for all view modes. */
 
 /* =============================================================================
    Responsive

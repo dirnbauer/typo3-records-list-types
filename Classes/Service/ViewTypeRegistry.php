@@ -243,8 +243,14 @@ final class ViewTypeRegistry implements SingletonInterface
         ];
     }
 
+    /** Shared base CSS loaded for all view types. */
+    private const BASE_CSS = 'EXT:records_list_types/Resources/Public/Css/base.css';
+
     /**
      * Get CSS files for a view type.
+     *
+     * Always includes base.css first (shared pagination, heading, sorting
+     * styles), followed by the view-specific CSS file(s).
      *
      * @return array<int, string>
      */
@@ -252,18 +258,19 @@ final class ViewTypeRegistry implements SingletonInterface
     {
         $config = $this->getViewType($typeId, $pageId);
         if ($config === null) {
-            return [];
+            return [self::BASE_CSS];
         }
 
-        $files = [];
+        $files = [self::BASE_CSS];
         $css = $config['css'] ?? null;
         if ($css !== null && $css !== '' && $css !== []) {
-            $files = is_array($css)
+            $viewFiles = is_array($css)
                 ? array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $css)
                 : (is_scalar($css) ? [(string) $css] : []);
+            $files = array_merge($files, $viewFiles);
         }
 
-        return $files;
+        return array_values(array_unique($files));
     }
 
     /**

@@ -35,7 +35,7 @@ mod.web_list.viewMode {
             templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
             partialRootPath = EXT:my_sitepackage/Resources/Private/Backend/Partials/
 
-            # Assets (optional)
+            # Assets (optional - base.css is loaded automatically)
             css = EXT:my_sitepackage/Resources/Public/Css/my-view.css
             js = @my-sitepackage/my-view.js
 

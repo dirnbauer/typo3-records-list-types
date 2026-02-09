@@ -190,6 +190,31 @@ All view modes fully support TYPO3's dark mode with design tokens:
 - CSS custom properties for all colors, shadows, and borders
 - Workspace state colors adapted for dark backgrounds
 
+## CSS Architecture
+
+The extension uses a **base + view-specific** CSS pattern:
+
+```
+base.css            ← Loaded for ALL view modes (always first)
+├── grid-view.css   ← Grid-only: cards, drag-drop, field types
+├── compact-view.css← Compact-only: table, sticky columns, zebra striping
+├── teaser-view.css ← Teaser-only: teaser cards, badges, meta
+└── view-mode-toggle.css ← DocHeader toggle buttons (always loaded)
+```
+
+**`base.css`** contains shared components that every view mode needs:
+
+| Component | Description |
+|-----------|-------------|
+| Recordlist heading | Table header bar with title and action buttons |
+| Pagination | Core list view navigation (record range, page input, nav buttons) |
+| Sorting mode toggle | Segmented control for manual/field sorting modes |
+| Sorting dropdown | Field sorting dropdown and disabled state |
+
+**View-specific files** only contain styles unique to that view mode -- design tokens, card/row layouts, field type formatting, and responsive overrides. They reference TYPO3 CSS variables with hardcoded fallbacks for standalone use.
+
+`base.css` is automatically prepended by `ViewTypeRegistry::getCssFiles()`. Custom view types registered via TSconfig or PSR-14 events also receive `base.css` automatically.
+
 ## Architecture
 
 ### Services
@@ -309,6 +334,7 @@ records_list_types/
 │   │       └── TeaserView.html                # Teaser view template
 │   └── Public/
 │       ├── Css/
+│       │   ├── base.css                       # Shared styles (heading, pagination, sorting)
 │       │   ├── grid-view.css                  # Grid view styles + design tokens
 │       │   ├── compact-view.css               # Compact view styles
 │       │   ├── teaser-view.css                # Teaser view styles
