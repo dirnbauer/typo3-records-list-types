@@ -64,11 +64,14 @@ jobs:
         run: composer install --no-progress --prefer-dist
 
       - name: Run PHPUnit
-        run: vendor/bin/phpunit --coverage-clover var/log/coverage.xml
+        run: |
+          mkdir -p var/log
+          vendor/bin/phpunit --coverage-clover var/log/coverage.xml
 
       - name: Upload coverage
-        if: matrix.php == '8.3'
+        if: matrix.php == '8.3' && always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: var/log/coverage.xml
+          if-no-files-found: ignore
