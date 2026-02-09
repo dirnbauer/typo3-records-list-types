@@ -221,14 +221,8 @@ final class RecordListController extends CoreRecordListController
         // Initialize dbList for URL building, clipboard functionality, and search queries
         $dbList->start($this->pageContext->pageId, $this->table, $pointer, $this->searchTerm, $searchLevels);
 
-        // Render the appropriate view based on view type configuration
-        // Built-in types have dedicated render methods, custom types use generic rendering
-        $customContent = match ($viewMode) {
-            'grid' => $this->renderGridViewContent($request, $pageId, $this->table, $this->searchTerm, $searchLevels),
-            'compact' => $this->renderCompactViewContent($request, $pageId, $this->table, $this->searchTerm, $searchLevels),
-            'teaser' => $this->renderTeaserViewContent($request, $pageId, $this->table, $this->searchTerm, $searchLevels),
-            default => $this->renderGenericViewContent($request, $pageId, $this->table, $this->searchTerm, $searchLevels, $viewMode),
-        };
+        // Render the appropriate view (all view types use the same render path)
+        $customContent = $this->renderViewContent($request, $pageId, $this->table, $this->searchTerm, $searchLevels, $viewMode);
 
         // Page title
         if ($this->pageContext->pageId === 0) {
@@ -344,38 +338,45 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Render the Grid View content (cards only, no frame).
+     * Render any view type (grid, compact, teaser, or custom).
+     *
+     * All view types share the same data pipeline: fetch records, enrich with
+     * display values, build pagination, create action buttons, and render via
+     * Fluid. The only differences are handled by ViewTypeRegistry (template,
+     * CSS, JS, display columns) and by computing all optional data (sorting
+     * toggle, column headers, language flags, middleware warning) for every
+     * view -- templates simply ignore what they don't need.
      */
-    protected function renderGridViewContent(
+    protected function renderViewContent(
         ServerRequestInterface $request,
         int $pageId,
         string $table,
         string $searchTerm,
         int $searchLevels,
+        string $viewMode,
     ): string {
-        // Get services
+        // Get view type configuration (null = unknown type, fall back to grid)
+        $registry = $this->getViewTypeRegistry();
+        $viewConfig = $registry->getViewType($viewMode, $pageId);
+        if ($viewConfig === null) {
+            $viewMode = 'grid';
+            $viewConfig = $registry->getViewType($viewMode, $pageId);
+        }
+
+        // Services
         $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
         $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
         $middlewareDiagnosticService = GeneralUtility::makeInstance(MiddlewareDiagnosticService::class);
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
 
-        // Get current view mode
-        $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId);
-
-        // Get sorting parameters from request (per-table sorting)
+        // Parse request parameters
         $queryParams = $request->getQueryParams();
         $parsedBody = $request->getParsedBody();
         $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        // Sort parameters are stored as sort[tableName][field] and sort[tableName][direction]
         $sortParams = (array) ($queryParams['sort'] ?? $parsedBodyArray['sort'] ?? []);
-        // Sorting mode parameters: sortingMode[tableName] = 'manual' or 'field'
         $sortingModeParams = (array) ($queryParams['sortingMode'] ?? $parsedBodyArray['sortingMode'] ?? []);
 
-        // Get global grid configuration
-        $gridConfig = $gridConfigurationService->getGlobalConfig($pageId);
-
-        // Check for middleware issues
+        // Middleware diagnostics (only GridView template shows this)
         $middlewareWarning = null;
         $forceListViewUrl = null;
         $diagnosis = $middlewareDiagnosticService->diagnose($request);
@@ -384,8 +385,10 @@ final class RecordListController extends CoreRecordListController
             $forceListViewUrl = $diagnosis['forceListViewUrl'];
         }
 
+        // Display columns configuration from ViewTypeRegistry
+        $columnsConfig = $registry->getDisplayColumnsConfig($viewMode, $pageId);
+
         // Get tables to display
-        // Uses TYPO3's native search API with proper workspace support
         $tablesToRender = $this->getSearchableTables($pageId, $table, $searchTerm, $searchLevels, $request);
 
         // Collect all records grouped by table
@@ -393,24 +396,21 @@ final class RecordListController extends CoreRecordListController
         foreach ($tablesToRender as $tableName) {
             $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
 
-            // Check if table has sortby field for manual sorting
+            // TCA info for sorting capabilities
             $tcaForTable = $this->getTcaForTable($tableName);
             $tcaCtrl = $tcaForTable['ctrl'];
             $sortbyVal = $tcaCtrl['sortby'] ?? '';
             $sortbyFieldName = is_string($sortbyVal) ? $sortbyVal : '';
             $hasSortbyField = $sortbyFieldName !== '';
 
-            // Get per-table sorting mode (manual or field)
+            // Per-table sorting mode (manual drag vs. field-based)
             $sortingModeVal = $sortingModeParams[$tableName] ?? '';
             $sortingMode = is_string($sortingModeVal) ? $sortingModeVal : '';
-            // Default to 'manual' if table has sortby field and no custom sort is set
-            if ($sortingMode === '' && $hasSortbyField) {
-                $sortingMode = 'manual';
-            } elseif ($sortingMode === '') {
-                $sortingMode = 'field';
+            if ($sortingMode === '') {
+                $sortingMode = $hasSortbyField ? 'manual' : 'field';
             }
 
-            // Get per-table sorting parameters
+            // Per-table sorting parameters
             $tableSortParams = is_array($sortParams[$tableName] ?? null) ? $sortParams[$tableName] : [];
             $sortFieldVal = $tableSortParams['field'] ?? '';
             $sortField = is_string($sortFieldVal) ? $sortFieldVal : '';
@@ -418,797 +418,177 @@ final class RecordListController extends CoreRecordListController
             $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
             $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
 
-            // When in manual sorting mode, use the sortby field
+            // In manual mode, sort by the TCA sortby field
             if ($sortingMode === 'manual' && $hasSortbyField) {
                 $sortField = $sortbyFieldName;
             }
 
-            // Pagination: use TYPO3 Core Pagination API (1-based page numbers)
+            // Pagination
             $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
             $currentPointer = $this->getCurrentPointer($request, $tableName);
             $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
             $offset = ($currentPointer - 1) * $itemsPerPage;
 
-            // Use DatabaseRecordList's query builder for search (handles searchLevels properly)
-            // This uses the same API as the core list view for proper workspace and search support
+            // Fetch records
             if ($searchTerm !== '') {
                 $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
             } else {
                 $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
             }
 
-            if ($records !== []) {
-                $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
-                $isSingleTableMode = ($table !== '');
+            if ($records === []) {
+                continue;
+            }
 
-                // Build pagination using TYPO3 Core Pagination API
-                $paginationData = $this->buildPagination(
-                    $records,
-                    $recordCount,
-                    $currentPointer,
-                    $itemsPerPage,
-                    $tableName,
-                    $pageId,
-                    $viewMode,
-                    $request,
-                );
+            $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
+            $isSingleTableMode = ($table !== '');
 
-                // Create action buttons using TYPO3 ComponentFactory API
-                $actionButtons = $this->createTableActionButtons(
-                    $tableName,
-                    $pageId,
-                    $viewMode,
-                    $request,
-                    $recordCount,
-                    $isSingleTableMode,
-                );
+            // Pagination
+            $paginationData = $this->buildPagination(
+                $records,
+                $recordCount,
+                $currentPointer,
+                $itemsPerPage,
+                $tableName,
+                $pageId,
+                $viewMode,
+                $request,
+            );
 
-                // Build single table URL (click to show only this table)
-                $singleTableUrl = '';
-                $clearTableUrl = '';
-                try {
-                    // URL to show only this table
-                    $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                        'id' => $pageId,
-                        'table' => $tableName,
-                        'displayMode' => $viewMode,
-                    ]);
-                    // URL to clear table filter (back to all tables)
-                    $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                        'id' => $pageId,
-                        'displayMode' => $viewMode,
-                    ]);
-                } catch (Exception $e) {
-                    // Ignore if route not found
-                }
+            // Action buttons
+            $actionButtons = $this->createTableActionButtons(
+                $tableName,
+                $pageId,
+                $viewMode,
+                $request,
+                $recordCount,
+                $isSingleTableMode,
+            );
 
-                // Get columns to display (same as list view)
+            // Table URLs
+            $singleTableUrl = '';
+            $clearTableUrl = '';
+            try {
+                $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
+                    'id' => $pageId,
+                    'table' => $tableName,
+                    'displayMode' => $viewMode,
+                ]);
+                $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
+                    'id' => $pageId,
+                    'displayMode' => $viewMode,
+                ]);
+            } catch (Exception $e) {
+            }
+
+            // Display columns (from ViewTypeRegistry config)
+            $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
+            if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
                 $displayColumns = $this->getDisplayColumns($tableName);
-
-                // Enrich each record with display values for all columns
-                $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
-
-                // Enrich records with language flag info (sys_language_uid -> flag identifier)
-                $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
-
-                // Get sortable fields for this table
-                $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
-
-                // Create sorting dropdown using TYPO3's native ComponentFactory API
-                $sortingDropdownHtml = $this->createSortingDropdown(
-                    $tableName,
-                    $sortableFields,
-                    $sortField,
-                    $sortDirection,
-                    $pageId,
-                    $viewMode,
-                    $request,
-                );
-
-                // Table identifier for collapse state
-                $tableIdentifier = $tableName;
-
-                // Drag-and-drop reordering is allowed when in manual sorting mode
-                $canReorder = $sortingMode === 'manual' && $hasSortbyField;
-
-                // Create sorting mode toggle if table supports manual sorting
-                // Include sorting dropdown integrated into the toggle
-                $sortingModeToggleHtml = '';
-                if ($hasSortbyField) {
-                    // Show full toggle with Manual/Field modes
-                    $sortingModeToggleHtml = $this->createSortingModeToggle(
-                        $tableName,
-                        $sortingMode,
-                        $sortDirection,
-                        $pageId,
-                        $viewMode,
-                        $request,
-                        $sortingDropdownHtml, // Pass the dropdown to integrate with "Nach Spalte"
-                    );
-                } elseif ($sortingDropdownHtml !== '') {
-                    // For tables without sortby field, show only the field sorting dropdown
-                    $sortingModeToggleHtml = '<div class="gridview-sorting-wrapper me-2">'
-                        . '<div class="gridview-sorting-toggle btn-group" role="group">'
-                        . '<div class="btn-group" role="group">'
-                        . $sortingDropdownHtml
-                        . '</div></div></div>';
-                }
-
-                // Compute last record UID for end dropzone (drag after last item)
-                $lastRecordUid = '';
-                if ($enrichedRecords !== []) {
-                    $lastUidVal = $enrichedRecords[array_key_last($enrichedRecords)]['uid'] ?? 0;
-                    $lastRecordUid = is_scalar($lastUidVal) ? (string) $lastUidVal : '';
-                }
-
-                $tableData[] = [
-                    'tableName' => $tableName,
-                    'tableIdentifier' => $tableIdentifier,
-                    'tableLabel' => $this->getTableLabel($tableName),
-                    'tableIcon' => $this->getTableIcon($tableName),
-                    'tableConfig' => $tableConfig,
-                    'records' => $enrichedRecords,
-                    'recordCount' => $recordCount,
-                    'lastRecordUid' => $lastRecordUid,
-                    // Action buttons rendered via TYPO3 API
-                    'actionButtons' => $actionButtons,
-                    // Sorting dropdown rendered via TYPO3 API
-                    'sortingDropdownHtml' => $sortingDropdownHtml,
-                    // Sorting mode toggle (Manual / Field)
-                    'sortingModeToggleHtml' => $sortingModeToggleHtml,
-                    'singleTableUrl' => $singleTableUrl,
-                    'clearTableUrl' => $clearTableUrl,
-                    'displayColumns' => $displayColumns,
-                    'isFiltered' => $isSingleTableMode && $table === $tableName,
-                    'canReorder' => $canReorder,
-                    'sortField' => $sortField,
-                    'sortDirection' => $sortDirection,
-                    // Sorting mode state
-                    'hasSortbyField' => $hasSortbyField,
-                    'sortingMode' => $sortingMode,
-                    'sortbyFieldName' => $sortbyFieldName,
-                    // Pagination (TYPO3 Core Pagination API)
-                    'paginator' => $paginationData['paginator'],
-                    'pagination' => $paginationData['pagination'],
-                    'paginationUrl' => $paginationData['currentUrl'],
-                ];
-            }
-        }
-
-        // Add CSS and JS assets
-        $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
-        $pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/grid-view.css');
-        $pageRenderer->loadJavaScriptModule('@webconsulting/records-list-types/GridViewActions.js');
-        $pageRenderer->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
-
-        // Create the view using ViewFactory for Grid View content
-        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
-        $viewFactoryData = new ViewFactoryData(
-            templateRootPaths: ['EXT:records_list_types/Resources/Private/Templates/'],
-            partialRootPaths: ['EXT:records_list_types/Resources/Private/Partials/'],
-            layoutRootPaths: ['EXT:records_list_types/Resources/Private/Layouts/'],
-            request: $request,
-        );
-
-        $gridView = $viewFactory->create($viewFactoryData);
-        $gridView->assignMultiple([
-            'pageId' => $pageId,
-            'gridConfig' => $gridConfig,
-            'tableData' => $tableData,
-            'middlewareWarning' => $middlewareWarning,
-            'forceListViewUrl' => $forceListViewUrl,
-            'currentTable' => $table,
-            'searchTerm' => $searchTerm,
-            'viewMode' => $viewMode,
-        ]);
-
-        return $gridView->render('GridView');
-    }
-
-    /**
-     * Render the Compact View content (single-line per record).
-     */
-    protected function renderCompactViewContent(
-        ServerRequestInterface $request,
-        int $pageId,
-        string $table,
-        string $searchTerm,
-        int $searchLevels,
-    ): string {
-        // Get services
-        $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
-        $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-
-        // Get sorting parameters from request (per-table sorting)
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        $sortParams = (array) ($queryParams['sort'] ?? $parsedBodyArray['sort'] ?? []);
-
-        // Get tables to display
-        // Uses TYPO3's native search API with proper workspace support
-        $tablesToRender = $this->getSearchableTables($pageId, $table, $searchTerm, $searchLevels, $request);
-
-        // Collect all records grouped by table
-        $tableData = [];
-        foreach ($tablesToRender as $tableName) {
-            $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
-
-            // Get per-table sorting parameters
-            $tableSortParams = is_array($sortParams[$tableName] ?? null) ? $sortParams[$tableName] : [];
-            $sortFieldVal = $tableSortParams['field'] ?? '';
-            $sortField = is_string($sortFieldVal) ? $sortFieldVal : '';
-            $sortDirVal = $tableSortParams['direction'] ?? 'asc';
-            $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
-            $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
-
-            // Pagination: use TYPO3 Core Pagination API (1-based page numbers)
-            $itemsPerPage = $this->getItemsPerPage('compact', $pageId);
-            $currentPointer = $this->getCurrentPointer($request, $tableName);
-            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
-            $offset = ($currentPointer - 1) * $itemsPerPage;
-
-            // Use DatabaseRecordList's query builder for search (handles searchLevels properly)
-            // This uses the same API as the core list view for proper workspace and search support
-            if ($searchTerm !== '') {
-                $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
+            } elseif ($columnsArray !== []) {
+                $displayColumns = $this->getSpecificDisplayColumns($tableName, $columnsArray);
             } else {
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
-            }
-
-            if ($records !== []) {
-                $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
-                $isSingleTableMode = ($table !== '');
-
-                // Build pagination using TYPO3 Core Pagination API
-                $paginationData = $this->buildPagination(
-                    $records,
-                    $recordCount,
-                    $currentPointer,
-                    $itemsPerPage,
-                    $tableName,
-                    $pageId,
-                    'compact',
-                    $request,
-                );
-
-                // Create action buttons using TYPO3 ComponentFactory API
-                $actionButtons = $this->createTableActionButtons(
-                    $tableName,
-                    $pageId,
-                    'compact',
-                    $request,
-                    $recordCount,
-                    $isSingleTableMode,
-                );
-
-                // Build single table URL (click to show only this table)
-                $singleTableUrl = '';
-                $clearTableUrl = '';
-                try {
-                    $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                        'id' => $pageId,
-                        'table' => $tableName,
-                        'displayMode' => 'compact',
-                    ]);
-                    $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                        'id' => $pageId,
-                        'displayMode' => 'compact',
-                    ]);
-                } catch (Exception $e) {
-                }
-
-                $displayColumns = $this->getDisplayColumns($tableName);
-
-                // Enrich each record with display values for all columns
-                $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
-
-                // Generate sortable column headers like TYPO3's core list view
-                // Each header has a dropdown for asc/desc sorting
-                $sortableColumnHeaders = $this->getSortableColumnHeaders(
-                    $tableName,
-                    $displayColumns,
-                    $sortField,
-                    $sortDirection,
-                    $pageId,
-                    'compact',
-                    $request,
-                );
-
-                // Table identifier for collapse state
-                $tableIdentifier = $tableName;
-
-                // Check if drag-and-drop reordering is allowed
-                $tcaForTableCompact = $this->getTcaForTable($tableName);
-                $tcaCtrlCompact = $tcaForTableCompact['ctrl'];
-                $hasSortbyField = ($tcaCtrlCompact['sortby'] ?? '') !== '';
-                $canReorder = $hasSortbyField && $sortField === '';
-
-                $tableData[] = [
-                    'tableName' => $tableName,
-                    'tableIdentifier' => $tableIdentifier,
-                    'tableLabel' => $this->getTableLabel($tableName),
-                    'tableIcon' => $this->getTableIcon($tableName),
-                    'tableConfig' => $tableConfig,
-                    'records' => $enrichedRecords,
-                    'recordCount' => $recordCount,
-                    // Action buttons rendered via TYPO3 API
-                    'actionButtons' => $actionButtons,
-                    // Sortable column headers with dropdowns (like core list view)
-                    'sortableColumnHeaders' => $sortableColumnHeaders,
-                    'singleTableUrl' => $singleTableUrl,
-                    'clearTableUrl' => $clearTableUrl,
-                    'displayColumns' => $displayColumns,
-                    'isFiltered' => $isSingleTableMode && $table === $tableName,
-                    'canReorder' => $canReorder,
-                    'sortField' => $sortField,
-                    'sortDirection' => $sortDirection,
-                    // Pagination (TYPO3 Core Pagination API)
-                    'paginator' => $paginationData['paginator'],
-                    'pagination' => $paginationData['pagination'],
-                    'paginationUrl' => $paginationData['currentUrl'],
-                ];
-            }
-        }
-
-        // Add CSS and JS
-        $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
-        $pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/compact-view.css');
-        $pageRenderer->loadJavaScriptModule('@webconsulting/records-list-types/GridViewActions.js');
-        $pageRenderer->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
-
-        // Create the view
-        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
-        $viewFactoryData = new ViewFactoryData(
-            templateRootPaths: ['EXT:records_list_types/Resources/Private/Templates/'],
-            partialRootPaths: ['EXT:records_list_types/Resources/Private/Partials/'],
-            layoutRootPaths: ['EXT:records_list_types/Resources/Private/Layouts/'],
-            request: $request,
-        );
-
-        $compactView = $viewFactory->create($viewFactoryData);
-        $compactView->assignMultiple([
-            'pageId' => $pageId,
-            'tableData' => $tableData,
-            'currentTable' => $table,
-            'searchTerm' => $searchTerm,
-            'viewMode' => 'compact',
-        ]);
-
-        return $compactView->render('CompactView');
-    }
-
-    /**
-     * Render the Teaser View content (minimal cards with title, date, teaser).
-     *
-     * This is a simplified view ideal for news, blog posts, and similar content.
-     * Shows fewer fields than the full grid view for a cleaner overview.
-     */
-    protected function renderTeaserViewContent(
-        ServerRequestInterface $request,
-        int $pageId,
-        string $table,
-        string $searchTerm,
-        int $searchLevels,
-    ): string {
-        // Get services
-        $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
-        $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-
-        // Get sorting parameters from request
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        $sortParams = (array) ($queryParams['sort'] ?? $parsedBodyArray['sort'] ?? []);
-
-        // Get tables to display
-        $tablesToRender = $this->getSearchableTables($pageId, $table, $searchTerm, $searchLevels, $request);
-
-        // Collect all records grouped by table
-        $tableData = [];
-        foreach ($tablesToRender as $tableName) {
-            $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
-
-            // Get per-table sorting parameters
-            $tableSortParams = is_array($sortParams[$tableName] ?? null) ? $sortParams[$tableName] : [];
-            $sortFieldVal = $tableSortParams['field'] ?? '';
-            $sortField = is_string($sortFieldVal) ? $sortFieldVal : '';
-            $sortDirVal = $tableSortParams['direction'] ?? 'asc';
-            $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
-            $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
-
-            // Pagination: use TYPO3 Core Pagination API (1-based page numbers)
-            $itemsPerPage = $this->getItemsPerPage('teaser', $pageId);
-            $currentPointer = $this->getCurrentPointer($request, $tableName);
-            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
-            $offset = ($currentPointer - 1) * $itemsPerPage;
-
-            // Use DatabaseRecordList's query builder for search
-            if ($searchTerm !== '') {
-                $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
-            } else {
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
-            }
-
-            if ($records !== []) {
-                $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
-                $isSingleTableMode = ($table !== '');
-
-                // Build pagination using TYPO3 Core Pagination API
-                $paginationData = $this->buildPagination(
-                    $records,
-                    $recordCount,
-                    $currentPointer,
-                    $itemsPerPage,
-                    $tableName,
-                    $pageId,
-                    'teaser',
-                    $request,
-                );
-
-                // Create action buttons
-                $actionButtons = $this->createTableActionButtons(
-                    $tableName,
-                    $pageId,
-                    'teaser',
-                    $request,
-                    $recordCount,
-                    $isSingleTableMode,
-                );
-
-                // Build table URLs
-                $singleTableUrl = '';
-                $clearTableUrl = '';
-                try {
-                    $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                        'id' => $pageId,
-                        'table' => $tableName,
-                        'displayMode' => 'teaser',
-                    ]);
-                    $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                        'id' => $pageId,
-                        'displayMode' => 'teaser',
-                    ]);
-                } catch (Exception $e) {
-                }
-
-                // Get display columns - teaser view shows fewer fields
                 $displayColumns = $this->getTeaserDisplayColumns($tableName);
+            }
 
-                // Enrich each record with display values
-                $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
+            // Enrich records
+            $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
+            $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
 
-                // Get sortable fields
-                $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
+            // Sorting dropdown
+            $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
+            $sortingDropdownHtml = $this->createSortingDropdown(
+                $tableName,
+                $sortableFields,
+                $sortField,
+                $sortDirection,
+                $pageId,
+                $viewMode,
+                $request,
+            );
 
-                // Create sorting dropdown using TYPO3's native ComponentFactory API
-                $sortingDropdownHtml = $this->createSortingDropdown(
+            // Sorting mode toggle (used by GridView template for manual/field switch)
+            $sortingModeToggleHtml = '';
+            if ($hasSortbyField) {
+                $sortingModeToggleHtml = $this->createSortingModeToggle(
                     $tableName,
-                    $sortableFields,
-                    $sortField,
-                    $sortDirection,
-                    $pageId,
-                    'teaser',
-                    $request,
-                );
-
-                // Table identifier
-                $tableIdentifier = $tableName;
-
-                // Check if reordering is allowed
-                $tcaForTableTeaser = $this->getTcaForTable($tableName);
-                $tcaCtrlTeaser = $tcaForTableTeaser['ctrl'];
-                $hasSortbyField = ($tcaCtrlTeaser['sortby'] ?? '') !== '';
-                $canReorder = $hasSortbyField && $sortField === '';
-
-                $tableData[] = [
-                    'tableName' => $tableName,
-                    'tableIdentifier' => $tableIdentifier,
-                    'tableLabel' => $this->getTableLabel($tableName),
-                    'tableIcon' => $this->getTableIcon($tableName),
-                    'tableConfig' => $tableConfig,
-                    'records' => $enrichedRecords,
-                    'recordCount' => $recordCount,
-                    'actionButtons' => $actionButtons,
-                    'sortingDropdownHtml' => $sortingDropdownHtml,
-                    'singleTableUrl' => $singleTableUrl,
-                    'clearTableUrl' => $clearTableUrl,
-                    'displayColumns' => $displayColumns,
-                    'isFiltered' => $isSingleTableMode && $table === $tableName,
-                    'canReorder' => $canReorder,
-                    'sortField' => $sortField,
-                    'sortDirection' => $sortDirection,
-                    // Pagination (TYPO3 Core Pagination API)
-                    'paginator' => $paginationData['paginator'],
-                    'pagination' => $paginationData['pagination'],
-                    'paginationUrl' => $paginationData['currentUrl'],
-                ];
-            }
-        }
-
-        // Add CSS and JS
-        $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
-        $pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/teaser-view.css');
-        $pageRenderer->loadJavaScriptModule('@webconsulting/records-list-types/GridViewActions.js');
-
-        // Create the view
-        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
-        $viewFactoryData = new ViewFactoryData(
-            templateRootPaths: ['EXT:records_list_types/Resources/Private/Templates/'],
-            partialRootPaths: ['EXT:records_list_types/Resources/Private/Partials/'],
-            layoutRootPaths: ['EXT:records_list_types/Resources/Private/Layouts/'],
-            request: $request,
-        );
-
-        $teaserView = $viewFactory->create($viewFactoryData);
-        $teaserView->assignMultiple([
-            'pageId' => $pageId,
-            'tableData' => $tableData,
-            'currentTable' => $table,
-            'searchTerm' => $searchTerm,
-            'viewMode' => 'teaser',
-        ]);
-
-        return $teaserView->render('TeaserView');
-    }
-
-    /**
-     * Get display columns for teaser view - minimal set: title, date, teaser.
-     *
-     * @param string $tableName The table name
-     * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
-     */
-    protected function getTeaserDisplayColumns(string $tableName): array
-    {
-        $columns = [];
-        $tcaForTable = $this->getTcaForTable($tableName);
-        $ctrl = $tcaForTable['ctrl'];
-        $tcaColumns = $tcaForTable['columns'];
-
-        // 1. Label field (title) - always first
-        $labelVal = $ctrl['label'] ?? 'uid';
-        $labelField = is_string($labelVal) ? $labelVal : 'uid';
-        if (isset($tcaColumns[$labelField])) {
-            $columns[] = [
-                'field' => $labelField,
-                'label' => $this->getFieldLabel($labelField, $tcaColumns, $ctrl),
-                'type' => 'text',
-                'isLabelField' => true,
-            ];
-        }
-
-        // 2. Date field - prefer datetime, then crdate, then tstamp
-        $dateField = null;
-        $dateFields = ['datetime', 'date', 'starttime'];
-        foreach ($dateFields as $field) {
-            if (isset($tcaColumns[$field])) {
-                $dateField = $field;
-                break;
-            }
-        }
-        // Fall back to crdate if available
-        if ($dateField === null) {
-            $crdateVal = $ctrl['crdate'] ?? '';
-            if (is_string($crdateVal) && $crdateVal !== '') {
-                $dateField = $crdateVal;
-            }
-        }
-        if ($dateField !== null) {
-            $columns[] = [
-                'field' => $dateField,
-                'label' => $this->getFieldLabel($dateField, $tcaColumns, $ctrl),
-                'type' => 'datetime',
-                'isLabelField' => false,
-            ];
-        }
-
-        // 3. Teaser/description field - prefer teaser, abstract, bodytext
-        $teaserFields = ['teaser', 'abstract', 'description', 'bodytext', 'short'];
-        foreach ($teaserFields as $field) {
-            if (isset($tcaColumns[$field]) && $field !== $labelField) {
-                $columns[] = [
-                    'field' => $field,
-                    'label' => $this->getFieldLabel($field, $tcaColumns, $ctrl),
-                    'type' => 'text',
-                    'isLabelField' => false,
-                ];
-                break; // Only include first matching teaser field
-            }
-        }
-
-        return $columns;
-    }
-
-    /**
-     * Render a generic/custom view type using ViewTypeRegistry configuration.
-     *
-     * This method handles custom view types registered via TSconfig.
-     * It uses the view type configuration to determine templates, CSS, and columns.
-     *
-     * @param ServerRequestInterface $request The current request
-     * @param int $pageId The current page ID
-     * @param string $table The specific table filter (empty for all)
-     * @param string $searchTerm The search term
-     * @param int $searchLevels The search depth
-     * @param string $viewMode The view type identifier
-     * @return string Rendered HTML content
-     */
-    protected function renderGenericViewContent(
-        ServerRequestInterface $request,
-        int $pageId,
-        string $table,
-        string $searchTerm,
-        int $searchLevels,
-        string $viewMode,
-    ): string {
-        // Get view type configuration
-        $viewConfig = $this->getViewTypeRegistry()->getViewType($viewMode, $pageId);
-
-        // Fallback to grid if type not found
-        if ($viewConfig === null) {
-            return $this->renderGridViewContent($request, $pageId, $table, $searchTerm, $searchLevels);
-        }
-
-        // Get services
-        $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
-        $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-
-        // Get sorting parameters
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        $sortParams = (array) ($queryParams['sort'] ?? $parsedBodyArray['sort'] ?? []);
-
-        // Get tables to display
-        $tablesToRender = $this->getSearchableTables($pageId, $table, $searchTerm, $searchLevels, $request);
-
-        // Get column configuration from view type
-        $columnsConfig = $this->getViewTypeRegistry()->getDisplayColumnsConfig($viewMode, $pageId);
-
-        // Collect all records grouped by table
-        $tableData = [];
-        foreach ($tablesToRender as $tableName) {
-            $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
-
-            // Get per-table sorting parameters
-            $tableSortParams = is_array($sortParams[$tableName] ?? null) ? $sortParams[$tableName] : [];
-            $sortFieldVal = $tableSortParams['field'] ?? '';
-            $sortField = is_string($sortFieldVal) ? $sortFieldVal : '';
-            $sortDirVal = $tableSortParams['direction'] ?? 'asc';
-            $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
-            $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
-
-            // Pagination: use TYPO3 Core Pagination API (1-based page numbers)
-            $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
-            $currentPointer = $this->getCurrentPointer($request, $tableName);
-            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
-            $offset = ($currentPointer - 1) * $itemsPerPage;
-
-            // Get records using the standard method
-            if ($searchTerm !== '') {
-                $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
-            } else {
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
-            }
-
-            if ($records !== []) {
-                $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
-                $isSingleTableMode = ($table !== '');
-
-                // Build pagination using TYPO3 Core Pagination API
-                $paginationData = $this->buildPagination(
-                    $records,
-                    $recordCount,
-                    $currentPointer,
-                    $itemsPerPage,
-                    $tableName,
-                    $pageId,
-                    $viewMode,
-                    $request,
-                );
-
-                // Create action buttons
-                $actionButtons = $this->createTableActionButtons(
-                    $tableName,
-                    $pageId,
-                    $viewMode,
-                    $request,
-                    $recordCount,
-                    $isSingleTableMode,
-                );
-
-                // Build table URLs
-                $singleTableUrl = '';
-                $clearTableUrl = '';
-                try {
-                    $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                        'id' => $pageId,
-                        'table' => $tableName,
-                        'displayMode' => $viewMode,
-                    ]);
-                    $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                        'id' => $pageId,
-                        'displayMode' => $viewMode,
-                    ]);
-                } catch (Exception $e) {
-                }
-
-                // Get display columns based on view type configuration
-                $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
-                if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
-                    $displayColumns = $this->getDisplayColumns($tableName);
-                } elseif ($columnsArray !== []) {
-                    $displayColumns = $this->getSpecificDisplayColumns($tableName, $columnsArray);
-                } else {
-                    $displayColumns = $this->getTeaserDisplayColumns($tableName);
-                }
-
-                // Enrich records with display values
-                $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
-
-                // Get sortable fields
-                $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
-
-                // Create sorting dropdown using TYPO3's native ComponentFactory API
-                $sortingDropdownHtml = $this->createSortingDropdown(
-                    $tableName,
-                    $sortableFields,
-                    $sortField,
+                    $sortingMode,
                     $sortDirection,
                     $pageId,
                     $viewMode,
                     $request,
+                    $sortingDropdownHtml,
                 );
-
-                // Check if reordering is allowed
-                $tcaForTableGeneric = $this->getTcaForTable($tableName);
-                $tcaCtrlGeneric = $tcaForTableGeneric['ctrl'];
-                $hasSortbyField = ($tcaCtrlGeneric['sortby'] ?? '') !== '';
-                $canReorder = $hasSortbyField && $sortField === '';
-
-                $tableData[] = [
-                    'tableName' => $tableName,
-                    'tableIdentifier' => $tableName,
-                    'tableLabel' => $this->getTableLabel($tableName),
-                    'tableIcon' => $this->getTableIcon($tableName),
-                    'tableConfig' => $tableConfig,
-                    'records' => $enrichedRecords,
-                    'recordCount' => $recordCount,
-                    'actionButtons' => $actionButtons,
-                    'sortingDropdownHtml' => $sortingDropdownHtml,
-                    'singleTableUrl' => $singleTableUrl,
-                    'clearTableUrl' => $clearTableUrl,
-                    'displayColumns' => $displayColumns,
-                    'isFiltered' => $isSingleTableMode && $table === $tableName,
-                    'canReorder' => $canReorder,
-                    'sortField' => $sortField,
-                    'sortDirection' => $sortDirection,
-                    // Pagination (TYPO3 Core Pagination API)
-                    'paginator' => $paginationData['paginator'],
-                    'pagination' => $paginationData['pagination'],
-                    'paginationUrl' => $paginationData['currentUrl'],
-                ];
+            } elseif ($sortingDropdownHtml !== '') {
+                $sortingModeToggleHtml = '<div class="gridview-sorting-wrapper me-2">'
+                    . '<div class="gridview-sorting-toggle btn-group" role="group">'
+                    . '<div class="btn-group" role="group">'
+                    . $sortingDropdownHtml
+                    . '</div></div></div>';
             }
+
+            // Sortable column headers (used by CompactView template)
+            $sortableColumnHeaders = $this->getSortableColumnHeaders(
+                $tableName,
+                $displayColumns,
+                $sortField,
+                $sortDirection,
+                $pageId,
+                $viewMode,
+                $request,
+            );
+
+            // Last record UID for drag-drop end dropzone (used by GridView template)
+            $lastRecordUid = '';
+            if ($enrichedRecords !== []) {
+                $lastUidVal = $enrichedRecords[array_key_last($enrichedRecords)]['uid'] ?? 0;
+                $lastRecordUid = is_scalar($lastUidVal) ? (string) $lastUidVal : '';
+            }
+
+            // Drag-and-drop reordering
+            $canReorder = $sortingMode === 'manual' && $hasSortbyField;
+
+            $tableData[] = [
+                'tableName' => $tableName,
+                'tableIdentifier' => $tableName,
+                'tableLabel' => $this->getTableLabel($tableName),
+                'tableIcon' => $this->getTableIcon($tableName),
+                'tableConfig' => $tableConfig,
+                'records' => $enrichedRecords,
+                'recordCount' => $recordCount,
+                'lastRecordUid' => $lastRecordUid,
+                'actionButtons' => $actionButtons,
+                'sortingDropdownHtml' => $sortingDropdownHtml,
+                'sortingModeToggleHtml' => $sortingModeToggleHtml,
+                'sortableColumnHeaders' => $sortableColumnHeaders,
+                'singleTableUrl' => $singleTableUrl,
+                'clearTableUrl' => $clearTableUrl,
+                'displayColumns' => $displayColumns,
+                'isFiltered' => $isSingleTableMode && $table === $tableName,
+                'canReorder' => $canReorder,
+                'sortField' => $sortField,
+                'sortDirection' => $sortDirection,
+                'hasSortbyField' => $hasSortbyField,
+                'sortingMode' => $sortingMode,
+                'sortbyFieldName' => $sortbyFieldName,
+                'paginator' => $paginationData['paginator'],
+                'pagination' => $paginationData['pagination'],
+                'paginationUrl' => $paginationData['currentUrl'],
+            ];
         }
 
-        // Add CSS and JS from view type configuration
+        // Load CSS and JS from ViewTypeRegistry
         $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
-
-        foreach ($this->getViewTypeRegistry()->getCssFiles($viewMode, $pageId) as $cssFile) {
+        foreach ($registry->getCssFiles($viewMode, $pageId) as $cssFile) {
             $pageRenderer->addCssFile($cssFile);
         }
-
-        foreach ($this->getViewTypeRegistry()->getJsModules($viewMode, $pageId) as $jsModule) {
+        foreach ($registry->getJsModules($viewMode, $pageId) as $jsModule) {
             $pageRenderer->loadJavaScriptModule($jsModule);
         }
+        $pageRenderer->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
 
-        // Get template configuration
-        $templatePaths = $this->getViewTypeRegistry()->getTemplatePaths($viewMode, $pageId);
-
-        // Create the view
+        // Create the view from ViewTypeRegistry template paths
+        $templatePaths = $registry->getTemplatePaths($viewMode, $pageId);
         $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
         $viewFactoryData = new ViewFactoryData(
             templateRootPaths: $templatePaths['templateRootPaths'],
@@ -1225,6 +605,8 @@ final class RecordListController extends CoreRecordListController
             'searchTerm' => $searchTerm,
             'viewMode' => $viewMode,
             'viewConfig' => $viewConfig,
+            'middlewareWarning' => $middlewareWarning,
+            'forceListViewUrl' => $forceListViewUrl,
         ]);
 
         return $view->render($templatePaths['template']);
@@ -1287,6 +669,72 @@ final class RecordListController extends CoreRecordListController
                 'type' => $this->getFieldType($field, $tcaColumns, $ctrl),
                 'isLabelField' => ($field === $labelField),
             ];
+        }
+
+        return $columns;
+    }
+
+    /**
+     * Get display columns for teaser view - minimal set: title, date, teaser.
+     *
+     * @param string $tableName The table name
+     * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
+     */
+    protected function getTeaserDisplayColumns(string $tableName): array
+    {
+        $columns = [];
+        $tcaForTable = $this->getTcaForTable($tableName);
+        $ctrl = $tcaForTable['ctrl'];
+        $tcaColumns = $tcaForTable['columns'];
+
+        // 1. Label field (title) - always first
+        $labelVal = $ctrl['label'] ?? 'uid';
+        $labelField = is_string($labelVal) ? $labelVal : 'uid';
+        if (isset($tcaColumns[$labelField])) {
+            $columns[] = [
+                'field' => $labelField,
+                'label' => $this->getFieldLabel($labelField, $tcaColumns, $ctrl),
+                'type' => 'text',
+                'isLabelField' => true,
+            ];
+        }
+
+        // 2. Date field - prefer datetime, then crdate, then tstamp
+        $dateField = null;
+        $dateFields = ['datetime', 'date', 'starttime'];
+        foreach ($dateFields as $field) {
+            if (isset($tcaColumns[$field])) {
+                $dateField = $field;
+                break;
+            }
+        }
+        if ($dateField === null) {
+            $crdateVal = $ctrl['crdate'] ?? '';
+            if (is_string($crdateVal) && $crdateVal !== '') {
+                $dateField = $crdateVal;
+            }
+        }
+        if ($dateField !== null) {
+            $columns[] = [
+                'field' => $dateField,
+                'label' => $this->getFieldLabel($dateField, $tcaColumns, $ctrl),
+                'type' => 'datetime',
+                'isLabelField' => false,
+            ];
+        }
+
+        // 3. Teaser/description field - prefer teaser, abstract, bodytext
+        $teaserFields = ['teaser', 'abstract', 'description', 'bodytext', 'short'];
+        foreach ($teaserFields as $field) {
+            if (isset($tcaColumns[$field]) && $field !== $labelField) {
+                $columns[] = [
+                    'field' => $field,
+                    'label' => $this->getFieldLabel($field, $tcaColumns, $ctrl),
+                    'type' => 'text',
+                    'isLabelField' => false,
+                ];
+                break;
+            }
         }
 
         return $columns;
