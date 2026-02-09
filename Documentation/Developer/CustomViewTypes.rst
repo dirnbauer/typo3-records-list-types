@@ -188,6 +188,19 @@ Configuration options
     ``label`` (TCA label field), ``datetime`` (first date field),
     ``teaser`` (first description field).
 
+..  confval:: types.<id>.itemsPerPage
+    :name: conf-type-itemsperpage
+    :type: int
+    :default: ``100`` (``300`` for compact)
+
+    Number of records displayed per page. Set to ``0`` to disable
+    pagination and show all records at once.
+
+    ..  code-block:: typoscript
+        :caption: Page TSconfig
+
+        mod.web_list.viewMode.types.kanban.itemsPerPage = 50
+
 .. _custom-view-types-template:
 
 Creating a template
@@ -216,6 +229,11 @@ Each item in ``tableData`` provides:
 -   ``recordCount``, ``actionButtons``
 -   ``displayColumns``, ``sortableFields``
 -   ``sortField``, ``sortDirection``
+-   ``paginator`` -- :php:`DatabasePaginator` implementing
+    :php:`TYPO3\CMS\Core\Pagination\PaginatorInterface`
+-   ``pagination`` -- :php:`SlidingWindowPagination` implementing
+    :php:`TYPO3\CMS\Core\Pagination\PaginationInterface`
+-   ``paginationUrl`` -- base URL for building pagination links
 
 Each record in ``records`` provides:
 

@@ -50,6 +50,66 @@ View mode settings
         # Force list view only (hides toggle)
         mod.web_list.viewMode.allowed = list
 
+.. _configuration-pagination:
+
+Pagination
+==========
+
+All alternative view modes (Grid, Compact, Teaser, and custom types) support
+pagination. When the number of records exceeds the configured
+``itemsPerPage``, a pagination bar is shown at the top and bottom of the
+record list -- similar to the classic List View's "Expand table" behavior.
+
+.. _configuration-pagination-items-per-page:
+
+..  confval:: mod.web_list.viewMode.itemsPerPage
+    :name: conf-viewmode-itemsperpage
+    :type: int
+    :default: ``100``
+
+    Global default for the number of records displayed per page in all
+    alternative view modes. Set to ``0`` to disable pagination entirely
+    (show all records).
+
+    ..  code-block:: typoscript
+        :caption: Page TSconfig
+
+        # Show 50 records per page in all view modes
+        mod.web_list.viewMode.itemsPerPage = 50
+
+        # Disable pagination (show all records)
+        mod.web_list.viewMode.itemsPerPage = 0
+
+.. _configuration-pagination-per-type:
+
+..  confval:: mod.web_list.viewMode.types.<type>.itemsPerPage
+    :name: conf-viewmode-type-itemsperpage
+    :type: int
+    :default: ``100`` (``300`` for compact)
+
+    Override the items-per-page setting for a specific view type. The
+    built-in defaults are:
+
+    -  **grid**: ``100``
+    -  **compact**: ``300`` (compact rows are denser, so more records fit)
+    -  **teaser**: ``100``
+    -  Custom types: ``100``
+
+    ..  code-block:: typoscript
+        :caption: Page TSconfig
+
+        # Show 200 records per page in grid view
+        mod.web_list.viewMode.types.grid.itemsPerPage = 200
+
+        # Show 500 records per page in compact view
+        mod.web_list.viewMode.types.compact.itemsPerPage = 500
+
+        # Disable pagination for teaser view
+        mod.web_list.viewMode.types.teaser.itemsPerPage = 0
+
+        # Custom view type with 50 records per page
+        mod.web_list.viewMode.types.myview.itemsPerPage = 50
+
 .. _configuration-grid-cols:
 
 ..  confval:: mod.web_list.gridView.cols

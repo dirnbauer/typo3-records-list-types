@@ -41,6 +41,10 @@ Services
     *   -   :php:`MiddlewareDiagnosticService`
         -   Detects middleware configurations that could break rendering
 
+    *   -   :php:`DatabasePaginator`
+        -   Paginator for pre-fetched database records, extending
+            :php:`TYPO3\CMS\Core\Pagination\AbstractPaginator`
+
 .. _architecture-listeners:
 
 Event listeners
@@ -124,6 +128,8 @@ File structure
     │   ├── GridViewButtonBarListener.php
     │   ├── GridViewQueryListener.php
     │   └── GridViewRecordActionsListener.php
+    ├── Pagination/
+    │   └── DatabasePaginator.php
     ├── Service/
     │   ├── GridConfigurationService.php
     │   ├── MiddlewareDiagnosticService.php

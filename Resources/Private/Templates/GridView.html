@@ -91,6 +91,9 @@
 
                     <f:comment>Grid content - with WCAG 2.1 ARIA attributes for drag and drop</f:comment>
                     <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
+                        <f:comment>Pagination - top</f:comment>
+                        <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+
                         <div class="gridview-card-grid"
                              data-table="{table.tableName}"
                              data-can-reorder="{f:if(condition: table.canReorder, then: '1', else: '0')}"
@@ -114,6 +117,9 @@
                                 </div>
                             </f:if>
                         </div>
+
+                        <f:comment>Pagination - bottom</f:comment>
+                        <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
                     </div>
                 </div>
             </f:for>

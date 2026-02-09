@@ -13,6 +13,30 @@ mod.web_list {
     # Setting only "list" hides the Grid View toggle entirely
     allowedViews = list,grid
 
+    viewMode {
+        # =================================================================
+        # Pagination
+        # =================================================================
+        # Default items per page for all view types (0 = no pagination).
+        # Can be overridden per view type in types.<type>.itemsPerPage
+        # itemsPerPage = 100
+
+        types {
+            # Grid view: 100 records per page (default)
+            grid {
+                itemsPerPage = 100
+            }
+            # Compact view: 300 records per page (denser layout = more records)
+            compact {
+                itemsPerPage = 300
+            }
+            # Teaser view: 100 records per page (default)
+            teaser {
+                itemsPerPage = 100
+            }
+        }
+    }
+
     gridView {
         # Default view when no user preference exists
         # Options: list, grid

@@ -60,11 +60,17 @@
 
                     <f:comment>Teaser cards list</f:comment>
                     <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
+                        <f:comment>Pagination - top</f:comment>
+                        <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+
                         <div class="teaserview-list">
                             <f:for each="{table.records}" as="record">
                                 <f:render partial="TeaserCard" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName}" />
                             </f:for>
                         </div>
+
+                        <f:comment>Pagination - bottom</f:comment>
+                        <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
                     </div>
                 </div>
             </f:for>

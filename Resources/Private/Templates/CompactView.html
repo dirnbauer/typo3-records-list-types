@@ -61,6 +61,9 @@
 
                     <f:comment>Records table with sortable column headers (like core list view)</f:comment>
                     <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
+                        <f:comment>Pagination - top</f:comment>
+                        <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+
                         <div class="compactview-table-wrapper" data-scroll-container>
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
@@ -88,6 +91,9 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <f:comment>Pagination - bottom</f:comment>
+                        <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
                     </div>
                 </div>
             </f:for>

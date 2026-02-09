@@ -103,6 +103,51 @@ mod.web_list.gridView.table.tt_content {
 }
 ```
 
+## Pagination
+
+All alternative view modes (Grid, Compact, Teaser, and custom types) support
+pagination using TYPO3's Core Pagination API (`SlidingWindowPagination`).
+When the number of records exceeds the configured `itemsPerPage`, a
+pagination bar is shown at the top and bottom of the record list.
+
+### Global Default
+
+```typoscript
+mod.web_list.viewMode {
+    # Default items per page for all view types (0 = no pagination)
+    itemsPerPage = 100
+}
+```
+
+### Per-Type Override
+
+Built-in defaults: Grid = 100, Compact = 300, Teaser = 100.
+
+```typoscript
+mod.web_list.viewMode.types {
+    # Grid view: 100 records per page (default)
+    grid.itemsPerPage = 100
+
+    # Compact view: 300 records per page (denser layout)
+    compact.itemsPerPage = 300
+
+    # Teaser view: 100 records per page (default)
+    teaser.itemsPerPage = 100
+
+    # Custom view type
+    myview.itemsPerPage = 50
+
+    # Disable pagination for a specific view
+    grid.itemsPerPage = 0
+}
+```
+
+### Resolution Order
+
+1. Per-type TSconfig: `mod.web_list.viewMode.types.<type>.itemsPerPage`
+2. Global TSconfig: `mod.web_list.viewMode.itemsPerPage`
+3. Built-in default: `100` (or `300` for compact)
+
 ## User TSconfig
 
 Control Grid View behavior per user or user group.

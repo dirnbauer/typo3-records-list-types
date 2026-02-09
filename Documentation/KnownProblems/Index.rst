@@ -80,6 +80,47 @@ This is not a limitation of the extension but reflects TYPO3's
 underlying data model where pages serve a dual role as both content
 containers and tree nodes.
 
+.. _known-problems-grid-drag-pagination:
+
+Drag-and-drop with pagination in Grid View
+==========================================
+
+When pagination is active and records span multiple pages, **drag-and-drop
+reordering in Grid View cannot move a record to a position that is on a
+different pagination page**. Only records visible on the current page can
+be reordered relative to each other.
+
+This is an inherent limitation: the drag-and-drop interaction works on
+DOM elements that are currently rendered, and records on other pagination
+pages are not present in the DOM.
+
+Workaround
+----------
+
+-  **Increase items per page** to show all records on a single page:
+
+   ..  code-block:: typoscript
+
+       mod.web_list.viewMode.types.grid.itemsPerPage = 0
+
+   Setting ``itemsPerPage`` to ``0`` disables pagination entirely for
+   the Grid View, showing all records at once and enabling unrestricted
+   drag-and-drop reordering.
+
+-  **Use the standard List View** for reordering tasks that require
+   moving records across large distances in the sort order.
+
+-  **Switch to manual sorting mode** and use the "move after" context
+   menu action available in the classic List View, which allows
+   targeting any record regardless of pagination.
+
+.. note::
+
+   This limitation applies only to the Grid View, where drag-and-drop
+   is the primary reordering mechanism. Compact, Teaser, and custom
+   view types do not offer drag-and-drop reordering across pagination
+   boundaries either, but their reordering is less prominent in the UI.
+
 .. _known-problems-workspace-support:
 
 Workspace support is experimental

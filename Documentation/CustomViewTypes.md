@@ -64,6 +64,7 @@ mod.web_list.viewMode {
 | `js` | string/array | JavaScript module(s) to load |
 | `columnsFromTCA` | bool | Use user's column selection (default: true) |
 | `displayColumns` | string | Comma-separated field list |
+| `itemsPerPage` | int | Records per page (default: 100, compact: 300, 0 = no pagination) |
 
 ## Creating Templates
 
@@ -105,6 +106,9 @@ sortableFields      - Available sort fields
 sortField           - Current sort field
 sortDirection       - "asc" or "desc"
 canReorder          - Whether drag-drop is enabled
+paginator           - DatabasePaginator (TYPO3 Core PaginatorInterface)
+pagination          - SlidingWindowPagination (TYPO3 Core PaginationInterface)
+paginationUrl       - Base URL for pagination links
 ```
 
 Each record in `records` contains:

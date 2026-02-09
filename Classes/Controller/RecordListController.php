@@ -18,9 +18,11 @@ use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Core\Pagination\SlidingWindowPagination;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\View\ViewFactoryData;
 use TYPO3\CMS\Core\View\ViewFactoryInterface;
+use Webconsulting\RecordsListTypes\Pagination\DatabasePaginator;
 use Webconsulting\RecordsListTypes\Service\GridConfigurationService;
 use Webconsulting\RecordsListTypes\Service\MiddlewareDiagnosticService;
 use Webconsulting\RecordsListTypes\Service\RecordGridDataProvider;
@@ -421,17 +423,35 @@ final class RecordListController extends CoreRecordListController
                 $sortField = $sortbyFieldName;
             }
 
+            // Pagination: use TYPO3 Core Pagination API (1-based page numbers)
+            $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
+            $currentPointer = $this->getCurrentPointer($request, $tableName);
+            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
+            $offset = ($currentPointer - 1) * $itemsPerPage;
+
             // Use DatabaseRecordList's query builder for search (handles searchLevels properly)
             // This uses the same API as the core list view for proper workspace and search support
             if ($searchTerm !== '') {
                 $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
             } else {
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, 100, 0, $searchTerm, $sortField, $sortDirection);
+                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
             }
 
             if ($records !== []) {
-                $recordCount = count($records);
+                $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
                 $isSingleTableMode = ($table !== '');
+
+                // Build pagination using TYPO3 Core Pagination API
+                $paginationData = $this->buildPagination(
+                    $records,
+                    $recordCount,
+                    $currentPointer,
+                    $itemsPerPage,
+                    $tableName,
+                    $pageId,
+                    $viewMode,
+                    $request,
+                );
 
                 // Create action buttons using TYPO3 ComponentFactory API
                 $actionButtons = $this->createTableActionButtons(
@@ -547,6 +567,10 @@ final class RecordListController extends CoreRecordListController
                     'hasSortbyField' => $hasSortbyField,
                     'sortingMode' => $sortingMode,
                     'sortbyFieldName' => $sortbyFieldName,
+                    // Pagination (TYPO3 Core Pagination API)
+                    'paginator' => $paginationData['paginator'],
+                    'pagination' => $paginationData['pagination'],
+                    'paginationUrl' => $paginationData['currentUrl'],
                 ];
             }
         }
@@ -619,17 +643,35 @@ final class RecordListController extends CoreRecordListController
             $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
             $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
 
+            // Pagination: use TYPO3 Core Pagination API (1-based page numbers)
+            $itemsPerPage = $this->getItemsPerPage('compact', $pageId);
+            $currentPointer = $this->getCurrentPointer($request, $tableName);
+            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
+            $offset = ($currentPointer - 1) * $itemsPerPage;
+
             // Use DatabaseRecordList's query builder for search (handles searchLevels properly)
             // This uses the same API as the core list view for proper workspace and search support
             if ($searchTerm !== '') {
                 $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
             } else {
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, 100, 0, $searchTerm, $sortField, $sortDirection);
+                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
             }
 
             if ($records !== []) {
-                $recordCount = count($records);
+                $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
                 $isSingleTableMode = ($table !== '');
+
+                // Build pagination using TYPO3 Core Pagination API
+                $paginationData = $this->buildPagination(
+                    $records,
+                    $recordCount,
+                    $currentPointer,
+                    $itemsPerPage,
+                    $tableName,
+                    $pageId,
+                    'compact',
+                    $request,
+                );
 
                 // Create action buttons using TYPO3 ComponentFactory API
                 $actionButtons = $this->createTableActionButtons(
@@ -702,6 +744,10 @@ final class RecordListController extends CoreRecordListController
                     'canReorder' => $canReorder,
                     'sortField' => $sortField,
                     'sortDirection' => $sortDirection,
+                    // Pagination (TYPO3 Core Pagination API)
+                    'paginator' => $paginationData['paginator'],
+                    'pagination' => $paginationData['pagination'],
+                    'paginationUrl' => $paginationData['currentUrl'],
                 ];
             }
         }
@@ -773,16 +819,34 @@ final class RecordListController extends CoreRecordListController
             $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
             $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
 
+            // Pagination: use TYPO3 Core Pagination API (1-based page numbers)
+            $itemsPerPage = $this->getItemsPerPage('teaser', $pageId);
+            $currentPointer = $this->getCurrentPointer($request, $tableName);
+            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
+            $offset = ($currentPointer - 1) * $itemsPerPage;
+
             // Use DatabaseRecordList's query builder for search
             if ($searchTerm !== '') {
                 $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
             } else {
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, 100, 0, $searchTerm, $sortField, $sortDirection);
+                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
             }
 
             if ($records !== []) {
-                $recordCount = count($records);
+                $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
                 $isSingleTableMode = ($table !== '');
+
+                // Build pagination using TYPO3 Core Pagination API
+                $paginationData = $this->buildPagination(
+                    $records,
+                    $recordCount,
+                    $currentPointer,
+                    $itemsPerPage,
+                    $tableName,
+                    $pageId,
+                    'teaser',
+                    $request,
+                );
 
                 // Create action buttons
                 $actionButtons = $this->createTableActionButtons(
@@ -856,6 +920,10 @@ final class RecordListController extends CoreRecordListController
                     'canReorder' => $canReorder,
                     'sortField' => $sortField,
                     'sortDirection' => $sortDirection,
+                    // Pagination (TYPO3 Core Pagination API)
+                    'paginator' => $paginationData['paginator'],
+                    'pagination' => $paginationData['pagination'],
+                    'paginationUrl' => $paginationData['currentUrl'],
                 ];
             }
         }
@@ -1013,16 +1081,34 @@ final class RecordListController extends CoreRecordListController
             $sortDirection = is_string($sortDirVal) ? $sortDirVal : 'asc';
             $sortDirection = strtolower($sortDirection) === 'desc' ? 'desc' : 'asc';
 
+            // Pagination: use TYPO3 Core Pagination API (1-based page numbers)
+            $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
+            $currentPointer = $this->getCurrentPointer($request, $tableName);
+            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
+            $offset = ($currentPointer - 1) * $itemsPerPage;
+
             // Get records using the standard method
             if ($searchTerm !== '') {
                 $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
             } else {
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, 100, 0, $searchTerm, $sortField, $sortDirection);
+                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
             }
 
             if ($records !== []) {
-                $recordCount = count($records);
+                $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
                 $isSingleTableMode = ($table !== '');
+
+                // Build pagination using TYPO3 Core Pagination API
+                $paginationData = $this->buildPagination(
+                    $records,
+                    $recordCount,
+                    $currentPointer,
+                    $itemsPerPage,
+                    $tableName,
+                    $pageId,
+                    $viewMode,
+                    $request,
+                );
 
                 // Create action buttons
                 $actionButtons = $this->createTableActionButtons(
@@ -1100,6 +1186,10 @@ final class RecordListController extends CoreRecordListController
                     'canReorder' => $canReorder,
                     'sortField' => $sortField,
                     'sortDirection' => $sortDirection,
+                    // Pagination (TYPO3 Core Pagination API)
+                    'paginator' => $paginationData['paginator'],
+                    'pagination' => $paginationData['pagination'],
+                    'paginationUrl' => $paginationData['currentUrl'],
                 ];
             }
         }
@@ -2533,6 +2623,132 @@ final class RecordListController extends CoreRecordListController
         }
 
         return false;
+    }
+
+    /**
+     * Get the number of items per page for a view mode.
+     *
+     * Resolution order:
+     * 1. Per-type TSconfig: mod.web_list.viewMode.types.<type>.itemsPerPage
+     * 2. Global TSconfig: mod.web_list.viewMode.itemsPerPage
+     * 3. Built-in default: 100 (300 for compact mode)
+     *
+     * @param string $viewMode The view mode identifier
+     * @param int $pageId The page ID for TSconfig resolution
+     * @return int Number of items per page (0 = no pagination)
+     */
+    protected function getItemsPerPage(string $viewMode, int $pageId): int
+    {
+        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
+
+        // 1. Per-type TSconfig
+        $perType = $tsConfig['mod.']['web_list.']['viewMode.']['types.'][$viewMode . '.']['itemsPerPage'] ?? null;
+        if ($perType !== null && is_numeric($perType)) {
+            return max(0, (int) $perType);
+        }
+
+        // 2. Global TSconfig
+        $global = $tsConfig['mod.']['web_list.']['viewMode.']['itemsPerPage'] ?? null;
+        if ($global !== null && is_numeric($global)) {
+            return max(0, (int) $global);
+        }
+
+        // 3. Built-in defaults
+        return match ($viewMode) {
+            'compact' => 300,
+            default => 100,
+        };
+    }
+
+    /**
+     * Build pagination objects for a table using TYPO3's Core Pagination API.
+     *
+     * Uses DatabasePaginator (extending AbstractPaginator) with SlidingWindowPagination
+     * for consistent pagination handling across all view modes. This follows the same
+     * pattern used in TYPO3 Core (e.g. LiveSearch) rather than custom array logic.
+     *
+     * The returned array contains the paginator and pagination objects for use in Fluid,
+     * plus a pre-built currentUrl for page navigation links (matching the Core ListNavigation pattern).
+     *
+     * @param array<int, array<string, mixed>> $records The already-fetched records for the current page
+     * @param int $totalRecords Total number of records across all pages
+     * @param int $currentPage Current page number (1-based, like TYPO3 Core)
+     * @param int $itemsPerPage Number of items per page
+     * @param string $tableName The table name (for URL building)
+     * @param int $pageId The TYPO3 page ID
+     * @param string $viewMode The current view mode
+     * @param ServerRequestInterface $request The current request
+     * @return array{paginator: DatabasePaginator, pagination: SlidingWindowPagination, currentUrl: string}
+     */
+    protected function buildPagination(
+        array $records,
+        int $totalRecords,
+        int $currentPage,
+        int $itemsPerPage,
+        string $tableName,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+    ): array {
+        $paginator = new DatabasePaginator($records, $totalRecords, $currentPage, $itemsPerPage);
+        $pagination = new SlidingWindowPagination($paginator, 15);
+
+        // Build the currentUrl for page navigation (same pattern as Core ListNavigation).
+        // The Fluid template appends &pointer[<table>]=<pageNumber> to this URL.
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $queryParams = $request->getQueryParams();
+
+        $urlParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        $preserveParams = ['table', 'searchTerm', 'search_levels'];
+        foreach ($preserveParams as $param) {
+            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
+                $urlParams[$param] = $queryParams[$param];
+            }
+        }
+        // Preserve sort parameters
+        if (isset($queryParams['sort'])) {
+            $urlParams['sort'] = $queryParams['sort'];
+        }
+        if (isset($queryParams['sortingMode'])) {
+            $urlParams['sortingMode'] = $queryParams['sortingMode'];
+        }
+
+        $currentUrl = '';
+        try {
+            $currentUrl = (string) $uriBuilder->buildUriFromRoute('records', $urlParams);
+        } catch (Exception $e) {
+            // Ignore
+        }
+
+        return [
+            'paginator' => $paginator,
+            'pagination' => $pagination,
+            'currentUrl' => $currentUrl,
+        ];
+    }
+
+    /**
+     * Get the current pagination pointer for a specific table from the request.
+     *
+     * Uses 1-based page numbers like TYPO3 Core's DatabaseRecordList.
+     * The pointer is passed as pointer[<tableName>]=<pageNumber>.
+     *
+     * @param ServerRequestInterface $request The current request
+     * @param string $tableName The table name
+     * @return int The current page number (1-based)
+     */
+    protected function getCurrentPointer(ServerRequestInterface $request, string $tableName): int
+    {
+        $queryParams = $request->getQueryParams();
+        $parsedBody = $request->getParsedBody();
+        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
+
+        $pointer = $queryParams['pointer'] ?? $parsedBodyArray['pointer'] ?? [];
+        if (is_array($pointer) && isset($pointer[$tableName])) {
+            return max(1, (int) $pointer[$tableName]);
+        }
+
+        return 1;
     }
 
     /**

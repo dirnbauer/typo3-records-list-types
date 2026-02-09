@@ -15,6 +15,7 @@ A TYPO3 extension that transforms the backend **Records** module with multiple v
 - **Per-Table Config** -- Configure title, description, image, and display fields via TSconfig
 - **User Preferences** -- View mode is persisted per backend user via AJAX
 - **Sorting Controls** -- Manual drag ordering and field-based sorting with direction toggle
+- **Pagination** -- Configurable records-per-page with top/bottom navigation (TYPO3 Core Pagination API)
 - **Search** -- Client-side search filtering across all view modes
 - **Accessibility** -- WCAG 2.1 compliant keyboard navigation, ARIA labels, and screen reader support
 

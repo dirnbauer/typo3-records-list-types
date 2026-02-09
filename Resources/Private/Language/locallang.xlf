@@ -98,6 +98,11 @@
             <trans-unit id="drag.endPosition" resname="drag.endPosition">
                 <source>End position (after last item)</source>
             </trans-unit>
+            
+            <!-- Pagination -->
+            <trans-unit id="pagination.of" resname="pagination.of">
+                <source>of</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

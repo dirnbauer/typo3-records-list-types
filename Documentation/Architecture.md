@@ -240,6 +240,8 @@ Classes/
 │   ├── GridViewButtonBarListener.php   # Injects toggle buttons
 │   ├── GridViewQueryListener.php       # Query modification bridge
 │   └── GridViewRecordActionsListener.php # Action bridging
+├── Pagination/
+│   └── DatabasePaginator.php           # Core Pagination API paginator for DB records
 ├── Service/
 │   ├── GridConfigurationService.php    # TSconfig parsing
 │   ├── MiddlewareDiagnosticService.php # Middleware checks

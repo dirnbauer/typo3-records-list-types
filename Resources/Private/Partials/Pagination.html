@@ -1,0 +1,137 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Pagination partial using TYPO3 Core Pagination API.
+    
+    Follows the same pattern as EXT:backend/Resources/Private/Templates/ListNavigation.fluid.html
+    but adapted for non-table contexts (Grid View, Teaser View, etc.).
+    
+    Arguments:
+    - paginator: DatabasePaginator (implements PaginatorInterface)
+    - pagination: SlidingWindowPagination (implements PaginationInterface)
+    - paginationUrl: Base URL for page links (pointer[table] is appended)
+    - tableName: The database table name (used for per-table pointer parameter)
+    - position: 'top' or 'bottom' (for aria differentiation)
+</f:comment>
+
+<f:if condition="{paginator.numberOfPages} > 1">
+    <nav class="recordlist-pagination" aria-label="Table pagination ({position})">
+        <ul class="pagination pagination-sm mb-0">
+            <f:comment>Range indicator (e.g. "1-100 of 250")</f:comment>
+            <li class="page-item">
+                <span class="page-link">
+                    {pagination.startRecordNumber}–{pagination.endRecordNumber}
+                    <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:pagination.of" default="of" />
+                    {paginator.totalItems}
+                </span>
+            </li>
+
+            <f:comment>First page</f:comment>
+            <f:if condition="{paginator.currentPageNumber} > 1">
+                <f:then>
+                    <li class="page-item">
+                        <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pagination.firstPageNumber}"
+                           title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:first')}"
+                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:first')}">
+                            <core:icon identifier="actions-view-paging-first" size="small" />
+                        </a>
+                    </li>
+                </f:then>
+                <f:else>
+                    <li class="page-item disabled" aria-hidden="true">
+                        <span class="page-link"><core:icon identifier="actions-view-paging-first" size="small" /></span>
+                    </li>
+                </f:else>
+            </f:if>
+
+            <f:comment>Previous page</f:comment>
+            <f:if condition="{pagination.previousPageNumber}">
+                <f:then>
+                    <li class="page-item">
+                        <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pagination.previousPageNumber}"
+                           title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:previous')}"
+                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:previous')}">
+                            <core:icon identifier="actions-view-paging-previous" size="small" />
+                        </a>
+                    </li>
+                </f:then>
+                <f:else>
+                    <li class="page-item disabled" aria-hidden="true">
+                        <span class="page-link"><core:icon identifier="actions-view-paging-previous" size="small" /></span>
+                    </li>
+                </f:else>
+            </f:if>
+
+            <f:comment>Page numbers (sliding window)</f:comment>
+            <f:if condition="{pagination.hasLessPages}">
+                <li class="page-item disabled" aria-hidden="true"><span class="page-link">&hellip;</span></li>
+            </f:if>
+            <f:for each="{pagination.allPageNumbers}" as="pageNumber">
+                <f:if condition="{pageNumber} == {paginator.currentPageNumber}">
+                    <f:then>
+                        <li class="page-item active">
+                            <span class="page-link" aria-current="page">{pageNumber}</span>
+                        </li>
+                    </f:then>
+                    <f:else>
+                        <li class="page-item">
+                            <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pageNumber}">{pageNumber}</a>
+                        </li>
+                    </f:else>
+                </f:if>
+            </f:for>
+            <f:if condition="{pagination.hasMorePages}">
+                <li class="page-item disabled" aria-hidden="true"><span class="page-link">&hellip;</span></li>
+            </f:if>
+
+            <f:comment>Next page</f:comment>
+            <f:if condition="{pagination.nextPageNumber}">
+                <f:then>
+                    <li class="page-item">
+                        <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pagination.nextPageNumber}"
+                           title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:next')}"
+                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:next')}">
+                            <core:icon identifier="actions-view-paging-next" size="small" />
+                        </a>
+                    </li>
+                </f:then>
+                <f:else>
+                    <li class="page-item disabled" aria-hidden="true">
+                        <span class="page-link"><core:icon identifier="actions-view-paging-next" size="small" /></span>
+                    </li>
+                </f:else>
+            </f:if>
+
+            <f:comment>Last page</f:comment>
+            <f:if condition="{paginator.currentPageNumber} < {paginator.numberOfPages}">
+                <f:then>
+                    <li class="page-item">
+                        <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pagination.lastPageNumber}"
+                           title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:last')}"
+                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:last')}">
+                            <core:icon identifier="actions-view-paging-last" size="small" />
+                        </a>
+                    </li>
+                </f:then>
+                <f:else>
+                    <li class="page-item disabled" aria-hidden="true">
+                        <span class="page-link"><core:icon identifier="actions-view-paging-last" size="small" /></span>
+                    </li>
+                </f:else>
+            </f:if>
+
+            <f:comment>Reload button (same as Core ListNavigation)</f:comment>
+            <li class="page-item">
+                <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={paginator.currentPageNumber}"
+                   title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:reload')}"
+                   aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:reload')}">
+                    <core:icon identifier="actions-refresh" size="small" />
+                </a>
+            </li>
+        </ul>
+    </nav>
+</f:if>
+
+</html>
