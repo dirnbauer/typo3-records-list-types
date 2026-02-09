@@ -108,3 +108,68 @@ Include the following information in your report:
 - Steps to reproduce the issue
 - Expected vs. actual behaviour
 - Any error messages from the TYPO3 log or browser console
+
+.. _known-problems-accessibility:
+
+Accessibility of drag-and-drop reordering
+=========================================
+
+The Grid View provides keyboard-based drag-and-drop reordering that
+aims for WCAG 2.1 compliance. However, **accessibility of the drag-and-drop
+interaction has not been tested with a wide range of assistive
+technologies** and should be considered a best-effort implementation.
+
+What is implemented
+-------------------
+
+- **Keyboard support**: Press :kbd:`Space` or :kbd:`Enter` on a drag
+  handle to grab a record, use arrow keys to move it, press
+  :kbd:`Space` or :kbd:`Enter` to drop, or :kbd:`Escape` to cancel.
+- **ARIA attributes**: ``role="listbox"`` on the grid container,
+  ``role="option"`` on cards, ``role="button"`` on drag handles,
+  and ``aria-grabbed`` state tracking.
+- **Live region announcements**: An ``aria-live="polite"`` region
+  announces grab, move ("Position 3 of 12"), drop, and cancel events.
+- **Focus management**: Focus returns to the drag handle after a
+  completed or cancelled reorder operation.
+- **Hidden instructions**: A screen-reader-only element describes the
+  keyboard interaction pattern.
+
+Known limitations
+-----------------
+
+- The drag-and-drop pattern has primarily been tested with keyboard
+  navigation in modern browsers (Chrome, Firefox, Safari). Testing
+  with dedicated screen readers (NVDA, JAWS, VoiceOver) has been
+  limited.
+- Some screen readers may not consistently announce live region
+  updates during rapid keyboard navigation.
+- The ``aria-grabbed`` attribute is deprecated in WAI-ARIA 1.1 but
+  remains in use as a pragmatic solution until broader support for
+  the ``aria-roledescription`` pattern is available.
+- Touch-based assistive technologies on tablets may not trigger the
+  keyboard drag-and-drop path.
+
+Recommendations for critical workflows
+---------------------------------------
+
+If drag-and-drop reordering is essential for users who rely on
+assistive technology, consider using the standard List View as a
+fallback. The List View uses TYPO3 Core's native sorting mechanisms,
+which have undergone more extensive accessibility testing.
+
+Administrators can restrict available view modes per page via TSconfig
+to ensure only tested views are offered:
+
+.. code-block:: typoscript
+
+   mod.web_list.viewMode.allowed = list,grid
+
+If you encounter accessibility barriers, please report them on the
+`GitHub issue tracker <https://github.com/dirnbauer/typo3-records-list-types/issues>`__
+with the following details:
+
+- Assistive technology and version (e.g. NVDA 2024.1, VoiceOver on macOS 15)
+- Browser and version
+- Description of the barrier encountered
+- Expected behaviour

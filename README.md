@@ -328,6 +328,8 @@ records_list_types/
 
 - **Workspace support is experimental.** Visual indicators for workspace states are implemented, but workspace integration has not been extensively tested across all view modes and edge cases (e.g., drag-and-drop reordering within workspaces, publishing changes). If you encounter issues in a workspace environment, please [report them on GitHub](https://github.com/dirnbauer/typo3-records-list-types/issues).
 
+- **Drag-and-drop accessibility has limited assistive technology coverage.** Keyboard-based drag-and-drop is implemented with ARIA attributes and live region announcements, but has primarily been tested with keyboard navigation in modern browsers. Testing with dedicated screen readers (NVDA, JAWS, VoiceOver) has been limited. If drag-and-drop reordering is critical for users relying on assistive technology, the standard List View provides a more thoroughly tested fallback. Please [report accessibility barriers on GitHub](https://github.com/dirnbauer/typo3-records-list-types/issues).
+
 ## Documentation
 
 Comprehensive documentation is available in the `Documentation/` folder:
