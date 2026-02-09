@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\EventListener;
 
+use Exception;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
@@ -28,7 +29,6 @@ use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 #[AsEventListener(event: ModifyButtonBarEvent::class)]
 final class GridViewButtonBarListener
 {
-
     public function __construct(
         private readonly ViewModeResolver $viewModeResolver,
         private readonly IconFactory $iconFactory,
@@ -66,10 +66,10 @@ final class GridViewButtonBarListener
         // Get current and allowed modes
         $currentMode = $this->viewModeResolver->getActiveViewMode($request, $pageId);
         $viewModes = $this->viewModeResolver->getViewModesForDisplay($pageId);
-        
+
         // Filter to only allowed modes
         $allowedModes = array_filter($viewModes, fn($config) => $config['allowed']);
-        
+
         // Need at least 2 modes to show a toggle
         if (count($allowedModes) < 2) {
             return;
@@ -82,7 +82,7 @@ final class GridViewButtonBarListener
             $allowedModes,
             $currentMode,
             $request,
-            $pageId
+            $pageId,
         );
 
         // Add button to the right side, in group 5
@@ -107,16 +107,16 @@ final class GridViewButtonBarListener
         array $allowedModes,
         string $currentMode,
         ServerRequestInterface $request,
-        int $pageId
+        int $pageId,
     ): DropDownButton {
         $queryParams = $request->getQueryParams();
         $lang = $this->getLanguageService();
-        
+
         // Get current mode config for the dropdown label
         $currentModeConfig = $allowedModes[$currentMode] ?? reset($allowedModes);
-        
+
         $componentFactory = $this->getComponentFactory();
-        
+
         // Create dropdown button
         $dropdownButton = $componentFactory->createDropDownButton()
             ->setLabel($lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:button.viewMode'))
@@ -139,11 +139,11 @@ final class GridViewButtonBarListener
             }
 
             try {
-                $url = (string)$this->uriBuilder->buildUriFromRoute(Constants::MODULE_ROUTE, $routeParams);
-            } catch (\Exception $e) {
+                $url = (string) $this->uriBuilder->buildUriFromRoute(Constants::MODULE_ROUTE, $routeParams);
+            } catch (Exception $e) {
                 $params = $queryParams;
                 $params['displayMode'] = $modeId;
-                $url = (string)$request->getUri()->withQuery(http_build_query($params));
+                $url = (string) $request->getUri()->withQuery(http_build_query($params));
             }
 
             $dropdownItem = $componentFactory->createDropDownRadio()
@@ -174,7 +174,7 @@ final class GridViewButtonBarListener
         $route = $request->getAttribute('route');
         if ($route !== null) {
             $routePath = $route->getPath();
-            if (str_contains($routePath, '/module/content/records') 
+            if (str_contains($routePath, '/module/content/records')
                 || str_contains($routePath, '/module/web/list')) {
                 return true;
             }
@@ -209,14 +209,14 @@ final class GridViewButtonBarListener
     private function getPageIdFromRequest(ServerRequestInterface $request): int
     {
         $queryParams = $request->getQueryParams();
-        
+
         if (isset($queryParams['id'])) {
-            return (int)$queryParams['id'];
+            return (int) $queryParams['id'];
         }
 
         $routeParams = $request->getAttribute('routing');
         if (is_array($routeParams) && isset($routeParams['id'])) {
-            return (int)$routeParams['id'];
+            return (int) $routeParams['id'];
         }
 
         return 0;

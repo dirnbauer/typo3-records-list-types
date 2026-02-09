@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
+use Exception;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\FileReference;
 use TYPO3\CMS\Core\Resource\FileRepository;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\SingletonInterface;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * ThumbnailService - Handles image thumbnail resolution and generation.
@@ -20,9 +20,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 final class ThumbnailService implements SingletonInterface
 {
-    /**
-     * Default thumbnail dimensions.
-     */
+    /** Default thumbnail dimensions. */
     private const DEFAULT_WIDTH = 400;
     private const DEFAULT_HEIGHT = 225;
 
@@ -45,7 +43,7 @@ final class ThumbnailService implements SingletonInterface
             $fileReferences = $this->fileRepository->findByRelation(
                 $table,
                 $fieldName,
-                $uid
+                $uid,
             );
 
             if (empty($fileReferences)) {
@@ -57,7 +55,7 @@ final class ThumbnailService implements SingletonInterface
 
             if ($firstReference instanceof FileReference) {
                 $file = $firstReference->getOriginalFile();
-                
+
                 // Only return image files
                 if ($this->isImageFile($file)) {
                     return $file;
@@ -65,7 +63,7 @@ final class ThumbnailService implements SingletonInterface
             }
 
             return null;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Log error but don't break rendering
             return null;
         }
@@ -85,7 +83,7 @@ final class ThumbnailService implements SingletonInterface
             $fileReferences = $this->fileRepository->findByRelation(
                 $table,
                 $fieldName,
-                $uid
+                $uid,
             );
 
             $images = [];
@@ -99,7 +97,7 @@ final class ThumbnailService implements SingletonInterface
             }
 
             return $images;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return [];
         }
     }
@@ -127,7 +125,7 @@ final class ThumbnailService implements SingletonInterface
     public function getThumbnailUrl(
         FileInterface $file,
         int $width = self::DEFAULT_WIDTH,
-        int $height = self::DEFAULT_HEIGHT
+        int $height = self::DEFAULT_HEIGHT,
     ): ?string {
         try {
             $processingInstructions = [
@@ -137,11 +135,11 @@ final class ThumbnailService implements SingletonInterface
 
             $processedFile = $file->process(
                 ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
-                $processingInstructions
+                $processingInstructions,
             );
 
             return $processedFile->getPublicUrl();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return null;
         }
     }
@@ -189,7 +187,7 @@ final class ThumbnailService implements SingletonInterface
             $fileReferences = $this->fileRepository->findByRelation(
                 $table,
                 $fieldName,
-                $uid
+                $uid,
             );
 
             if (empty($fileReferences)) {
@@ -197,13 +195,13 @@ final class ThumbnailService implements SingletonInterface
             }
 
             $firstReference = reset($fileReferences);
-            
+
             if ($firstReference instanceof FileReference && $this->isImageFile($firstReference->getOriginalFile())) {
                 return $firstReference;
             }
 
             return null;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return null;
         }
     }
@@ -221,4 +219,3 @@ final class ThumbnailService implements SingletonInterface
         ];
     }
 }
-

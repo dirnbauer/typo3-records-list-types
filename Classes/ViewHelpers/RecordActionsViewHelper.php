@@ -24,9 +24,7 @@ use Webconsulting\RecordsListTypes\EventListener\GridViewRecordActionsListener;
  */
 class RecordActionsViewHelper extends AbstractViewHelper
 {
-    /**
-     * Do not escape output - actions contain HTML.
-     */
+    /** Do not escape output - actions contain HTML. */
     protected $escapeOutput = false;
 
     public function initializeArguments(): void
@@ -35,41 +33,41 @@ class RecordActionsViewHelper extends AbstractViewHelper
             'table',
             'string',
             'The database table name',
-            true
+            true,
         );
         $this->registerArgument(
             'uid',
             'int',
             'The record UID',
-            true
+            true,
         );
         $this->registerArgument(
             'group',
             'string',
             'Action group to retrieve: "primary", "secondary", or "all"',
             false,
-            'all'
+            'all',
         );
         $this->registerArgument(
             'asArray',
             'bool',
             'Return actions as array instead of rendered HTML',
             false,
-            false
+            false,
         );
         $this->registerArgument(
             'separator',
             'string',
             'Separator between actions when rendering as HTML',
             false,
-            ''
+            '',
         );
     }
 
     public function render(): string|array
     {
         $table = $this->arguments['table'];
-        $uid = (int)$this->arguments['uid'];
+        $uid = (int) $this->arguments['uid'];
         $group = $this->arguments['group'];
         $asArray = $this->arguments['asArray'];
         $separator = $this->arguments['separator'];
@@ -91,4 +89,3 @@ class RecordActionsViewHelper extends AbstractViewHelper
         return implode($separator, $actions);
     }
 }
-

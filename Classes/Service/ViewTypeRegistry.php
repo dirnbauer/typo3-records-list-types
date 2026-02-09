@@ -33,9 +33,7 @@ use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
  */
 final class ViewTypeRegistry implements SingletonInterface
 {
-    /**
-     * Built-in view types with their default configuration.
-     */
+    /** Built-in view types with their default configuration. */
     private const BUILTIN_TYPES = [
         'list' => [
             'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.list',
@@ -161,18 +159,18 @@ final class ViewTypeRegistry implements SingletonInterface
     public function getAllowedViewTypes(int $pageId): array
     {
         $allTypes = $this->getViewTypes($pageId);
-        
+
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $allowedString = $tsConfig['mod.']['web_list.']['viewMode.']['allowed'] 
-            ?? $tsConfig['mod.']['web_list.']['allowedViews'] 
+        $allowedString = $tsConfig['mod.']['web_list.']['viewMode.']['allowed']
+            ?? $tsConfig['mod.']['web_list.']['allowedViews']
             ?? implode(',', array_keys($allTypes));
-        
+
         $allowedIds = array_map('trim', explode(',', $allowedString));
-        
+
         return array_filter(
             $allTypes,
             fn(string $typeId) => in_array($typeId, $allowedIds, true),
-            ARRAY_FILTER_USE_KEY
+            ARRAY_FILTER_USE_KEY,
         );
     }
 
@@ -182,15 +180,15 @@ final class ViewTypeRegistry implements SingletonInterface
     public function getDefaultViewType(int $pageId): string
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $default = $tsConfig['mod.']['web_list.']['viewMode.']['default'] 
-            ?? $tsConfig['mod.']['web_list.']['gridView.']['default'] 
+        $default = $tsConfig['mod.']['web_list.']['viewMode.']['default']
+            ?? $tsConfig['mod.']['web_list.']['gridView.']['default']
             ?? 'list';
-        
+
         // Validate it exists
         if (!$this->hasViewType($default, $pageId)) {
             return 'list';
         }
-        
+
         return $default;
     }
 
@@ -204,7 +202,7 @@ final class ViewTypeRegistry implements SingletonInterface
     public function getTemplatePaths(string $typeId, int $pageId): array
     {
         $config = $this->getViewType($typeId, $pageId);
-        
+
         if ($config === null) {
             // Fallback to grid
             $config = self::BUILTIN_TYPES['grid'];
@@ -280,19 +278,19 @@ final class ViewTypeRegistry implements SingletonInterface
     public function getDisplayColumnsConfig(string $typeId, int $pageId): array
     {
         $config = $this->getViewType($typeId, $pageId);
-        
+
         if ($config === null) {
             return ['columns' => [], 'fromTCA' => true];
         }
 
         $columns = [];
         if (!empty($config['displayColumns'])) {
-            $columns = is_array($config['displayColumns']) 
-                ? $config['displayColumns'] 
+            $columns = is_array($config['displayColumns'])
+                ? $config['displayColumns']
                 : GeneralUtility::trimExplode(',', $config['displayColumns'], true);
         }
 
-        $fromTCA = (bool)($config['columnsFromTCA'] ?? true);
+        $fromTCA = (bool) ($config['columnsFromTCA'] ?? true);
 
         return [
             'columns' => $columns,
@@ -334,7 +332,7 @@ final class ViewTypeRegistry implements SingletonInterface
             'partialRootPath' => $config['partialRootPath'] ?? null,
             'layoutRootPath' => $config['layoutRootPath'] ?? null,
             'displayColumns' => $config['displayColumns'] ?? null,
-            'columnsFromTCA' => isset($config['columnsFromTCA']) ? (bool)$config['columnsFromTCA'] : true,
+            'columnsFromTCA' => isset($config['columnsFromTCA']) ? (bool) $config['columnsFromTCA'] : true,
             'builtin' => false,
         ];
     }
@@ -358,4 +356,3 @@ final class ViewTypeRegistry implements SingletonInterface
         $this->cache = [];
     }
 }
-

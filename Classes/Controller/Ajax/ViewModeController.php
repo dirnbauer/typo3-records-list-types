@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Controller\Ajax;
 
+use Exception;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -31,15 +32,13 @@ final class ViewModeController
      *     "mode": "grid" | "list"
      * }
      *
-     * @param ServerRequestInterface $request
-     * @return ResponseInterface
      */
     public function setViewModeAction(ServerRequestInterface $request): ResponseInterface
     {
         try {
             // Parse request body
             $body = $request->getParsedBody();
-            
+
             // Handle both JSON and form-encoded requests
             if (empty($body)) {
                 $content = $request->getBody()->getContents();
@@ -65,7 +64,7 @@ final class ViewModeController
                 'mode' => $mode,
                 'message' => 'View mode preference saved.',
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logger->error('Failed to save view mode preference', [
                 'exception' => $e,
                 'message' => $e->getMessage(),
@@ -80,14 +79,12 @@ final class ViewModeController
     /**
      * Get the user's current view mode preference.
      *
-     * @param ServerRequestInterface $request
-     * @return ResponseInterface
      */
     public function getViewModeAction(ServerRequestInterface $request): ResponseInterface
     {
         try {
             $queryParams = $request->getQueryParams();
-            $pageId = (int)($queryParams['pageId'] ?? 0);
+            $pageId = (int) ($queryParams['pageId'] ?? 0);
 
             $currentMode = $this->viewModeResolver->getActiveViewMode($request, $pageId);
             $userPreference = $this->viewModeResolver->getUserPreference();
@@ -100,7 +97,7 @@ final class ViewModeController
                 'forcedMode' => $forcedMode,
                 'isForced' => $forcedMode !== null,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logger->error('Failed to get view mode preference', [
                 'exception' => $e,
                 'message' => $e->getMessage(),
@@ -112,4 +109,3 @@ final class ViewModeController
         }
     }
 }
-

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
+use InvalidArgumentException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
@@ -26,7 +27,7 @@ use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
  * 2. User preference ($BE_USER->uc['records_view_mode'])
  * 3. Page TSconfig (mod.web_list.viewMode.default)
  * 4. Fallback: "list"
- * 
+ *
  * @see RegisterViewModesEvent for adding custom view modes
  */
 final class ViewModeResolver implements SingletonInterface
@@ -35,7 +36,7 @@ final class ViewModeResolver implements SingletonInterface
      * Default view modes. Additional modes can be registered via:
      * - RegisterViewModesEvent (PSR-14 event)
      * - TSconfig: mod.web_list.viewMode.types.{id} { label, icon, description }
-     * 
+     *
      * Icons available in TYPO3:
      * - actions-viewmode-list (horizontal lines)
      * - actions-viewmode-tiles (grid of boxes)
@@ -68,7 +69,7 @@ final class ViewModeResolver implements SingletonInterface
 
     private const USER_CONFIG_KEY = 'records_view_mode';
     private const DEFAULT_MODE = 'list';
-    
+
     /**
      * Cached view modes (includes custom modes from event + TSconfig)
      * @var array<string, array{label: string, icon: string, description: string}>|null
@@ -112,7 +113,7 @@ final class ViewModeResolver implements SingletonInterface
 
     /**
      * Get all registered view modes.
-     * 
+     *
      * Modes are collected from:
      * 1. Built-in modes (list, grid, compact)
      * 2. Custom modes registered via RegisterViewModesEvent
@@ -126,21 +127,21 @@ final class ViewModeResolver implements SingletonInterface
         if ($this->viewModes !== null) {
             return $this->viewModes;
         }
-        
+
         // Start with default modes
         $modes = self::DEFAULT_VIEW_MODES;
-        
+
         // Allow extensions to register custom modes via PSR-14 event
         $eventDispatcher = GeneralUtility::makeInstance(EventDispatcherInterface::class);
         $event = new RegisterViewModesEvent($modes);
         $eventDispatcher->dispatch($event);
         $modes = $event->getViewModes();
-        
+
         // Also check TSconfig for custom modes
         if ($pageId > 0) {
             $tsConfig = BackendUtility::getPagesTSconfig($pageId);
             $customModes = $tsConfig['mod.']['web_list.']['viewMode.']['types.'] ?? [];
-            
+
             foreach ($customModes as $modeId => $config) {
                 $modeId = rtrim($modeId, '.');
                 if (is_array($config) && !isset($modes[$modeId])) {
@@ -152,7 +153,7 @@ final class ViewModeResolver implements SingletonInterface
                 }
             }
         }
-        
+
         $this->viewModes = $modes;
         return $modes;
     }
@@ -166,21 +167,21 @@ final class ViewModeResolver implements SingletonInterface
     public function getAllowedModes(int $pageId): array
     {
         $allModes = $this->getViewModes($pageId);
-        
+
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $allowedString = $tsConfig['mod.']['web_list.']['viewMode.']['allowed'] 
-            ?? $tsConfig['mod.']['web_list.']['allowedViews'] 
+        $allowedString = $tsConfig['mod.']['web_list.']['viewMode.']['allowed']
+            ?? $tsConfig['mod.']['web_list.']['allowedViews']
             ?? implode(',', array_keys($allModes)); // Default: all registered modes
-        
+
         $configured = array_map('trim', explode(',', $allowedString));
-        
+
         // Filter to only valid modes
         return array_values(array_filter($configured, fn($mode) => isset($allModes[$mode])));
     }
 
     /**
      * Check if the given mode is valid (registered).
-     * 
+     *
      * @param string $mode The mode identifier to check
      * @param int $pageId Optional page ID for TSconfig-based modes
      */
@@ -199,14 +200,14 @@ final class ViewModeResolver implements SingletonInterface
         if ($backendUser === null) {
             return null;
         }
-        
+
         $preference = $backendUser->uc[self::USER_CONFIG_KEY] ?? null;
         return is_string($preference) ? $preference : null;
     }
 
     /**
      * Store the user's view mode preference.
-     * 
+     *
      * @param string $mode The mode identifier to store
      * @param int $pageId Optional page ID for validation against TSconfig modes
      */
@@ -214,9 +215,9 @@ final class ViewModeResolver implements SingletonInterface
     {
         if (!$this->isValidMode($mode, $pageId)) {
             $modes = $this->getViewModes($pageId);
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf('Invalid view mode "%s". Allowed: %s', $mode, implode(', ', array_keys($modes))),
-                1735600000
+                1735600000,
             );
         }
 
@@ -235,8 +236,8 @@ final class ViewModeResolver implements SingletonInterface
     private function getTsConfigDefault(int $pageId): ?string
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        return $tsConfig['mod.']['web_list.']['viewMode.']['default'] 
-            ?? $tsConfig['mod.']['web_list.']['gridView.']['default'] 
+        return $tsConfig['mod.']['web_list.']['viewMode.']['default']
+            ?? $tsConfig['mod.']['web_list.']['gridView.']['default']
             ?? null;
     }
 
@@ -276,11 +277,11 @@ final class ViewModeResolver implements SingletonInterface
         // Check User TSconfig for forced view
         $userTsConfig = $backendUser->getTSConfig();
         $forcedView = $userTsConfig['options.']['layout.']['records.']['forceView'] ?? null;
-        
+
         if ($forcedView !== null && $this->isValidMode($forcedView)) {
             return $forcedView;
         }
-        
+
         return null;
     }
 
@@ -317,13 +318,13 @@ final class ViewModeResolver implements SingletonInterface
         $allModes = $this->getViewModes($pageId);
         $allowedModes = $this->getAllowedModes($pageId);
         $result = [];
-        
+
         foreach ($allModes as $mode => $config) {
             $label = $config['label'];
             if (str_starts_with($label, 'LLL:')) {
                 $label = $GLOBALS['LANG']->sL($label) ?: $mode;
             }
-            
+
             $result[$mode] = [
                 'id' => $mode,
                 'label' => $label,
@@ -332,7 +333,7 @@ final class ViewModeResolver implements SingletonInterface
                 'allowed' => in_array($mode, $allowedModes, true),
             ];
         }
-        
+
         return $result;
     }
 

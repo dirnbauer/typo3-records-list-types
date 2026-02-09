@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
+use Doctrine\DBAL\ParameterType;
+use RuntimeException;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use Doctrine\DBAL\ParameterType;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
@@ -50,7 +51,7 @@ final class RecordGridDataProvider implements SingletonInterface
         int $offset = 0,
         string $searchTerm = '',
         string $sortField = '',
-        string $sortDirection = 'asc'
+        string $sortDirection = 'asc',
     ): array {
         $tableConfig = $this->configurationService->getTableConfig($table, $pageId);
         $queryBuilder = $this->createQueryBuilder($table, $pageId, $searchTerm, $sortField, $sortDirection);
@@ -74,12 +75,12 @@ final class RecordGridDataProvider implements SingletonInterface
         while ($row = $result->fetchAssociative()) {
             // Apply workspace overlay to get the correct version for the current workspace
             BackendUtility::workspaceOL($table, $row);
-            
+
             // workspaceOL returns false/null if record is deleted in workspace or should not be shown
             if (!is_array($row)) {
                 continue;
             }
-            
+
             $records[] = $this->enrichRecord($table, $row, $tableConfig, $pageId);
         }
 
@@ -99,38 +100,38 @@ final class RecordGridDataProvider implements SingletonInterface
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
         $backendUser = $this->getBackendUserAuthentication();
-        
+
         // Use TYPO3's standard restrictions for proper workspace handling
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
             ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $backendUser->workspace));
-        
+
         $queryBuilder
             ->count('uid')
             ->from($table)
             ->where(
                 $queryBuilder->expr()->eq(
                     'pid',
-                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER)
-                )
+                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER),
+                ),
             );
 
-        return (int)$queryBuilder->executeQuery()->fetchOne();
+        return (int) $queryBuilder->executeQuery()->fetchOne();
     }
 
     /**
      * Get the current backend user authentication.
      *
-     * @throws \RuntimeException If no backend user is available
+     * @throws RuntimeException If no backend user is available
      */
     private function getBackendUserAuthentication(): BackendUserAuthentication
     {
         $backendUser = $GLOBALS['BE_USER'] ?? null;
         if ($backendUser === null) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 'No backend user available. RecordGridDataProvider requires an authenticated backend user.',
-                1735700000
+                1735700000,
             );
         }
         return $backendUser;
@@ -146,14 +147,13 @@ final class RecordGridDataProvider implements SingletonInterface
      * @param string $searchTerm Search term to filter records
      * @param string $sortField Field to sort by (empty = default TCA sorting)
      * @param string $sortDirection Sort direction: 'asc' or 'desc'
-     * @return QueryBuilder
      */
     private function createQueryBuilder(
         string $table,
         int $pageId,
         string $searchTerm = '',
         string $sortField = '',
-        string $sortDirection = 'asc'
+        string $sortDirection = 'asc',
     ): QueryBuilder {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
         $backendUser = $this->getBackendUserAuthentication();
@@ -171,8 +171,8 @@ final class RecordGridDataProvider implements SingletonInterface
             ->where(
                 $queryBuilder->expr()->eq(
                     'pid',
-                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER)
-                )
+                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER),
+                ),
             );
 
         // Apply search term filter
@@ -189,12 +189,12 @@ final class RecordGridDataProvider implements SingletonInterface
             $sortBy = $GLOBALS['TCA'][$table]['ctrl']['default_sortby'] ?? 'uid DESC';
             $sortBy = str_replace('ORDER BY ', '', $sortBy);
             $sortParts = GeneralUtility::trimExplode(',', $sortBy);
-            
+
             foreach ($sortParts as $sortPart) {
                 $parts = GeneralUtility::trimExplode(' ', $sortPart);
                 $field = $parts[0] ?? 'uid';
                 $direction = strtoupper($parts[1] ?? 'ASC');
-                
+
                 if ($direction === 'DESC') {
                     $queryBuilder->addOrderBy($field, 'DESC');
                 } else {
@@ -220,18 +220,18 @@ final class RecordGridDataProvider implements SingletonInterface
         if (in_array($field, $coreSystemFields, true)) {
             return true;
         }
-        
+
         // Check TCA ctrl fields that might exist
         $tca = $GLOBALS['TCA'][$table] ?? [];
         $ctrl = $tca['ctrl'] ?? [];
-        
+
         // Check if field is defined as a ctrl field (crdate, tstamp, sortby, etc.)
         $ctrlFields = [
             'crdate' => $ctrl['crdate'] ?? null,
             'tstamp' => $ctrl['tstamp'] ?? null,
             'sorting' => $ctrl['sortby'] ?? null,
         ];
-        
+
         foreach ($ctrlFields as $alias => $actualField) {
             if ($field === $alias && $actualField !== null) {
                 return true;
@@ -360,10 +360,10 @@ final class RecordGridDataProvider implements SingletonInterface
 
     /**
      * Translate a TCA label.
-     * 
+     *
      * Handles both traditional LLL: format and TYPO3 v12+ translation domain format
      * (e.g., 'frontend.db.tt_content:header').
-     * 
+     *
      * @param string $label The label to translate
      * @param string $fallback Fallback value if translation fails
      * @return string The translated label
@@ -406,48 +406,48 @@ final class RecordGridDataProvider implements SingletonInterface
     {
         $tca = $GLOBALS['TCA'][$table] ?? [];
         $ctrl = $tca['ctrl'] ?? [];
-        
+
         // Get searchable fields from TCA ctrl.searchFields or fall back to label field
         $searchFieldsString = $ctrl['searchFields'] ?? '';
         if ($searchFieldsString === '') {
             $searchFieldsString = $ctrl['label'] ?? 'uid';
         }
-        
+
         $searchFields = GeneralUtility::trimExplode(',', $searchFieldsString, true);
-        
+
         // Also search in uid if the search term is numeric
         if (is_numeric($searchTerm)) {
             $searchFields[] = 'uid';
         }
-        
+
         // Build OR conditions for each search field
         $searchConstraints = [];
         $likeValue = '%' . $queryBuilder->escapeLikeWildcards($searchTerm) . '%';
-        
+
         foreach ($searchFields as $field) {
             // Skip fields that don't exist in the table
             if ($field !== 'uid' && !isset($tca['columns'][$field])) {
                 continue;
             }
-            
+
             if ($field === 'uid' && is_numeric($searchTerm)) {
                 // For uid, do an exact match
                 $searchConstraints[] = $queryBuilder->expr()->eq(
                     $field,
-                    $queryBuilder->createNamedParameter((int)$searchTerm, ParameterType::INTEGER)
+                    $queryBuilder->createNamedParameter((int) $searchTerm, ParameterType::INTEGER),
                 );
             } else {
                 // For text fields, use LIKE
                 $searchConstraints[] = $queryBuilder->expr()->like(
                     $field,
-                    $queryBuilder->createNamedParameter($likeValue)
+                    $queryBuilder->createNamedParameter($likeValue),
                 );
             }
         }
-        
+
         if (!empty($searchConstraints)) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->or(...$searchConstraints)
+                $queryBuilder->expr()->or(...$searchConstraints),
             );
         }
     }
@@ -463,7 +463,7 @@ final class RecordGridDataProvider implements SingletonInterface
      */
     private function enrichRecord(string $table, array $row, array $tableConfig, int $pageId): array
     {
-        $uid = (int)$row['uid'];
+        $uid = (int) $row['uid'];
 
         // Get title
         $titleField = $tableConfig['titleField'];
@@ -471,7 +471,7 @@ final class RecordGridDataProvider implements SingletonInterface
         if (is_array($title)) {
             $title = reset($title);
         }
-        $title = (string)$title;
+        $title = (string) $title;
 
         // Get description
         $description = null;
@@ -481,7 +481,7 @@ final class RecordGridDataProvider implements SingletonInterface
                 $description = reset($description);
             }
             // Strip HTML and limit length
-            $description = strip_tags((string)$description);
+            $description = strip_tags((string) $description);
         }
 
         // Get thumbnail
@@ -491,7 +491,7 @@ final class RecordGridDataProvider implements SingletonInterface
             $thumbnailData = $this->thumbnailService->getThumbnailData(
                 $table,
                 $uid,
-                $tableConfig['imageField']
+                $tableConfig['imageField'],
             );
             $thumbnail = $thumbnailData['file'];
             $thumbnailUrl = $thumbnailData['url'];
@@ -502,7 +502,7 @@ final class RecordGridDataProvider implements SingletonInterface
 
         // Check hidden status
         $hiddenField = $GLOBALS['TCA'][$table]['ctrl']['enablecolumns']['disabled'] ?? null;
-        $hidden = $hiddenField ? (bool)($row[$hiddenField] ?? false) : false;
+        $hidden = $hiddenField ? (bool) ($row[$hiddenField] ?? false) : false;
 
         // Detect workspace state for visual indicators
         // t3ver_state values: 0=default, 1=new, 2=deleted, 3=moved placeholder, 4=move pointer
@@ -510,7 +510,7 @@ final class RecordGridDataProvider implements SingletonInterface
 
         return [
             'uid' => $uid,
-            'pid' => (int)$row['pid'],
+            'pid' => (int) $row['pid'],
             'tableName' => $table,
             'title' => $title,
             'description' => $description,
@@ -555,7 +555,7 @@ final class RecordGridDataProvider implements SingletonInterface
         }
 
         // Check t3ver_state field
-        $t3verState = (int)($row['t3ver_state'] ?? 0);
+        $t3verState = (int) ($row['t3ver_state'] ?? 0);
 
         // t3ver_state values (from TYPO3 VersionState):
         // 0 = DEFAULT_STATE (live or unchanged in workspace)
@@ -583,7 +583,7 @@ final class RecordGridDataProvider implements SingletonInterface
     private function isChangedInWorkspace(array $row): bool
     {
         // If t3ver_oid > 0, this is a workspace version of a live record
-        $t3verOid = (int)($row['t3ver_oid'] ?? 0);
+        $t3verOid = (int) ($row['t3ver_oid'] ?? 0);
         return $t3verOid > 0;
     }
 
@@ -608,7 +608,7 @@ final class RecordGridDataProvider implements SingletonInterface
         int $offset = 0,
         string $searchTerm = '',
         string $sortField = '',
-        string $sortDirection = 'asc'
+        string $sortDirection = 'asc',
     ): array {
         $records = $this->getRecordsForTable($table, $pageId, $limit, $offset, $searchTerm, $sortField, $sortDirection);
 
@@ -620,4 +620,3 @@ final class RecordGridDataProvider implements SingletonInterface
         return $records;
     }
 }
-

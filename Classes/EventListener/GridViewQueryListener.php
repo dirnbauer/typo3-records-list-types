@@ -20,9 +20,7 @@ use TYPO3\CMS\Core\Attribute\AsEventListener;
 #[AsEventListener]
 final class GridViewQueryListener
 {
-    /**
-     * @var array<string, \TYPO3\CMS\Core\Database\Query\QueryBuilder> Cache of modified query builders
-     */
+    /** @var array<string, \TYPO3\CMS\Core\Database\Query\QueryBuilder> Cache of modified query builders */
     private static array $queryCache = [];
 
     public function __invoke(ModifyDatabaseQueryForRecordListingEvent $event): void
@@ -41,7 +39,6 @@ final class GridViewQueryListener
      *
      * @param string $table The table name
      * @param int $pageId The page ID
-     * @return \TYPO3\CMS\Core\Database\Query\QueryBuilder|null
      */
     public static function getCachedQueryBuilder(string $table, int $pageId): ?\TYPO3\CMS\Core\Database\Query\QueryBuilder
     {
@@ -57,4 +54,3 @@ final class GridViewQueryListener
         self::$queryCache = [];
     }
 }
-
