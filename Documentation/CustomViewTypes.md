@@ -1,6 +1,291 @@
 # Custom View Types
 
-The Records Grid View extension supports custom view types that can be registered via TSconfig. Each view type can have its own Fluid template, styling, and behavior.
+Adding a new view type requires **zero PHP**. You provide TSconfig + a Fluid template, and the extension handles the rest: record fetching, pagination, sorting, action buttons, and asset loading.
+
+## Quick Start: Add a View Type in 3 Steps
+
+### Step 1: Register the view type (Page TSconfig)
+
+```tsconfig
+mod.web_list.viewMode {
+    allowed = list,grid,compact,teaser,timeline
+
+    types.timeline {
+        label = Timeline
+        icon = actions-calendar
+        template = TimelineView
+        templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
+        css = EXT:my_sitepackage/Resources/Public/Css/timeline.css
+        displayColumns = label,datetime,teaser
+        columnsFromTCA = 0
+    }
+}
+```
+
+### Step 2: Create the Fluid template
+
+Copy `GenericView.html` from the extension and customize it:
+
+```
+EXT:my_sitepackage/Resources/Private/Backend/Templates/TimelineView.html
+```
+
+```html
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<div class="timeline-container">
+    <f:for each="{tableData}" as="table">
+        <div class="recordlist" id="t3-table-{table.tableName}">
+            <div class="recordlist-heading">
+                <div class="recordlist-heading-row">
+                    <div class="recordlist-heading-title">
+                        <a href="{table.singleTableUrl}">
+                            <span class="fw-bold">{table.tableLabel}</span>
+                            <span>({table.recordCount})</span>
+                        </a>
+                    </div>
+                    <div class="recordlist-heading-actions">
+                        <f:if condition="{table.actionButtons.newRecordButton}">
+                            <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                        </f:if>
+                    </div>
+                </div>
+            </div>
+
+            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+
+            <div class="timeline-list">
+                <f:for each="{table.records}" as="record">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong>{record.title}</strong>
+                            <f:for each="{record.displayValues}" as="field">
+                                <f:if condition="{field.type} == 'datetime'">
+                                    <span class="text-muted small ms-2">{field.formatted}</span>
+                                </f:if>
+                            </f:for>
+                        </div>
+                    </div>
+                </f:for>
+            </div>
+
+            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
+        </div>
+    </f:for>
+</div>
+
+</html>
+```
+
+### Step 3: Add CSS (optional)
+
+```css
+/* EXT:my_sitepackage/Resources/Public/Css/timeline.css */
+.timeline-list { padding: 1rem; }
+.timeline-item { display: flex; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb; }
+.timeline-marker { width: 12px; height: 12px; border-radius: 50%; background: #3b82f6; margin-top: 4px; flex-shrink: 0; }
+.timeline-content { flex: 1; }
+```
+
+That's it. No PHP, no classes, no dependency injection. The new "Timeline" view appears in the view switcher and works with pagination, sorting, search, and all record actions.
+
+## View Type on a Specific Page Only
+
+Use TSconfig conditions to restrict a view type to certain pages:
+
+```tsconfig
+# Timeline view only on the "Events" page (uid=42)
+[page["uid"] == 42]
+    mod.web_list.viewMode {
+        allowed = list,timeline
+        default = timeline
+
+        types.timeline {
+            label = Event Timeline
+            icon = actions-calendar
+            template = TimelineView
+            templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
+            css = EXT:my_sitepackage/Resources/Public/Css/timeline.css
+            displayColumns = label,datetime,teaser
+            columnsFromTCA = 0
+            itemsPerPage = 50
+        }
+    }
+[end]
+```
+
+This gives the Events page a "Timeline" toggle while all other pages keep the default views. Setting `default = timeline` makes it the default when editors first visit that page.
+
+### More page-scoping examples
+
+```tsconfig
+# Grid-only for media folders (doktype 254 = sysfolder)
+[page["doktype"] == 254]
+    mod.web_list.viewMode.default = grid
+    mod.web_list.viewMode.allowed = list,grid
+[end]
+
+# Compact view for system records pages
+[page["module"] == "system"]
+    mod.web_list.viewMode.default = compact
+    mod.web_list.viewMode.allowed = list,compact
+[end]
+
+# Custom view for an entire page tree (pid=100 and its children)
+[page["uid"] == 100 || page["pid"] == 100]
+    mod.web_list.viewMode {
+        allowed = list,grid,catalog
+        default = catalog
+        types.catalog {
+            label = Product Catalog
+            icon = actions-viewmode-tiles
+            template = CatalogView
+            templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
+            css = EXT:my_sitepackage/Resources/Public/Css/catalog.css
+            columnsFromTCA = 1
+        }
+    }
+[end]
+```
+
+## Real-World Examples
+
+### Product Catalog (Grid with large thumbnails)
+
+A visual overview for browsing products, showing images prominently:
+
+```tsconfig
+mod.web_list.viewMode {
+    allowed = list,grid,catalog
+    types.catalog {
+        label = Product Catalog
+        icon = actions-viewmode-tiles
+        template = CatalogView
+        templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
+        css = EXT:my_sitepackage/Resources/Public/Css/catalog.css
+        displayColumns = label,teaser
+        columnsFromTCA = 0
+        itemsPerPage = 24
+    }
+}
+
+mod.web_list.gridView.table.tx_myshop_domain_model_product {
+    titleField = name
+    descriptionField = short_description
+    imageField = images
+    preview = 1
+}
+```
+
+### Address Book (Compact with specific columns)
+
+A dense list showing key contact information at a glance:
+
+```tsconfig
+mod.web_list.viewMode {
+    allowed = list,compact,addressbook
+    types.addressbook {
+        label = Address Book
+        icon = actions-address
+        template = CompactView
+        displayColumns = name,email,phone,company,city
+        columnsFromTCA = 0
+        itemsPerPage = 500
+    }
+}
+```
+
+Note: this reuses the built-in `CompactView` template but with custom columns -- no new template needed.
+
+### Event Calendar List
+
+A view optimized for upcoming events, sorted by date:
+
+```tsconfig
+[page["uid"] == 55]
+    mod.web_list.viewMode {
+        allowed = list,eventlist
+        default = eventlist
+        types.eventlist {
+            label = Event List
+            icon = actions-calendar
+            template = TeaserView
+            displayColumns = label,datetime,teaser
+            columnsFromTCA = 0
+            itemsPerPage = 30
+        }
+    }
+[end]
+```
+
+This reuses the built-in `TeaserView` template -- the date field is automatically detected and displayed with a calendar icon.
+
+### News Dashboard (Teaser with all fields from TCA)
+
+An editorial view showing all user-selected columns in teaser format:
+
+```tsconfig
+mod.web_list.viewMode.types.newsdash {
+    label = News Dashboard
+    icon = content-news
+    template = TeaserView
+    columnsFromTCA = 1
+    itemsPerPage = 20
+}
+mod.web_list.viewMode.allowed = list,grid,newsdash
+```
+
+Setting `columnsFromTCA = 1` means editors can choose which columns appear via TYPO3's "Show columns" selector.
+
+### Minimal List (no pagination)
+
+A simple list that shows all records without pagination:
+
+```tsconfig
+mod.web_list.viewMode.types.fulllist {
+    label = Full List
+    icon = actions-viewmode-list
+    template = CompactView
+    columnsFromTCA = 1
+    itemsPerPage = 0
+}
+mod.web_list.viewMode.allowed = list,fulllist
+```
+
+Setting `itemsPerPage = 0` disables pagination entirely.
+
+## Reusing Built-in Templates
+
+You don't need to create a custom template for every view type. The built-in templates work with any configuration:
+
+| Template | Best for |
+|----------|----------|
+| `GridView` | Visual content with images (products, team members, portfolio) |
+| `CompactView` | Dense data (addresses, system records, logs, settings) |
+| `TeaserView` | Content previews (news, blog posts, events, press releases) |
+| `GenericView` | Starting point for fully custom layouts |
+
+Example: a "Photo Gallery" view using the built-in `GridView` template with custom per-table config:
+
+```tsconfig
+mod.web_list.viewMode.types.gallery {
+    label = Photo Gallery
+    icon = actions-image
+    template = GridView
+    columnsFromTCA = 0
+    displayColumns = label
+    itemsPerPage = 48
+}
+
+mod.web_list.gridView.table.sys_file_metadata {
+    titleField = title
+    imageField = file
+    preview = 1
+}
+```
 
 ## Built-in View Types
 
@@ -11,262 +296,105 @@ The Records Grid View extension supports custom view types that can be registere
 | `compact` | Compact View | Single-line table with sortable columns |
 | `teaser` | Teaser List | Minimal cards with title, date, and teaser |
 
-## Registering Custom View Types
+## Configuration Reference
 
-Add custom view types via Page TSconfig:
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `label` | string | *required* | Display name in the view switcher (supports `LLL:`) |
+| `icon` | string | *required* | TYPO3 icon identifier |
+| `description` | string | *(empty)* | Tooltip description |
+| `template` | string | `<TypeId>View` | Fluid template name (without `.html`) |
+| `partial` | string | `Card` | Default partial for record cards |
+| `templateRootPath` | string | *(extension default)* | Custom template path |
+| `partialRootPath` | string | *(extension default)* | Custom partial path |
+| `layoutRootPath` | string | *(extension default)* | Custom layout path |
+| `css` | string | *(none)* | CSS file to include (`EXT:` syntax) |
+| `js` | string | *(none)* | JavaScript module (`@vendor/module.js` syntax) |
+| `columnsFromTCA` | bool | `1` | Use editor's column selection from TCA |
+| `displayColumns` | string | *(empty)* | Comma-separated field list |
+| `itemsPerPage` | int | `100` | Records per page (`0` = no pagination) |
 
-```tsconfig
-mod.web_list.viewMode {
-    # Make your view available
-    allowed = list,grid,compact,teaser,myview
+### Special Column Names
 
-    types {
-        myview {
-            # Required: Display settings
-            label = My Custom View
-            icon = content-text
-            description = Custom view for my content
+When using `displayColumns`, these names are resolved automatically:
 
-            # Template configuration
-            template = MyView
-            partial = MyCard
+| Name | Resolves to |
+|------|-------------|
+| `label` | TCA `ctrl.label` field (the record title) |
+| `datetime` | First date field found (`datetime`, `date`, `starttime`, or `crdate`) |
+| `teaser` | First description field found (`teaser`, `abstract`, `description`, `bodytext`, `short`) |
 
-            # Custom template paths (optional)
-            templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
-            partialRootPath = EXT:my_sitepackage/Resources/Private/Backend/Partials/
-
-            # Assets (optional - base.css is loaded automatically)
-            css = EXT:my_sitepackage/Resources/Public/Css/my-view.css
-            js = @my-sitepackage/my-view.js
-
-            # Column configuration
-            columnsFromTCA = 1
-            # OR specify exact columns:
-            # displayColumns = title,datetime,teaser,categories
-        }
-    }
-}
-```
-
-## Configuration Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `label` | string | Display name in the view switcher |
-| `icon` | string | TYPO3 icon identifier |
-| `description` | string | Tooltip description |
-| `template` | string | Fluid template name (without .html) |
-| `partial` | string | Default partial for record cards |
-| `templateRootPath` | string | Custom template path |
-| `partialRootPath` | string | Custom partial path |
-| `layoutRootPath` | string | Custom layout path |
-| `css` | string/array | CSS file(s) to include |
-| `js` | string/array | JavaScript module(s) to load |
-| `columnsFromTCA` | bool | Use user's column selection (default: true) |
-| `displayColumns` | string | Comma-separated field list |
-| `itemsPerPage` | int | Records per page (default: 100, compact: 300, 0 = no pagination) |
-
-## Creating Templates
-
-### 1. Copy the Generic Template
-
-Copy `EXT:records_list_types/Resources/Private/Templates/GenericView.html` to your extension:
-
-```
-EXT:my_sitepackage/Resources/Private/Backend/Templates/MyView.html
-```
-
-### 2. Available Variables
+## Template Variables
 
 Your template receives these variables:
 
-```
-pageId              - Current page ID
-tableData           - Array of table data (see below)
-currentTable        - Filtered table name (or empty)
-searchTerm          - Current search term
-viewMode            - View type identifier
-viewConfig          - View type configuration
-```
+| Variable | Description |
+|----------|-------------|
+| `pageId` | Current page ID |
+| `tableData` | Array of table data (see below) |
+| `currentTable` | Filtered table name (or empty) |
+| `searchTerm` | Current search term |
+| `viewMode` | View type identifier |
+| `viewConfig` | View type configuration array |
+| `middlewareWarning` | Middleware diagnostic warning (if any) |
+| `forceListViewUrl` | URL to force list view (if middleware issue) |
 
-Each item in `tableData` contains:
+Each item in `tableData`:
 
-```
-tableName           - Database table name
-tableLabel          - Human-readable label
-tableIcon           - TYPO3 icon identifier
-tableConfig         - Table configuration
-records             - Array of enriched records
-recordCount         - Number of records
-actionButtons       - Rendered button HTML
-singleTableUrl      - URL to filter by table
-clearTableUrl       - URL to clear filter
-displayColumns      - Columns to display
-sortableFields      - Available sort fields
-sortField           - Current sort field
-sortDirection       - "asc" or "desc"
-canReorder          - Whether drag-drop is enabled
-paginator           - DatabasePaginator (TYPO3 Core PaginatorInterface)
-pagination          - SlidingWindowPagination (TYPO3 Core PaginationInterface)
-paginationUrl       - Base URL for pagination links
-```
+| Key | Description |
+|-----|-------------|
+| `tableName` | Database table name |
+| `tableLabel` | Human-readable table label |
+| `tableIcon` | TYPO3 icon identifier |
+| `records` | Array of enriched records |
+| `recordCount` | Total number of records |
+| `actionButtons` | Rendered action button HTML |
+| `sortingDropdownHtml` | Sorting dropdown HTML |
+| `sortingModeToggleHtml` | Manual/field sorting toggle HTML |
+| `sortableColumnHeaders` | Sortable column header HTML (for table views) |
+| `singleTableUrl` | URL to filter by this table |
+| `clearTableUrl` | URL to show all tables |
+| `displayColumns` | Columns to display |
+| `sortField`, `sortDirection` | Current sorting state |
+| `canReorder` | Whether drag-drop is enabled |
+| `lastRecordUid` | Last record UID (for drag-drop end zone) |
+| `paginator` | `DatabasePaginator` (TYPO3 Core PaginatorInterface) |
+| `pagination` | `SlidingWindowPagination` (TYPO3 Core PaginationInterface) |
+| `paginationUrl` | Base URL for pagination links |
 
-Each record in `records` contains:
+Each record in `records`:
 
-```
-uid                 - Record UID
-pid                 - Page ID
-tableName           - Table name
-title               - Label field value
-iconIdentifier      - Record icon
-hidden              - Hidden status
-rawRecord           - Full database row
-displayValues       - Formatted field values (see below)
-```
+| Key | Description |
+|-----|-------------|
+| `uid`, `pid` | Record identifiers |
+| `tableName` | Table name |
+| `title` | Label field value |
+| `iconIdentifier` | Record icon |
+| `hidden` | Hidden status |
+| `rawRecord` | Full database row |
+| `displayValues` | Array of formatted field values |
 
 Each field in `displayValues`:
 
-```
-field               - Field name
-label               - Translated label
-type                - Field type (text, datetime, boolean, etc.)
-isLabelField        - Is this the title field?
-raw                 - Raw database value
-formatted           - Formatted display value
-isEmpty             - Whether value is empty
-```
-
-### 3. Example: News Teaser View
-
-**TSconfig:**
-
-```tsconfig
-mod.web_list.viewMode {
-    allowed = list,grid,newsteaser
-
-    types {
-        newsteaser {
-            label = News Teaser
-            icon = content-news
-            description = News list with image and teaser
-            template = NewsTeaserView
-            partial = NewsTeaserCard
-            templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
-            partialRootPath = EXT:my_sitepackage/Resources/Private/Backend/Partials/
-            css = EXT:my_sitepackage/Resources/Public/Css/news-teaser.css
-            columnsFromTCA = 0
-            displayColumns = title,datetime,teaser
-        }
-    }
-}
-```
-
-**Template (NewsTeaserView.html):**
-
-```html
-<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
-      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
-      data-namespace-typo3-fluid="true">
-
-<div class="newsteaser-container">
-    <f:for each="{tableData}" as="table">
-        <div class="recordlist" id="t3-table-{table.tableName}">
-            <!-- Header -->
-            <div class="recordlist-heading">
-                <div class="recordlist-heading-row">
-                    <div class="recordlist-heading-title">
-                        <core:icon identifier="{table.tableIcon}" size="small" />
-                        <span class="fw-bold ms-1">{table.tableLabel}</span>
-                        <span>({table.recordCount})</span>
-                    </div>
-                    <div class="recordlist-heading-actions">
-                        <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Records -->
-            <div class="newsteaser-list">
-                <f:for each="{table.records}" as="record">
-                    <f:render partial="NewsTeaserCard" arguments="{record: record}" />
-                </f:for>
-            </div>
-        </div>
-    </f:for>
-</div>
-
-</html>
-```
-
-**Partial (NewsTeaserCard.html):**
-
-```html
-<div class="newsteaser-card card mb-3">
-    <div class="row g-0">
-        <div class="col-md-3">
-            <f:if condition="{record.thumbnailUrl}">
-                <img src="{record.thumbnailUrl}" class="img-fluid rounded-start" alt="">
-            </f:if>
-        </div>
-        <div class="col-md-9">
-            <div class="card-body">
-                <h5 class="card-title">{record.title}</h5>
-                <f:for each="{record.displayValues}" as="field">
-                    <f:if condition="{field.type} == 'datetime'">
-                        <p class="card-text text-muted small">{field.formatted}</p>
-                    </f:if>
-                    <f:if condition="{field.type} == 'text' && !{field.isLabelField}">
-                        <p class="card-text">{field.formatted}</p>
-                    </f:if>
-                </f:for>
-            </div>
-        </div>
-    </div>
-</div>
-```
-
-## Special Column Names
-
-When using `displayColumns`, you can use these special names:
-
-| Name | Resolves To |
-|------|-------------|
-| `label` | TCA ctrl.label field (title) |
-| `datetime` | First date field found |
-| `teaser` | First teaser/description field |
-
-Example:
-
-```tsconfig
-displayColumns = label,datetime,teaser,categories
-```
-
-## Per-Table Configuration
-
-Configure how each table should appear in grid/teaser views:
-
-```tsconfig
-mod.web_list.gridView.table {
-    tx_news_domain_model_news {
-        titleField = title
-        descriptionField = teaser
-        imageField = fal_media
-        preview = 1
-    }
-}
-```
+| Key | Description |
+|-----|-------------|
+| `field` | Field name |
+| `label` | Translated label |
+| `type` | Field type (`text`, `datetime`, `boolean`, `number`, `relation`, `link`) |
+| `isLabelField` | Whether this is the title field |
+| `raw` | Raw database value |
+| `formatted` | Formatted display value |
+| `isEmpty` | Whether value is empty |
 
 ## Adding Custom JavaScript
 
 Register ES6 modules for custom interactivity:
 
 ```tsconfig
-mod.web_list.viewMode.types.myview {
-    js = @my-sitepackage/my-custom-view.js
-}
+mod.web_list.viewMode.types.myview.js = @my-sitepackage/my-custom-view.js
 ```
 
-Your module should be registered in `Configuration/JavaScriptModules.php`:
+Register the module in `Configuration/JavaScriptModules.php`:
 
 ```php
 return [
@@ -276,3 +404,28 @@ return [
 ];
 ```
 
+## Method 2: PSR-14 Event (for extensions)
+
+If you're building a TYPO3 extension (not a sitepackage), use the PSR-14 event to register view types programmatically:
+
+```php
+use TYPO3\CMS\Core\Attribute\AsEventListener;
+use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
+
+#[AsEventListener]
+final class RegisterCustomViewListener
+{
+    public function __invoke(RegisterViewModesEvent $event): void
+    {
+        $event->addViewMode('kanban', [
+            'label' => 'LLL:EXT:my_extension/Resources/Private/Language/locallang.xlf:viewMode.kanban',
+            'icon' => 'actions-view-table-columns',
+            'description' => 'Kanban board view',
+            'template' => 'KanbanView',
+            'css' => 'EXT:my_extension/Resources/Public/Css/kanban.css',
+        ]);
+    }
+}
+```
+
+Templates and CSS work exactly the same way as with TSconfig registration.

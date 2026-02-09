@@ -19,6 +19,19 @@ A TYPO3 extension that transforms the backend **Records** module with multiple v
 - **Search** -- Client-side search filtering across all view modes
 - **Accessibility** -- WCAG 2.1 compliant keyboard navigation, ARIA labels, and screen reader support
 
+## Use Cases
+
+- **News / Blog** -- Teaser view with title, date, and excerpt; Grid view for thumbnail browsing
+- **Products / Shop** -- Grid view with large product images; custom catalog view per shop page
+- **Team / Staff** -- Grid view with portrait photos; compact address book view
+- **Events** -- Timeline or teaser view restricted to the events page, sorted by date
+- **Media Assets** -- Grid view as a photo gallery with 48 items per page
+- **System Records** -- Compact view with 500 records per page for efficient data management
+- **Multi-Site** -- Different default views per page tree using TSconfig conditions
+- **Editorial Workflow** -- Custom views showing only status and assignee columns for editors
+
+All views work with any table -- `tx_news`, `tt_content`, `fe_users`, `pages`, or your own custom records.
+
 ## Requirements
 
 - TYPO3 v14.0+
@@ -77,42 +90,49 @@ A minimal card layout inspired by news/blog listings.
 
 ### Custom View Types
 
-Register your own view types via **PSR-14 events** or **TSconfig**:
+Adding a new view type requires **zero PHP** -- just TSconfig and an optional Fluid template:
 
-```php
-// Via PSR-14 event listener
-use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
+```typoscript
+mod.web_list.viewMode {
+    allowed = list,grid,compact,teaser,timeline
 
-#[\TYPO3\CMS\Core\Attribute\AsEventListener]
-final class MyViewModeListener
-{
-    public function __invoke(RegisterViewModesEvent $event): void
-    {
-        $event->addViewMode('kanban', [
-            'label' => 'Kanban Board',
-            'icon' => 'content-widget-list',
-            'description' => 'Drag cards between columns',
-        ]);
+    types.timeline {
+        label = Timeline
+        icon = actions-calendar
+        template = TimelineView
+        templateRootPath = EXT:my_sitepackage/Resources/Private/Backend/Templates/
+        css = EXT:my_sitepackage/Resources/Public/Css/timeline.css
+        displayColumns = label,datetime,teaser
+        columnsFromTCA = 0
     }
 }
 ```
 
-Or via TSconfig:
+You can also reuse built-in templates without creating a new one:
 
 ```typoscript
-mod.web_list.viewMode.types.kanban {
-    label = Kanban Board
-    icon = content-widget-list
-    template = KanbanView
-    partial = KanbanCard
-    css = EXT:my_ext/Resources/Public/Css/kanban.css
-    js = @my-ext/kanban.js
-    templateRootPath = EXT:my_ext/Resources/Private/Templates/
-    partialRootPath = EXT:my_ext/Resources/Private/Partials/
-    displayColumns = title,status,assignee
-    columnsFromTCA = 1
+# Address book using the compact table layout with custom columns
+mod.web_list.viewMode.types.addressbook {
+    label = Address Book
+    icon = actions-address
+    template = CompactView
+    displayColumns = name,email,phone,company,city
+    columnsFromTCA = 0
+    itemsPerPage = 500
 }
 ```
+
+Restrict a view type to a specific page using TSconfig conditions:
+
+```typoscript
+# Timeline only on the Events page
+[page["uid"] == 42]
+    mod.web_list.viewMode.allowed = list,timeline
+    mod.web_list.viewMode.default = timeline
+[end]
+```
+
+See [Custom View Types](Documentation/CustomViewTypes.md) for full documentation with step-by-step guide, real-world examples, and template variable reference.
 
 ## Configuration
 
