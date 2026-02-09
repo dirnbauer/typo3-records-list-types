@@ -153,12 +153,12 @@ final class DatabasePaginatorTest extends TestCase
     }
 
     #[Test]
-    public function currentPageClampedToMinimumOne(): void
+    public function currentPageZeroThrowsException(): void
     {
-        // Page 0 or negative should be clamped to 1
-        $paginator = new DatabasePaginator([], 100, 0, 10);
+        // TYPO3's AbstractPaginator requires currentPageNumber > 0
+        $this->expectException(\InvalidArgumentException::class);
 
-        self::assertSame(1, $paginator->getCurrentPageNumber());
+        new DatabasePaginator([], 100, 0, 10);
     }
 
     // ========================================================================
