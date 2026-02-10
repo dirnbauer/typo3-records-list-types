@@ -17,6 +17,7 @@ use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
+use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Pagination\SlidingWindowPagination;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -45,9 +46,6 @@ use Webconsulting\RecordsListTypes\Service\ViewTypeRegistry;
 final class RecordListController extends CoreRecordListController
 {
     private ?ViewTypeRegistry $viewTypeRegistry = null;
-
-    /** Clipboard object, stored as property so renderViewContent() can access it. */
-    private ?\TYPO3\CMS\Backend\Clipboard\Clipboard $clipboardObj = null;
 
     /** Whether the clipboard is enabled for this request. */
     private bool $clipboardEnabled = false;
@@ -206,8 +204,7 @@ final class RecordListController extends CoreRecordListController
         $dbList->clipObj = $clipboard;
 
         // Store clipboard state for renderViewContent()
-        $this->clipboardObj = $clipboard;
-        $this->clipboardEnabled = $this->moduleData !== null && (bool) $this->moduleData->get('clipBoard');
+        $this->clipboardEnabled = (bool) $this->moduleData->get('clipBoard');
 
         // Dispatch additional content event
         $additionalRecordListEvent = new RenderAdditionalContentToRecordListEvent($request);
@@ -1064,7 +1061,8 @@ final class RecordListController extends CoreRecordListController
         try {
             $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
             $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
-            return (int) $qb->count('*')->executeQuery()->fetchOne();
+            $count = $qb->count('*')->executeQuery()->fetchOne();
+            return is_numeric($count) ? (int) $count : 0;
         } catch (Exception $e) {
             return 0;
         }
@@ -1114,7 +1112,7 @@ final class RecordListController extends CoreRecordListController
             . ' data-multi-record-selection-action="edit"'
             . ' data-multi-record-selection-action-config="' . $editConfig . '">'
             . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.edit') ?: 'Edit')
+            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.edit', 'Edit'))
             . '</button>';
 
         // Edit columns action
@@ -1128,7 +1126,7 @@ final class RecordListController extends CoreRecordListController
             . ' data-multi-record-selection-action="edit"'
             . ' data-multi-record-selection-action-config="' . $editColumnsConfig . '">'
             . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns') ?: 'Edit columns')
+            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns', 'Edit columns'))
             . '</button>';
 
         // Clipboard: Transfer to clipboard
@@ -1141,7 +1139,7 @@ final class RecordListController extends CoreRecordListController
             . ' data-multi-record-selection-action="copyMarked"'
             . ' data-multi-record-selection-action-config="' . $copyConfig . '">'
             . $iconFactory->getIcon('actions-edit-copy', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_copyMarked') ?: 'Transfer to clipboard')
+            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_copyMarked', 'Transfer to clipboard'))
             . '</button>';
 
         // Clipboard: Remove from clipboard
@@ -1154,23 +1152,23 @@ final class RecordListController extends CoreRecordListController
             . ' data-multi-record-selection-action="removeMarked"'
             . ' data-multi-record-selection-action-config="' . $removeConfig . '">'
             . $iconFactory->getIcon('actions-minus', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_removeMarked') ?: 'Remove from clipboard')
+            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_removeMarked', 'Remove from clipboard'))
             . '</button>';
 
         // Delete action
         $deleteConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
             'idField' => 'uid',
             'tableName' => $tableName,
-            'ok' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete') ?: 'Delete',
-            'cancel' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel') ?: 'Cancel',
-            'title' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarked') ?: 'Delete selected',
-            'content' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarkedWarning') ?: 'Are you sure you want to delete the selected records?',
+            'ok' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete', 'Delete'),
+            'cancel' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel', 'Cancel'),
+            'title' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarked', 'Delete selected'),
+            'content' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarkedWarning', 'Are you sure you want to delete the selected records?'),
         ], true);
         $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
             . ' data-multi-record-selection-action="delete"'
             . ' data-multi-record-selection-action-config="' . $deleteConfig . '">'
             . $iconFactory->getIcon('actions-edit-delete', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete') ?: 'Delete')
+            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete', 'Delete'))
             . '</button>';
 
         return implode(PHP_EOL, $buttons);
@@ -2453,5 +2451,15 @@ final class RecordListController extends CoreRecordListController
         /** @var array<string, array<string, mixed>> $columns */
         $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
         return ['ctrl' => $ctrl, 'columns' => $columns];
+    }
+
+    /**
+     * Translate a label key with a fallback value.
+     * Avoids short ternary operator (?:) that PHPStan disallows.
+     */
+    private function translate(LanguageService $languageService, string $key, string $fallback): string
+    {
+        $translated = $languageService->sL($key);
+        return $translated !== '' ? $translated : $fallback;
     }
 }
