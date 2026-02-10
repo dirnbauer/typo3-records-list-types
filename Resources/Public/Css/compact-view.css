@@ -740,43 +740,8 @@
    Clipboard Checkbox
    ============================================================================= */
 
-/* Checkbox styling - subtle borders, visible in both light and dark mode */
-.compactview-th--checkbox .form-check-input,
-.compactview-td--checkbox .form-check-input {
-    width: 13px;
-    height: 13px;
-    margin: 0;
-    cursor: pointer;
-    vertical-align: middle;
-    border: 1.5px solid var(--cv-text-subtle);
-    border-radius: 2px;
-    background-color: transparent;
-    appearance: none;
-    -webkit-appearance: none;
-    display: inline-block;
-}
-
-.compactview-th--checkbox .form-check-input:checked,
-.compactview-td--checkbox .form-check-input:checked {
-    background-color: var(--cv-accent);
-    border-color: var(--cv-accent);
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
-    background-size: 10px;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-.compactview-th--checkbox .form-check-input:indeterminate {
-    background-color: var(--cv-accent);
-    border-color: var(--cv-accent);
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-width='3' d='M6 10h8'/%3e%3c/svg%3e");
-    background-size: 10px;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-/* Highlight row when checkbox is checked - use opaque color for all cells */
-.compactview-row.is-clipboard-active .compactview-td {
+/* Multi Record Selection: highlight row when selected (TYPO3 adds .active class) */
+.compactview-row.active .compactview-td {
     background-color: var(--cv-accent-bg-opaque) !important;
 }
 

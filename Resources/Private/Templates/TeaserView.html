@@ -14,9 +14,10 @@
     <f:if condition="{tableData}">
         <f:then>
             <f:for each="{tableData}" as="table">
-                <div class="recordlist" id="t3-table-{table.tableName}">
+                <div class="recordlist" id="t3-table-{table.tableName}"
+                     data-multi-record-selection-identifier="t3-table-{table.tableName}">
                     <f:comment>Table header - consistent with other view modes</f:comment>
-                    <div class="recordlist-heading">
+                    <div class="recordlist-heading multi-record-selection-panel">
                         <div class="recordlist-heading-row">
                             <div class="recordlist-heading-title">
                                 <f:if condition="{currentTable}">
@@ -56,6 +57,18 @@
                                 </f:if>
                             </div>
                         </div>
+
+                        <f:comment>Multi Record Selection action bar</f:comment>
+                        <f:if condition="{table.multiRecordSelectionActionsHtml}">
+                            <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
+                                <div class="recordlist-heading-title">
+                                    <strong><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
+                                </div>
+                                <div class="recordlist-heading-actions">
+                                    <f:format.raw>{table.multiRecordSelectionActionsHtml}</f:format.raw>
+                                </div>
+                            </div>
+                        </f:if>
                     </div>
 
                     <f:comment>Teaser cards list</f:comment>
@@ -65,9 +78,9 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
-                        <div class="teaserview-list">
+                        <div class="teaserview-list" data-multi-record-selection-row-selection="true">
                             <f:for each="{table.records}" as="record">
-                                <f:render partial="TeaserCard" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, clipboardEnabled: clipboardEnabled}" />
+                                <f:render partial="TeaserCard" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName}" />
                             </f:for>
                         </div>
 

@@ -79,7 +79,6 @@ class GridViewActions {
         this.initializeSearch();
         this.initializeScrollShadows();
         this.initializePaginationInputs();
-        this.initializeClipboardCheckboxes();
         this.initializeCompactDropdowns();
     }
 
@@ -1482,110 +1481,6 @@ class GridViewActions {
         }
         
         window.location.href = url.toString();
-    }
-
-    // =========================================================================
-    // Clipboard Checkboxes (Compact View)
-    // =========================================================================
-
-    /**
-     * Initialize clipboard checkbox interactions for compact view.
-     * Handles select-all toggles and per-row clipboard registration via AJAX.
-     */
-    initializeClipboardCheckboxes() {
-        // Select-all checkboxes in table headers
-        document.querySelectorAll('.cv-clipboard-check-all').forEach(selectAll => {
-            selectAll.addEventListener('change', () => {
-                const table = selectAll.closest('table');
-                if (!table) return;
-
-                const checkboxes = table.querySelectorAll('.cv-clipboard-check');
-                checkboxes.forEach(cb => {
-                    if (cb.checked !== selectAll.checked) {
-                        cb.checked = selectAll.checked;
-                        this.onClipboardCheckboxChange(cb);
-                    }
-                });
-            });
-        });
-
-        // Individual row checkboxes
-        document.querySelectorAll('.cv-clipboard-check').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                this.onClipboardCheckboxChange(checkbox);
-                this.updateSelectAllState(checkbox);
-            });
-        });
-    }
-
-    /**
-     * Handle a single clipboard checkbox change.
-     * Registers or unregisters the record on the TYPO3 clipboard via AJAX.
-     */
-    async onClipboardCheckboxChange(checkbox) {
-        const table = checkbox.dataset.table;
-        const uid = checkbox.dataset.uid;
-        const row = checkbox.closest('.compactview-row');
-
-        if (!table || !uid) return;
-
-        // Visual feedback - highlight the row
-        if (row) {
-            row.classList.toggle('is-clipboard-active', checkbox.checked);
-        }
-
-        // Register/unregister on clipboard via AJAX
-        const url = TYPO3?.settings?.ajaxUrls?.clipboard_process;
-        if (!url) return;
-
-        const fullUrl = new URL(url, window.location.origin);
-        fullUrl.searchParams.set(`CB[el][${table}|${uid}]`, checkbox.checked ? '1' : '0');
-
-        try {
-            await fetch(fullUrl.toString(), {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            // Update clipboard panel if visible
-            const clipboardPanel = document.querySelector('typo3-backend-clipboard-panel');
-            if (clipboardPanel) {
-                clipboardPanel.dispatchEvent(new Event('typo3:clipboard:update'));
-            }
-        } catch (err) {
-            console.error('[GridView] Clipboard checkbox error:', err);
-        }
-    }
-
-    /**
-     * Update the select-all checkbox state based on individual checkboxes.
-     * Sets to checked if all are checked, indeterminate if some, unchecked if none.
-     */
-    updateSelectAllState(checkbox) {
-        const table = checkbox.closest('table');
-        if (!table) return;
-
-        const allCheckboxes = table.querySelectorAll('.cv-clipboard-check');
-        const checkedCount = table.querySelectorAll('.cv-clipboard-check:checked').length;
-        const selectAll = table.closest('.compactview-table-wrapper')
-            ?.querySelector('.cv-clipboard-check-all');
-
-        if (!selectAll) return;
-
-        if (checkedCount === 0) {
-            selectAll.checked = false;
-            selectAll.indeterminate = false;
-        } else if (checkedCount === allCheckboxes.length) {
-            selectAll.checked = true;
-            selectAll.indeterminate = false;
-        } else {
-            selectAll.checked = false;
-            selectAll.indeterminate = true;
-        }
     }
 
     // =========================================================================

@@ -602,6 +602,9 @@ final class RecordListController extends CoreRecordListController
             // Drag-and-drop reordering
             $canReorder = $sortingMode === 'manual' && $hasSortbyField;
 
+            // Multi Record Selection action buttons (Edit, Delete, Transfer/Remove clipboard)
+            $multiRecordSelectionActionsHtml = $this->renderMultiRecordSelectionActions($tableName, $pageId, $viewMode, $request);
+
             $tableData[] = [
                 'tableName' => $tableName,
                 'tableIdentifier' => $tableName,
@@ -629,6 +632,7 @@ final class RecordListController extends CoreRecordListController
                 'paginator' => $paginationData['paginator'],
                 'pagination' => $paginationData['pagination'],
                 'paginationUrl' => $paginationData['currentUrl'],
+                'multiRecordSelectionActionsHtml' => $multiRecordSelectionActionsHtml,
             ];
         }
 
@@ -641,6 +645,11 @@ final class RecordListController extends CoreRecordListController
             $pageRenderer->loadJavaScriptModule($jsModule);
         }
         $pageRenderer->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
+
+        // Multi Record Selection JS modules (TYPO3 core API for bulk actions)
+        $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection.js');
+        $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection-delete-action.js');
+        $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection-edit-action.js');
 
         // Create the view from ViewTypeRegistry template paths
         $templatePaths = $registry->getTemplatePaths($viewMode, $pageId);
@@ -1059,6 +1068,70 @@ final class RecordListController extends CoreRecordListController
         } catch (Exception $e) {
             return 0;
         }
+    }
+
+    /**
+     * Render the multi-record-selection action buttons for a table.
+     *
+     * Generates the hidden action bar that appears when records are
+     * selected via checkboxes. Uses TYPO3's Multi Record Selection API.
+     *
+     * @param string $tableName The database table
+     * @param int $pageId The current page ID
+     * @param string $viewMode The current view mode
+     * @param ServerRequestInterface $request The current request
+     * @return string Rendered HTML for the action buttons row
+     */
+    protected function renderMultiRecordSelectionActions(
+        string $tableName,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+    ): string {
+        $languageService = $this->getLanguageService();
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
+
+        $returnUrl = '';
+        try {
+            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', [
+                'id' => $pageId,
+                'displayMode' => $viewMode,
+            ]);
+        } catch (Exception $e) {
+            $returnUrl = (string) $request->getUri();
+        }
+
+        // Edit action
+        $editConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
+            'idField' => 'uid',
+            'tableName' => $tableName,
+            'returnUrl' => $returnUrl,
+        ], true);
+        $editButton = '<button type="button" class="btn btn-sm btn-default"'
+            . ' data-multi-record-selection-action="edit"'
+            . ' data-multi-record-selection-action-config="' . $editConfig . '">'
+            . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
+            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.edit') ?: 'Edit')
+            . '</button>';
+
+        // Delete action
+        $deleteConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
+            'idField' => 'uid',
+            'tableName' => $tableName,
+            'ok' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete') ?: 'Delete',
+            'cancel' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel') ?: 'Cancel',
+            'title' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarked') ?: 'Delete selected',
+            'content' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarkedWarning') ?: 'Are you sure you want to delete the selected records?',
+        ], true);
+        $deleteButton = '<button type="button" class="btn btn-sm btn-default"'
+            . ' data-multi-record-selection-action="delete"'
+            . ' data-multi-record-selection-action-config="' . $deleteConfig . '">'
+            . $iconFactory->getIcon('actions-edit-delete', IconSize::SMALL)->render()
+            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete') ?: 'Delete')
+            . '</button>';
+
+        return $editButton . $deleteButton;
     }
 
     /**

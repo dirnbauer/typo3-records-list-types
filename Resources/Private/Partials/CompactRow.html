@@ -9,16 +9,16 @@
 
 <tr class="compactview-row{f:if(condition: record.hidden, then: ' compactview-row--hidden')}"
     data-table="{record.tableName}"
-    data-uid="{record.uid}">
+    data-uid="{record.uid}"
+    data-multi-record-selection-element="true">
 
-    <f:comment>Fixed left: Clipboard checkbox (only when clipboard enabled)</f:comment>
-    <f:if condition="{clipboardEnabled}">
-        <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox">
-            <input type="checkbox" class="form-check-input cv-clipboard-check"
-                   name="CBC[{record.tableName}|{record.uid}]" value="1"
-                   data-table="{record.tableName}" data-uid="{record.uid}" />
-        </td>
-    </f:if>
+    <f:comment>Fixed left: Multi Record Selection checkbox (TYPO3 core API)</f:comment>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox">
+        <span class="form-check form-check-type-toggle">
+            <input class="form-check-input t3js-multi-record-selection-check"
+                   type="checkbox" />
+        </span>
+    </td>
     
     <f:comment>Fixed left: Icon</f:comment>
     <td class="compactview-td compactview-td--fixed-left compactview-td--icon">

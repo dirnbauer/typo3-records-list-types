@@ -20,7 +20,8 @@
 
 <article class="teaserview-card{f:if(condition: record.hidden, then: ' teaserview-card--hidden')}"
          data-table="{record.tableName}"
-         data-uid="{record.uid}">
+         data-uid="{record.uid}"
+         data-multi-record-selection-element="true">
     
     <div class="teaserview-card__body">
         <div class="teaserview-card__header">
@@ -28,13 +29,10 @@
             <div class="teaserview-card__main">
                 <f:comment>Title row with icon, title, badges</f:comment>
                 <div class="teaserview-card__title-row">
-                    <f:if condition="{clipboardEnabled}">
-                        <label class="teaserview-card__checkbox">
-                            <input type="checkbox" class="form-check-input cv-clipboard-check"
-                                   name="CBC[{record.tableName}|{record.uid}]" value="1"
-                                   data-table="{record.tableName}" data-uid="{record.uid}" />
-                        </label>
-                    </f:if>
+                    <label class="teaserview-card__checkbox">
+                        <input class="form-check-input t3js-multi-record-selection-check"
+                               type="checkbox" />
+                    </label>
                     <span class="teaserview-card__icon">
                         <core:icon identifier="{record.iconIdentifier}" size="small" />
                     </span>

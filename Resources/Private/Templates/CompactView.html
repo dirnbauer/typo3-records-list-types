@@ -8,9 +8,10 @@
     <f:if condition="{tableData}">
         <f:then>
             <f:for each="{tableData}" as="table">
-                <div class="recordlist" id="t3-table-{table.tableName}">
+                <div class="recordlist" id="t3-table-{table.tableName}"
+                     data-multi-record-selection-identifier="t3-table-{table.tableName}">
                     <f:comment>Table header - matches native List View styling exactly</f:comment>
-                    <div class="recordlist-heading">
+                    <div class="recordlist-heading multi-record-selection-panel">
                         <div class="recordlist-heading-row">
                             <f:comment>Title section with table name link - identical to core</f:comment>
                             <div class="recordlist-heading-title">
@@ -57,6 +58,18 @@
                                 </f:if>
                             </div>
                         </div>
+
+                        <f:comment>Multi Record Selection action bar (hidden, shown by JS when records selected)</f:comment>
+                        <f:if condition="{table.multiRecordSelectionActionsHtml}">
+                            <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
+                                <div class="recordlist-heading-title">
+                                    <strong><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
+                                </div>
+                                <div class="recordlist-heading-actions">
+                                    <f:format.raw>{table.multiRecordSelectionActionsHtml}</f:format.raw>
+                                </div>
+                            </div>
+                        </f:if>
                     </div>
 
                     <f:comment>Records table with sortable column headers (like core list view)</f:comment>
@@ -66,17 +79,44 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
-                        <div class="compactview-table-wrapper{f:if(condition: clipboardEnabled, then: ' has-clipboard')}" data-scroll-container>
+                        <div class="compactview-table-wrapper has-clipboard" data-scroll-container>
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
                                     <tr>
-                                        <f:comment>Checkbox column (select-all, only when clipboard enabled)</f:comment>
-                                        <f:if condition="{clipboardEnabled}">
-                                            <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
-                                                <input type="checkbox" class="form-check-input cv-clipboard-check-all"
-                                                       title="Select all" data-table="{table.tableName}" />
-                                            </th>
-                                        </f:if>
+                                        <f:comment>Checkbox column with Check All / Uncheck All / Toggle dropdown</f:comment>
+                                        <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
+                                            <div class="btn-group dropdown">
+                                                <button type="button"
+                                                        class="btn btn-default btn-sm dropdown-toggle t3js-multi-record-selection-check-actions-toggle"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false">
+                                                    <core:icon identifier="actions-selection" size="small" />
+                                                </button>
+                                                <ul class="dropdown-menu t3js-multi-record-selection-check-actions">
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled
+                                                                data-multi-record-selection-check-action="check-all">
+                                                            <core:icon identifier="actions-check-square" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll" default="Check All" />
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled
+                                                                data-multi-record-selection-check-action="check-none">
+                                                            <core:icon identifier="actions-square" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll" default="Uncheck All" />
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled
+                                                                data-multi-record-selection-check-action="toggle">
+                                                            <core:icon identifier="actions-document-select" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection" default="Toggle Selection" />
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </th>
 
                                         <f:comment>Icon column (no sorting)</f:comment>
                                         <th class="compactview-th compactview-th--fixed-left compactview-th--icon"></th>
@@ -98,9 +138,9 @@
                                         <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
                                     </tr>
                                 </thead>
-                                <tbody class="compactview-tbody">
+                                <tbody class="compactview-tbody" data-multi-record-selection-row-selection="true">
                                     <f:for each="{table.records}" as="record">
-                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, clipboardEnabled: clipboardEnabled}" />
+                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns}" />
                                     </f:for>
                                 </tbody>
                             </table>

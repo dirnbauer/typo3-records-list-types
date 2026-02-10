@@ -42,13 +42,10 @@
     <div class="gridview-card__header">
         <f:comment>Row 1: Title row with full width</f:comment>
         <div class="gridview-card__header-title">
-            <f:if condition="{clipboardEnabled}">
-                <label class="gridview-card__checkbox">
-                    <input type="checkbox" class="form-check-input cv-clipboard-check"
-                           name="CBC[{record.tableName}|{record.uid}]" value="1"
-                           data-table="{record.tableName}" data-uid="{record.uid}" />
-                </label>
-            </f:if>
+            <label class="gridview-card__checkbox">
+                <input class="form-check-input t3js-multi-record-selection-check"
+                       type="checkbox" />
+            </label>
             <f:if condition="{canReorder}">
                 <div class="gridview-card__drag" 
                      role="button"
