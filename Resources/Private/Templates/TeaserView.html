@@ -16,6 +16,9 @@
             <f:for each="{tableData}" as="table">
                 <div class="recordlist" id="t3-table-{table.tableName}"
                      data-multi-record-selection-identifier="t3-table-{table.tableName}">
+                    <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
+                    <input type="hidden" name="cmd_table" value="{table.tableName}" />
+                    <input type="hidden" name="cmd" />
                     <f:comment>Table header - consistent with other view modes</f:comment>
                     <div class="recordlist-heading multi-record-selection-panel">
                         <div class="recordlist-heading-row">
@@ -78,15 +81,11 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
-                        <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
-                        <input type="hidden" name="cmd_table" value="{table.tableName}" />
-                        <input type="hidden" name="cmd" />
                         <div class="teaserview-list" data-multi-record-selection-row-selection="true">
                             <f:for each="{table.records}" as="record">
                                 <f:render partial="TeaserCard" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName}" />
                             </f:for>
                         </div>
-                        </form>
 
                         <f:comment>Expand table button - multi-table mode with more records</f:comment>
                         <f:if condition="!{currentTable} && {table.hasMore}">
@@ -103,6 +102,7 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
                         </f:if>
                     </div>
+                    </form>
                 </div>
             </f:for>
         </f:then>
