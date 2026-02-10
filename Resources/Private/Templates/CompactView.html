@@ -86,12 +86,33 @@
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
                                     <tr>
-                                        <f:comment>Checkbox column with dropdown for Check All / Uncheck All / Toggle</f:comment>
+                                        <f:comment>Checkbox column with Check All / Uncheck All / Toggle dropdown (matches TYPO3 core DatabaseRecordList::renderCheckboxActions exactly)</f:comment>
                                         <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
-                                            <span class="form-check form-check-type-toggle">
-                                                <input class="form-check-input t3js-multi-record-selection-check-actions-toggle"
-                                                       type="checkbox" title="Toggle selection" />
-                                            </span>
+                                            <div class="btn-group dropdown">
+                                                <button type="button" class="dropdown-toggle dropdown-toggle-link t3js-multi-record-selection-check-actions-toggle" data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false" aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.openSelectionOptions', default: 'Open selection options')}">
+                                                    <core:icon identifier="actions-selection" size="small" />
+                                                </button>
+                                                <ul class="dropdown-menu t3js-multi-record-selection-check-actions">
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-all" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll', default: 'Check All')}">
+                                                            <core:icon identifier="actions-selection-elements-all" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll" default="Check All" />
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-none" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll', default: 'Uncheck All')}">
+                                                            <core:icon identifier="actions-selection-elements-none" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll" default="Uncheck All" />
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="toggle" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection', default: 'Toggle Selection')}">
+                                                            <core:icon identifier="actions-selection-elements-invert" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection" default="Toggle Selection" />
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </th>
 
                                         <f:comment>Icon column (no sorting)</f:comment>
