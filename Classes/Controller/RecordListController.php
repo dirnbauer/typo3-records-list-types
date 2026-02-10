@@ -1129,28 +1129,18 @@ final class RecordListController extends CoreRecordListController
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns', 'Edit columns'))
             . '</button>';
 
-        // Clipboard: Transfer to clipboard
-        $copyConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'returnUrl' => $returnUrl,
-        ], true);
+        // Clipboard: Transfer to clipboard (uses our own data attribute to avoid TYPO3 module interception)
         $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="copyMarked"'
-            . ' data-multi-record-selection-action-config="' . $copyConfig . '">'
+            . ' data-gridview-clipboard="copy"'
+            . ' data-table="' . htmlspecialchars($tableName) . '">'
             . $iconFactory->getIcon('actions-edit-copy', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_copyMarked', 'Transfer to clipboard'))
             . '</button>';
 
         // Clipboard: Remove from clipboard
-        $removeConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'returnUrl' => $returnUrl,
-        ], true);
         $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="removeMarked"'
-            . ' data-multi-record-selection-action-config="' . $removeConfig . '">'
+            . ' data-gridview-clipboard="remove"'
+            . ' data-table="' . htmlspecialchars($tableName) . '">'
             . $iconFactory->getIcon('actions-minus', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_removeMarked', 'Remove from clipboard'))
             . '</button>';

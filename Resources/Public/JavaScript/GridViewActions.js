@@ -81,6 +81,7 @@ class GridViewActions {
         this.initializePaginationInputs();
         this.initializeCompactDropdowns();
         this.initializeClipboardSelectionActions();
+        this.initializeCheckAllToggle();
     }
 
     // =========================================================================
@@ -1552,29 +1553,18 @@ class GridViewActions {
 
     /**
      * Handle "Transfer to clipboard" and "Remove from clipboard" buttons.
-     * Direct click handlers since TYPO3's multi-record-selection events
-     * may not fire for custom action names.
+     * Uses our own data-gridview-clipboard attribute to avoid TYPO3's
+     * multi-record-selection module intercepting the click.
      */
     initializeClipboardSelectionActions() {
         document.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-multi-record-selection-action="copyMarked"], [data-multi-record-selection-action="removeMarked"]');
+            const btn = e.target.closest('[data-gridview-clipboard]');
             if (!btn) return;
 
             e.preventDefault();
-            e.stopPropagation();
 
-            const action = btn.dataset.multiRecordSelectionAction;
-            const mode = action === 'copyMarked' ? 'copy' : 'remove';
-
-            // Parse config from data attribute
-            let config = {};
-            try {
-                config = JSON.parse(btn.dataset.multiRecordSelectionActionConfig || '{}');
-            } catch (err) {
-                // ignore parse errors
-            }
-
-            const tableName = config.tableName || '';
+            const mode = btn.dataset.gridviewClipboard; // 'copy' or 'remove'
+            const tableName = btn.dataset.table || '';
             if (!tableName) return;
 
             // Find the selection container
@@ -1600,6 +1590,27 @@ class GridViewActions {
             if (uids.length === 0) return;
 
             this.processClipboardBulk(tableName, uids, mode);
+        });
+    }
+
+    /**
+     * Toggle all checkboxes when the header checkbox is clicked.
+     * The TYPO3 multi-record-selection dropdown doesn't fit the
+     * narrow compact view column, so we use a simple checkbox toggle.
+     */
+    initializeCheckAllToggle() {
+        document.querySelectorAll('.compactview-th--checkbox .form-check-input').forEach(toggle => {
+            toggle.addEventListener('change', () => {
+                const table = toggle.closest('table');
+                if (!table) return;
+
+                const checkboxes = table.querySelectorAll('.t3js-multi-record-selection-check');
+                checkboxes.forEach(cb => {
+                    cb.checked = toggle.checked;
+                    // Dispatch change event so TYPO3's module updates the action bar
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
         });
     }
 
