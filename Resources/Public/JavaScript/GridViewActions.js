@@ -79,6 +79,8 @@ class GridViewActions {
         this.initializeSearch();
         this.initializeScrollShadows();
         this.initializePaginationInputs();
+        this.initializeClipboardCheckboxes();
+        this.initializeCompactDropdowns();
     }
 
     // =========================================================================
@@ -1480,6 +1482,172 @@ class GridViewActions {
         }
         
         window.location.href = url.toString();
+    }
+
+    // =========================================================================
+    // Clipboard Checkboxes (Compact View)
+    // =========================================================================
+
+    /**
+     * Initialize clipboard checkbox interactions for compact view.
+     * Handles select-all toggles and per-row clipboard registration via AJAX.
+     */
+    initializeClipboardCheckboxes() {
+        // Select-all checkboxes in table headers
+        document.querySelectorAll('.cv-clipboard-check-all').forEach(selectAll => {
+            selectAll.addEventListener('change', () => {
+                const table = selectAll.closest('table');
+                if (!table) return;
+
+                const checkboxes = table.querySelectorAll('.cv-clipboard-check');
+                checkboxes.forEach(cb => {
+                    if (cb.checked !== selectAll.checked) {
+                        cb.checked = selectAll.checked;
+                        this.onClipboardCheckboxChange(cb);
+                    }
+                });
+            });
+        });
+
+        // Individual row checkboxes
+        document.querySelectorAll('.cv-clipboard-check').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                this.onClipboardCheckboxChange(checkbox);
+                this.updateSelectAllState(checkbox);
+            });
+        });
+    }
+
+    /**
+     * Handle a single clipboard checkbox change.
+     * Registers or unregisters the record on the TYPO3 clipboard via AJAX.
+     */
+    async onClipboardCheckboxChange(checkbox) {
+        const table = checkbox.dataset.table;
+        const uid = checkbox.dataset.uid;
+        const row = checkbox.closest('.compactview-row');
+
+        if (!table || !uid) return;
+
+        // Visual feedback - highlight the row
+        if (row) {
+            row.classList.toggle('is-clipboard-active', checkbox.checked);
+        }
+
+        // Register/unregister on clipboard via AJAX
+        const url = TYPO3?.settings?.ajaxUrls?.clipboard_process;
+        if (!url) return;
+
+        const fullUrl = new URL(url, window.location.origin);
+        fullUrl.searchParams.set(`CB[el][${table}|${uid}]`, checkbox.checked ? '1' : '0');
+
+        try {
+            await fetch(fullUrl.toString(), {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            // Update clipboard panel if visible
+            const clipboardPanel = document.querySelector('typo3-backend-clipboard-panel');
+            if (clipboardPanel) {
+                clipboardPanel.dispatchEvent(new Event('typo3:clipboard:update'));
+            }
+        } catch (err) {
+            console.error('[GridView] Clipboard checkbox error:', err);
+        }
+    }
+
+    /**
+     * Update the select-all checkbox state based on individual checkboxes.
+     * Sets to checked if all are checked, indeterminate if some, unchecked if none.
+     */
+    updateSelectAllState(checkbox) {
+        const table = checkbox.closest('table');
+        if (!table) return;
+
+        const allCheckboxes = table.querySelectorAll('.cv-clipboard-check');
+        const checkedCount = table.querySelectorAll('.cv-clipboard-check:checked').length;
+        const selectAll = table.closest('.compactview-table-wrapper')
+            ?.querySelector('.cv-clipboard-check-all');
+
+        if (!selectAll) return;
+
+        if (checkedCount === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (checkedCount === allCheckboxes.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        }
+    }
+
+    // =========================================================================
+    // Compact View Dropdowns - Teleport to body
+    // =========================================================================
+
+    /**
+     * Teleport compact view dropdown menus to <body> when opened.
+     *
+     * Sticky columns + overflow-x:auto on the table wrapper create a stacking
+     * context that clips absolutely-positioned dropdown menus. By moving the
+     * menu to <body> and using position:fixed we escape all overflow and
+     * z-index constraints. The menu is returned to its original parent on close.
+     */
+    initializeCompactDropdowns() {
+        document.querySelectorAll('[data-cv-dropdown]').forEach(dropdown => {
+            const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+            const menu = dropdown.querySelector('.dropdown-menu');
+            if (!toggle || !menu) return;
+
+            // On show: teleport menu to body and position it
+            toggle.addEventListener('show.bs.dropdown', () => {
+                // Store original parent so we can return the menu later
+                menu._cvOriginalParent = dropdown;
+
+                // Get toggle button position
+                const rect = toggle.getBoundingClientRect();
+
+                // Move menu to body
+                document.body.appendChild(menu);
+                menu.classList.add('cv-dropdown-teleported');
+
+                // Position: align right edge with toggle, below it
+                const menuWidth = menu.offsetWidth || 160;
+                let top = rect.bottom + 2;
+                let left = rect.right - menuWidth;
+
+                // If menu would overflow bottom of viewport, open upward
+                const menuHeight = menu.offsetHeight || 200;
+                if (top + menuHeight > window.innerHeight) {
+                    top = rect.top - menuHeight - 2;
+                }
+
+                // Keep within viewport
+                if (left < 4) left = 4;
+                if (top < 4) top = 4;
+
+                menu.style.top = top + 'px';
+                menu.style.left = left + 'px';
+            });
+
+            // On hidden: return menu to original parent
+            toggle.addEventListener('hidden.bs.dropdown', () => {
+                menu.classList.remove('cv-dropdown-teleported');
+                menu.style.top = '';
+                menu.style.left = '';
+                if (menu._cvOriginalParent) {
+                    menu._cvOriginalParent.appendChild(menu);
+                    delete menu._cvOriginalParent;
+                }
+            });
+        });
     }
 }
 
