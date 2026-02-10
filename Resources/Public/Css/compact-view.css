@@ -239,7 +239,7 @@
    - title has NO max-width so it stretches to fill remaining space */
 .compactview-th--checkbox { width: var(--cv-col-checkbox); min-width: var(--cv-col-checkbox); max-width: var(--cv-col-checkbox); text-align: center; padding: 0 2px; }
 /* Compact dropdown toggle in checkbox header - matches TYPO3 core styling */
-.compactview-th--checkbox .btn-group { display: flex; justify-content: center; padding-left: 4px; }
+.compactview-th--checkbox .btn-group { display: flex; justify-content: center; padding-left: 10px; }
 .compactview-th--checkbox .dropdown-toggle-link { line-height: 1; }
 .compactview-th--icon { width: var(--cv-col-icon); min-width: var(--cv-col-icon); max-width: var(--cv-col-icon); }
 .compactview-th--uid { width: var(--cv-col-uid); min-width: var(--cv-col-uid); max-width: var(--cv-col-uid); text-align: right; padding-right: 0.375rem; }
