@@ -47,6 +47,16 @@ final class RecordListController extends CoreRecordListController
     private ?ViewTypeRegistry $viewTypeRegistry = null;
 
     /**
+     * Clipboard object, stored as property so renderViewContent() can access it.
+     */
+    private ?\TYPO3\CMS\Backend\Clipboard\Clipboard $clipboardObj = null;
+
+    /**
+     * Whether the clipboard is enabled for this request.
+     */
+    private bool $clipboardEnabled = false;
+
+    /**
      * Get the ViewTypeRegistry from the DI container.
      * XClasses can't use constructor injection for additional dependencies,
      * so we fetch it from the container on demand.
@@ -198,6 +208,10 @@ final class RecordListController extends CoreRecordListController
         // Initialize clipboard
         $clipboard = $this->initializeClipboard($request, (bool) $this->moduleData->get('clipBoard'));
         $dbList->clipObj = $clipboard;
+
+        // Store clipboard state for renderViewContent()
+        $this->clipboardObj = $clipboard;
+        $this->clipboardEnabled = $this->moduleData !== null && (bool) $this->moduleData->get('clipBoard');
 
         // Dispatch additional content event
         $additionalRecordListEvent = new RenderAdditionalContentToRecordListEvent($request);
@@ -426,31 +440,50 @@ final class RecordListController extends CoreRecordListController
             $isSingleTableMode = ($table !== '');
             $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
 
-            // Pagination: only in single-table mode (matches TYPO3 Core List View).
-            // Multi-table mode shows limited records with an "Expand table" button.
-            if ($isSingleTableMode) {
+            // Pagination and record fetching strategy depends on mode + search state
+            if ($searchTerm !== '') {
+                // ---- SEARCH MODE ----
+                // Get total count of matching records for this table
+                $searchTotalCount = $this->getSearchRecordCount($tableName, $pageId, $searchTerm, $searchLevels, $request);
+
+                if ($isSingleTableMode) {
+                    // Single-table search: full pagination support
+                    $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
+                    $currentPointer = $this->getCurrentPointer($request, $tableName);
+                    $offset = ($currentPointer - 1) * $itemsPerPage;
+                    $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels, $itemsPerPage, $offset);
+                    $recordCount = $searchTotalCount;
+                    $hasMore = false; // pagination handles navigation
+                } else {
+                    // Multi-table search: show limited results with "Expand table"
+                    $itemsPerPage = $this->getItemsLimitPerTable($pageId);
+                    $currentPointer = 1;
+                    $offset = 0;
+                    $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels, $itemsPerPage);
+                    $recordCount = $searchTotalCount;
+                    $hasMore = $searchTotalCount > count($records);
+                }
+            } elseif ($isSingleTableMode) {
+                // ---- SINGLE TABLE, NO SEARCH ----
                 $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
                 $currentPointer = $this->getCurrentPointer($request, $tableName);
                 $offset = ($currentPointer - 1) * $itemsPerPage;
+                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
+                $recordCount = $totalRecordCount;
+                $hasMore = false; // pagination handles navigation
             } else {
+                // ---- MULTI TABLE, NO SEARCH ----
                 $itemsPerPage = $this->getItemsLimitPerTable($pageId);
                 $currentPointer = 1;
                 $offset = 0;
-            }
-
-            // Fetch records
-            if ($searchTerm !== '') {
-                $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels);
-            } else {
                 $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
+                $recordCount = $totalRecordCount;
+                $hasMore = $recordCount > count($records);
             }
 
             if ($records === []) {
                 continue;
             }
-
-            $recordCount = $searchTerm !== '' ? count($records) : $totalRecordCount;
-            $hasMore = $recordCount > count($records);
 
             // Pagination
             $paginationData = $this->buildPagination(
@@ -478,15 +511,31 @@ final class RecordListController extends CoreRecordListController
             $singleTableUrl = '';
             $clearTableUrl = '';
             try {
-                $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
+                $singleTableUrlParams = [
                     'id' => $pageId,
                     'table' => $tableName,
                     'displayMode' => $viewMode,
-                ]);
-                $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', [
+                ];
+                // Preserve search parameters when expanding a table during search
+                if ($searchTerm !== '') {
+                    $singleTableUrlParams['searchTerm'] = $searchTerm;
+                    if ($searchLevels > 0) {
+                        $singleTableUrlParams['search_levels'] = $searchLevels;
+                    }
+                }
+                $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $singleTableUrlParams);
+                $clearTableUrlParams = [
                     'id' => $pageId,
                     'displayMode' => $viewMode,
-                ]);
+                ];
+                // Preserve search parameters when collapsing back to multi-table view
+                if ($searchTerm !== '') {
+                    $clearTableUrlParams['searchTerm'] = $searchTerm;
+                    if ($searchLevels > 0) {
+                        $clearTableUrlParams['search_levels'] = $searchLevels;
+                    }
+                }
+                $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
             } catch (Exception $e) {
             }
 
@@ -617,6 +666,7 @@ final class RecordListController extends CoreRecordListController
             'viewConfig' => $viewConfig,
             'middlewareWarning' => $middlewareWarning,
             'forceListViewUrl' => $forceListViewUrl,
+            'clipboardEnabled' => $this->clipboardEnabled,
         ]);
 
         return $view->render($templatePaths['template']);
@@ -906,6 +956,8 @@ final class RecordListController extends CoreRecordListController
      * @param int $pageId The current page ID
      * @param string $searchTerm The search term
      * @param int $searchLevels The search depth level
+     * @param int $limit Maximum number of records to fetch (0 = no limit)
+     * @param int $offset Number of records to skip (for pagination)
      * @return array<int, array<string, mixed>> Array of enriched record data
      */
     protected function getRecordsUsingDbList(
@@ -915,6 +967,8 @@ final class RecordListController extends CoreRecordListController
         int $pageId,
         string $searchTerm,
         int $searchLevels,
+        int $limit = 100,
+        int $offset = 0,
     ): array {
         $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $records = [];
@@ -925,7 +979,7 @@ final class RecordListController extends CoreRecordListController
 
             // Use DatabaseRecordList's query builder which handles search properly
             // This is the same API the core list view uses
-            $queryBuilder = $dbList->getQueryBuilder($tableName, ['*'], true, 0, 100);
+            $queryBuilder = $dbList->getQueryBuilder($tableName, ['*'], true, $offset, $limit);
             $result = $queryBuilder->executeQuery();
 
             while ($row = $result->fetchAssociative()) {
@@ -980,6 +1034,35 @@ final class RecordListController extends CoreRecordListController
         }
 
         return $records;
+    }
+
+    /**
+     * Get total count of search results for a table.
+     *
+     * Uses the same DatabaseRecordList query builder as getRecordsUsingDbList()
+     * to build a COUNT query with identical search/WHERE conditions.
+     *
+     * @param string $tableName The table to count records for
+     * @param int $pageId The current page ID
+     * @param string $searchTerm The search term
+     * @param int $searchLevels The search depth level
+     * @param ServerRequestInterface $request The current request
+     * @return int Total number of matching records
+     */
+    protected function getSearchRecordCount(
+        string $tableName,
+        int $pageId,
+        string $searchTerm,
+        int $searchLevels,
+        ServerRequestInterface $request,
+    ): int {
+        try {
+            $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
+            $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
+            return (int) $qb->count('*')->executeQuery()->fetchOne();
+        } catch (Exception $e) {
+            return 0;
+        }
     }
 
     /**
