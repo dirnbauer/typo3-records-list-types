@@ -277,13 +277,15 @@ class GridViewActions {
         e.dataTransfer.dropEffect = 'move';
         
         // Calculate position based on cursor relative to card
-        // For the last card in the grid, use a more generous "after" zone (top 25% = before, rest = after)
+        // For the last visible card in the grid, use a more generous "after" zone (top 25% = before, rest = after)
         // so it's easier to drop after the last element without needing to reach the bottom half
         const rect = card.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const grid = card.closest('.gridview-card-grid');
-        const allWrappers = grid ? grid.querySelectorAll('.gridview-card-wrapper') : [];
-        const isLastCard = allWrappers.length > 0 && allWrappers[allWrappers.length - 1] === wrapper;
+        const allWrappers = grid ? Array.from(grid.querySelectorAll('.gridview-card-wrapper')) : [];
+        // Filter out the dragged card's wrapper to find the real last visible card
+        const visibleWrappers = allWrappers.filter(w => w !== this.draggedWrapper);
+        const isLastCard = visibleWrappers.length > 0 && visibleWrappers[visibleWrappers.length - 1] === wrapper;
         const threshold = isLastCard ? rect.height * 0.25 : rect.height / 2;
         const position = y < threshold ? 'before' : 'after';
         
