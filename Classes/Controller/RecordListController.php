@@ -46,14 +46,10 @@ final class RecordListController extends CoreRecordListController
 {
     private ?ViewTypeRegistry $viewTypeRegistry = null;
 
-    /**
-     * Clipboard object, stored as property so renderViewContent() can access it.
-     */
+    /** Clipboard object, stored as property so renderViewContent() can access it. */
     private ?\TYPO3\CMS\Backend\Clipboard\Clipboard $clipboardObj = null;
 
-    /**
-     * Whether the clipboard is enabled for this request.
-     */
+    /** Whether the clipboard is enabled for this request. */
     private bool $clipboardEnabled = false;
 
     /**
