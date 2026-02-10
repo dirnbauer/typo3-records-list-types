@@ -1554,58 +1554,63 @@ class GridViewActions {
      * Handle "Transfer to clipboard" and "Remove from clipboard" actions
      * from the TYPO3 Multi Record Selection action bar.
      *
-     * These don't have built-in TYPO3 JS handlers, so we listen for the
-     * custom events and process them via the clipboard AJAX endpoint.
+     * Uses TYPO3's MultiRecordSelectionAction helper to extract selected UIDs,
+     * then processes them via the clipboard AJAX endpoint.
      */
     initializeClipboardSelectionActions() {
-        // Transfer to clipboard (copyMarked)
         document.addEventListener('multiRecordSelection:action:copyMarked', (e) => {
-            this.processClipboardSelection(e.detail, 'copy');
+            this.processClipboardSelection(e, 'copy');
         });
 
-        // Remove from clipboard (removeMarked)
         document.addEventListener('multiRecordSelection:action:removeMarked', (e) => {
-            this.processClipboardSelection(e.detail, 'remove');
+            this.processClipboardSelection(e, 'remove');
         });
     }
 
     /**
      * Process clipboard selection: copy or remove selected records.
      */
-    async processClipboardSelection(detail, mode) {
+    async processClipboardSelection(event, mode) {
         const url = TYPO3?.settings?.ajaxUrls?.clipboard_process;
         if (!url) return;
 
-        // Get selected checkboxes from the detail
-        const checkboxes = detail?.checkboxes || [];
-        if (checkboxes.length === 0) return;
-
-        const config = detail?.configuration || {};
+        // Extract configuration from the button that triggered the action
+        const detail = event.detail || {};
+        const config = detail.configuration || {};
         const tableName = config.tableName || '';
+        if (!tableName) return;
+
+        // Find the selection container for this action
+        const trigger = detail.trigger;
+        const container = trigger?.closest('[data-multi-record-selection-identifier]');
+
+        // Get all checked checkboxes within this container (or all if no container)
+        const scope = container || document;
+        const checked = scope.querySelectorAll('.t3js-multi-record-selection-check:checked');
+        if (checked.length === 0) return;
+
+        // Collect UIDs from data-uid on parent elements
+        const uids = [];
+        checked.forEach(cb => {
+            const el = cb.closest('[data-uid]');
+            if (el?.dataset?.uid) {
+                uids.push(el.dataset.uid);
+            }
+        });
+        if (uids.length === 0) return;
 
         const fullUrl = new URL(url, window.location.origin);
 
         if (mode === 'copy') {
-            // Set copy mode
             fullUrl.searchParams.set('CB[setCopyMode]', '1');
-            // Add each selected record
-            checkboxes.forEach(cb => {
-                const row = cb.closest('[data-uid]');
-                const uid = row?.dataset?.uid;
-                if (uid && tableName) {
-                    fullUrl.searchParams.set(`CB[el][${tableName}|${uid}]`, '1');
-                }
-            });
-        } else if (mode === 'remove') {
-            // Remove each selected record from clipboard
-            checkboxes.forEach(cb => {
-                const row = cb.closest('[data-uid]');
-                const uid = row?.dataset?.uid;
-                if (uid && tableName) {
-                    fullUrl.searchParams.set(`CB[el][${tableName}|${uid}]`, '0');
-                }
-            });
         }
+
+        uids.forEach(uid => {
+            fullUrl.searchParams.set(
+                `CB[el][${tableName}|${uid}]`,
+                mode === 'remove' ? '0' : '1'
+            );
+        });
 
         try {
             await fetch(fullUrl.toString(), {
@@ -1619,17 +1624,16 @@ class GridViewActions {
 
             this.showNotification(
                 mode === 'copy' ? 'Transferred to clipboard' : 'Removed from clipboard',
-                `${checkboxes.length} record(s)`,
+                `${uids.length} record(s)`,
                 'success'
             );
 
-            // Update clipboard panel
+            // Update clipboard panel and reload
             const clipboardPanel = document.querySelector('typo3-backend-clipboard-panel');
             if (clipboardPanel) {
                 clipboardPanel.dispatchEvent(new Event('typo3:clipboard:update'));
             }
 
-            // Reload to reflect clipboard state
             window.location.reload();
         } catch (err) {
             console.error('[GridView] Clipboard selection error:', err);
