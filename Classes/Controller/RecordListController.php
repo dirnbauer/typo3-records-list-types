@@ -1102,17 +1102,59 @@ final class RecordListController extends CoreRecordListController
             $returnUrl = (string) $request->getUri();
         }
 
+        $buttons = [];
+
         // Edit action
         $editConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
             'idField' => 'uid',
             'tableName' => $tableName,
             'returnUrl' => $returnUrl,
         ], true);
-        $editButton = '<button type="button" class="btn btn-sm btn-default"'
+        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
             . ' data-multi-record-selection-action="edit"'
             . ' data-multi-record-selection-action-config="' . $editConfig . '">'
             . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.edit') ?: 'Edit')
+            . '</button>';
+
+        // Edit columns action
+        $editColumnsConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
+            'idField' => 'uid',
+            'tableName' => $tableName,
+            'returnUrl' => $returnUrl,
+            'columnsOnly' => true,
+        ], true);
+        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
+            . ' data-multi-record-selection-action="edit"'
+            . ' data-multi-record-selection-action-config="' . $editColumnsConfig . '">'
+            . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
+            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns') ?: 'Edit columns')
+            . '</button>';
+
+        // Clipboard: Transfer to clipboard
+        $copyConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
+            'idField' => 'uid',
+            'tableName' => $tableName,
+            'returnUrl' => $returnUrl,
+        ], true);
+        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
+            . ' data-multi-record-selection-action="copyMarked"'
+            . ' data-multi-record-selection-action-config="' . $copyConfig . '">'
+            . $iconFactory->getIcon('actions-edit-copy', IconSize::SMALL)->render()
+            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_copyMarked') ?: 'Transfer to clipboard')
+            . '</button>';
+
+        // Clipboard: Remove from clipboard
+        $removeConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
+            'idField' => 'uid',
+            'tableName' => $tableName,
+            'returnUrl' => $returnUrl,
+        ], true);
+        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
+            . ' data-multi-record-selection-action="removeMarked"'
+            . ' data-multi-record-selection-action-config="' . $removeConfig . '">'
+            . $iconFactory->getIcon('actions-minus', IconSize::SMALL)->render()
+            . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_removeMarked') ?: 'Remove from clipboard')
             . '</button>';
 
         // Delete action
@@ -1124,14 +1166,14 @@ final class RecordListController extends CoreRecordListController
             'title' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarked') ?: 'Delete selected',
             'content' => $languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarkedWarning') ?: 'Are you sure you want to delete the selected records?',
         ], true);
-        $deleteButton = '<button type="button" class="btn btn-sm btn-default"'
+        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
             . ' data-multi-record-selection-action="delete"'
             . ' data-multi-record-selection-action-config="' . $deleteConfig . '">'
             . $iconFactory->getIcon('actions-edit-delete', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($languageService->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete') ?: 'Delete')
             . '</button>';
 
-        return $editButton . $deleteButton;
+        return implode(PHP_EOL, $buttons);
     }
 
     /**
