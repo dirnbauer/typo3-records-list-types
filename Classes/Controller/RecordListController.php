@@ -1129,18 +1129,17 @@ final class RecordListController extends CoreRecordListController
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns', 'Edit columns'))
             . '</button>';
 
-        // Clipboard: Transfer to clipboard (uses our own data attribute to avoid TYPO3 module interception)
+        // Clipboard: Transfer to clipboard (inline onclick to bypass any event interception)
+        $tableJs = GeneralUtility::quoteJSvalue($tableName);
         $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-gridview-clipboard="copy"'
-            . ' data-table="' . htmlspecialchars($tableName) . '">'
+            . ' onclick="window.__gridviewClipboard(' . $tableJs . ', \'copy\'); return false;">'
             . $iconFactory->getIcon('actions-edit-copy', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_copyMarked', 'Transfer to clipboard'))
             . '</button>';
 
         // Clipboard: Remove from clipboard
         $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-gridview-clipboard="remove"'
-            . ' data-table="' . htmlspecialchars($tableName) . '">'
+            . ' onclick="window.__gridviewClipboard(' . $tableJs . ', \'remove\'); return false;">'
             . $iconFactory->getIcon('actions-minus', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_removeMarked', 'Remove from clipboard'))
             . '</button>';

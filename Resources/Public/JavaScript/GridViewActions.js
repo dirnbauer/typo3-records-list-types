@@ -1552,56 +1552,30 @@ class GridViewActions {
     // =========================================================================
 
     /**
-     * Handle "Transfer to clipboard" and "Remove from clipboard" buttons.
-     * Attaches click handlers directly to buttons (not delegation) because
-     * TYPO3's multi-record-selection module may stop event propagation
-     * within the action bar.
+     * Register global clipboard handler called via inline onclick.
+     * Inline onclick bypasses any event interception by TYPO3's
+     * multi-record-selection module.
      */
     initializeClipboardSelectionActions() {
-        // Attach to existing buttons
-        this.attachClipboardButtonHandlers();
+        window.__gridviewClipboard = (tableName, mode) => {
+            // Find all checked checkboxes across the page for this table
+            const allChecked = document.querySelectorAll('.t3js-multi-record-selection-check:checked');
+            if (allChecked.length === 0) {
+                this.showNotification('No records selected', 'Please select records first', 'warning');
+                return;
+            }
 
-        // Also observe DOM for dynamically shown action bars
-        const observer = new MutationObserver(() => {
-            this.attachClipboardButtonHandlers();
-        });
-        document.querySelectorAll('.t3js-multi-record-selection-actions').forEach(el => {
-            observer.observe(el, { attributes: true, attributeFilter: ['class'] });
-        });
-    }
-
-    attachClipboardButtonHandlers() {
-        document.querySelectorAll('[data-gridview-clipboard]:not([data-clipboard-bound])').forEach(btn => {
-            btn.setAttribute('data-clipboard-bound', '1');
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-
-                const mode = btn.dataset.gridviewClipboard;
-                const tableName = btn.dataset.table || '';
-                if (!tableName) return;
-
-                const container = btn.closest('[data-multi-record-selection-identifier]');
-                const scope = container || document;
-
-                const checked = scope.querySelectorAll('.t3js-multi-record-selection-check:checked');
-                if (checked.length === 0) {
-                    this.showNotification('No records selected', 'Please select records first', 'warning');
-                    return;
+            const uids = [];
+            allChecked.forEach(cb => {
+                const el = cb.closest('[data-uid]');
+                if (el?.dataset?.uid) {
+                    uids.push(el.dataset.uid);
                 }
-
-                const uids = [];
-                checked.forEach(cb => {
-                    const el = cb.closest('[data-uid]');
-                    if (el?.dataset?.uid) {
-                        uids.push(el.dataset.uid);
-                    }
-                });
-
-                if (uids.length === 0) return;
-                this.processClipboardBulk(tableName, uids, mode);
             });
-        });
+
+            if (uids.length === 0) return;
+            this.processClipboardBulk(tableName, uids, mode);
+        };
     }
 
     /**
