@@ -10,6 +10,15 @@
 <tr class="compactview-row{f:if(condition: record.hidden, then: ' compactview-row--hidden')}"
     data-table="{record.tableName}"
     data-uid="{record.uid}">
+
+    <f:comment>Fixed left: Clipboard checkbox (only when clipboard enabled)</f:comment>
+    <f:if condition="{clipboardEnabled}">
+        <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox">
+            <input type="checkbox" class="form-check-input cv-clipboard-check"
+                   name="CBC[{record.tableName}|{record.uid}]" value="1"
+                   data-table="{record.tableName}" data-uid="{record.uid}" />
+        </td>
+    </f:if>
     
     <f:comment>Fixed left: Icon</f:comment>
     <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
@@ -97,6 +106,9 @@
             </td>
         </f:if>
     </f:for>
+
+    <f:comment>Spacer - absorbs remaining width (hidden from screen readers)</f:comment>
+    <td class="compactview-td compactview-td--spacer" aria-hidden="true" role="presentation"></td>
     
     <f:comment>Fixed right: Visibility toggle</f:comment>
     <td class="compactview-td compactview-td--fixed-right compactview-td--status">
@@ -143,6 +155,57 @@
                 data-uid="{record.uid}">
             <core:icon identifier="actions-edit-delete" size="small" />
         </button>
+    </td>
+
+    <f:comment>Fixed right: More Actions dropdown</f:comment>
+    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
+        <div class="dropdown" data-cv-dropdown>
+            <button type="button" class="cv-action"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    title="More actions">
+                <core:icon identifier="actions-menu-alternative" size="small" />
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="#"
+                       data-gridview-action="info"
+                       data-table="{record.tableName}"
+                       data-uid="{record.uid}">
+                        <core:icon identifier="actions-document-info" size="small" />
+                        <span>Info</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#"
+                       data-gridview-action="history"
+                       data-table="{record.tableName}"
+                       data-uid="{record.uid}">
+                        <core:icon identifier="actions-document-history-open" size="small" />
+                        <span>History</span>
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="#"
+                       data-gridview-action="copy"
+                       data-table="{record.tableName}"
+                       data-uid="{record.uid}">
+                        <core:icon identifier="actions-edit-copy" size="small" />
+                        <span>Copy</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#"
+                       data-gridview-action="cut"
+                       data-table="{record.tableName}"
+                       data-uid="{record.uid}">
+                        <core:icon identifier="actions-edit-cut" size="small" />
+                        <span>Cut</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
     </td>
 </tr>
 

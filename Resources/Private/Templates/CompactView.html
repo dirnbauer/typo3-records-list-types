@@ -66,10 +66,18 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
-                        <div class="compactview-table-wrapper" data-scroll-container>
+                        <div class="compactview-table-wrapper{f:if(condition: clipboardEnabled, then: ' has-clipboard')}" data-scroll-container>
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
                                     <tr>
+                                        <f:comment>Checkbox column (select-all, only when clipboard enabled)</f:comment>
+                                        <f:if condition="{clipboardEnabled}">
+                                            <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
+                                                <input type="checkbox" class="form-check-input cv-clipboard-check-all"
+                                                       title="Select all" data-table="{table.tableName}" />
+                                            </th>
+                                        </f:if>
+
                                         <f:comment>Icon column (no sorting)</f:comment>
                                         <th class="compactview-th compactview-th--fixed-left compactview-th--icon"></th>
                                         
@@ -80,15 +88,19 @@
                                             </th>
                                         </f:for>
                                         
-                                        <f:comment>Fixed right columns: Status, Edit, Delete</f:comment>
+                                        <f:comment>Spacer column - absorbs remaining width so right columns stay at the edge</f:comment>
+                                        <th class="compactview-th compactview-th--spacer" aria-hidden="true" role="presentation"></th>
+
+                                        <f:comment>Fixed right columns: Status, Edit, Delete, More</f:comment>
                                         <th class="compactview-th compactview-th--fixed-right compactview-th--status"></th>
+                                        <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
                                         <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
                                         <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
                                     </tr>
                                 </thead>
                                 <tbody class="compactview-tbody">
                                     <f:for each="{table.records}" as="record">
-                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns}" />
+                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, clipboardEnabled: clipboardEnabled}" />
                                     </f:for>
                                 </tbody>
                             </table>

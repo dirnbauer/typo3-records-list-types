@@ -104,7 +104,7 @@
                             <f:for each="{table.records}" as="record" iteration="iterator">
                                 <div class="gridview-card-wrapper"
                                      data-index="{iterator.index}">
-                                    <f:render partial="Card" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, canReorder: table.canReorder}" />
+                                    <f:render partial="Card" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, canReorder: table.canReorder, clipboardEnabled: clipboardEnabled}" />
                                 </div>
                             </f:for>
                             <f:comment>End dropzone - visible during drag to allow dropping after last item</f:comment>
