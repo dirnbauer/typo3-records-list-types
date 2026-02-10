@@ -83,39 +83,12 @@
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
                                     <tr>
-                                        <f:comment>Checkbox column with Check All / Uncheck All / Toggle dropdown</f:comment>
+                                        <f:comment>Checkbox column with dropdown for Check All / Uncheck All / Toggle</f:comment>
                                         <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
-                                            <div class="btn-group dropdown">
-                                                <button type="button"
-                                                        class="btn btn-default btn-sm dropdown-toggle t3js-multi-record-selection-check-actions-toggle"
-                                                        data-bs-toggle="dropdown"
-                                                        aria-expanded="false">
-                                                    <core:icon identifier="actions-selection" size="small" />
-                                                </button>
-                                                <ul class="dropdown-menu t3js-multi-record-selection-check-actions">
-                                                    <li>
-                                                        <button type="button" class="dropdown-item" disabled
-                                                                data-multi-record-selection-check-action="check-all">
-                                                            <core:icon identifier="actions-check-square" size="small" />
-                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll" default="Check All" />
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item" disabled
-                                                                data-multi-record-selection-check-action="check-none">
-                                                            <core:icon identifier="actions-square" size="small" />
-                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll" default="Uncheck All" />
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item" disabled
-                                                                data-multi-record-selection-check-action="toggle">
-                                                            <core:icon identifier="actions-document-select" size="small" />
-                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection" default="Toggle Selection" />
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
+                                            <span class="form-check form-check-type-toggle">
+                                                <input class="form-check-input t3js-multi-record-selection-check-actions-toggle"
+                                                       type="checkbox" title="Toggle selection" />
+                                            </span>
                                         </th>
 
                                         <f:comment>Icon column (no sorting)</f:comment>
