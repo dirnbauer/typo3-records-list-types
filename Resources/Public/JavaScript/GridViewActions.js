@@ -1551,53 +1551,64 @@ class GridViewActions {
     // =========================================================================
 
     /**
-     * Handle "Transfer to clipboard" and "Remove from clipboard" actions
-     * from the TYPO3 Multi Record Selection action bar.
-     *
-     * Uses TYPO3's MultiRecordSelectionAction helper to extract selected UIDs,
-     * then processes them via the clipboard AJAX endpoint.
+     * Handle "Transfer to clipboard" and "Remove from clipboard" buttons.
+     * Direct click handlers since TYPO3's multi-record-selection events
+     * may not fire for custom action names.
      */
     initializeClipboardSelectionActions() {
-        document.addEventListener('multiRecordSelection:action:copyMarked', (e) => {
-            this.processClipboardSelection(e, 'copy');
-        });
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-multi-record-selection-action="copyMarked"], [data-multi-record-selection-action="removeMarked"]');
+            if (!btn) return;
 
-        document.addEventListener('multiRecordSelection:action:removeMarked', (e) => {
-            this.processClipboardSelection(e, 'remove');
+            e.preventDefault();
+            e.stopPropagation();
+
+            const action = btn.dataset.multiRecordSelectionAction;
+            const mode = action === 'copyMarked' ? 'copy' : 'remove';
+
+            // Parse config from data attribute
+            let config = {};
+            try {
+                config = JSON.parse(btn.dataset.multiRecordSelectionActionConfig || '{}');
+            } catch (err) {
+                // ignore parse errors
+            }
+
+            const tableName = config.tableName || '';
+            if (!tableName) return;
+
+            // Find the selection container
+            const container = btn.closest('[data-multi-record-selection-identifier]');
+            const scope = container || document;
+
+            // Get all checked checkboxes
+            const checked = scope.querySelectorAll('.t3js-multi-record-selection-check:checked');
+            if (checked.length === 0) {
+                this.showNotification('No records selected', 'Please select records first', 'warning');
+                return;
+            }
+
+            // Collect UIDs
+            const uids = [];
+            checked.forEach(cb => {
+                const el = cb.closest('[data-uid]');
+                if (el?.dataset?.uid) {
+                    uids.push(el.dataset.uid);
+                }
+            });
+
+            if (uids.length === 0) return;
+
+            this.processClipboardBulk(tableName, uids, mode);
         });
     }
 
     /**
-     * Process clipboard selection: copy or remove selected records.
+     * Send bulk clipboard operation via AJAX.
      */
-    async processClipboardSelection(event, mode) {
+    async processClipboardBulk(tableName, uids, mode) {
         const url = TYPO3?.settings?.ajaxUrls?.clipboard_process;
         if (!url) return;
-
-        // Extract configuration from the button that triggered the action
-        const detail = event.detail || {};
-        const config = detail.configuration || {};
-        const tableName = config.tableName || '';
-        if (!tableName) return;
-
-        // Find the selection container for this action
-        const trigger = detail.trigger;
-        const container = trigger?.closest('[data-multi-record-selection-identifier]');
-
-        // Get all checked checkboxes within this container (or all if no container)
-        const scope = container || document;
-        const checked = scope.querySelectorAll('.t3js-multi-record-selection-check:checked');
-        if (checked.length === 0) return;
-
-        // Collect UIDs from data-uid on parent elements
-        const uids = [];
-        checked.forEach(cb => {
-            const el = cb.closest('[data-uid]');
-            if (el?.dataset?.uid) {
-                uids.push(el.dataset.uid);
-            }
-        });
-        if (uids.length === 0) return;
 
         const fullUrl = new URL(url, window.location.origin);
 
@@ -1636,7 +1647,7 @@ class GridViewActions {
 
             window.location.reload();
         } catch (err) {
-            console.error('[GridView] Clipboard selection error:', err);
+            console.error('[GridView] Clipboard error:', err);
             this.showNotification('Clipboard action failed', err.message, 'error');
         }
     }
