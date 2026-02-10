@@ -109,6 +109,9 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
+                        <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
+                        <input type="hidden" name="cmd_table" value="{table.tableName}" />
+                        <input type="hidden" name="cmd" />
                         <div class="gridview-card-grid"
                              data-table="{table.tableName}"
                              data-can-reorder="{f:if(condition: table.canReorder, then: '1', else: '0')}"
@@ -135,6 +138,7 @@
                                 </div>
                             </f:if>
                         </div>
+                        </form>
 
                         <f:comment>Expand table button - multi-table mode with more records</f:comment>
                         <f:if condition="!{currentTable} && {table.hasMore}">

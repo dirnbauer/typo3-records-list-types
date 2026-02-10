@@ -79,6 +79,9 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
+                        <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
+                        <input type="hidden" name="cmd_table" value="{table.tableName}" />
+                        <input type="hidden" name="cmd" />
                         <div class="compactview-table-wrapper has-clipboard" data-scroll-container>
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
@@ -118,6 +121,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        </form>
 
                         <f:comment>Expand table button - multi-table mode with more records</f:comment>
                         <f:if condition="!{currentTable} && {table.hasMore}">

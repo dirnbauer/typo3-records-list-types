@@ -618,6 +618,7 @@ final class RecordListController extends CoreRecordListController
                 'sortableColumnHeaders' => $sortableColumnHeaders,
                 'singleTableUrl' => $singleTableUrl,
                 'clearTableUrl' => $clearTableUrl,
+                'formActionUrl' => $singleTableUrl,
                 'displayColumns' => $displayColumns,
                 'isFiltered' => $isSingleTableMode && $table === $tableName,
                 'canReorder' => $canReorder,
@@ -647,6 +648,8 @@ final class RecordListController extends CoreRecordListController
         $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection.js');
         $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection-delete-action.js');
         $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection-edit-action.js');
+        // recordlist.js handles copyMarked/removeMarked via form submission
+        $pageRenderer->loadJavaScriptModule('@typo3/backend/recordlist.js');
 
         // Create the view from ViewTypeRegistry template paths
         $templatePaths = $registry->getTemplatePaths($viewMode, $pageId);
