@@ -80,7 +80,6 @@ class GridViewActions {
         this.initializeScrollShadows();
         this.initializePaginationInputs();
         this.initializeCompactDropdowns();
-        this.initializeClipboardSelectionActions();
         this.initializeCheckAllToggle();
     }
 
@@ -1547,37 +1546,6 @@ class GridViewActions {
         });
     }
 
-    // =========================================================================
-    // Multi Record Selection: Clipboard Actions
-    // =========================================================================
-
-    /**
-     * Register global clipboard handler called via inline onclick.
-     * Inline onclick bypasses any event interception by TYPO3's
-     * multi-record-selection module.
-     */
-    initializeClipboardSelectionActions() {
-        window.__gridviewClipboard = (tableName, mode) => {
-            // Find all checked checkboxes across the page for this table
-            const allChecked = document.querySelectorAll('.t3js-multi-record-selection-check:checked');
-            if (allChecked.length === 0) {
-                this.showNotification('No records selected', 'Please select records first', 'warning');
-                return;
-            }
-
-            const uids = [];
-            allChecked.forEach(cb => {
-                const el = cb.closest('[data-uid]');
-                if (el?.dataset?.uid) {
-                    uids.push(el.dataset.uid);
-                }
-            });
-
-            if (uids.length === 0) return;
-            this.processClipboardBulk(tableName, uids, mode);
-        };
-    }
-
     /**
      * Toggle all checkboxes when the header checkbox is clicked.
      * The TYPO3 multi-record-selection dropdown doesn't fit the
@@ -1599,54 +1567,6 @@ class GridViewActions {
         });
     }
 
-    /**
-     * Send bulk clipboard operation via AJAX.
-     */
-    async processClipboardBulk(tableName, uids, mode) {
-        const url = TYPO3?.settings?.ajaxUrls?.clipboard_process;
-        if (!url) return;
-
-        const fullUrl = new URL(url, window.location.origin);
-
-        if (mode === 'copy') {
-            fullUrl.searchParams.set('CB[setCopyMode]', '1');
-        }
-
-        uids.forEach(uid => {
-            fullUrl.searchParams.set(
-                `CB[el][${tableName}|${uid}]`,
-                mode === 'remove' ? '0' : '1'
-            );
-        });
-
-        try {
-            await fetch(fullUrl.toString(), {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            this.showNotification(
-                mode === 'copy' ? 'Transferred to clipboard' : 'Removed from clipboard',
-                `${uids.length} record(s)`,
-                'success'
-            );
-
-            // Update clipboard panel and reload
-            const clipboardPanel = document.querySelector('typo3-backend-clipboard-panel');
-            if (clipboardPanel) {
-                clipboardPanel.dispatchEvent(new Event('typo3:clipboard:update'));
-            }
-
-            window.location.reload();
-        } catch (err) {
-            console.error('[GridView] Clipboard error:', err);
-            this.showNotification('Clipboard action failed', err.message, 'error');
-        }
-    }
 }
 
 // Auto-init

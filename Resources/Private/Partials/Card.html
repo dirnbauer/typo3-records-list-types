@@ -44,7 +44,9 @@
         <div class="gridview-card__header-title">
             <label class="gridview-card__checkbox">
                 <input class="form-check-input t3js-multi-record-selection-check"
-                       type="checkbox" />
+                       type="checkbox"
+                       name="CBC[{record.tableName}|{record.uid}]"
+                       value="1" />
             </label>
             <f:if condition="{canReorder}">
                 <div class="gridview-card__drag" 
