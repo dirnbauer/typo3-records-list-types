@@ -7,6 +7,7 @@ namespace Webconsulting\RecordsListTypes\Controller;
 use Exception;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use ReflectionMethod;
 use RuntimeException;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
@@ -1852,7 +1853,7 @@ final class RecordListController extends CoreRecordListController
      */
     protected function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
     {
-        $method = new \ReflectionMethod($iconFactory, 'mapRecordTypeToIconIdentifier');
+        $method = new ReflectionMethod($iconFactory, 'mapRecordTypeToIconIdentifier');
 
         if ($method->getNumberOfParameters() >= 3) {
             $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
