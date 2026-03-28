@@ -20,6 +20,7 @@ use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Pagination\SlidingWindowPagination;
+use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\View\ViewFactoryData;
 use TYPO3\CMS\Core\View\ViewFactoryInterface;
@@ -600,7 +601,9 @@ final class RecordListController extends CoreRecordListController
             $canReorder = $sortingMode === 'manual' && $hasSortbyField;
 
             // Multi Record Selection action buttons (Edit, Delete, Transfer/Remove clipboard)
-            $multiRecordSelectionActionsHtml = $this->renderMultiRecordSelectionActions($tableName, $pageId, $viewMode, $request);
+            $displayColumnFields = array_map(static fn(array $col): string => $col['field'] ?? '', $displayColumns);
+            $displayColumnFields = array_values(array_filter($displayColumnFields, static fn(string $f): bool => $f !== ''));
+            $multiRecordSelectionActionsHtml = $this->renderMultiRecordSelectionActions($tableName, $pageId, $viewMode, $request, $displayColumnFields);
 
             $tableData[] = [
                 'tableName' => $tableName,
@@ -1083,11 +1086,15 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return string Rendered HTML for the action buttons row
      */
+    /**
+     * @param list<string> $displayColumnFields Field names of the currently displayed columns
+     */
     protected function renderMultiRecordSelectionActions(
         string $tableName,
         int $pageId,
         string $viewMode,
         ServerRequestInterface $request,
+        array $displayColumnFields = [],
     ): string {
         $languageService = $this->getLanguageService();
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
@@ -1118,12 +1125,12 @@ final class RecordListController extends CoreRecordListController
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.edit', 'Edit'))
             . '</button>';
 
-        // Edit columns action
+        // Edit columns action - only edit the currently displayed columns
         $editColumnsConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
             'idField' => 'uid',
             'tableName' => $tableName,
             'returnUrl' => $returnUrl,
-            'columnsOnly' => true,
+            'columnsOnly' => $displayColumnFields,
         ], true);
         $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
             . ' data-multi-record-selection-action="edit"'
@@ -1835,8 +1842,32 @@ final class RecordListController extends CoreRecordListController
     protected function getTableIcon(string $tableName): string
     {
         $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
-        $icon = $iconFactory->mapRecordTypeToIconIdentifier($tableName, []);
+        $icon = $this->mapRecordTypeToIconIdentifier($iconFactory, $tableName, []);
         return $icon !== '' ? $icon : 'mimetypes-x-content-text';
+    }
+
+    /**
+     * TYPO3 v14 minors changed this core method signature to require a TCA schema.
+     * Keep the extension compatible across both variants.
+     */
+    protected function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
+    {
+        $method = new \ReflectionMethod($iconFactory, 'mapRecordTypeToIconIdentifier');
+
+        if ($method->getNumberOfParameters() >= 3) {
+            $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+            if (!$schemaFactory->has($tableName)) {
+                return '';
+            }
+
+            /** @var string $iconIdentifier */
+            $iconIdentifier = $method->invoke($iconFactory, $tableName, $row, $schemaFactory->get($tableName));
+            return $iconIdentifier;
+        }
+
+        /** @var string $iconIdentifier */
+        $iconIdentifier = $method->invoke($iconFactory, $tableName, $row);
+        return $iconIdentifier;
     }
 
     /**
