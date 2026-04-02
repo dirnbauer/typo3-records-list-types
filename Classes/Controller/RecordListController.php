@@ -602,7 +602,7 @@ final class RecordListController extends CoreRecordListController
             $canReorder = $sortingMode === 'manual' && $hasSortbyField;
 
             // Multi Record Selection action buttons (Edit, Delete, Transfer/Remove clipboard)
-            $displayColumnFields = array_map(static fn(array $col): string => $col['field'] ?? '', $displayColumns);
+            $displayColumnFields = array_map(static fn(array $col): string => $col['field'], $displayColumns);
             $displayColumnFields = array_values(array_filter($displayColumnFields, static fn(string $f): bool => $f !== ''));
             $multiRecordSelectionActionsHtml = $this->renderMultiRecordSelectionActions($tableName, $pageId, $viewMode, $request, $displayColumnFields);
 
@@ -1850,6 +1850,8 @@ final class RecordListController extends CoreRecordListController
     /**
      * TYPO3 v14 minors changed this core method signature to require a TCA schema.
      * Keep the extension compatible across both variants.
+     *
+     * @param array<string, mixed> $row
      */
     protected function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
     {
