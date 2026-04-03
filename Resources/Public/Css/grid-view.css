@@ -1234,129 +1234,71 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
 }
 
 /* =============================================================================
-   Translation Rows (collapsible, inside parent card)
+   Translation Flag Pills (compact, in card footer)
    ============================================================================= */
 
-.gridview-card__translations-section {
-    border-top: 1px solid var(--gv-border-muted);
-}
-
-.gridview-card__translations-toggle {
-    display: flex;
+.gridview-card__translation-pills {
+    display: inline-flex;
     align-items: center;
-    gap: var(--gv-space-2);
-    width: 100%;
-    padding: var(--gv-space-2) var(--gv-space-3);
-    border: none;
-    background: var(--gv-bg-subtle);
-    color: var(--gv-text-muted);
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background var(--gv-transition-fast), color var(--gv-transition-fast);
+    gap: 3px;
+    flex-wrap: wrap;
 }
 
-.gridview-card__translations-toggle:hover {
-    background: var(--gv-bg-muted);
-    color: var(--gv-text);
-}
-
-.gridview-card__translations-toggle .icon {
-    transition: transform var(--gv-transition);
-}
-
-.gridview-card__translations-toggle[aria-expanded="true"] .icon {
-    transform: rotate(90deg);
-}
-
-.gridview-card__translations-count {
-    flex: 1;
-    text-align: left;
-}
-
-.gridview-card__translations {
-    display: none;
-}
-
-.gridview-card__translations.is-expanded {
-    display: block;
-}
-
-.gridview-card__translation-row {
-    display: flex;
+.gridview-card__translation-pill {
+    display: inline-flex;
     align-items: center;
-    gap: var(--gv-space-2);
-    padding: var(--gv-space-1) var(--gv-space-3);
-    border-top: 1px solid var(--gv-border-muted);
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.375rem;
+    padding: 0;
+    border-radius: var(--gv-radius-sm);
+    border: 1px solid var(--gv-border);
     background: var(--gv-bg);
-    font-size: 0.8125rem;
-    min-height: 2rem;
-}
-
-.gridview-card__translation-row:last-child {
-    border-radius: 0 0 var(--gv-radius) var(--gv-radius);
-}
-
-.gridview-card__translation-row--hidden {
-    opacity: 0.55;
-}
-
-/* Workspace state indicators on translation rows */
-.gridview-card__translation-row--ws-new {
-    border-left: 3px solid #3b82f6;
-    background: #eff6ff;
-}
-
-.gridview-card__translation-row--ws-changed {
-    border-left: 3px solid #8b5cf6;
-    background: #f5f3ff;
-}
-
-.gridview-card__translation-row--ws-move {
-    border-left: 3px solid #06b6d4;
-    background: #ecfeff;
-}
-
-.gridview-card__translation-row--ws-deleted {
-    border-left: 3px solid #ef4444;
-    background: #fef2f2;
-}
-
-.gridview-card__translation-row--ws-deleted .gridview-card__translation-title {
-    text-decoration: line-through;
-    opacity: 0.6;
-}
-
-.gridview-card__translation-flag {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-}
-
-.gridview-card__translation-title {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--gv-text);
-}
-
-.gridview-card__translation-title a {
-    color: inherit;
+    color: var(--gv-text-muted);
     text-decoration: none;
+    transition:
+        border-color var(--gv-transition-fast),
+        background var(--gv-transition-fast),
+        box-shadow var(--gv-transition-fast);
+    cursor: pointer;
+    position: relative;
 }
 
-.gridview-card__translation-title a:hover {
-    color: var(--gv-accent);
-    text-decoration: underline;
+.gridview-card__translation-pill .icon {
+    width: 14px;
+    height: 14px;
 }
 
-.gridview-card__translation-actions {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 2px;
+.gridview-card__translation-pill:hover {
+    border-color: var(--gv-accent);
+    background: var(--gv-accent-bg);
+    box-shadow: 0 0 0 1px var(--gv-accent-muted);
+}
+
+.gridview-card__translation-pill--hidden {
+    opacity: 0.4;
+}
+
+/* Workspace state ring indicators on pills */
+.gridview-card__translation-pill--ws-new {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.gridview-card__translation-pill--ws-changed {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3);
+}
+
+.gridview-card__translation-pill--ws-move {
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.3);
+}
+
+.gridview-card__translation-pill--ws-deleted {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
+    opacity: 0.5;
 }
 
 /* =============================================================================
@@ -1381,38 +1323,17 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
 }
 
 /* =============================================================================
-   Dark Mode: Translation Rows + Free Badge
+   Dark Mode: Translation Pills + Free Badge
    ============================================================================= */
 
-[data-color-scheme="dark"] .gridview-card__translations-toggle {
+[data-color-scheme="dark"] .gridview-card__translation-pill {
+    border-color: var(--gv-border);
     background: var(--gv-bg-subtle);
-    color: var(--gv-text-muted);
 }
 
-[data-color-scheme="dark"] .gridview-card__translations-toggle:hover {
-    background: var(--gv-bg-muted);
-    color: var(--gv-text);
-}
-
-[data-color-scheme="dark"] .gridview-card__translation-row {
-    background: var(--gv-bg);
-    border-top-color: var(--gv-border-muted);
-}
-
-[data-color-scheme="dark"] .gridview-card__translation-row--ws-new {
-    background: rgba(59, 130, 246, 0.1);
-}
-
-[data-color-scheme="dark"] .gridview-card__translation-row--ws-changed {
-    background: rgba(139, 92, 246, 0.1);
-}
-
-[data-color-scheme="dark"] .gridview-card__translation-row--ws-move {
-    background: rgba(6, 182, 212, 0.1);
-}
-
-[data-color-scheme="dark"] .gridview-card__translation-row--ws-deleted {
-    background: rgba(239, 68, 68, 0.1);
+[data-color-scheme="dark"] .gridview-card__translation-pill:hover {
+    border-color: var(--gv-accent);
+    background: var(--gv-accent-bg);
 }
 
 [data-color-scheme="dark"] .gridview-card__free-badge {
@@ -1420,23 +1341,17 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
 }
 
 @media (prefers-color-scheme: dark) {
-    .gridview-card__translation-row--ws-new {
-        background: rgba(59, 130, 246, 0.1);
+    html:not([data-color-scheme="light"]) .gridview-card__translation-pill {
+        border-color: var(--gv-border);
+        background: var(--gv-bg-subtle);
     }
 
-    .gridview-card__translation-row--ws-changed {
-        background: rgba(139, 92, 246, 0.1);
+    html:not([data-color-scheme="light"]) .gridview-card__translation-pill:hover {
+        border-color: var(--gv-accent);
+        background: var(--gv-accent-bg);
     }
 
-    .gridview-card__translation-row--ws-move {
-        background: rgba(6, 182, 212, 0.1);
-    }
-
-    .gridview-card__translation-row--ws-deleted {
-        background: rgba(239, 68, 68, 0.1);
-    }
-
-    .gridview-card__free-badge {
+    html:not([data-color-scheme="light"]) .gridview-card__free-badge {
         background: rgba(59, 130, 246, 0.15);
     }
 }

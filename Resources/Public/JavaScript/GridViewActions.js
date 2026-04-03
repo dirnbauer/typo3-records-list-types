@@ -81,7 +81,6 @@ class GridViewActions {
         this.initializePaginationInputs();
         this.initializeCompactDropdowns();
         this.initializeCheckAllToggle();
-        this.initializeTranslationToggles();
     }
 
     // =========================================================================
@@ -1572,29 +1571,6 @@ class GridViewActions {
                     // Dispatch change event so TYPO3's module updates the action bar
                     cb.dispatchEvent(new Event('change', { bubbles: true }));
                 });
-            });
-        });
-    }
-
-    /**
-     * Initialize expand/collapse toggles for connected translation rows inside cards.
-     * Translation rows live inside the parent card, so they move with it during drag-and-drop.
-     */
-    initializeTranslationToggles() {
-        document.querySelectorAll('.gridview-card__translations-toggle').forEach(toggle => {
-            toggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const targetId = toggle.getAttribute('aria-controls');
-                if (!targetId) return;
-
-                const panel = document.getElementById(targetId);
-                if (!panel) return;
-
-                const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-                toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
-                panel.classList.toggle('is-expanded', !isExpanded);
             });
         });
     }
