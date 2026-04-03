@@ -2269,7 +2269,10 @@ final class RecordListController extends CoreRecordListController
 
         // Fetch connected translations for all default-language parent UIDs
         $parentUids = array_map(
-            static fn(array $r): int => is_numeric($r['uid'] ?? 0) ? (int) $r['uid'] : 0,
+            static function (array $r): int {
+                $uidRaw = $r['uid'] ?? 0;
+                return is_numeric($uidRaw) ? (int) $uidRaw : 0;
+            },
             $defaultRecords,
         );
         $parentUids = array_filter($parentUids, static fn(int $uid): bool => $uid > 0);
@@ -2279,7 +2282,8 @@ final class RecordListController extends CoreRecordListController
             $translationsGrouped = $this->enrichTranslationGroups($translationsGrouped, $tableName);
 
             foreach ($defaultRecords as &$record) {
-                $uid = is_numeric($record['uid'] ?? 0) ? (int) $record['uid'] : 0;
+                $uidRaw = $record['uid'] ?? 0;
+                $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
                 $record['translations'] = $translationsGrouped[$uid] ?? [];
             }
             unset($record);
