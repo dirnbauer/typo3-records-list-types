@@ -18,7 +18,7 @@
     - teaser/abstract/bodytext for description
 </f:comment>
 
-<article class="teaserview-card{f:if(condition: record.hidden, then: ' teaserview-card--hidden')}"
+<article class="teaserview-card{f:if(condition: record.hidden, then: ' teaserview-card--hidden')}{f:if(condition: record.isFreeTranslation, then: ' teaserview-card--free')}"
          data-table="{record.tableName}"
          data-uid="{record.uid}"
          data-multi-record-selection-element="true">
@@ -175,6 +175,51 @@
             </div>
         </div>
     </div>
+
+    <f:if condition="{record.translations}">
+        <div class="teaserview-card__translations-section">
+            <button type="button"
+                    class="gridview-card__translations-toggle"
+                    aria-expanded="false"
+                    aria-controls="tv-translations-{record.uid}">
+                <core:icon identifier="actions-chevron-right" size="small" />
+                <span class="gridview-card__translations-count">
+                    <f:count subject="{record.translations}" /> <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.label" default="translation(s)" />
+                </span>
+            </button>
+            <div class="gridview-card__translations" id="tv-translations-{record.uid}">
+                <f:for each="{record.translations}" as="translation">
+                    <div class="gridview-card__translation-row{f:if(condition: translation.hidden, then: ' gridview-card__translation-row--hidden')}{f:if(condition: translation.workspaceState, then: ' gridview-card__translation-row--ws-{translation.workspaceState}')}">
+                        <span class="gridview-card__translation-flag" title="{translation.languageTitle}">
+                            <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+                        </span>
+                        <span class="gridview-card__translation-title">
+                            <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}">
+                                <f:if condition="{translation.title}">
+                                    <f:then>{translation.title -> f:format.crop(maxCharacters: 50, append: '…')}</f:then>
+                                    <f:else>N/A</f:else>
+                                </f:if>
+                            </be:link.editRecord>
+                        </span>
+                        <span class="gridview-card__translation-actions">
+                            <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}"
+                                class="teaserview-action teaserview-action--primary" title="Edit">
+                                <core:icon identifier="actions-open" size="small" />
+                            </be:link.editRecord>
+                        </span>
+                    </div>
+                </f:for>
+            </div>
+        </div>
+    </f:if>
+
+    <f:if condition="{record.isFreeTranslation}">
+        <div class="teaserview-card__footer-free">
+            <span class="gridview-card__free-badge">
+                <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free" default="FREE" />
+            </span>
+        </div>
+    </f:if>
 </article>
 
 </html>

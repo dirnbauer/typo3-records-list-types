@@ -483,5 +483,44 @@
     height: 1rem;
 }
 
+/* =============================================================================
+   Translation Section (collapsible, reuses grid-view toggle classes)
+   ============================================================================= */
+
+.teaserview-card__translations-section {
+    border-top: 1px solid var(--tv-border);
+}
+
+.teaserview-card--free {
+    border-left: 3px dashed var(--tv-primary);
+}
+
+.teaserview-card__footer-free {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.25rem 1rem 0.5rem;
+}
+
+/* Workspace state indicators on teaser translation rows */
+.teaserview-card__translations-section .gridview-card__translation-row--ws-new {
+    border-left: 3px solid #3b82f6;
+    background: light-dark(#eff6ff, rgba(59, 130, 246, 0.1));
+}
+
+.teaserview-card__translations-section .gridview-card__translation-row--ws-changed {
+    border-left: 3px solid #8b5cf6;
+    background: light-dark(#f5f3ff, rgba(139, 92, 246, 0.1));
+}
+
+.teaserview-card__translations-section .gridview-card__translation-row--ws-move {
+    border-left: 3px solid #06b6d4;
+    background: light-dark(#ecfeff, rgba(6, 182, 212, 0.1));
+}
+
+.teaserview-card__translations-section .gridview-card__translation-row--ws-deleted {
+    border-left: 3px solid #ef4444;
+    background: light-dark(#fef2f2, rgba(239, 68, 68, 0.1));
+}
+
 /* Note: Pagination and recordlist heading base styles are in base.css
    which is loaded automatically for all view modes. */

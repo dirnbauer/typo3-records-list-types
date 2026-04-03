@@ -795,6 +795,58 @@
     min-width: 10rem;
 }
 
+/* =============================================================================
+   Translation Rows (indented below parent, like standard List View)
+   ============================================================================= */
+
+.compactview-row--translation .compactview-td {
+    background-color: var(--cv-bg-subtle);
+    font-size: 0.75rem;
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+}
+
+.compactview-row--translation .compactview-td--fixed-left,
+.compactview-row--translation .compactview-td--fixed-right {
+    background-color: var(--cv-bg-subtle) !important;
+}
+
+.compactview-row--translation .compactview-td--title {
+    padding-left: 1.25rem;
+}
+
+.compactview-row--translation .compactview-row__title-link {
+    color: var(--cv-text-muted);
+    font-weight: 400;
+}
+
+/* Workspace state indicators on translation rows */
+.compactview-row--ws-new .compactview-td { border-left: 3px solid #3b82f6; }
+.compactview-row--ws-changed .compactview-td { border-left: 3px solid #8b5cf6; }
+.compactview-row--ws-move .compactview-td { border-left: 3px solid #06b6d4; }
+.compactview-row--ws-deleted .compactview-td { border-left: 3px solid #ef4444; }
+.compactview-row--ws-deleted .compactview-row__title-link { text-decoration: line-through; opacity: 0.6; }
+
+/* Only apply border-left to the first cell per row */
+.compactview-row--ws-new .compactview-td:not(:first-child),
+.compactview-row--ws-changed .compactview-td:not(:first-child),
+.compactview-row--ws-move .compactview-td:not(:first-child),
+.compactview-row--ws-deleted .compactview-td:not(:first-child) {
+    border-left: none;
+}
+
+/* Free translation row indicator */
+.compactview-row--free .compactview-td:first-child {
+    border-left: 3px dashed var(--cv-accent);
+}
+
+/* Dark mode workspace state backgrounds for translation rows */
+[data-color-scheme="dark"] .compactview-row--translation .compactview-td,
+[data-color-scheme="dark"] .compactview-row--translation .compactview-td--fixed-left,
+[data-color-scheme="dark"] .compactview-row--translation .compactview-td--fixed-right {
+    background-color: var(--cv-bg-subtle) !important;
+}
+
 /* Note: Sorting toggle, pagination, and recordlist heading base styles
    are in base.css which is loaded automatically for all view modes. */
 
