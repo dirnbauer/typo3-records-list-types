@@ -633,6 +633,114 @@ final class RecordGridDataProvider implements SingletonInterface
     }
 
     /**
+     * Fetch connected translations for a set of parent record UIDs.
+     *
+     * Connected translations have the TCA transOrigPointerField (typically l10n_parent)
+     * pointing to a default-language record. They are grouped by parent UID.
+     *
+     * @param string $table The database table name
+     * @param int $pageId The page ID
+     * @param array<int> $parentUids UIDs of default-language parent records
+     * @return array<int, array<int, array<string, mixed>>> Parent UID => list of enriched translation records
+     */
+    public function getTranslationsForRecords(string $table, int $pageId, array $parentUids): array
+    {
+        if ($parentUids === []) {
+            return [];
+        }
+
+        $tca = $this->getTca($table);
+        $ctrl = $tca['ctrl'];
+        $transOrigPointerField = is_string($ctrl['transOrigPointerField'] ?? null) ? $ctrl['transOrigPointerField'] : '';
+        $languageField = is_string($ctrl['languageField'] ?? null) ? $ctrl['languageField'] : '';
+
+        if ($transOrigPointerField === '' || $languageField === '') {
+            return [];
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $backendUser = $this->getBackendUserAuthentication();
+
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
+            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $backendUser->workspace));
+
+        $queryBuilder
+            ->select('*')
+            ->from($table)
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'pid',
+                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER),
+                ),
+                $queryBuilder->expr()->in(
+                    $transOrigPointerField,
+                    $queryBuilder->createNamedParameter($parentUids, \Doctrine\DBAL\ArrayParameterType::INTEGER),
+                ),
+                $queryBuilder->expr()->gt(
+                    $languageField,
+                    $queryBuilder->createNamedParameter(0, ParameterType::INTEGER),
+                ),
+            )
+            ->orderBy($languageField, 'ASC');
+
+        $result = $queryBuilder->executeQuery();
+        $tableConfig = $this->configurationService->getTableConfig($table, $pageId);
+        $grouped = [];
+
+        while ($row = $result->fetchAssociative()) {
+            BackendUtility::workspaceOL($table, $row);
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $parentUidRaw = $row[$transOrigPointerField] ?? 0;
+            $parentUid = is_numeric($parentUidRaw) ? (int) $parentUidRaw : 0;
+            if ($parentUid <= 0) {
+                continue;
+            }
+
+            $grouped[$parentUid][] = $this->enrichRecord($table, $row, $tableConfig, $pageId);
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * Check whether a table supports language-aware records (has languageField + transOrigPointerField).
+     *
+     * @param string $table The database table name
+     * @return bool True if the table is language-aware
+     */
+    public function isLanguageAwareTable(string $table): bool
+    {
+        $tca = $this->getTca($table);
+        $ctrl = $tca['ctrl'];
+        $languageField = is_string($ctrl['languageField'] ?? null) ? $ctrl['languageField'] : '';
+        $transOrigPointerField = is_string($ctrl['transOrigPointerField'] ?? null) ? $ctrl['transOrigPointerField'] : '';
+
+        return $languageField !== '' && $transOrigPointerField !== '';
+    }
+
+    /**
+     * Get the TCA language field and transOrigPointerField names for a table.
+     *
+     * @param string $table The database table name
+     * @return array{languageField: string, transOrigPointerField: string}
+     */
+    public function getLanguageFields(string $table): array
+    {
+        $tca = $this->getTca($table);
+        $ctrl = $tca['ctrl'];
+
+        return [
+            'languageField' => is_string($ctrl['languageField'] ?? null) ? $ctrl['languageField'] : '',
+            'transOrigPointerField' => is_string($ctrl['transOrigPointerField'] ?? null) ? $ctrl['transOrigPointerField'] : '',
+        ];
+    }
+
+    /**
      * Get records with their actions (for use after actions have been collected).
      *
      * @param string $table The database table name

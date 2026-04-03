@@ -548,6 +548,9 @@ final class RecordListController extends CoreRecordListController
             $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
             $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
 
+            // Separate connected translations from default-language / free-mode records
+            $enrichedRecords = $this->groupTranslationsOnRecords($enrichedRecords, $tableName, $pageId, $recordGridDataProvider);
+
             // Sorting dropdown
             $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
             $sortingDropdownHtml = $this->createSortingDropdown(
@@ -2203,6 +2206,130 @@ final class RecordListController extends CoreRecordListController
         }
 
         return $records;
+    }
+
+    /**
+     * Separate connected translations from the flat record list and attach them
+     * to their parent (default-language) records. Free translations are kept as
+     * standalone cards with an `isFreeTranslation` flag.
+     *
+     * Connected translations are fetched via RecordGridDataProvider and enriched
+     * with language info + workspace overlays, then stored under the parent's
+     * `translations` key. Only default-language records and free translations
+     * remain in the returned array -- connected translations are removed from
+     * the top-level list so they don't appear as separate grid cards.
+     *
+     * @param array<int, array<string, mixed>> $records Enriched records (may include translations)
+     * @param string $tableName The table name
+     * @param int $pageId The current page ID
+     * @param RecordGridDataProvider $dataProvider The data provider for fetching translations
+     * @return array<int, array<string, mixed>> Records with translations grouped
+     */
+    protected function groupTranslationsOnRecords(
+        array $records,
+        string $tableName,
+        int $pageId,
+        RecordGridDataProvider $dataProvider,
+    ): array {
+        if (!$dataProvider->isLanguageAwareTable($tableName)) {
+            return $records;
+        }
+
+        $langFields = $dataProvider->getLanguageFields($tableName);
+        $languageField = $langFields['languageField'];
+        $transOrigPointerField = $langFields['transOrigPointerField'];
+
+        if ($languageField === '' || $transOrigPointerField === '') {
+            return $records;
+        }
+
+        // Split records into default-language, connected translations, and free translations
+        $defaultRecords = [];
+        $freeTranslations = [];
+
+        foreach ($records as $record) {
+            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
+            $langUidRaw = $rawRecord[$languageField] ?? 0;
+            $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
+            $parentPointerRaw = $rawRecord[$transOrigPointerField] ?? 0;
+            $parentPointer = is_numeric($parentPointerRaw) ? (int) $parentPointerRaw : 0;
+
+            if ($langUid === 0 || $langUid === -1) {
+                $record['translations'] = [];
+                $record['isFreeTranslation'] = false;
+                $defaultRecords[] = $record;
+            } elseif ($parentPointer === 0) {
+                $record['isFreeTranslation'] = true;
+                $record['translations'] = [];
+                $freeTranslations[] = $record;
+            }
+            // Connected translations (parentPointer > 0) are excluded from the
+            // top-level list; they will be fetched separately below.
+        }
+
+        // Fetch connected translations for all default-language parent UIDs
+        $parentUids = array_map(
+            static fn(array $r): int => is_numeric($r['uid'] ?? 0) ? (int) $r['uid'] : 0,
+            $defaultRecords,
+        );
+        $parentUids = array_filter($parentUids, static fn(int $uid): bool => $uid > 0);
+
+        if ($parentUids !== []) {
+            $translationsGrouped = $dataProvider->getTranslationsForRecords($tableName, $pageId, $parentUids);
+            $translationsGrouped = $this->enrichTranslationGroups($translationsGrouped, $tableName);
+
+            foreach ($defaultRecords as &$record) {
+                $uid = is_numeric($record['uid'] ?? 0) ? (int) $record['uid'] : 0;
+                $record['translations'] = $translationsGrouped[$uid] ?? [];
+            }
+            unset($record);
+        }
+
+        // Append free translations after all default-language records
+        return array_merge($defaultRecords, $freeTranslations);
+    }
+
+    /**
+     * Enrich grouped translation records with language flag info.
+     *
+     * @param array<int, array<int, array<string, mixed>>> $translationsGrouped Parent UID => translations
+     * @param string $tableName The table name
+     * @return array<int, array<int, array<string, mixed>>> Enriched translations
+     */
+    private function enrichTranslationGroups(array $translationsGrouped, string $tableName): array
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+        $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
+        $tcaForTable = $this->getTcaForTable($tableName);
+        $languageField = $tcaForTable['ctrl']['languageField'] ?? null;
+
+        if (!is_string($languageField) || $languageField === '') {
+            return $translationsGrouped;
+        }
+
+        foreach ($translationsGrouped as &$translations) {
+            foreach ($translations as &$translation) {
+                $rawRecord = is_array($translation['rawRecord'] ?? null) ? $translation['rawRecord'] : [];
+                $langUidRaw = $rawRecord[$languageField] ?? 0;
+                $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
+
+                $translation['sysLanguageUid'] = $langUid;
+                $translation['languageFlagIdentifier'] = '';
+                $translation['languageTitle'] = '';
+
+                foreach ($siteLanguages as $siteLanguage) {
+                    if ($siteLanguage->getLanguageId() === $langUid) {
+                        $translation['languageFlagIdentifier'] = $siteLanguage->getFlagIdentifier();
+                        $translation['languageTitle'] = $siteLanguage->getTitle();
+                        break;
+                    }
+                }
+            }
+            unset($translation);
+        }
+        unset($translations);
+
+        return $translationsGrouped;
     }
 
     /**
