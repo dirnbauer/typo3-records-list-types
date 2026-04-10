@@ -251,17 +251,16 @@ class GridViewActions {
         const dropzone = e.target.closest('.gridview-end-dropzone');
         if (!dropzone) return;
         if (dropzone.dataset.table !== this.draggedTable) return;
-        
-        // Get the last UID - we want to move after this element
-        const lastUid = dropzone.dataset.lastUid;
-        if (!lastUid) {
-            console.error('[GridView] No lastUid found on end dropzone');
+
+        const grid = this.getGridElement(dropzone);
+        const fallbackPid = this.draggedCard?.dataset.pid || this.keyboardDragCard?.dataset.pid || null;
+        const moveTarget = this.calculateEndMoveTarget(grid, fallbackPid);
+
+        if (moveTarget === null || moveTarget === '') {
+            console.error('[GridView] No move target found for end dropzone');
             return;
         }
-        
-        // Move after the last element (negative UID)
-        const moveTarget = '-' + lastUid;
-        
+
         this.executeMove(this.draggedTable, this.draggedUid, moveTarget);
     }
     
@@ -556,14 +555,12 @@ class GridViewActions {
         
         // Check if dropping at end position
         if (targetIndex >= wrappers.length) {
-            // End position - move after the last element
-            const lastUid = grid.dataset.lastUid;
-            if (!lastUid) {
-                console.error('[GridView] No lastUid found on grid');
+            moveTarget = this.calculateEndMoveTarget(grid, draggedCard.dataset.pid || null);
+            if (moveTarget === null || moveTarget === '') {
+                console.error('[GridView] No move target found on grid');
                 this.keyboardCancelDrag();
                 return;
             }
-            moveTarget = '-' + lastUid;
             announcePosition = 'end';
         } else {
             // Get the target card and calculate move target
@@ -641,38 +638,77 @@ class GridViewActions {
     // Shared Move Logic
     // =========================================================================
 
+    getGridElement(element) {
+        if (!element || typeof element.closest !== 'function') {
+            return null;
+        }
+
+        return element.closest('.gridview-card-grid');
+    }
+
+    getSortDirection(element) {
+        const grid = this.getGridElement(element);
+        return grid?.dataset?.sortDirection === 'desc' ? 'desc' : 'asc';
+    }
+
+    isDescendingSortDirection(element) {
+        return this.getSortDirection(element) === 'desc';
+    }
+
+    calculateMoveTargetBeforeTarget(targetCard, targetPid, searchDirection = 'previous') {
+        const wrapper = targetCard.closest('.gridview-card-wrapper');
+        const siblingProperty = searchDirection === 'next' ? 'nextElementSibling' : 'previousElementSibling';
+        let adjacentWrapper = wrapper?.[siblingProperty] ?? null;
+        let adjacentCard = null;
+        const draggedCard = this.draggedCard || this.keyboardDragCard;
+        const draggedTable = this.draggedTable || draggedCard?.dataset.table;
+
+        while (adjacentWrapper) {
+            const candidate = adjacentWrapper.querySelector('.gridview-card');
+            if (candidate && candidate !== draggedCard && candidate.dataset.table === draggedTable) {
+                adjacentCard = candidate;
+                break;
+            }
+            adjacentWrapper = adjacentWrapper[siblingProperty];
+        }
+
+        if (adjacentCard) {
+            return '-' + adjacentCard.dataset.uid;
+        }
+
+        return targetPid;
+    }
+
+    calculateEndMoveTarget(grid, fallbackPid = null) {
+        if (!grid) {
+            return null;
+        }
+
+        if (this.isDescendingSortDirection(grid)) {
+            return grid.dataset.pageId || fallbackPid;
+        }
+
+        const lastUid = grid.dataset.lastUid;
+        return lastUid ? '-' + lastUid : null;
+    }
+
     /**
      * Calculate the TYPO3 move target based on position
      */
     calculateMoveTarget(targetCard, position, targetUid, targetPid) {
-        if (position === 'after') {
-            // Move after target = negative target UID
-            return '-' + targetUid;
-        } else {
-            // Move before target = find previous card (skipping the dragged card)
-            const wrapper = targetCard.closest('.gridview-card-wrapper');
-            let prevWrapper = wrapper?.previousElementSibling;
-            let prevCard = null;
-            const draggedCard = this.draggedCard || this.keyboardDragCard;
-            const draggedTable = this.draggedTable || draggedCard?.dataset.table;
-            
-            // Skip the dragged card if it's the previous sibling
-            while (prevWrapper) {
-                const candidate = prevWrapper.querySelector('.gridview-card');
-                if (candidate && candidate !== draggedCard && candidate.dataset.table === draggedTable) {
-                    prevCard = candidate;
-                    break;
-                }
-                prevWrapper = prevWrapper.previousElementSibling;
+        if (this.isDescendingSortDirection(targetCard)) {
+            if (position === 'before') {
+                return '-' + targetUid;
             }
-            
-            if (prevCard) {
-                return '-' + prevCard.dataset.uid;
-            } else {
-                // First position - use page ID
-                return targetPid;
-            }
+
+            return this.calculateMoveTargetBeforeTarget(targetCard, targetPid, 'next');
         }
+
+        if (position === 'after') {
+            return '-' + targetUid;
+        }
+
+        return this.calculateMoveTargetBeforeTarget(targetCard, targetPid, 'previous');
     }
     
     async executeMove(table, uid, target) {

@@ -115,7 +115,9 @@
                         <div class="gridview-card-grid"
                              data-table="{table.tableName}"
                              data-can-reorder="{f:if(condition: table.canReorder, then: '1', else: '0')}"
+                             data-page-id="{pageId}"
                              data-last-uid="{table.lastRecordUid}"
+                             data-sort-direction="{table.sortDirection}"
                              data-multi-record-selection-row-selection="true"
                              {f:if(condition: table.canReorder, then: 'role="listbox" aria-label="{table.tableLabel} - reorderable list" aria-describedby="gridview-drag-instructions"')}>
                             <f:for each="{table.records}" as="record" iteration="iterator">

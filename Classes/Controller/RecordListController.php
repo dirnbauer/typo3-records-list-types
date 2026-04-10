@@ -1355,14 +1355,14 @@ final class RecordListController extends CoreRecordListController
         // Determine current icon based on direction
         $sortIcon = $currentSortDirection === 'desc' ? 'actions-sort-amount-down' : 'actions-sort-amount-up';
 
-        // Get label for "Nach Spalte" - show current field name if selected
-        $fieldLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
-        $fieldLabel = $fieldLabelTranslated !== '' ? $fieldLabelTranslated : 'Nach Spalte';
+        $fieldModeLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
+        $fieldModeLabel = $fieldModeLabelTranslated !== '' ? $fieldModeLabelTranslated : 'By Column';
+        $currentFieldLabel = $fieldModeLabel;
         if ($currentSortField !== '') {
             // Find the label for the current sort field
             foreach ($sortableFields as $field) {
                 if (($field['field'] ?? '') === $currentSortField) {
-                    $fieldLabel = $field['label'] ?? $currentSortField;
+                    $currentFieldLabel = $field['label'] ?? $currentSortField;
                     break;
                 }
             }
@@ -1380,8 +1380,12 @@ final class RecordListController extends CoreRecordListController
 
         // Build custom dropdown HTML matching the toggle button styling
         $html = '<button type="button" class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">';
+        $html .= $iconFactory->getIcon('actions-filter', IconSize::SMALL)->render();
+        $html .= '<span class="gridview-sorting-toggle__text">' . htmlspecialchars($fieldModeLabel) . '</span>';
+        $html .= '<span class="gridview-sorting-toggle__value">';
         $html .= $iconFactory->getIcon($sortIcon, IconSize::SMALL)->render();
-        $html .= ' <span>' . htmlspecialchars($fieldLabel) . '</span>';
+        $html .= '<span>' . htmlspecialchars($currentFieldLabel) . '</span>';
+        $html .= '</span>';
         $html .= '</button>';
         $html .= '<ul class="dropdown-menu">';
 
@@ -1544,6 +1548,7 @@ final class RecordListController extends CoreRecordListController
         $isFieldActive = ($currentMode === 'field');
         $isAscActive = $currentDirection === 'asc';
         $isDescActive = $currentDirection === 'desc';
+        $manualStateLabel = $isDescActive ? $descLabel : $ascLabel;
 
         // Get the heading label
         $headingLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.label');
@@ -1558,10 +1563,11 @@ final class RecordListController extends CoreRecordListController
         // Manual sorting button with dropdown for asc/desc
         if ($isManualActive) {
             // When manual is active, show dropdown for direction
-            $html .= '<div class="btn-group" role="group">';
+            $html .= '<div class="btn-group gridview-sorting-toggle__group" role="group">';
             $html .= '<button type="button" class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="' . htmlspecialchars($manualTitle) . '">';
-            $html .= $iconFactory->getIcon('actions-sort-amount-' . ($isAscActive ? 'up' : 'down'), IconSize::SMALL)->render();
-            $html .= ' <span>' . htmlspecialchars($manualLabel) . '</span>';
+            $html .= $iconFactory->getIcon('actions-move', IconSize::SMALL)->render();
+            $html .= '<span class="gridview-sorting-toggle__text">' . htmlspecialchars($manualLabel) . '</span>';
+            $html .= '<span class="gridview-sorting-toggle__value">' . htmlspecialchars($manualStateLabel) . '</span>';
             $html .= '</button>';
             $html .= '<ul class="dropdown-menu">';
             $html .= '<li><a class="dropdown-item' . ($isAscActive ? ' active' : '') . '" href="' . htmlspecialchars($ascUrl) . '">' . $iconFactory->getIcon('actions-sort-amount-up', IconSize::SMALL)->render() . ' ' . htmlspecialchars($ascLabel) . '</a></li>';
@@ -1572,21 +1578,21 @@ final class RecordListController extends CoreRecordListController
             // When not active, simple link button
             $html .= '<a href="' . htmlspecialchars($manualUrl) . '" class="btn btn-default btn-sm gridview-sorting-toggle__btn" title="' . htmlspecialchars($manualTitle) . '">';
             $html .= $iconFactory->getIcon('actions-move', IconSize::SMALL)->render();
-            $html .= ' <span>' . htmlspecialchars($manualLabel) . '</span>';
+            $html .= '<span class="gridview-sorting-toggle__text">' . htmlspecialchars($manualLabel) . '</span>';
             $html .= '</a>';
         }
 
         // Field sorting button - when active, show as dropdown with sorting options
         if ($isFieldActive && $sortingDropdownHtml !== '') {
             // When field mode is active, integrate the sorting dropdown into the button
-            $html .= '<div class="btn-group" role="group">';
+            $html .= '<div class="btn-group gridview-sorting-toggle__group" role="group">';
             $html .= $sortingDropdownHtml; // The dropdown already has proper button styling
             $html .= '</div>';
         } else {
             // When not active, simple link button to switch to field mode
             $html .= '<a href="' . htmlspecialchars($fieldUrl) . '" class="btn btn-default btn-sm gridview-sorting-toggle__btn" title="' . htmlspecialchars($fieldTitle) . '">';
             $html .= $iconFactory->getIcon('actions-filter', IconSize::SMALL)->render();
-            $html .= ' <span>' . htmlspecialchars($fieldLabel) . '</span>';
+            $html .= '<span class="gridview-sorting-toggle__text">' . htmlspecialchars($fieldLabel) . '</span>';
             $html .= '</a>';
         }
 

@@ -141,52 +141,111 @@
 .gridview-sorting-wrapper {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.625rem;
+    flex-wrap: wrap;
 }
 
 .gridview-sorting-label {
     font-size: 0.6875rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.08em;
     color: var(--typo3-text-color-variant, #6b7280);
+}
+
+.gridview-sorting-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
 }
 
 .gridview-sorting-toggle {
     display: inline-flex;
-    background: var(--typo3-surface-container-low, #e5e7eb);
-    border: 1px solid var(--typo3-component-border-color, transparent);
-    border-radius: var(--typo3-component-border-radius, 6px);
-    padding: 2px;
-    gap: 2px;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background: var(--typo3-surface-container-low, #eceff4);
+    border: 1px solid var(--typo3-component-border-color, #d4d4d8);
+    border-radius: 0.95rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.gridview-sorting-toggle__group {
+    display: inline-flex;
+    align-items: stretch;
+    min-width: 0;
 }
 
 .gridview-sorting-toggle__btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.625rem;
-    font-size: 0.75rem;
-    font-weight: 500;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1;
     text-decoration: none;
-    border: none;
-    border-radius: calc(var(--typo3-component-border-radius, 6px) - 2px);
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
     background: transparent;
     color: var(--typo3-text-color-variant, #6b7280);
-    transition: all 0.15s ease-in-out;
+    transition:
+        background-color 0.15s ease-in-out,
+        border-color 0.15s ease-in-out,
+        box-shadow 0.15s ease-in-out,
+        color 0.15s ease-in-out,
+        transform 0.15s ease-in-out;
     cursor: pointer;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.gridview-sorting-toggle__text {
+    white-space: nowrap;
+}
+
+.gridview-sorting-toggle__value {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    min-width: 0;
+    max-width: 12rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: var(--typo3-text-color-base, #111827);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.gridview-sorting-toggle__value .icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.gridview-sorting-toggle__value span {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .gridview-sorting-toggle__btn .icon {
     width: 14px;
     height: 14px;
-    opacity: 0.7;
+    opacity: 0.78;
+    flex-shrink: 0;
 }
 
 .gridview-sorting-toggle__btn:hover {
-    background: var(--typo3-surface-container-high, rgba(255, 255, 255, 0.5));
+    background: rgba(255, 255, 255, 0.68);
     color: var(--typo3-text-color-base, #374151);
     text-decoration: none;
+    transform: translateY(-1px);
 }
 
 .gridview-sorting-toggle__btn:hover .icon {
@@ -195,18 +254,28 @@
 
 /* Active state */
 .gridview-sorting-toggle__btn--active {
-    background: var(--typo3-component-bg, #ffffff);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.98));
+    border-color: rgba(37, 99, 235, 0.22);
     color: var(--typo3-state-default-primary-color, #1d4ed8);
-    box-shadow: var(--typo3-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.1));
+    box-shadow:
+        0 8px 18px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .gridview-sorting-toggle__btn--active .icon {
     opacity: 1;
 }
 
+.gridview-sorting-toggle__btn--active .gridview-sorting-toggle__value {
+    background: rgba(29, 78, 216, 0.08);
+    border-color: rgba(29, 78, 216, 0.12);
+    color: inherit;
+}
+
 .gridview-sorting-toggle__btn--active:hover {
-    background: var(--typo3-component-bg, #ffffff);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(219, 234, 254, 0.98));
     color: var(--typo3-state-hover-primary-color, #1e40af);
+    border-color: rgba(29, 78, 216, 0.26);
 }
 
 /* Button group resets */
@@ -218,17 +287,17 @@
 
 .gridview-sorting-toggle > .btn,
 .gridview-sorting-toggle > a {
-    border-radius: 4px;
+    border-radius: 0.75rem;
 }
 
 .gridview-sorting-toggle .btn-group:first-child .btn {
-    border-radius: 4px;
+    border-radius: 0.75rem;
 }
 
 .gridview-sorting-toggle .btn-sm,
 .gridview-sorting-toggle .btn.btn-sm {
-    padding: 0.375rem 0.625rem;
-    font-size: 0.75rem;
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.8125rem;
 }
 
 .gridview-sorting-toggle .btn-sm .icon {
@@ -238,20 +307,22 @@
 
 /* Dropdown menu within toggle */
 .gridview-sorting-toggle .dropdown-menu {
-    min-width: 8rem;
+    min-width: 11rem;
     font-size: 0.75rem;
-    border-radius: var(--typo3-component-border-radius, 4px);
-    box-shadow: var(--typo3-shadow-3, 0 4px 12px rgba(0, 0, 0, 0.15));
+    border-radius: 0.875rem;
+    box-shadow: var(--typo3-shadow-3, 0 10px 28px rgba(15, 23, 42, 0.16));
     border: 1px solid var(--typo3-component-border-color, #d1d5db);
+    padding: 0.375rem;
 }
 
 .gridview-sorting-toggle .dropdown-item {
     display: flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
+    padding: 0.5rem 0.75rem;
     font-size: 0.75rem;
     color: var(--typo3-component-color, #374151);
+    border-radius: 0.625rem;
 }
 
 .gridview-sorting-toggle .dropdown-item .icon {
@@ -279,8 +350,9 @@
 }
 
 [data-color-scheme="dark"] .gridview-sorting-toggle {
-    background: var(--typo3-surface-container-low, #374151);
+    background: var(--typo3-surface-container-low, #273244);
     border-color: var(--typo3-component-border-color, #4b5563);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 [data-color-scheme="dark"] .gridview-sorting-toggle__btn {
@@ -288,18 +360,34 @@
 }
 
 [data-color-scheme="dark"] .gridview-sorting-toggle__btn:hover {
-    background: var(--typo3-surface-container-high, rgba(255, 255, 255, 0.1));
+    background: rgba(255, 255, 255, 0.08);
     color: var(--typo3-text-color-base, #e5e7eb);
 }
 
 [data-color-scheme="dark"] .gridview-sorting-toggle__btn--active {
-    background: var(--typo3-component-bg, #1f2937);
-    color: var(--typo3-state-default-primary-color, #60a5fa);
-    box-shadow: var(--typo3-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.3));
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.2), rgba(30, 41, 59, 0.96));
+    border-color: rgba(96, 165, 250, 0.22);
+    color: #bfdbfe;
+    box-shadow:
+        0 10px 24px rgba(2, 6, 23, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle__value {
+    background: rgba(15, 23, 42, 0.55);
+    border-color: rgba(148, 163, 184, 0.16);
+    color: #e2e8f0;
+}
+
+[data-color-scheme="dark"] .gridview-sorting-toggle__btn--active .gridview-sorting-toggle__value {
+    background: rgba(148, 197, 255, 0.12);
+    border-color: rgba(148, 197, 255, 0.12);
+    color: #dbeafe;
 }
 
 [data-color-scheme="dark"] .gridview-sorting-toggle__btn--active:hover {
-    color: var(--typo3-state-hover-primary-color, #93c5fd);
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.24), rgba(30, 41, 59, 0.98));
+    color: #dbeafe;
 }
 
 [data-color-scheme="dark"] .gridview-sorting-toggle .dropdown-menu {
@@ -327,8 +415,9 @@
     }
 
     html:not([data-color-scheme="light"]) .gridview-sorting-toggle {
-        background: var(--typo3-surface-container-low, #374151);
+        background: var(--typo3-surface-container-low, #273244);
         border-color: var(--typo3-component-border-color, #4b5563);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 
     html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn {
@@ -336,18 +425,34 @@
     }
 
     html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn:hover {
-        background: var(--typo3-surface-container-high, rgba(255, 255, 255, 0.1));
+        background: rgba(255, 255, 255, 0.08);
         color: var(--typo3-text-color-base, #e5e7eb);
     }
 
     html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn--active {
-        background: var(--typo3-component-bg, #1f2937);
-        color: var(--typo3-state-default-primary-color, #60a5fa);
-        box-shadow: var(--typo3-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.3));
+        background: linear-gradient(180deg, rgba(37, 99, 235, 0.2), rgba(30, 41, 59, 0.96));
+        border-color: rgba(96, 165, 250, 0.22);
+        color: #bfdbfe;
+        box-shadow:
+            0 10px 24px rgba(2, 6, 23, 0.28),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle__value {
+        background: rgba(15, 23, 42, 0.55);
+        border-color: rgba(148, 163, 184, 0.16);
+        color: #e2e8f0;
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn--active .gridview-sorting-toggle__value {
+        background: rgba(148, 197, 255, 0.12);
+        border-color: rgba(148, 197, 255, 0.12);
+        color: #dbeafe;
     }
 
     html:not([data-color-scheme="light"]) .gridview-sorting-toggle__btn--active:hover {
-        color: var(--typo3-state-hover-primary-color, #93c5fd);
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.24), rgba(30, 41, 59, 0.98));
+        color: #dbeafe;
     }
 
     html:not([data-color-scheme="light"]) .gridview-sorting-toggle .dropdown-menu {
