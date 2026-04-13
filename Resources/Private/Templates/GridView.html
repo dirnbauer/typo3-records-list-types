@@ -47,16 +47,14 @@
                                     <f:then>
                                         <f:comment>In single table mode - link back to all tables</f:comment>
                                         <a href="{table.clearTableUrl}">
-                                            <span class="fw-bold">{table.tableLabel}</span>
-                                            <span>({table.recordCount})</span>
+                                            {table.tableLabel} (<span>{table.recordCount}</span>)
                                             <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
                                         </a>
                                     </f:then>
                                     <f:else>
                                         <f:comment>In multi-table mode - link to single table view</f:comment>
                                         <a href="{table.singleTableUrl}">
-                                            <span class="fw-bold">{table.tableLabel}</span>
-                                            <span>({table.recordCount})</span>
+                                            {table.tableLabel} (<span>{table.recordCount}</span>)
                                             <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
                                         </a>
                                     </f:else>

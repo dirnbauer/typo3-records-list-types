@@ -13,52 +13,11 @@
  */
 
 /* =============================================================================
-   1. Recordlist Heading - Table header bar shared by all views
+   1. Recordlist Heading - rely on TYPO3 core recordlist styling
    ============================================================================= */
 
 .recordlist {
     margin-bottom: 1.5rem;
-}
-
-.recordlist-heading {
-    background: var(--typo3-component-bg, #ffffff);
-    border: 1px solid var(--typo3-component-border-color, #d4d4d8);
-    border-radius: 0.5rem 0.5rem 0 0;
-    padding: 0.75rem 1rem;
-}
-
-.recordlist-heading-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.recordlist-heading-title {
-    flex: 0 0 auto;
-}
-
-.recordlist-heading-title a {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    color: var(--typo3-text-color-base, #18181b);
-    text-decoration: none;
-    font-size: 0.875rem;
-    transition: color 100ms ease;
-}
-
-.recordlist-heading-title a:hover {
-    color: var(--typo3-state-default-primary-color, #3b82f6);
-}
-
-.recordlist-heading-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-left: auto;
-    flex-wrap: wrap;
 }
 
 /* Consistent button sizing in action bar */
