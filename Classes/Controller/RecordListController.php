@@ -1325,37 +1325,7 @@ final class RecordListController extends CoreRecordListController
         $html .= '</button>';
         $html .= '<ul class="dropdown-menu">';
 
-        // Add sort field options
-        foreach ($sortableFields as $field) {
-            $fieldName = $field['field'] ?? '';
-            $itemLabel = $field['label'] ?? $fieldName;
-
-            if ($fieldName === '') {
-                continue;
-            }
-
-            $isActive = ($fieldName === $currentSortField);
-
-            try {
-                $sortParams = $baseParams;
-                $sortParams['sortingMode'][$tableName] = 'field';
-                $sortParams['sort'][$tableName]['field'] = $fieldName;
-                $sortParams['sort'][$tableName]['direction'] = $currentSortDirection;
-
-                $url = (string) $uriBuilder->buildUriFromRoute('records', $sortParams);
-
-                $html .= '<li><a class="dropdown-item' . ($isActive ? ' active' : '') . '" href="' . htmlspecialchars($url) . '">';
-                $html .= htmlspecialchars($itemLabel);
-                $html .= '</a></li>';
-            } catch (Exception $e) {
-                // Skip if URL building fails
-            }
-        }
-
-        // Add divider
-        $html .= '<li><hr class="dropdown-divider"></li>';
-
-        // Add direction options
+        // Add direction options first, then the sortable field list.
         $ascLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
         $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Aufsteigend';
         $descLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
@@ -1389,6 +1359,34 @@ final class RecordListController extends CoreRecordListController
             $html .= '</a></li>';
         } catch (Exception $e) {
             // Skip if URL building fails
+        }
+
+        $html .= '<li><hr class="dropdown-divider"></li>';
+
+        foreach ($sortableFields as $field) {
+            $fieldName = $field['field'] ?? '';
+            $itemLabel = $field['label'] ?? $fieldName;
+
+            if ($fieldName === '') {
+                continue;
+            }
+
+            $isActive = ($fieldName === $currentSortField);
+
+            try {
+                $sortParams = $baseParams;
+                $sortParams['sortingMode'][$tableName] = 'field';
+                $sortParams['sort'][$tableName]['field'] = $fieldName;
+                $sortParams['sort'][$tableName]['direction'] = $currentSortDirection;
+
+                $url = (string) $uriBuilder->buildUriFromRoute('records', $sortParams);
+
+                $html .= '<li><a class="dropdown-item' . ($isActive ? ' active' : '') . '" href="' . htmlspecialchars($url) . '">';
+                $html .= htmlspecialchars($itemLabel);
+                $html .= '</a></li>';
+            } catch (Exception $e) {
+                // Skip if URL building fails
+            }
         }
 
         $html .= '</ul>';
