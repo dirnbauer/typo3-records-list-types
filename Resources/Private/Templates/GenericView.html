@@ -47,15 +47,13 @@
                                 <f:if condition="{currentTable}">
                                     <f:then>
                                         <a href="{table.clearTableUrl}">
-                                            <span class="fw-bold">{table.tableLabel}</span>
-                                            <span>({table.recordCount})</span>
+                                            {table.tableLabel} (<span>{table.recordCount}</span>)
                                             <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
                                         </a>
                                     </f:then>
                                     <f:else>
                                         <a href="{table.singleTableUrl}">
-                                            <span class="fw-bold">{table.tableLabel}</span>
-                                            <span>({table.recordCount})</span>
+                                            {table.tableLabel} (<span>{table.recordCount}</span>)
                                             <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
                                         </a>
                                     </f:else>
@@ -74,6 +72,10 @@
                                 
                                 <f:if condition="{table.actionButtons.downloadButton}">
                                     <f:format.raw>{table.actionButtons.downloadButton}</f:format.raw>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.columnSelectorButton}">
+                                    <f:format.raw>{table.actionButtons.columnSelectorButton}</f:format.raw>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.collapseButton}">
@@ -174,4 +176,3 @@
 </div>
 
 </html>
-

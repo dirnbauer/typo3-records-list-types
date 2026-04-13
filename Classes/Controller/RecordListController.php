@@ -13,7 +13,6 @@ use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
-use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Imaging\IconFactory;
@@ -231,7 +230,7 @@ final class RecordListController extends CoreRecordListController
         $dbList->start($this->pageContext->pageId, $this->table, $pointer, $this->searchTerm, $searchLevels);
 
         // Render the appropriate view (all view types use the same render path)
-        $customContent = $this->renderViewContent($request, $pageId, $this->table, $this->searchTerm, $searchLevels, $viewMode);
+        $customContent = $this->renderViewContent($request, $dbList, $pageId, $this->table, $this->searchTerm, $searchLevels, $viewMode);
 
         // Page title
         if ($this->pageContext->pageId === 0) {
@@ -358,6 +357,7 @@ final class RecordListController extends CoreRecordListController
      */
     protected function renderViewContent(
         ServerRequestInterface $request,
+        DatabaseRecordList $dbList,
         int $pageId,
         string $table,
         string $searchTerm,
@@ -494,10 +494,8 @@ final class RecordListController extends CoreRecordListController
 
             // Action buttons
             $actionButtons = $this->createTableActionButtons(
+                $dbList,
                 $tableName,
-                $pageId,
-                $viewMode,
-                $request,
                 $recordCount,
                 $isSingleTableMode,
             );
@@ -1198,27 +1196,16 @@ final class RecordListController extends CoreRecordListController
      * - collapseButton: HTML for "Collapse/Expand" button
      *
      * @param string $tableName The database table name
-     * @param int $pageId The current page ID
-     * @param string $viewMode The current view mode (grid/compact)
-     * @param ServerRequestInterface $request The current request
      * @param int $recordCount Number of records for this table
      * @param bool $isSingleTableMode Whether we're in single table view mode
      * @return array<string, string> Array of rendered button HTML
      */
     protected function createTableActionButtons(
+        DatabaseRecordList $dbList,
         string $tableName,
-        int $pageId,
-        string $viewMode,
-        ServerRequestInterface $request,
         int $recordCount,
         bool $isSingleTableMode,
     ): array {
-        $componentFactory = GeneralUtility::makeInstance(ComponentFactory::class);
-        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        $lang = $this->getLanguageService();
-        $backendUser = $this->getBackendUserAuthentication();
-
         $buttons = [
             'newRecordButton' => '',
             'downloadButton' => '',
@@ -1226,105 +1213,53 @@ final class RecordListController extends CoreRecordListController
             'collapseButton' => '',
         ];
 
-        // New record button - check if user can modify this table
-        if ($backendUser->check('tables_modify', $tableName)) {
-            try {
-                $newRecordUrl = (string) $uriBuilder->buildUriFromRoute('record_edit', [
-                    'edit' => [$tableName => [$pageId => 'new']],
-                    'returnUrl' => (string) $request->getUri(),
-                ]);
-
-                $newButton = $componentFactory->createLinkButton()
-                    ->setHref($newRecordUrl)
-                    ->setTitle($lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:newRecordGeneral'))
-                    ->setIcon($iconFactory->getIcon('actions-plus', IconSize::SMALL))
-                    ->setShowLabelText(true);
-
-                $buttons['newRecordButton'] = $newButton->render();
-            } catch (Exception $e) {
-                // Route not found
-            }
+        $newRecordButton = $dbList->createActionButtonNewRecord($tableName);
+        if ($newRecordButton !== null) {
+            $buttons['newRecordButton'] = $newRecordButton->render();
         }
 
-        // Download/Export button
-        if ($backendUser->isExportEnabled() && $recordCount > 0) {
-            try {
-                $downloadUrl = (string) $uriBuilder->buildUriFromRoute('tx_impexp_export', [
-                    'tx_impexp' => ['list' => [$tableName . ':' . $pageId]],
-                ]);
-
-                $exportLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:export');
-                $downloadButton = $componentFactory->createLinkButton()
-                    ->setHref($downloadUrl)
-                    ->setTitle($exportLabel !== '' ? $exportLabel : 'Download')
-                    ->setIcon($iconFactory->getIcon('actions-download', IconSize::SMALL))
-                    ->setShowLabelText(true);
-
-                $buttons['downloadButton'] = $downloadButton->render();
-            } catch (Exception $e) {
-                // impexp not installed
-            }
-        }
-
-        // Column selector button (using TYPO3 web component)
-        try {
-            $columnSelectorUrl = (string) $uriBuilder->buildUriFromRoute('ajax_show_columns_selector', [
-                'id' => $pageId,
-                'table' => $tableName,
-            ]);
-            $columnSelectorTarget = (string) $uriBuilder->buildUriFromRoute('records', [
-                'id' => $pageId,
-                'displayMode' => $viewMode,
-            ]) . '#recordlist-' . $tableName;
-
-            $tableLabel = $this->getTableLabel($tableName);
-            $showColumnsSelectionLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_column_selector.xlf:showColumnsSelection');
-            $updateColumnViewLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_column_selector.xlf:updateColumnView');
-            $cancelLabel = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.cancel');
-            $errorLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_column_selector.xlf:updateColumnView.error');
-            $showColumnsLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_column_selector.xlf:showColumns');
-            $buttons['columnSelectorButton'] = sprintf(
-                '<typo3-backend-column-selector-button
-                    data-url="%s"
-                    data-target="%s"
-                    data-title="%s"
-                    data-button-ok="%s"
-                    data-button-close="%s"
-                    data-error-message="%s">
-                    <button type="button" class="btn btn-default btn-sm">%s <span>%s</span></button>
-                </typo3-backend-column-selector-button>',
-                htmlspecialchars($columnSelectorUrl),
-                htmlspecialchars($columnSelectorTarget),
-                htmlspecialchars($showColumnsSelectionLabel),
-                htmlspecialchars($updateColumnViewLabel !== '' ? $updateColumnViewLabel : 'Update'),
-                htmlspecialchars($cancelLabel !== '' ? $cancelLabel : 'Cancel'),
-                htmlspecialchars($errorLabel !== '' ? $errorLabel : 'Error'),
-                $iconFactory->getIcon('actions-options', IconSize::SMALL)->render(),
-                htmlspecialchars($showColumnsLabel !== '' ? $showColumnsLabel : 'Show columns'),
-            );
-        } catch (Exception $e) {
-            // Route not found
-        }
-
-        // Collapse/Expand button (only in multi-table mode)
+        $buttons['downloadButton'] = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'createActionButtonDownload',
+            [$tableName, $recordCount],
+        );
+        $buttons['columnSelectorButton'] = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'createActionButtonColumnSelector',
+            [$tableName],
+        );
         if (!$isSingleTableMode) {
-            $collapseButton = $componentFactory->createGenericButton()
-                ->setTag('button')
-                ->setAttributes([
-                    'type' => 'button',
-                    'class' => 'btn btn-default btn-sm t3js-toggle-recordlist',
-                    'data-bs-toggle' => 'collapse',
-                    'data-bs-target' => '#recordlist-' . $tableName,
-                    'aria-expanded' => 'true',
-                    'data-table' => $tableName,
-                ])
-                ->setTitle($lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:collapseExpandTable'))
-                ->setIcon($iconFactory->getIcon('actions-view-list-collapse', IconSize::SMALL));
-
-            $buttons['collapseButton'] = $collapseButton->render();
+            $buttons['collapseButton'] = $this->renderDatabaseRecordListButton(
+                $dbList,
+                'createActionButtonCollapse',
+                [$tableName],
+            );
         }
 
         return $buttons;
+    }
+
+    /**
+     * Render a TYPO3 core DatabaseRecordList button via its native button builder.
+     *
+     * The core keeps some table header button methods protected. Using reflection
+     * here lets the custom views render the exact same button markup and behavior
+     * as the native list view instead of approximating it.
+     *
+     * @param list<mixed> $arguments
+     */
+    protected function renderDatabaseRecordListButton(
+        DatabaseRecordList $dbList,
+        string $methodName,
+        array $arguments,
+    ): string {
+        try {
+            $method = new ReflectionMethod($dbList, $methodName);
+            $button = $method->invokeArgs($dbList, $arguments);
+            return is_object($button) && method_exists($button, 'render') ? $button->render() : '';
+        } catch (\ReflectionException|Exception $e) {
+            return '';
+        }
     }
 
     /**
