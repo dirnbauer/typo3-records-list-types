@@ -7,6 +7,7 @@ namespace Webconsulting\RecordsListTypes\Controller;
 use Exception;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use ReflectionException;
 use ReflectionMethod;
 use RuntimeException;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
@@ -1257,7 +1258,7 @@ final class RecordListController extends CoreRecordListController
             $method = new ReflectionMethod($dbList, $methodName);
             $button = $method->invokeArgs($dbList, $arguments);
             return is_object($button) && method_exists($button, 'render') ? $button->render() : '';
-        } catch (\ReflectionException|Exception $e) {
+        } catch (ReflectionException|Exception $e) {
             return '';
         }
     }
