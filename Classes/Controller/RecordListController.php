@@ -1389,7 +1389,42 @@ final class RecordListController extends CoreRecordListController
         $html .= '</button>';
         $html .= '<ul class="dropdown-menu">';
 
-        // Add sort field options
+        // Direction options first (then divider, then sortable fields)
+        $ascLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
+        $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Aufsteigend';
+        $descLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
+        $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Absteigend';
+
+        try {
+            $ascParams = $baseParams;
+            $ascParams['sortingMode'][$tableName] = 'field';
+            if ($currentSortField !== '') {
+                $ascParams['sort'][$tableName]['field'] = $currentSortField;
+            }
+            $ascParams['sort'][$tableName]['direction'] = 'asc';
+            $ascUrl = (string) $uriBuilder->buildUriFromRoute('records', $ascParams);
+
+            $html .= '<li><a class="dropdown-item' . ($currentSortDirection === 'asc' ? ' active' : '') . '" href="' . htmlspecialchars($ascUrl) . '">';
+            $html .= $iconFactory->getIcon('actions-sort-amount-up', IconSize::SMALL)->render() . ' ' . htmlspecialchars($ascLabel);
+            $html .= '</a></li>';
+
+            $descParams = $baseParams;
+            $descParams['sortingMode'][$tableName] = 'field';
+            if ($currentSortField !== '') {
+                $descParams['sort'][$tableName]['field'] = $currentSortField;
+            }
+            $descParams['sort'][$tableName]['direction'] = 'desc';
+            $descUrl = (string) $uriBuilder->buildUriFromRoute('records', $descParams);
+
+            $html .= '<li><a class="dropdown-item' . ($currentSortDirection === 'desc' ? ' active' : '') . '" href="' . htmlspecialchars($descUrl) . '">';
+            $html .= $iconFactory->getIcon('actions-sort-amount-down', IconSize::SMALL)->render() . ' ' . htmlspecialchars($descLabel);
+            $html .= '</a></li>';
+        } catch (Exception $e) {
+            // Skip if URL building fails
+        }
+
+        $html .= '<li><hr class="dropdown-divider"></li>';
+
         foreach ($sortableFields as $field) {
             $fieldName = $field['field'] ?? '';
             $itemLabel = $field['label'] ?? $fieldName;
@@ -1414,45 +1449,6 @@ final class RecordListController extends CoreRecordListController
             } catch (Exception $e) {
                 // Skip if URL building fails
             }
-        }
-
-        // Add divider
-        $html .= '<li><hr class="dropdown-divider"></li>';
-
-        // Add direction options
-        $ascLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
-        $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Aufsteigend';
-        $descLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
-        $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Absteigend';
-
-        try {
-            // Ascending option
-            $ascParams = $baseParams;
-            $ascParams['sortingMode'][$tableName] = 'field';
-            if ($currentSortField !== '') {
-                $ascParams['sort'][$tableName]['field'] = $currentSortField;
-            }
-            $ascParams['sort'][$tableName]['direction'] = 'asc';
-            $ascUrl = (string) $uriBuilder->buildUriFromRoute('records', $ascParams);
-
-            $html .= '<li><a class="dropdown-item' . ($currentSortDirection === 'asc' ? ' active' : '') . '" href="' . htmlspecialchars($ascUrl) . '">';
-            $html .= $iconFactory->getIcon('actions-sort-amount-up', IconSize::SMALL)->render() . ' ' . htmlspecialchars($ascLabel);
-            $html .= '</a></li>';
-
-            // Descending option
-            $descParams = $baseParams;
-            $descParams['sortingMode'][$tableName] = 'field';
-            if ($currentSortField !== '') {
-                $descParams['sort'][$tableName]['field'] = $currentSortField;
-            }
-            $descParams['sort'][$tableName]['direction'] = 'desc';
-            $descUrl = (string) $uriBuilder->buildUriFromRoute('records', $descParams);
-
-            $html .= '<li><a class="dropdown-item' . ($currentSortDirection === 'desc' ? ' active' : '') . '" href="' . htmlspecialchars($descUrl) . '">';
-            $html .= $iconFactory->getIcon('actions-sort-amount-down', IconSize::SMALL)->render() . ' ' . htmlspecialchars($descLabel);
-            $html .= '</a></li>';
-        } catch (Exception $e) {
-            // Skip if URL building fails
         }
 
         $html .= '</ul>';
