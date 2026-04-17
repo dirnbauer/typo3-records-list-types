@@ -2174,7 +2174,7 @@ final class RecordListController extends CoreRecordListController
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
 
         try {
-            $record['editUrl'] = (string)$uriBuilder->buildUriFromRoute('record_edit', [
+            $record['editUrl'] = (string) $uriBuilder->buildUriFromRoute('record_edit', [
                 'edit' => [
                     $tableNameRaw => [
                         $uid => 'edit',
@@ -2183,7 +2183,7 @@ final class RecordListController extends CoreRecordListController
                 'module' => 'records',
                 'returnUrl' => $returnUrl,
             ]);
-            $record['contextualEditUrl'] = (string)$uriBuilder->buildUriFromRoute('record_edit_contextual', [
+            $record['contextualEditUrl'] = (string) $uriBuilder->buildUriFromRoute('record_edit_contextual', [
                 'edit' => [
                     $tableNameRaw => [
                         $uid => 'edit',
@@ -2219,7 +2219,7 @@ final class RecordListController extends CoreRecordListController
         }
 
         try {
-            return (string)$uriBuilder->buildUriFromRoute('records', $params);
+            return (string) $uriBuilder->buildUriFromRoute('records', $params);
         } catch (Exception) {
             return '';
         }
