@@ -450,15 +450,14 @@ typo3-backend-contextual-record-edit-trigger.teaserview-action {
     font-size: 0.8125rem;
     min-width: 10rem;
     margin: 0;
-    inset: auto auto auto 0;
-    transform: none;
+    inset: auto;
+    position-anchor: auto;
+    position-area: block-end span-inline-end;
+    margin-block-start: 0.25rem;
 }
 
 .teaserview-card__actions .dropdown-menu[popover]:popover-open {
-    position: absolute;
-    top: calc(100% + 0.25rem);
-    right: 0;
-    left: auto;
+    display: block;
 }
 
 .teaserview-card__actions .dropdown-item {

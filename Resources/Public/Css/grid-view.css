@@ -838,15 +838,16 @@ typo3-backend-contextual-record-edit-trigger.gridview-action-sm {
 }
 
 .gridview-card__header-actions .dropdown-menu[popover] {
-    inset: auto auto auto 0;
-    top: calc(100% + 2px);
-    right: 0;
-    left: auto;
+    position-anchor: auto;
+    position-area: block-end span-inline-end;
+    margin: 0;
+    inset: auto;
     min-inline-size: 10rem;
 }
 
 .gridview-card__header-actions .dropdown-menu:popover-open {
     display: block;
+    margin-block-start: 2px;
 }
 
 .gridview-card__header-actions .dropdown-item {
