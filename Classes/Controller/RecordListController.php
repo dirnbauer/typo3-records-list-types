@@ -1004,6 +1004,9 @@ final class RecordListController extends CoreRecordListController
     ): array {
         $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $records = [];
+        $recordsByIdentity = [];
+        $backendUser = $this->getBackendUserAuthentication();
+        $useWorkspaceReduction = $backendUser->workspace > 0;
 
         try {
             // Create a properly initialized DatabaseRecordList for this table
@@ -1046,7 +1049,7 @@ final class RecordListController extends CoreRecordListController
                 $hiddenField = is_string($hiddenFieldVal) ? $hiddenFieldVal : null;
                 $hidden = ($hiddenField !== null && $hiddenField !== '') ? (bool) ($row[$hiddenField] ?? false) : false;
 
-                $records[] = [
+                $recordData = [
                     'uid' => $uid,
                     'pid' => $recordPid,
                     'tableName' => $tableName,
@@ -1059,13 +1062,43 @@ final class RecordListController extends CoreRecordListController
                     'rawRecord' => $row,
                     'actions' => [],
                 ];
+
+                if ($useWorkspaceReduction) {
+                    // In workspaces the DB query can still yield both a live row and a
+                    // versioned/moved row that overlay to the same effective record.
+                    // Reduce them by their live identity so custom views mirror the
+                    // native list's single effective row per record.
+                    $identity = $this->getWorkspaceRecordIdentity($row, $uid);
+                    $recordsByIdentity[$identity] = $recordData;
+                } else {
+                    $records[] = $recordData;
+                }
             }
         } catch (Exception $e) {
             // Log error but don't fail - return empty results
             // This can happen if the table doesn't exist or user lacks permissions
         }
 
+        if ($useWorkspaceReduction) {
+            $records = array_values($recordsByIdentity);
+        }
+
         return $records;
+    }
+
+    /**
+     * Return a stable workspace identity for a row after overlay.
+     *
+     * Versioned records point back to the live row via t3ver_oid; live rows and
+     * new workspace-only records fall back to their own uid.
+     *
+     * @param array<string, mixed> $row
+     */
+    protected function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
+    {
+        $liveUidRaw = $row['t3ver_oid'] ?? 0;
+        $liveUid = is_numeric($liveUidRaw) ? (int)$liveUidRaw : 0;
+        return (string)($liveUid > 0 ? $liveUid : $fallbackUid);
     }
 
     /**
