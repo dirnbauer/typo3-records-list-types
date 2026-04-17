@@ -437,12 +437,28 @@ typo3-backend-contextual-record-edit-trigger.teaserview-action {
 /* More Actions dropdown inside action bar */
 .teaserview-card__actions .dropdown {
     display: inline-flex;
+    position: relative;
 }
 
-.teaserview-card__actions .dropdown-menu {
+.teaserview-card__actions .dropdown-toggle[popovertarget] {
+    border: 1px solid var(--tv-border);
+    background: var(--tv-bg);
+}
+
+.teaserview-card__actions .dropdown-menu[popover] {
     z-index: 1050;
     font-size: 0.8125rem;
     min-width: 10rem;
+    margin: 0;
+    inset: auto auto auto 0;
+    transform: none;
+}
+
+.teaserview-card__actions .dropdown-menu[popover]:popover-open {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    right: 0;
+    left: auto;
 }
 
 .teaserview-card__actions .dropdown-item {

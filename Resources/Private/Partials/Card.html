@@ -122,16 +122,16 @@
                 <core:icon identifier="actions-edit-delete" size="small" />
             </button>
 
-            <f:comment>More Actions Dropdown</f:comment>
-            <div class="dropdown" data-rlt-dropdown>
-                <button type="button" class="gridview-action-sm" 
-                        data-bs-toggle="dropdown" 
-                        data-bs-display="static"
-                        aria-expanded="false" 
-                        title="More actions">
+            <f:comment>More Actions popover</f:comment>
+            <div class="dropdown">
+                <button type="button"
+                        class="gridview-action-sm dropdown-toggle dropdown-toggle-no-chevron"
+                        popovertarget="actions-{record.tableName}-{record.uid}"
+                        title="More actions"
+                        aria-label="More actions">
                     <core:icon identifier="actions-menu-alternative" size="small" />
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
+                <ul id="actions-{record.tableName}-{record.uid}" class="dropdown-menu dropdown-menu-end" popover>
                     <li>
                         <a class="dropdown-item" href="#" 
                            data-gridview-action="info"

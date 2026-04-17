@@ -167,15 +167,14 @@
 
     <f:comment>Fixed right: More Actions dropdown</f:comment>
     <td class="compactview-td compactview-td--fixed-right compactview-td--action">
-        <div class="dropdown" data-rlt-dropdown>
-            <button type="button" class="cv-action"
-                    data-bs-toggle="dropdown"
-                    data-bs-display="static"
-                    aria-expanded="false"
-                    title="More actions">
+        <div class="dropdown">
+            <button type="button" class="cv-action dropdown-toggle dropdown-toggle-no-chevron"
+                    popovertarget="actions-{record.tableName}-{record.uid}"
+                    title="More actions"
+                    aria-label="More actions">
                 <core:icon identifier="actions-menu-alternative" size="small" />
             </button>
-            <ul class="dropdown-menu dropdown-menu-end">
+            <ul id="actions-{record.tableName}-{record.uid}" class="dropdown-menu dropdown-menu-end" popover>
                 <li>
                     <a class="dropdown-item" href="#"
                        data-gridview-action="info"

@@ -817,6 +817,15 @@ typo3-backend-contextual-record-edit-trigger.gridview-action-sm {
 }
 
 /* Dropdown styling - in header actions */
+.gridview-card__header-actions .dropdown {
+    position: relative;
+    display: inline-flex;
+}
+
+.gridview-card__header-actions .dropdown-toggle-no-chevron::after {
+    display: none;
+}
+
 .gridview-card__header-actions .dropdown-menu {
     background: var(--gv-bg);
     border: 1px solid var(--gv-border);
@@ -825,6 +834,19 @@ typo3-backend-contextual-record-edit-trigger.gridview-action-sm {
     padding: var(--gv-space-1);
     min-width: 10rem;
     z-index: 1050;
+    margin: 0;
+}
+
+.gridview-card__header-actions .dropdown-menu[popover] {
+    inset: auto auto auto 0;
+    top: calc(100% + 2px);
+    right: 0;
+    left: auto;
+    min-inline-size: 10rem;
+}
+
+.gridview-card__header-actions .dropdown-menu:popover-open {
+    display: block;
 }
 
 .gridview-card__header-actions .dropdown-item {
