@@ -139,6 +139,55 @@ All CSS uses TYPO3's CSS custom properties (``--bs-body-bg``,
 ``--bs-body-color``, ``--bs-border-color``) for automatic dark mode
 compatibility.
 
+.. _architecture-native-actions:
+
+Native TYPO3 14 action controls
+================================
+
+The alternative record list views deliberately reuse TYPO3 14's native
+backend action components instead of inventing a parallel edit-dialog
+system.
+
+Visible record edit affordances (title links, edit icons, translation
+edit links) use TYPO3's native contextual record edit web component:
+
+-   ``typo3-backend-contextual-record-edit-trigger``
+
+That component receives two URLs:
+
+-   ``edit-url`` -- the full FormEngine route (``record_edit``)
+-   ``url`` -- the contextual edit route (``record_edit_contextual``)
+
+This matches TYPO3 core behavior:
+
+-   if the user preference for contextual editing is enabled, TYPO3 opens
+    the edit form in the native sheet-style contextual editor
+-   if the preference is disabled, TYPO3 falls back to the regular content
+    frame edit view
+
+The controller precomputes both URLs in PHP for each record and grouped
+translation and exposes them as:
+
+-   ``record.editUrl``
+-   ``record.contextualEditUrl``
+-   ``translation.editUrl``
+-   ``translation.contextualEditUrl``
+
+This avoids fragile inline Fluid route construction for nested
+``edit[table][uid]=edit`` parameters.
+
+Additional modal-style actions use TYPO3-native backend controls as well:
+
+-   ``typo3-backend-dispatch-modal-button`` for iframe-based modal tools
+    such as move/reposition dialogs
+-   standard TYPO3 dispatch actions for info/history/window-manager
+    interactions
+
+The action dropdown positioning logic is shared across compact, grid, and
+teaser. All variants use the same dropdown hook plus the same
+teleport-to-``<body>`` mechanism so TYPO3/Bootstrap menus behave
+consistently inside backend overflow and stacking contexts.
+
 .. _architecture-files:
 
 File structure
