@@ -72,7 +72,8 @@ final class RecordGridDataProvider implements SingletonInterface
 
         while ($row = $result->fetchAssociative()) {
             // Apply workspace overlay to get the correct version for the current workspace
-            BackendUtility::workspaceOL($table, $row);
+            $backendUser = $this->getBackendUserAuthentication();
+            BackendUtility::workspaceOL($table, $row, $backendUser->workspace, true);
 
             // workspaceOL returns false/null if record is deleted in workspace or should not be shown
             if (!is_array($row)) {
@@ -690,7 +691,8 @@ final class RecordGridDataProvider implements SingletonInterface
         $grouped = [];
 
         while ($row = $result->fetchAssociative()) {
-            BackendUtility::workspaceOL($table, $row);
+            $backendUser = $this->getBackendUserAuthentication();
+            BackendUtility::workspaceOL($table, $row, $backendUser->workspace, true);
             if (!is_array($row)) {
                 continue;
             }

@@ -1019,7 +1019,8 @@ final class RecordListController extends CoreRecordListController
 
             while ($row = $result->fetchAssociative()) {
                 // Apply workspace overlay to get the correct version for the current workspace
-                BackendUtility::workspaceOL($tableName, $row);
+                $backendUser = $this->getBackendUserAuthentication();
+                BackendUtility::workspaceOL($tableName, $row, $backendUser->workspace, true);
 
                 // workspaceOL returns false/null if record is deleted in workspace or should not be shown
                 if (!is_array($row)) {
