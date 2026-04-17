@@ -858,6 +858,57 @@
 }
 
 /* =============================================================================
+   Teleported Dropdown Menus
+
+   The record-list "more actions" menus are moved to <body> when opened so
+   they escape stacking / overflow contexts in the TYPO3 backend frame.
+   These styles apply to the menu once it lives on <body>, so they can no
+   longer rely on the card's scoped selectors.
+   ============================================================================= */
+
+.rlt-dropdown-teleported {
+    position: fixed !important;
+    z-index: 1050;
+    background: var(--gv-bg);
+    border: 1px solid var(--gv-border);
+    border-radius: var(--gv-radius);
+    box-shadow: var(--gv-shadow-lg);
+    padding: var(--gv-space-1);
+    min-width: 10rem;
+    font-size: 0.8125rem;
+}
+
+.rlt-dropdown-teleported .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--gv-space-2);
+    padding: var(--gv-space-2) var(--gv-space-3);
+    color: var(--gv-text);
+    border-radius: var(--gv-radius-sm);
+    transition: background var(--gv-transition-fast);
+    text-decoration: none;
+}
+
+.rlt-dropdown-teleported .dropdown-item:hover {
+    background: var(--gv-bg-subtle);
+}
+
+.rlt-dropdown-teleported .dropdown-item.is-clipboard-active {
+    background: var(--gv-accent-bg);
+    color: var(--gv-accent);
+    font-weight: 600;
+}
+
+.rlt-dropdown-teleported .dropdown-item.is-clipboard-active:hover {
+    background: var(--gv-accent-bg);
+}
+
+.rlt-dropdown-teleported .dropdown-divider {
+    margin: var(--gv-space-1) 0;
+    border-color: var(--gv-border-muted);
+}
+
+/* =============================================================================
    Drag and Drop
    ============================================================================= */
 
