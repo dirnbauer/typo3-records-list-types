@@ -367,6 +367,12 @@
     flex-shrink: 0;
 }
 
+.teaserview-card__title typo3-backend-contextual-record-edit-trigger {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+}
+
 .teaserview-action {
     display: inline-flex;
     align-items: center;
@@ -381,6 +387,10 @@
     cursor: pointer;
     transition: all var(--tv-transition);
     text-decoration: none;
+}
+
+typo3-backend-contextual-record-edit-trigger.teaserview-action {
+    display: inline-flex;
 }
 
 .teaserview-action:hover {

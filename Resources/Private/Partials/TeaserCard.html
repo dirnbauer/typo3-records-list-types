@@ -40,12 +40,14 @@
                     </span>
                     
                     <h6 class="teaserview-card__title">
-                        <be:link.editRecord uid="{record.uid}" table="{record.tableName}">
+                        <typo3-backend-contextual-record-edit-trigger
+                            url="{record.contextualEditUrl}"
+                            edit-url="{record.editUrl}">
                             <f:if condition="{record.title}">
                                 <f:then>{record.title}</f:then>
                                 <f:else><em>Untitled</em></f:else>
                             </f:if>
-                        </be:link.editRecord>
+                        </typo3-backend-contextual-record-edit-trigger>
                     </h6>
                     
                     <span class="teaserview-badge teaserview-badge--uid">#{record.uid}</span>
@@ -109,10 +111,13 @@
                 </f:if>
 
                 <f:comment>Edit button</f:comment>
-                <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
-                    class="teaserview-action teaserview-action--primary" title="Edit">
+                <typo3-backend-contextual-record-edit-trigger
+                    class="teaserview-action teaserview-action--primary"
+                    title="Edit"
+                    url="{record.contextualEditUrl}"
+                    edit-url="{record.editUrl}">
                     <core:icon identifier="actions-open" size="small" />
-                </be:link.editRecord>
+                </typo3-backend-contextual-record-edit-trigger>
 
                 <f:comment>Delete button</f:comment>
                 <button type="button" 

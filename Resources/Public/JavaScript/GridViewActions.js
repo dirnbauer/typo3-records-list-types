@@ -79,7 +79,7 @@ class GridViewActions {
         this.initializeSearch();
         this.initializeScrollShadows();
         this.initializePaginationInputs();
-        this.initializeCompactDropdowns();
+        this.initializeActionDropdowns();
         this.initializeCheckAllToggle();
     }
 
@@ -1543,18 +1543,13 @@ class GridViewActions {
      * all of those constraints. The menu is returned to its original parent
      * on close so Bootstrap state stays consistent.
      *
-     * Markup contract: any container with `data-rlt-dropdown` (and, for the
-     * legacy compact row, `data-cv-dropdown`) gets teleported. The compact
-     * view keeps its own `cv-dropdown-teleported` class for existing styling.
+     * Markup contract: any container with `data-rlt-dropdown` gets teleported.
      */
-    initializeCompactDropdowns() {
-        const selector = '[data-rlt-dropdown], [data-cv-dropdown]';
-        document.querySelectorAll(selector).forEach(dropdown => {
+    initializeActionDropdowns() {
+        document.querySelectorAll('[data-rlt-dropdown]').forEach(dropdown => {
             const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
             const menu = dropdown.querySelector('.dropdown-menu');
             if (!toggle || !menu) return;
-
-            const isCompact = dropdown.hasAttribute('data-cv-dropdown');
 
             toggle.addEventListener('show.bs.dropdown', () => {
                 menu._rltOriginalParent = dropdown;
@@ -1563,9 +1558,6 @@ class GridViewActions {
 
                 document.body.appendChild(menu);
                 menu.classList.add('rlt-dropdown-teleported');
-                if (isCompact) {
-                    menu.classList.add('cv-dropdown-teleported');
-                }
 
                 // Make sure we can measure the menu even before Bootstrap flips
                 // the `show` class on.
@@ -1596,7 +1588,6 @@ class GridViewActions {
 
             toggle.addEventListener('hidden.bs.dropdown', () => {
                 menu.classList.remove('rlt-dropdown-teleported');
-                menu.classList.remove('cv-dropdown-teleported');
                 menu.style.top = '';
                 menu.style.left = '';
                 if (menu._rltOriginalParent) {

@@ -94,12 +94,15 @@
                                             </span>
                                             <span class="teaserview-translation-row__uid">#{translation.uid}</span>
                                             <span class="teaserview-translation-row__title">
-                                                <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}">
+                                                <typo3-backend-contextual-record-edit-trigger
+                                                    edit-url="{translation.editUrl}"
+                                                    url="{translation.contextualEditUrl}"
+                                                    class="teaserview-translation-row__title-link">
                                                     <f:if condition="{translation.title}">
                                                         <f:then>{translation.title -> f:format.crop(maxCharacters: 60, append: '…')}</f:then>
                                                         <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
                                                     </f:if>
-                                                </be:link.editRecord>
+                                                </typo3-backend-contextual-record-edit-trigger>
                                             </span>
                                             <span class="teaserview-translation-row__actions">
                                                 <f:if condition="{translation.hidden}">
@@ -116,10 +119,13 @@
                                                         </button>
                                                     </f:else>
                                                 </f:if>
-                                                <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}"
-                                                    class="teaserview-action teaserview-action--primary" title="Edit">
+                                                <typo3-backend-contextual-record-edit-trigger
+                                                    edit-url="{translation.editUrl}"
+                                                    url="{translation.contextualEditUrl}"
+                                                    class="teaserview-action teaserview-action--primary"
+                                                    title="Edit">
                                                     <core:icon identifier="actions-open" size="small" />
-                                                </be:link.editRecord>
+                                                </typo3-backend-contextual-record-edit-trigger>
                                             </span>
                                         </div>
                                     </f:for>

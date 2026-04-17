@@ -219,6 +219,71 @@ base.css              ← Loaded for ALL view modes (always first)
 
 `base.css` is automatically prepended by `ViewTypeRegistry::getCssFiles()`. Custom view types registered via TSconfig or PSR-14 events also receive `base.css` automatically -- they only need to provide their own view-specific CSS.
 
+## Native TYPO3 backend action controls
+
+The extension intentionally reuses TYPO3 v14's native backend action
+components instead of implementing its own modal or contextual edit
+infrastructure.
+
+### Contextual record edit
+
+Visible edit interactions in Grid, Compact, and Teaser views use TYPO3's
+native contextual record edit web component:
+
+```html
+<typo3-backend-contextual-record-edit-trigger
+    edit-url="/typo3/record/edit?..."
+    url="/typo3/record/edit/contextual?...">
+    ...
+</typo3-backend-contextual-record-edit-trigger>
+```
+
+This is the same component TYPO3 core uses in the Page module preview.
+Its behavior is controlled by the backend user preference
+`contextualRecordEdit`:
+
+- when enabled, the record opens in TYPO3's contextual edit sheet
+- when disabled, the full FormEngine opens in the content frame
+
+The extension precomputes both URLs in `RecordListController` and exposes
+them to Fluid as:
+
+- `record.editUrl`
+- `record.contextualEditUrl`
+
+The same applies to grouped translations.
+
+### Modal-backed actions
+
+Actions that TYPO3 core exposes as iframe dialogs should use TYPO3's
+native dispatch modal button:
+
+```html
+<typo3-backend-dispatch-modal-button
+    subject="Re-position content element"
+    url="/typo3/record/move?...">
+    ...
+</typo3-backend-dispatch-modal-button>
+```
+
+This component is loaded from TYPO3 core's
+`@typo3/backend/element/dispatch-modal-button.js` module and opens the
+target URL in a TYPO3 modal dialog.
+
+### Backend routes used
+
+The action components above rely on TYPO3 core routes:
+
+- `record_edit` → `/typo3/record/edit`
+- `record_edit_contextual` → `/typo3/record/edit/contextual`
+- `move_element` → `/typo3/record/move`
+- `record_history` → `/typo3/record/history`
+- `show_item` → `/typo3/record/info`
+
+When adding or customizing actions, prefer these TYPO3-native components
+and routes over custom modal/edit implementations so the behavior stays
+consistent with the core backend UI.
+
 ## Bootstrap 5 Integration
 
 The Grid View uses Bootstrap 5 components included in the TYPO3 v14 backend.

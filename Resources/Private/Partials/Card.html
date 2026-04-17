@@ -61,12 +61,14 @@
                 <core:icon identifier="{record.iconIdentifier}" size="small" />
             </div>
             <div class="gridview-card__title">
-                <be:link.editRecord uid="{record.uid}" table="{record.tableName}">
+                <typo3-backend-contextual-record-edit-trigger
+                    url="{record.contextualEditUrl}"
+                    edit-url="{record.editUrl}">
                     <f:if condition="{record.title}">
                         <f:then>{record.title}</f:then>
                         <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
                     </f:if>
-                </be:link.editRecord>
+                </typo3-backend-contextual-record-edit-trigger>
             </div>
         </div>
         
@@ -101,10 +103,14 @@
             <span class="gridview-action-separator"></span>
 
             <f:comment>Edit button</f:comment>
-            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
-                class="gridview-action-sm gridview-action-sm--primary" title="Edit">
+            <typo3-backend-contextual-record-edit-trigger
+                url="{record.contextualEditUrl}"
+                edit-url="{record.editUrl}"
+                class="gridview-action-sm gridview-action-sm--primary"
+                title="Edit"
+                aria-label="Edit">
                 <core:icon identifier="actions-open" size="small" />
-            </be:link.editRecord>
+            </typo3-backend-contextual-record-edit-trigger>
 
             <f:comment>Delete button</f:comment>
             <button type="button" 
@@ -171,12 +177,14 @@
     <f:comment>Card Image - Thumbnail from FAL field</f:comment>
     <f:if condition="{record.thumbnailUrl}">
         <div class="gridview-card__image">
-            <be:link.editRecord uid="{record.uid}" table="{record.tableName}">
+            <typo3-backend-contextual-record-edit-trigger
+                url="{record.contextualEditUrl}"
+                edit-url="{record.editUrl}">
                 <img src="{record.thumbnailUrl}" 
                      alt="{record.title}" 
                      loading="lazy"
                      class="gridview-card__thumbnail" />
-            </be:link.editRecord>
+            </typo3-backend-contextual-record-edit-trigger>
         </div>
         <div class="gridview-card__image-hint">
             <core:icon identifier="actions-info" size="small" />
@@ -303,11 +311,13 @@
             <span class="gridview-card__footer-separator"></span>
             <span class="gridview-card__translation-pills" title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.label', default: 'translation(s)')}">
                 <f:for each="{record.translations}" as="translation">
-                    <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}"
+                    <typo3-backend-contextual-record-edit-trigger
+                        url="{translation.contextualEditUrl}"
+                        edit-url="{translation.editUrl}"
                         class="gridview-card__translation-pill{f:if(condition: translation.hidden, then: ' gridview-card__translation-pill--hidden')}{f:if(condition: translation.workspaceState, then: ' gridview-card__translation-pill--ws-{translation.workspaceState}')}"
                         title="{translation.languageTitle}: {translation.title}">
                         <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
-                    </be:link.editRecord>
+                    </typo3-backend-contextual-record-edit-trigger>
                 </f:for>
             </span>
         </f:if>

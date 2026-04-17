@@ -109,11 +109,14 @@
                                         <f:comment>UID</f:comment>
                                         <span class="badge bg-secondary bg-opacity-25 text-muted">#{record.uid}</span>
                                         
-                                        <f:comment>Title with edit link</f:comment>
+                                        <f:comment>Title with native TYPO3 contextual edit trigger</f:comment>
                                         <div class="flex-grow-1">
-                                            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" class="text-decoration-none fw-medium">
+                                            <typo3-backend-contextual-record-edit-trigger
+                                                class="text-decoration-none fw-medium"
+                                                edit-url="{record.editUrl}"
+                                                url="{record.contextualEditUrl}">
                                                 {record.title}
-                                            </be:link.editRecord>
+                                            </typo3-backend-contextual-record-edit-trigger>
                                         </div>
                                         
                                         <f:comment>Display fields</f:comment>
@@ -127,10 +130,13 @@
                                         
                                         <f:comment>Actions</f:comment>
                                         <div class="btn-group btn-group-sm">
-                                            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
-                                                class="btn btn-outline-primary btn-sm" title="Edit">
+                                            <typo3-backend-contextual-record-edit-trigger
+                                                class="btn btn-outline-primary btn-sm"
+                                                title="Edit"
+                                                edit-url="{record.editUrl}"
+                                                url="{record.contextualEditUrl}">
                                                 <core:icon identifier="actions-open" size="small" />
-                                            </be:link.editRecord>
+                                            </typo3-backend-contextual-record-edit-trigger>
                                             <button type="button" 
                                                     class="btn btn-outline-danger btn-sm"
                                                     title="Delete"

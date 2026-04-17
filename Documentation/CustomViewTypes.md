@@ -32,6 +32,27 @@ Copy `GenericView.html` from the extension and customize it:
 EXT:my_sitepackage/Resources/Private/Backend/Templates/TimelineView.html
 ```
 
+For record edit links in custom templates, prefer TYPO3 14's native
+contextual edit trigger over `be:link.editRecord`. Records rendered by
+this extension already include precomputed URLs:
+
+- `record.editUrl`
+- `record.contextualEditUrl`
+
+Use them like this:
+
+```html
+<typo3-backend-contextual-record-edit-trigger
+    edit-url="{record.editUrl}"
+    url="{record.contextualEditUrl}">
+    {record.title}
+</typo3-backend-contextual-record-edit-trigger>
+```
+
+This matches TYPO3 core behavior: if the user has contextual editing
+enabled, the record opens in the native sheet editor; otherwise TYPO3
+falls back to the regular content-frame FormEngine.
+
 ```html
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"

@@ -120,6 +120,7 @@ final class RecordListController extends CoreRecordListController
 
         $this->pageRenderer->addInlineLanguageLabelFile('EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf');
         $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/dispatch-modal-button.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/contextual-record-edit-trigger.js');
 
         BackendUtility::lockRecords();
         $pointer = max(0, (int) ($parsedBodyArray['pointer'] ?? $queryParams['pointer'] ?? 0));
@@ -2096,6 +2097,7 @@ final class RecordListController extends CoreRecordListController
             }
 
             $record['displayValues'] = $displayValues;
+            $record = $this->enrichRecordWithEditUrls($record);
         }
 
         return $records;
@@ -2146,6 +2148,81 @@ final class RecordListController extends CoreRecordListController
         }
 
         return $records;
+    }
+
+    /**
+     * Add TYPO3 14 native edit URLs for contextual and full FormEngine editing.
+     *
+     * @param array<string, mixed> $record
+     * @return array<string, mixed>
+     */
+    protected function enrichRecordWithEditUrls(array $record): array
+    {
+        $uidRaw = $record['uid'] ?? null;
+        $tableNameRaw = $record['tableName'] ?? null;
+
+        if (!is_numeric($uidRaw) || !is_string($tableNameRaw) || $tableNameRaw === '') {
+            return $record;
+        }
+
+        $uid = (int) $uidRaw;
+        if ($uid <= 0) {
+            return $record;
+        }
+
+        $returnUrl = $this->buildContextualEditReturnUrl($record);
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+
+        try {
+            $record['editUrl'] = (string) $uriBuilder->buildUriFromRoute('record_edit', [
+                'edit' => [
+                    $tableNameRaw => [
+                        $uid => 'edit',
+                    ],
+                ],
+                'module' => 'records',
+                'returnUrl' => $returnUrl,
+            ]);
+            $record['contextualEditUrl'] = (string) $uriBuilder->buildUriFromRoute('record_edit_contextual', [
+                'edit' => [
+                    $tableNameRaw => [
+                        $uid => 'edit',
+                    ],
+                ],
+                'module' => 'records',
+                'returnUrl' => $returnUrl,
+            ]);
+        } catch (Exception) {
+            $record['editUrl'] = '';
+            $record['contextualEditUrl'] = '';
+        }
+
+        return $record;
+    }
+
+    /**
+     * Build a stable Records-module return URL for contextual edit dialogs.
+     *
+     * @param array<string, mixed> $record
+     */
+    protected function buildContextualEditReturnUrl(array $record): string
+    {
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+
+        $params = [
+            'id' => $this->pageContext->pageId,
+        ];
+
+        $tableName = $record['tableName'] ?? null;
+        if (is_string($tableName) && $tableName !== '') {
+            $params['table'] = $tableName;
+        }
+
+        try {
+            return (string) $uriBuilder->buildUriFromRoute('records', $params);
+        } catch (Exception) {
+            return '';
+        }
     }
 
     /**
@@ -2268,6 +2345,8 @@ final class RecordListController extends CoreRecordListController
                         break;
                     }
                 }
+
+                $translation = $this->enrichRecordWithEditUrls($translation);
             }
             unset($translation);
         }
