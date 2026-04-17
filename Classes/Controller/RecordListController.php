@@ -1097,8 +1097,8 @@ final class RecordListController extends CoreRecordListController
     protected function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
     {
         $liveUidRaw = $row['t3ver_oid'] ?? 0;
-        $liveUid = is_numeric($liveUidRaw) ? (int)$liveUidRaw : 0;
-        return (string)($liveUid > 0 ? $liveUid : $fallbackUid);
+        $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
+        return (string) ($liveUid > 0 ? $liveUid : $fallbackUid);
     }
 
     /**
