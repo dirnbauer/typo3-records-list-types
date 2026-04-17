@@ -149,12 +149,15 @@
                                                         <span class="compactview-row__uid">{translation.uid}</span>
                                                     </td>
                                                     <td class="compactview-td compactview-td--fixed-left compactview-td--title">
-                                                        <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}" class="compactview-row__title-link">
+                                                        <typo3-backend-contextual-record-edit-trigger
+                                                            class="compactview-row__title-link"
+                                                            edit-url="{translation.editUrl}"
+                                                            url="{translation.contextualEditUrl}">
                                                             <f:if condition="{translation.title}">
                                                                 <f:then>{translation.title -> f:format.crop(maxCharacters: 50, append: '…')}</f:then>
                                                                 <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
                                                             </f:if>
-                                                        </be:link.editRecord>
+                                                        </typo3-backend-contextual-record-edit-trigger>
                                                     </td>
                                                     <f:for each="{record.displayValues}" as="fieldData">
                                                         <f:if condition="!{fieldData.isLabelField}">
@@ -179,9 +182,13 @@
                                                         </f:if>
                                                     </td>
                                                     <td class="compactview-td compactview-td--fixed-right compactview-td--action">
-                                                        <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}" class="cv-action cv-action--primary" title="Edit">
+                                                        <typo3-backend-contextual-record-edit-trigger
+                                                            class="cv-action cv-action--primary"
+                                                            title="Edit"
+                                                            edit-url="{translation.editUrl}"
+                                                            url="{translation.contextualEditUrl}">
                                                             <core:icon identifier="actions-open" size="small" />
-                                                        </be:link.editRecord>
+                                                        </typo3-backend-contextual-record-edit-trigger>
                                                     </td>
                                                     <td class="compactview-td compactview-td--fixed-right compactview-td--action"></td>
                                                     <td class="compactview-td compactview-td--fixed-right compactview-td--action"></td>
