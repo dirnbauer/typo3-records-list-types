@@ -174,7 +174,6 @@
     box-shadow: var(--gv-shadow-sm);
     overflow: visible; /* Allow dropdowns to overflow */
     transition: 
-        transform var(--gv-transition),
         box-shadow var(--gv-transition),
         border-color var(--gv-transition);
     position: relative;
@@ -194,7 +193,6 @@
 .gridview-card:hover {
     box-shadow: var(--gv-shadow-md);
     border-color: var(--gv-border);
-    transform: translateY(-1px);
 }
 
 .gridview-card:focus-within {

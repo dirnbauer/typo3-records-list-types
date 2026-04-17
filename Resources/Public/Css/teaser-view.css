@@ -134,8 +134,7 @@
     box-shadow: var(--tv-shadow-sm);
     transition: 
         border-color var(--tv-transition),
-        box-shadow var(--tv-transition),
-        transform var(--tv-transition);
+        box-shadow var(--tv-transition);
     position: relative;
     overflow: hidden;
 }
@@ -150,7 +149,6 @@
 .teaserview-card:hover {
     border-color: var(--tv-primary) !important;
     box-shadow: var(--tv-shadow);
-    transform: translateY(-1px);
 }
 
 /* Hidden state - subtle warning styling */
