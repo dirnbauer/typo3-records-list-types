@@ -857,6 +857,35 @@
     border-color: var(--gv-border-muted);
 }
 
+/* -----------------------------------------------------------------------------
+   Pin the more-actions menu directly under its toggle.
+
+   In the TYPO3 backend frame Popper sometimes leaves the menu at its initial
+   `inset: 0 auto auto 0` / `transform: translate3d(0,0,0)` state, which lands
+   at the top-left of the nearest positioned ancestor (the iframe body). These
+   rules override Popper's inline styles with !important and keep the menu
+   anchored below the toggle, right-aligned with the action bar.
+
+   When the menu is teleported to <body> by GridViewActions.js it picks up
+   `.rlt-dropdown-teleported` (also !important, position: fixed), which wins
+   because the card-scoped selector no longer matches.
+   ----------------------------------------------------------------------------- */
+.gridview-card__header-actions .dropdown {
+    position: relative;
+}
+
+.gridview-card__header-actions .dropdown-menu {
+    position: absolute !important;
+    inset: auto !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    bottom: auto !important;
+    margin: 2px 0 0 !important;
+    transform: none !important;
+    z-index: 1050;
+}
+
 /* =============================================================================
    Teleported Dropdown Menus
 
