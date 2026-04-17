@@ -465,7 +465,27 @@ final class RecordListController extends CoreRecordListController
                 $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
                 $currentPointer = $this->getCurrentPointer($request, $tableName);
                 $offset = ($currentPointer - 1) * $itemsPerPage;
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
+                $backendUser = $this->getBackendUserAuthentication();
+                $useCoreDbListQuery = $backendUser->workspace > 0 && $sortingMode === 'manual' && $hasSortbyField;
+                if ($useCoreDbListQuery) {
+                    // In workspace/manual-order mode derive the effective row set from the
+                    // same core-aware query path the original list uses. TYPO3 workspaces
+                    // expose move pointers/version overlays that must be reduced the same
+                    // way as the native list before drag-reordering can target the correct
+                    // records and positions.
+                    $records = $this->getRecordsUsingDbList(
+                        $request,
+                        $tableName,
+                        $tableConfig,
+                        $pageId,
+                        $searchTerm,
+                        $searchLevels,
+                        $itemsPerPage,
+                        $offset,
+                    );
+                } else {
+                    $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
+                }
                 $recordCount = $totalRecordCount;
                 $hasMore = false; // pagination handles navigation
             } else {
