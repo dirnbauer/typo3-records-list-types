@@ -1529,47 +1529,64 @@ class GridViewActions {
     }
 
     // =========================================================================
-    // Compact View Dropdowns - Teleport to body
+    // Record-list Dropdowns - Teleport to body
     // =========================================================================
 
     /**
-     * Teleport compact view dropdown menus to <body> when opened.
+     * Teleport record-list dropdown menus to <body> when opened.
      *
-     * Sticky columns + overflow-x:auto on the table wrapper create a stacking
-     * context that clips absolutely-positioned dropdown menus. By moving the
-     * menu to <body> and using position:fixed we escape all overflow and
-     * z-index constraints. The menu is returned to its original parent on close.
+     * The TYPO3 backend content frame creates stacking / overflow / transform
+     * contexts that can prevent Popper from anchoring the menu to its toggle
+     * (the menu ends up pinned to the viewport origin). Sticky columns in the
+     * compact view produce the same problem. By moving the menu to <body> and
+     * positioning it with fixed coordinates relative to the toggle we escape
+     * all of those constraints. The menu is returned to its original parent
+     * on close so Bootstrap state stays consistent.
+     *
+     * Markup contract: any container with `data-rlt-dropdown` (and, for the
+     * legacy compact row, `data-cv-dropdown`) gets teleported. The compact
+     * view keeps its own `cv-dropdown-teleported` class for existing styling.
      */
     initializeCompactDropdowns() {
-        document.querySelectorAll('[data-cv-dropdown]').forEach(dropdown => {
+        const selector = '[data-rlt-dropdown], [data-cv-dropdown]';
+        document.querySelectorAll(selector).forEach(dropdown => {
             const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
             const menu = dropdown.querySelector('.dropdown-menu');
             if (!toggle || !menu) return;
 
-            // On show: teleport menu to body and position it
-            toggle.addEventListener('show.bs.dropdown', () => {
-                // Store original parent so we can return the menu later
-                menu._cvOriginalParent = dropdown;
+            const isCompact = dropdown.hasAttribute('data-cv-dropdown');
 
-                // Get toggle button position
+            toggle.addEventListener('show.bs.dropdown', () => {
+                menu._rltOriginalParent = dropdown;
+
                 const rect = toggle.getBoundingClientRect();
 
-                // Move menu to body
                 document.body.appendChild(menu);
-                menu.classList.add('cv-dropdown-teleported');
+                menu.classList.add('rlt-dropdown-teleported');
+                if (isCompact) {
+                    menu.classList.add('cv-dropdown-teleported');
+                }
 
-                // Position: align right edge with toggle, below it
+                // Make sure we can measure the menu even before Bootstrap flips
+                // the `show` class on.
+                const previousVisibility = menu.style.visibility;
+                const previousDisplay = menu.style.display;
+                menu.style.visibility = 'hidden';
+                menu.style.display = 'block';
+
                 const menuWidth = menu.offsetWidth || 160;
+                const menuHeight = menu.offsetHeight || 200;
+
+                menu.style.visibility = previousVisibility;
+                menu.style.display = previousDisplay;
+
                 let top = rect.bottom + 2;
                 let left = rect.right - menuWidth;
 
-                // If menu would overflow bottom of viewport, open upward
-                const menuHeight = menu.offsetHeight || 200;
                 if (top + menuHeight > window.innerHeight) {
                     top = rect.top - menuHeight - 2;
                 }
 
-                // Keep within viewport
                 if (left < 4) left = 4;
                 if (top < 4) top = 4;
 
@@ -1577,14 +1594,14 @@ class GridViewActions {
                 menu.style.left = left + 'px';
             });
 
-            // On hidden: return menu to original parent
             toggle.addEventListener('hidden.bs.dropdown', () => {
+                menu.classList.remove('rlt-dropdown-teleported');
                 menu.classList.remove('cv-dropdown-teleported');
                 menu.style.top = '';
                 menu.style.left = '';
-                if (menu._cvOriginalParent) {
-                    menu._cvOriginalParent.appendChild(menu);
-                    delete menu._cvOriginalParent;
+                if (menu._rltOriginalParent) {
+                    menu._rltOriginalParent.appendChild(menu);
+                    delete menu._rltOriginalParent;
                 }
             });
         });
