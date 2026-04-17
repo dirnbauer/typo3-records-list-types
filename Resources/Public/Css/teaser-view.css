@@ -427,21 +427,9 @@
 /* More Actions dropdown inside action bar */
 .teaserview-card__actions .dropdown {
     display: inline-flex;
-    position: relative;
 }
 
 .teaserview-card__actions .dropdown-menu {
-    /* Pin under the toggle. See note in grid-view.css for why these
-       overrides use !important (Popper inline styles in the TYPO3 backend
-       frame can leave the menu at the iframe top-left). */
-    position: absolute !important;
-    inset: auto !important;
-    top: 100% !important;
-    right: 0 !important;
-    left: auto !important;
-    bottom: auto !important;
-    margin: 2px 0 0 !important;
-    transform: none !important;
     z-index: 1050;
     font-size: 0.8125rem;
     min-width: 10rem;
