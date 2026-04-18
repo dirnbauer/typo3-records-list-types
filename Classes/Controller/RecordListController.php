@@ -177,9 +177,7 @@ final class RecordListController extends CoreRecordListController
         // Create DatabaseRecordList (needed for URL building and other parent methods)
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
-        if ($this->moduleData !== null) {
-            $dbList->setModuleData($this->moduleData);
-        }
+        $dbList->setModuleData($this->moduleData);
         $dbList->calcPerms = $this->pageContext->pagePermissions;
         $dbList->returnUrl = $this->returnUrl;
         $dbList->showClipboardActions = true;
@@ -893,7 +891,7 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
 
-            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $this->request);
+            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
             if ($count > 0) {
                 $tables[] = $tableName;
             }

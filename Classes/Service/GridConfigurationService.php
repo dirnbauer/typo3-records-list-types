@@ -205,9 +205,11 @@ final class GridConfigurationService implements SingletonInterface
             return 'hidden';
         }
 
-        $schema = $this->tcaSchemaFactory->get($table);
-        if ($schema->hasCapability(TcaSchemaCapability::RestrictionDisabledField)) {
-            return $schema->getCapability(TcaSchemaCapability::RestrictionDisabledField)->getFieldName();
+        $schemaConfig = $this->tcaSchemaFactory->get($table)->getRawConfiguration();
+        $enableColumns = is_array($schemaConfig['enablecolumns'] ?? null) ? $schemaConfig['enablecolumns'] : [];
+        $disabledField = $enableColumns['disabled'] ?? null;
+        if (is_string($disabledField) && $disabledField !== '') {
+            return $disabledField;
         }
 
         return 'hidden';
