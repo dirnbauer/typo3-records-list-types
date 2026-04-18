@@ -53,6 +53,27 @@ This matches TYPO3 core behavior: if the user has contextual editing
 enabled, the record opens in the native sheet editor; otherwise TYPO3
 falls back to the regular content-frame FormEngine.
 
+For TYPO3/core-generated backend fragments such as heading action buttons,
+download buttons, or multi-record selection actions, use TYPO3 core's
+sanitizer in your template instead of raw output:
+
+```html
+<f:sanitize.html build="records-list-types-backend-fragments">
+    {table.actionButtons.newRecordButton}
+</f:sanitize.html>
+```
+
+For extension-generated heading and sorting UI, prefer the structured data
+that the built-in templates now use:
+
+- `table.tableHeading`
+- `table.sortingDropdown`
+- `table.sortingModeToggle`
+- `table.sortableColumnHeaders`
+
+These are rendered through shared partials such as `TableHeading`,
+`SortingDropdown`, `SortingModeToggle`, and `SortableColumnHeader`.
+
 ```html
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
@@ -435,6 +456,23 @@ Each item in `tableData`:
 | `paginator` | `DatabasePaginator` (TYPO3 Core PaginatorInterface) |
 | `pagination` | `SlidingWindowPagination` (TYPO3 Core PaginationInterface) |
 | `paginationUrl` | Base URL for pagination links |
+
+### Notes about the examples repository
+
+The companion repository
+[`typo3-records-list-examples`](https://github.com/dirnbauer/typo3-records-list-examples)
+focuses on lightweight TSconfig + template examples. Some of those example
+templates intentionally keep their own local heading markup to stay simple
+and extension-free.
+
+This extension's built-in templates are the more systematic reference for:
+
+- structured heading and sorting data
+- shared Fluid partials
+- TYPO3 core `f:sanitize.html` usage for backend fragments
+
+When building new reusable templates, prefer the built-in template
+systematic from `records_list_types`.
 
 Each record in `records`:
 

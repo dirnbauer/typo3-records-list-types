@@ -268,6 +268,24 @@ base.css            ← Loaded for ALL view modes (always first)
 | `BackendFragmentSanitizerBuilder` | TYPO3 core htmlSanitizer preset for backend button/component fragments |
 | `f:sanitize.html(build: 'records-list-types-backend-fragments')` | Sanitizes TYPO3/core-generated backend fragments before rendering in Fluid |
 
+### Template systematic
+
+Built-in templates follow a consistent rendering split:
+
+- **Structured data rendered directly in Fluid** for extension-owned UI such as:
+  - `table.tableHeading`
+  - `table.sortingDropdown`
+  - `table.sortingModeToggle`
+  - `table.sortableColumnHeaders`
+- **TYPO3/core-generated backend fragments sanitized before output** for:
+  - `table.actionButtons.*`
+  - `table.multiRecordSelectionActionsHtml`
+  - event-driven record action fragments
+
+This keeps custom markup out of PHP string assembly wherever practical and
+reserves sanitization for backend fragments that still originate from TYPO3
+component APIs.
+
 ### JavaScript Modules
 
 | Module | Purpose |

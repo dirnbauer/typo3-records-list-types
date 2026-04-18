@@ -45,8 +45,24 @@ Quick start: 3 steps
 
 Copy :file:`EXT:records_list_types/Resources/Private/Templates/GenericView.html`
 to your sitepackage and customize it. The template receives ``tableData``
-with all records, ``paginator``/``pagination`` for paging, and
-``actionButtons`` for the heading bar.
+with all records, ``paginator``/``pagination`` for paging, structured
+``tableHeading`` / ``sortingDropdown`` / ``sortingModeToggle`` data for
+extension-rendered heading/sorting UI, and TYPO3/core-generated
+``actionButtons`` fragments for the heading bar.
+
+For built-in templates, the current systematic is:
+
+-   **Structured data + Fluid partials** for extension-rendered heading and
+    sorting UI
+-   **TYPO3 core** ``f:sanitize.html(build:
+    'records-list-types-backend-fragments')`` for backend fragment HTML that
+    still comes from TYPO3/core button and multi-selection APIs
+
+The companion `Records List Examples
+<https://github.com/dirnbauer/typo3-records-list-examples>`__ repository
+still demonstrates a lighter TSconfig-only custom-template style for
+satellite extensions. The built-in templates in ``records_list_types``
+already use the newer structured heading/sorting approach described here.
 
 For record edit links in custom templates, use TYPO3 14's native
 contextual edit trigger instead of ``be:link.editRecord``. Records
