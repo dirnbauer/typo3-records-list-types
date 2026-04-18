@@ -1,131 +1,48 @@
-# Testing Conformance Report
+# Testing Report
 
-**Extension:** `webconsulting/records-list-types`  
-**Date:** 2026-02-09  
-**Assessed by:** AI Agent (typo3-testing skill)  
-**TYPO3 Version:** 14.x  
-**PHP Version:** 8.3+
+> Run date: 2026-04-18
+> Skill: typo3-testing
+> Extension: records_list_types @ TYPO3 v14
+> Supersedes the 2026-02-09 snapshot.
 
----
+## Current state
 
-## Executive Summary
+- **Unit suite**: 90 tests / 158 assertions.
+- **Functional suite**: 72 tests / 155 assertions (pdo_sqlite driver).
+- **Architecture rules** (phpat): evaluated by PHPStan via
+  `vendor/phpat/phpat/extension.neon` — events can't depend on
+  services/controllers, services can't depend on controllers, view
+  helpers are isolated, constants have no dependencies.
+- **PHPStan**: level 9 + strict rules + phpat + saschaegerer/phpstan-typo3.
+- **CI**: PHP 8.3 + 8.4 matrix, MySQL 8 service for functional tests,
+  plus a dedicated `composer audit` job.
 
-The extension now has comprehensive test coverage across unit, functional, and architecture testing layers. From an initial state of 0% coverage (only a DummyTest placeholder), the extension has been brought to **126 tests with 248 assertions** covering 8 of 14 PHP classes.
+## Gaps identified
 
----
+| # | Gap | Remediation |
+|---|-----|-------------|
+| 1 | No unified test-runner script. CI and local runs use ad-hoc commands. | Added `Build/Scripts/runTests.sh` with `-s` / `-p` flags covering unit, functional, architecture, phpstan, cgl, composer, ci. |
+| 2 | `RecordGridDataProvider` has no direct tests. Exercised indirectly via the controller functional tests. | **Accepted**. The service is tightly coupled to TYPO3 Core's `BackendUtility::workspaceOL()` and the FAL pipeline; unit tests would be thin wrappers around Core mocks. |
+| 3 | `RecordListController` (XClass) has no direct tests. | **Accepted**. It inherits from Core and its behaviour is validated end-to-end by the functional tests of the services it coordinates. |
+| 4 | Mutation testing (Infection) not wired up. | **Deferred**. Worth revisiting once line coverage exceeds ~80%. |
+| 5 | `Tests/Architecture/` was registered as a PHPUnit testsuite but the classes are phpat rules (`->rule()->shouldNotDependOn(...)`) — PHPUnit could not execute them and emitted `failOnWarning` errors. | Dropped the suite from `phpunit.xml.dist`. phpat continues to run under PHPStan. |
+| 6 | `<coverage><report>` block in `phpunit.xml.dist` triggered "No code coverage driver available" warnings on local runs without xdebug/pcov. | Removed the block. CI still passes `--coverage-clover` via CLI. |
 
-## Test Results
+## Actions in this pass
 
-### Test Suites
+- Added `Build/Scripts/runTests.sh` executable script. CI can keep its
+  existing `vendor/bin/...` invocations; new contributors get a single
+  documented entry point.
+- Retired `ext_emconf.php` — it was triggering `Deprecations: 1` on four
+  functional tests.
 
-| Suite | Tests | Assertions | Status |
-|-------|-------|------------|--------|
-| Unit tests | 59 | 110 | **Passing** |
-| Functional tests | 67 | 138 | **Passing** |
-| Architecture tests (PHPat) | 5 rules | N/A | **Passing** |
-| **Total** | **126** | **248** | **All green** |
+## Verification
 
-### Test Infrastructure
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| `phpunit.xml.dist` | Present | Unit + Functional + Architecture suites |
-| `Tests/Build/FunctionalTests.xml` | Present | Functional bootstrap with separate config |
-| `composer.json` dev deps | Present | PHPUnit 11, testing-framework 9, PHPat 0.12 |
-| `autoload-dev` PSR-4 | Present | `Webconsulting\RecordsListTypes\Tests\` |
-| CI workflow | Present | PHPStan+PHPat, PHP-CS-Fixer, Unit tests, Functional tests (MySQL) |
-| PHPStan | Level 9 + PHPat | Architecture constraints enforced via static analysis |
-| CSV fixtures | Present | `Tests/Functional/Fixtures/Pages.csv` with TSconfig variations |
-
-### Classes Covered
-
-| Class | Test Type | Tests | Status |
-|-------|-----------|-------|--------|
-| `RegisterViewModesEvent` | Unit | 14 | **Covered** |
-| `GridViewRecordActionsListener` | Unit | 13 | **Covered** |
-| `ViewModeController` | Unit | 3 | **Covered** (error paths) |
-| `ThumbnailService` | Unit | 12 | **Covered** |
-| `Constants` | Unit | 6 | **Covered** |
-| `ViewModeResolver` | Functional | 17 | **Covered** |
-| `GridConfigurationService` | Functional | 22 | **Covered** |
-| `ViewTypeRegistry` | Functional | 28 | **Covered** |
-| `RecordGridDataProvider` | - | - | Not yet covered |
-| `MiddlewareDiagnosticService` | - | - | Not yet covered |
-| `RecordListController` | - | - | Not yet covered |
-| `GridViewButtonBarListener` | - | - | Not yet covered |
-| `GridViewQueryListener` | - | - | Not yet covered |
-| `RecordActionsViewHelper` | - | - | Not yet covered (legacy/helper path) |
-
-### Architecture Rules (PHPat)
-
-| Rule | Status |
-|------|--------|
-| Events must not depend on Services/Controllers/EventListeners | **Passing** |
-| Services must not depend on Controllers | **Passing** |
-| EventListeners must not depend on Controllers | **Passing** |
-| ViewHelpers must not depend on Services | **Passing** |
-| Constants must not depend on any internal class | **Passing** |
-
----
-
-## Scoring Against Requirements
-
-| Criterion | Requirement | Current | Score |
-|-----------|-------------|---------|-------|
-| Unit tests | Required, 70%+ coverage | 59 tests, 5 classes | 20/30 |
-| Functional tests | Required for DB operations | 67 tests, 3 services | 20/25 |
-| Architecture tests (PHPat) | Required for full conformance | 5 rules, all pass | 20/20 |
-| PHPStan | Level 9+ | Level 9 + PHPat | 15/15 |
-| E2E tests | Optional, bonus | None | 0/5 |
-| Mutation testing | 70%+ MSI for bonus | None | 0/5 |
-| **Total** | | | **75/100** |
-
----
-
-## Changes Applied
-
-### Session 1: Unit Tests
-
-1. **Removed DummyTest** - Replaced with real tests
-2. **Unit tests (59 tests, 110 assertions):**
-   - `RegisterViewModesEventTest` - 14 tests: constructor, add/remove/modify/has operations, validation
-   - `GridViewRecordActionsListenerTest` - 13 tests: store/retrieve, primary action filtering, cache
-   - `ViewModeControllerTest` - 3 tests: error handling, exception logging
-   - `ThumbnailServiceTest` - 12 tests: MIME type detection (data providers), error resilience
-   - `ConstantsTest` - 6 tests: constant value verification
-3. **Updated `phpunit.xml.dist`** - Added Architecture suite, Model exclusion from coverage
-
-### Session 2: Architecture + Functional + CI
-
-4. **Architecture tests (PHPat)** - 5 layer constraint rules enforced via PHPStan
-5. **Functional tests (67 tests, 138 assertions):**
-   - `ViewModeResolverTest` - 17 tests: mode resolution, TSconfig defaults, user preferences, allowed modes
-   - `GridConfigurationServiceTest` - 22 tests: table config, column counts, caching, preview settings
-   - `ViewTypeRegistryTest` - 28 tests: builtin types, custom TSconfig types, templates, CSS, JS modules
-6. **CSV fixtures** - Page records with varied TSconfig for testing different configurations
-7. **Functional test config** - `Tests/Build/FunctionalTests.xml` with FunctionalTestsBootstrap
-8. **CI workflow updated:**
-   - Renamed `tests` job to `unit-tests` (runs Unit suite only)
-   - Added `functional-tests` job with MySQL 8.0 service
-   - Added `--memory-limit=512M` to PHPStan job for PHPat analysis
-   - Updated PHPStan job name to reflect PHPat inclusion
-
-### Remaining Work
-
-9. **Functional tests** - For `RecordGridDataProvider` (DB queries with FAL)
-10. **Functional tests** - For `ViewModeController` happy-path (requires DI container)
-11. **E2E tests** - Optional Playwright tests for user workflows
-12. **Mutation testing** - Add Infection for test quality verification
-
----
-
-## Architecture Observations
-
-- **Testability concern:** `ViewModeResolver` uses `GeneralUtility::makeInstance()` for `EventDispatcherInterface`, making it a singleton with hidden dependencies. Constructor injection would improve testability.
-- **Good patterns:** `ViewTypeRegistry` uses constructor injection for EventDispatcher. `RegisterViewModesEvent` is pure PHP. `GridViewRecordActionsListener` is a self-contained cache.
-- **PHPat enforcement:** Layer boundaries are now enforced at CI time -- Events, Services, EventListeners, and ViewHelpers cannot introduce improper dependencies without failing the build.
-- **XClass usage:** The `RecordListController` extends the core controller via XClass, which is inherently harder to test in isolation. Integration/functional tests are the appropriate strategy here.
-
----
-
-*Report generated following the typo3-testing skill v1.0.0 methodology.*
+```bash
+Build/Scripts/runTests.sh -s unit          # 90 tests, 158 assertions
+Build/Scripts/runTests.sh -s phpstan       # 0 errors (includes phpat rules)
+Build/Scripts/runTests.sh -s cgl           # 0 diff
+Build/Scripts/runTests.sh -s composer      # validate + audit clean
+typo3DatabaseDriver=pdo_sqlite vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml
+# 72 tests, 155 assertions
+```
