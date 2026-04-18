@@ -258,15 +258,6 @@ final class ViewModeResolver implements SingletonInterface
     }
 
     /**
-     * Check if grid view is allowed for the given page.
-     * @deprecated Use isModeAllowed('grid', $pageId) instead
-     */
-    public function isGridViewAllowed(int $pageId): bool
-    {
-        return $this->isModeAllowed('grid', $pageId);
-    }
-
-    /**
      * Check if a user is forced to a specific view (disabling the toggle).
      *
      * @return string|null The forced view mode, or null if not forced
