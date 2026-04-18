@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload coverage
         if: matrix.php == '8.3' && always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: var/log/coverage.xml
@@ -150,7 +150,7 @@ jobs:
 
       - name: Upload functional coverage
         if: matrix.php == '8.3' && always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: functional-coverage-report
           path: var/log/functional-coverage.xml
