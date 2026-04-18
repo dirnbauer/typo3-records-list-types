@@ -54,7 +54,7 @@ The extension now has comprehensive test coverage across unit, functional, and a
 | `RecordListController` | - | - | Not yet covered |
 | `GridViewButtonBarListener` | - | - | Not yet covered |
 | `GridViewQueryListener` | - | - | Not yet covered |
-| `RecordActionsViewHelper` | - | - | Not yet covered |
+| `RecordActionsViewHelper` | - | - | Not yet covered (legacy/helper path) |
 
 ### Architecture Rules (PHPat)
 

@@ -217,3 +217,11 @@ File structure
     │   └── ViewTypeRegistry.php
     └── ViewHelpers/
         └── RecordActionsViewHelper.php
+
+Resources/
+    └── Private/
+        └── Partials/
+            ├── TableHeading.html
+            ├── SortingDropdown.html
+            ├── SortingModeToggle.html
+            └── SortableColumnHeader.html

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Service;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
@@ -15,6 +16,10 @@ use TYPO3\CMS\Core\SingletonInterface;
  */
 final class GridConfigurationService implements SingletonInterface
 {
+    public function __construct(
+        private readonly TcaSchemaFactory $tcaSchemaFactory,
+    ) {}
+
     /** @var array<string, array{titleField: ?string, descriptionField: ?string, imageField: ?string, preview: bool, hiddenField: string}> Runtime cache for table configurations */
     private array $tableConfigCache = [];
 
@@ -39,16 +44,7 @@ final class GridConfigurationService implements SingletonInterface
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
         $tableConfig = $tsConfig['mod.']['web_list.']['gridView.']['table.'][$table . '.'] ?? [];
 
-        // Get the hidden field from TCA
-        /** @var array<string, array<string, mixed>> $allTca */
-        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
-        /** @var array<string, mixed> $tca */
-        $tca = is_array($allTca[$table] ?? null) ? $allTca[$table] : [];
-        /** @var array<string, mixed> $tcaCtrl */
-        $tcaCtrl = $tca['ctrl'] ?? [];
-        /** @var array<string, string> $enableColumns */
-        $enableColumns = is_array($tcaCtrl['enablecolumns'] ?? null) ? $tcaCtrl['enablecolumns'] : [];
-        $hiddenField = $enableColumns['disabled'] ?? 'hidden';
+        $hiddenField = $this->getHiddenFieldName($table);
 
         $descriptionFieldRaw = $tableConfig['descriptionField'] ?? null;
         $imageFieldRaw = $tableConfig['imageField'] ?? null;
@@ -119,15 +115,11 @@ final class GridConfigurationService implements SingletonInterface
             return $titleField;
         }
 
-        // Fall back to TCA label field
-        /** @var array<string, array<string, mixed>> $allTcaLabel */
-        $allTcaLabel = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
-        $tca = is_array($allTcaLabel[$table] ?? null) ? $allTcaLabel[$table] : null;
-        if (is_array($tca)) {
-            /** @var array<string, mixed> $ctrl */
-            $ctrl = $tca['ctrl'] ?? [];
-            $labelField = $ctrl['label'] ?? null;
-            if (is_string($labelField)) {
+        // Fall back to the schema's configured label field
+        if ($this->tcaSchemaFactory->has($table)) {
+            $schemaConfig = $this->tcaSchemaFactory->get($table)->getRawConfiguration();
+            $labelField = $schemaConfig['label'] ?? null;
+            if (is_string($labelField) && $labelField !== '') {
                 return $labelField;
             }
         }
@@ -204,6 +196,22 @@ final class GridConfigurationService implements SingletonInterface
     public function clearCache(): void
     {
         $this->tableConfigCache = [];
+    }
+
+    private function getHiddenFieldName(string $table): string
+    {
+        if (!$this->tcaSchemaFactory->has($table)) {
+            return 'hidden';
+        }
+
+        $schemaConfig = $this->tcaSchemaFactory->get($table)->getRawConfiguration();
+        $enableColumns = is_array($schemaConfig['enablecolumns'] ?? null) ? $schemaConfig['enablecolumns'] : [];
+        $disabledField = $enableColumns['disabled'] ?? null;
+        if (is_string($disabledField) && $disabledField !== '') {
+            return $disabledField;
+        }
+
+        return 'hidden';
     }
 
     /**

@@ -50,7 +50,7 @@
 <f:if condition="{record.actions}">
     <div class="btn-group btn-group-sm ms-1" role="group">
         <f:for each="{record.actions}" as="actionHtml">
-            <f:format.raw>{actionHtml}</f:format.raw>
+            <f:sanitize.html build="records-list-types-backend-fragments">{actionHtml}</f:sanitize.html>
         </f:for>
     </div>
 </f:if>

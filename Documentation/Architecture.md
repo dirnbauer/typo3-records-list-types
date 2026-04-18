@@ -339,7 +339,7 @@ Classes/
 │   ├── ThumbnailService.php            # Image processing
 │   └── ViewModeResolver.php            # View mode determination
 └── ViewHelpers/
-    └── RecordActionsViewHelper.php     # Action rendering in cards
+    └── RecordActionsViewHelper.php     # Legacy action helper (not used by built-in templates)
 
 Configuration/
 ├── Icons.php                           # Icon registration

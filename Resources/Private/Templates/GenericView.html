@@ -61,25 +61,25 @@
                             </div>
 
                             <div class="recordlist-heading-actions">
-                                <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
-                                <f:if condition="{table.sortingDropdownHtml}">
-                                    <f:format.raw>{table.sortingDropdownHtml}</f:format.raw>
+                                <f:comment>Sorting dropdown rendered from structured data</f:comment>
+                                <f:if condition="{table.sortingDropdown}">
+                                    <f:render partial="SortingDropdown" arguments="{sortingDropdown: table.sortingDropdown}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
                                 </f:if>
                                 
                                 <f:if condition="{table.actionButtons.downloadButton}">
-                                    <f:format.raw>{table.actionButtons.downloadButton}</f:format.raw>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.downloadButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.columnSelectorButton}">
-                                    <f:format.raw>{table.actionButtons.columnSelectorButton}</f:format.raw>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.collapseButton}">
-                                    <f:format.raw>{table.actionButtons.collapseButton}</f:format.raw>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.collapseButton}</f:sanitize.html>
                                 </f:if>
                             </div>
                         </div>
