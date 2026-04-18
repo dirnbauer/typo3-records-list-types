@@ -7,6 +7,24 @@ on:
     branches: [main]
 
 jobs:
+  security:
+    name: Composer security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist
+
+      - name: composer audit
+        run: composer audit --locked --abandoned=report
+
   phpstan:
     name: PHPStan (Level 9 + PHPat)
     runs-on: ubuntu-latest
