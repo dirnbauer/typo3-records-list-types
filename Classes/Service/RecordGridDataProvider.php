@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Service;
 
 use Doctrine\DBAL\ParameterType;
-use RuntimeException;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -75,9 +73,9 @@ final class RecordGridDataProvider implements SingletonInterface
         $records = [];
 
         while ($row = $result->fetchAssociative()) {
-            // Apply workspace overlay to get the correct version for the current workspace
-            $backendUser = $this->getBackendUserAuthentication();
-            BackendUtility::workspaceOL($table, $row, $backendUser->workspace, true);
+            // Apply workspace overlay to get the correct version for the current
+            // workspace. The two-arg form reads the active workspace id itself.
+            BackendUtility::workspaceOL($table, $row, -99, true);
 
             // workspaceOL returns false/null if record is deleted in workspace or should not be shown
             if (!is_array($row)) {
@@ -118,7 +116,6 @@ final class RecordGridDataProvider implements SingletonInterface
     public function getRecordCount(string $table, int $pageId): int
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
-        $backendUser = $this->getBackendUserAuthentication();
 
         // Use TYPO3's standard restrictions for proper workspace handling
         $queryBuilder->getRestrictions()
@@ -138,25 +135,6 @@ final class RecordGridDataProvider implements SingletonInterface
 
         $result = $queryBuilder->executeQuery()->fetchOne();
         return is_int($result) || is_string($result) ? (int) $result : 0;
-    }
-
-    /**
-     * Get the current backend user authentication.
-     *
-     * Retained for workspaceOL() calls that still need the user object.
-     *
-     * @throws RuntimeException If no backend user is available
-     */
-    private function getBackendUserAuthentication(): BackendUserAuthentication
-    {
-        $backendUser = $GLOBALS['BE_USER'] ?? null;
-        if (!$backendUser instanceof BackendUserAuthentication) {
-            throw new RuntimeException(
-                'No backend user available. RecordGridDataProvider requires an authenticated backend user.',
-                1735700000,
-            );
-        }
-        return $backendUser;
     }
 
     /**
@@ -216,10 +194,9 @@ final class RecordGridDataProvider implements SingletonInterface
         string $sortDirection = 'asc',
     ): QueryBuilder {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
-        $backendUser = $this->getBackendUserAuthentication();
 
-        // Use TYPO3's standard restrictions for proper workspace handling
-        // Remove all default restrictions and add only the ones we need
+        // Use TYPO3's standard restrictions for proper workspace handling.
+        // Remove all default restrictions and add only the ones we need.
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
@@ -689,7 +666,6 @@ final class RecordGridDataProvider implements SingletonInterface
         }
 
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
-        $backendUser = $this->getBackendUserAuthentication();
 
         $queryBuilder->getRestrictions()
             ->removeAll()
@@ -720,8 +696,7 @@ final class RecordGridDataProvider implements SingletonInterface
         $grouped = [];
 
         while ($row = $result->fetchAssociative()) {
-            $backendUser = $this->getBackendUserAuthentication();
-            BackendUtility::workspaceOL($table, $row, $backendUser->workspace, true);
+            BackendUtility::workspaceOL($table, $row, -99, true);
             if (!is_array($row)) {
                 continue;
             }

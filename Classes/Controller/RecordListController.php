@@ -16,6 +16,7 @@ use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
+use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
@@ -1037,8 +1038,8 @@ final class RecordListController extends CoreRecordListController
     ): array {
         $records = [];
         $recordsByIdentity = [];
-        $backendUser = $this->getBackendUserAuthentication();
-        $useWorkspaceReduction = $backendUser->workspace > 0;
+        $workspaceId = $this->getCurrentWorkspaceId();
+        $useWorkspaceReduction = $workspaceId > 0;
         $recordGridDataProvider ??= GeneralUtility::makeInstance(RecordGridDataProvider::class);
 
         try {
@@ -1053,9 +1054,10 @@ final class RecordListController extends CoreRecordListController
             $result = $queryBuilder->executeQuery();
 
             while ($row = $result->fetchAssociative()) {
-                // Apply workspace overlay to get the correct version for the current workspace
-                $backendUser = $this->getBackendUserAuthentication();
-                BackendUtility::workspaceOL($tableName, $row, $backendUser->workspace, true);
+                // Apply workspace overlay to get the correct version for the
+                // current workspace. The -99 placeholder tells workspaceOL()
+                // to read the active workspace id itself.
+                BackendUtility::workspaceOL($tableName, $row, -99, true);
 
                 // workspaceOL returns false/null if record is deleted in workspace or should not be shown
                 if (!is_array($row)) {
@@ -1101,6 +1103,17 @@ final class RecordListController extends CoreRecordListController
         $liveUidRaw = $row['t3ver_oid'] ?? 0;
         $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
         return (string) ($liveUid > 0 ? $liveUid : $fallbackUid);
+    }
+
+    /**
+     * Resolve the current workspace id via the Context aspect — the canonical
+     * TYPO3 v14 API. Falls back to 0 (LIVE) when the aspect is missing.
+     */
+    protected function getCurrentWorkspaceId(): int
+    {
+        $workspaceId = GeneralUtility::makeInstance(Context::class)
+            ->getPropertyFromAspect('workspace', 'id', 0);
+        return is_numeric($workspaceId) ? (int) $workspaceId : 0;
     }
 
     /**
