@@ -264,7 +264,7 @@ final class RecordListController extends CoreRecordListController
 
         // Set page title
         $view->setTitle(
-            $languageService->translate('title', 'backend.modules.list') ?? '',
+            (string) ($languageService->translate('title', 'backend.modules.list') ?? ''),
             $title,
         );
 

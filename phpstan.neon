@@ -1,8 +1,7 @@
 includes:
     - vendor/phpstan/phpstan-strict-rules/rules.neon
     - vendor/phpat/phpat/extension.neon
-    # saschaegerer/phpstan-typo3 does not yet support TYPO3 v14
-    # Re-enable once v14 support is released
+    - vendor/saschaegerer/phpstan-typo3/extension.neon
 
 parameters:
     level: 9
@@ -12,3 +11,8 @@ parameters:
     excludePaths:
         - Classes/Domain/Model/*
     treatPhpDocTypesAsCertain: false
+    typo3:
+        requestGetAttributeMapping:
+            pageContext: TYPO3\CMS\Backend\Context\PageContext
+            moduleData: TYPO3\CMS\Backend\Module\ModuleData
+            route: TYPO3\CMS\Backend\Routing\Route
