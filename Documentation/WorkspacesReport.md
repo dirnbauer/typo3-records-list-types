@@ -1,54 +1,47 @@
 # Workspaces Report
 
-> Run date: 2026-04-18
+> Run date: 2026-04-18 (round 2)
 > Skill: typo3-workspaces
 > Extension: records_list_types @ TYPO3 v14
 
-## Summary
+## Scan findings
 
-The extension already integrates with TYPO3's workspace API correctly in the
-data layer. The remaining work is v14 API tightening and cleanup, not a
-rewrite.
+Running the `typo3-workspaces` skill against the current tree surfaced a
+few workspace-id resolution sites that still read
+`$backendUser->workspace` directly instead of going through the Context
+aspect that was standardised in the previous round.
 
-## What already works
+| # | Location | Old code | Remediation |
+|---|----------|----------|-------------|
+| 1 | `Classes/Controller/RecordListController.php:1041` | `$useWorkspaceReduction = $backendUser->workspace > 0;` | Read the workspace id from the Context aspect via a local helper. |
+| 2 | `Classes/Controller/RecordListController.php:1058` | `BackendUtility::workspaceOL($tableName, $row, $backendUser->workspace, true);` | Drop the explicit workspace id — the two-arg form of `workspaceOL()` reads the current workspace itself. |
+| 3 | `Classes/Service/RecordGridDataProvider.php:80` | `BackendUtility::workspaceOL($table, $row, $backendUser->workspace, true);` | Same: let `workspaceOL()` pick up the workspace id, remove the orphaned `$backendUser` local. |
+| 4 | `Classes/Service/RecordGridDataProvider.php:724` | Ditto, inside `getRecordsWithActions()` | Same fix. |
 
-- **Query-time restriction**: every `QueryBuilder` obtained from the extension
-  applies `DeletedRestriction` + `WorkspaceRestriction` keyed to the current
-  backend user's workspace
-  (`Classes/Service/RecordGridDataProvider.php:202-205`, `:113-116`, `:674-677`).
-- **Row-time overlay**: every result row is passed through
-  `BackendUtility::workspaceOL()` before being enriched and returned
-  (`Classes/Service/RecordGridDataProvider.php:81`, `:703`).
-- **State detection**: `t3ver_state` is mapped to visual indicators (new,
-  changed, move, deleted) via `getWorkspaceState()`
-  (`Classes/Service/RecordGridDataProvider.php:612-630`).
-- **Template rendering**: `gridview-card--ws-*` and
-  `gridview-card__translation-pill--ws-*` CSS hooks render workspace status
-  in Card, Compact and Teaser templates.
-- **Core XClass integration**: `RecordListController` delegates DataHandler
-  calls to the parent controller, so record deletion and copy operations
-  automatically use the workspace-aware Core APIs.
+## Confirmed green (no change required)
 
-## Issues found and addressed
+- Every `QueryBuilder` obtained inside `RecordGridDataProvider` applies
+  both `DeletedRestriction` and `WorkspaceRestriction` with the workspace
+  id resolved via `Context::getPropertyFromAspect('workspace', 'id')`.
+- `getWorkspaceState()` only maps the TYPO3 v14 values (1 = new,
+  2 = deleted, 4 = move). Legacy `t3ver_state = 3` is absent.
+- No TCA ships with this extension, so there is nothing to mark
+  `versioningWS => true` here; `pages` and `tt_content` already carry
+  the flag in Core.
+- The extension does not expose publish/stage buttons. Publishing flows
+  continue through Core's Workspaces module.
+- `workspaceRecordIdentity()` correctly folds live + overlaid rows to a
+  single effective record when the current workspace id > 0.
 
-| # | Issue | Resolution |
-|---|-------|-----------|
-| 1 | State mapping for `t3ver_state = 3` kept for legacy reasons. The value was removed in TYPO3 v11 (old "move placeholder"). On v14 only `4` represents a move pointer. | Map only `4` to `'move'`. |
-| 2 | Workspace ID resolved via `$BE_USER->workspace` property access. Skill guidance recommends `Context` aspect as the canonical API. | Read via `Context::getPropertyFromAspect('workspace', 'id', 0)`. |
-| 3 | Deprecated wrapper `ViewModeResolver::isGridViewAllowed()` kept alive for BC. Extension is v14-only; no external API surface depends on it. | Remove the wrapper. |
+## File / FAL reminder
 
-## Issues accepted
+Physical files under `fileadmin/` remain unversioned. Grid and Teaser
+thumbnails always render the live binary regardless of workspace — this
+is a TYPO3 platform constraint, covered in `Documentation/KnownProblems`
+and `Documentation/Developer/Workspaces.rst`.
 
-| # | Issue | Rationale |
-|---|-------|-----------|
-| A | Physical files under `fileadmin/` are not versioned, so thumbnails in the grid always render the live binary. | Documented limitation of TYPO3 FAL. Listed in `Documentation/KnownProblems/Index.rst`. |
-| B | The extension does not expose publish/stage/swap buttons. | The module is view-only; DataHandler handles publishing elsewhere in Core. |
+## Verification after fixes
 
-## Verification
-
-- PHPStan level 9 (see `phpstan.neon`).
-- Unit test `ConstantsTest` and functional tests for `TableAccessService`,
-  `ViewModeResolver`, `GridConfigurationService`, `ViewTypeRegistry` remain
-  green after the API tightening.
-- Manual backend check: switch to a custom workspace, verify the workspace
-  badge colors on the Grid view match the expected `t3ver_state` values.
+- `vendor/bin/phpstan analyse` — expected 0 errors.
+- `vendor/bin/phpunit --testsuite Unit` — 90 green.
+- `typo3DatabaseDriver=pdo_sqlite vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml` — 72 green.
