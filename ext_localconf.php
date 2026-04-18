@@ -15,7 +15,9 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects'][RecordListController::class] = [
     'className' => \Webconsulting\RecordsListTypes\Controller\RecordListController::class,
 ];
 
-$GLOBALS['TYPO3_CONF_VARS']['SYS']['htmlSanitizer']['recordsListTypesBackend']
+// The identifier must match the `build=` attribute used in every Fluid
+// template of this extension (records-list-types-backend-fragments).
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['htmlSanitizer']['records-list-types-backend-fragments']
     = BackendFragmentSanitizerBuilder::class;
 
 // =============================================================================
