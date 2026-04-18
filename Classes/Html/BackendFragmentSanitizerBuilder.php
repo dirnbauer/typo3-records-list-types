@@ -141,9 +141,13 @@ final class BackendFragmentSanitizerBuilder extends DefaultSanitizerBuilder
             (new Tag('input'))->addAttrs(...$inputAttrs),
             (new Tag('a', Tag::ALLOW_CHILDREN))->addAttrs(...$anchorAttrs),
             (new Tag('typo3-backend-contextual-record-edit-trigger', Tag::ALLOW_CHILDREN))->addAttrs(...$contextualTriggerAttrs),
-            (new Tag('typo3-recordlist-record-download-button'))->addAttrs(...$downloadButtonAttrs),
-            (new Tag('typo3-backend-new-page-wizard-button'))->addAttrs(...$newPageWizardAttrs),
-            (new Tag('typo3-backend-column-selector-button'))->addAttrs(...$columnSelectorAttrs),
+            // TYPO3 GenericButton renders these custom elements with an icon
+            // span + label text inside (`<...><span>…svg…</span>Label</...>`),
+            // so they must allow children -- otherwise the sanitizer's
+            // REMOVE_UNEXPECTED_CHILDREN flag wipes the icon and label.
+            (new Tag('typo3-recordlist-record-download-button', Tag::ALLOW_CHILDREN))->addAttrs(...$downloadButtonAttrs),
+            (new Tag('typo3-backend-new-page-wizard-button', Tag::ALLOW_CHILDREN))->addAttrs(...$newPageWizardAttrs),
+            (new Tag('typo3-backend-column-selector-button', Tag::ALLOW_CHILDREN))->addAttrs(...$columnSelectorAttrs),
             (new Tag('typo3-backend-clipboard-panel'))->addAttrs(...$clipboardPanelAttrs),
         );
     }
