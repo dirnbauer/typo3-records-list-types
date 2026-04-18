@@ -27,7 +27,6 @@ final class BackendFragmentSanitizerBuilder extends DefaultSanitizerBuilder
             ...$this->globalAttrs,
             new Attr('popover'),
             new Attr('popovertarget'),
-            new Attr('inert'),
             new Attr('disabled'),
             new Attr('hidden'),
         ];
@@ -37,12 +36,6 @@ final class BackendFragmentSanitizerBuilder extends DefaultSanitizerBuilder
             new Attr('type'),
             new Attr('name'),
             new Attr('value'),
-            new Attr('form'),
-            new Attr('formaction'),
-            new Attr('formenctype'),
-            new Attr('formmethod'),
-            new Attr('formnovalidate'),
-            new Attr('formtarget'),
         ];
 
         $anchorAttrs = [
@@ -59,34 +52,6 @@ final class BackendFragmentSanitizerBuilder extends DefaultSanitizerBuilder
                 new Attr('name'),
                 new Attr('value'),
                 new Attr('checked'),
-                new Attr('placeholder'),
-                new Attr('min'),
-                new Attr('max'),
-                new Attr('step'),
-                new Attr('autocomplete'),
-            ),
-            (new Tag('select', Tag::ALLOW_CHILDREN))->addAttrs(
-                ...$commonBackendAttrs,
-                new Attr('name'),
-                new Attr('multiple'),
-                new Attr('size'),
-            ),
-            (new Tag('option', Tag::ALLOW_CHILDREN))->addAttrs(
-                new Attr('value'),
-                new Attr('selected'),
-                new Attr('disabled'),
-                ...$commonBackendAttrs,
-            ),
-            (new Tag('optgroup', Tag::ALLOW_CHILDREN))->addAttrs(
-                new Attr('label'),
-                new Attr('disabled'),
-                ...$commonBackendAttrs,
-            ),
-            (new Tag('form', Tag::ALLOW_CHILDREN))->addAttrs(
-                ...$commonBackendAttrs,
-                new Attr('action'),
-                new Attr('method'),
-                new Attr('novalidate'),
             ),
             (new Tag('a', Tag::ALLOW_CHILDREN))->addAttrs(...$anchorAttrs),
             (new Tag('typo3-backend-contextual-record-edit-trigger', Tag::ALLOW_CHILDREN))->addAttrs(

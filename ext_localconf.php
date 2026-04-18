@@ -12,7 +12,7 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects'][\TYPO3\CMS\Backend\Controller\Reco
     'className' => \Webconsulting\RecordsListTypes\Controller\RecordListController::class,
 ];
 
-$GLOBALS['TYPO3_CONF_VARS']['SYS']['htmlSanitizer']['records-list-types-backend-fragments']
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['htmlSanitizer']['recordsListTypesBackend']
     = \Webconsulting\RecordsListTypes\Html\BackendFragmentSanitizerBuilder::class;
 
 // =============================================================================

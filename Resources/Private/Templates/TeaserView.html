@@ -23,29 +23,29 @@
                     <div class="recordlist-heading multi-record-selection-panel">
                         <div class="recordlist-heading-row">
                             <div class="recordlist-heading-title">
-                                <f:sanitize.html build="recordsListTypesBackend">{table.tableHeadingHtml}</f:sanitize.html>
+                                <f:sanitize.html build="records-list-types-backend-fragments">{table.tableHeadingHtml}</f:sanitize.html>
                             </div>
 
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
                                 <f:if condition="{table.sortingDropdownHtml}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.sortingDropdownHtml}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.sortingDropdownHtml}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.newRecordButton}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
                                 </f:if>
                                 
                                 <f:if condition="{table.actionButtons.downloadButton}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.downloadButton}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.downloadButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.columnSelectorButton}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.collapseButton}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.collapseButton}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.collapseButton}</f:sanitize.html>
                                 </f:if>
                             </div>
                         </div>
@@ -55,12 +55,12 @@
                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
                                 <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
                                     <span class="t3js-multi-record-selection-table-title">
-                                        <f:sanitize.html build="recordsListTypesBackend">{table.tableHeadingHtml}</f:sanitize.html>
+                                        <f:sanitize.html build="records-list-types-backend-fragments">{table.tableHeadingHtml}</f:sanitize.html>
                                     </span>
                                     <strong class="text-nowrap"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
                                 </div>
                                 <div class="recordlist-heading-actions">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.multiRecordSelectionActionsHtml}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.multiRecordSelectionActionsHtml}</f:sanitize.html>
                                 </div>
                             </div>
                         </f:if>

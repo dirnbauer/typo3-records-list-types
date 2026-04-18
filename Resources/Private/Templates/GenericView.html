@@ -63,23 +63,23 @@
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
                                 <f:if condition="{table.sortingDropdownHtml}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.sortingDropdownHtml}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.sortingDropdownHtml}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.newRecordButton}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
                                 </f:if>
                                 
                                 <f:if condition="{table.actionButtons.downloadButton}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.downloadButton}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.downloadButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.columnSelectorButton}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.collapseButton}">
-                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.collapseButton}</f:sanitize.html>
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.collapseButton}</f:sanitize.html>
                                 </f:if>
                             </div>
                         </div>
