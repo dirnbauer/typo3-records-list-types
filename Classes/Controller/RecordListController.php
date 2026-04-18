@@ -891,7 +891,7 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
 
-            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $this->request);
+            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
             if ($count > 0) {
                 $tables[] = $tableName;
             }
