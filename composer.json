@@ -1,18 +1,24 @@
 {
     "name": "webconsulting/records-list-types",
     "type": "typo3-cms-extension",
-    "description": "Multiple list view types for TYPO3 v14 Records module - grid, compact, teaser layouts with thumbnails",
+    "description": "Records List Types: multiple view modes (Grid, Compact, Teaser, custom) for the TYPO3 v14 backend Records module, with thumbnail support, per-table TSconfig, workspace-aware overlays, and PSR-14 extensibility.",
     "license": "GPL-2.0-or-later",
     "authors": [
         {
             "name": "Webconsulting",
-            "email": "office@webconsulting.at"
+            "email": "office@webconsulting.at",
+            "role": "Developer"
         }
     ],
+    "homepage": "https://github.com/dirnbauer/typo3-records-list-types",
+    "support": {
+        "issues": "https://github.com/dirnbauer/typo3-records-list-types/issues",
+        "source": "https://github.com/dirnbauer/typo3-records-list-types"
+    },
     "require": {
         "php": "^8.3",
-        "typo3/cms-core": "^14.0",
         "typo3/cms-backend": "^14.0",
+        "typo3/cms-core": "^14.0",
         "typo3/cms-fluid": "^14.0"
     },
     "require-dev": {
@@ -37,7 +43,8 @@
     },
     "extra": {
         "typo3/cms": {
-            "extension-key": "records_list_types"
+            "extension-key": "records_list_types",
+            "web-dir": "public"
         }
     },
     "config": {
