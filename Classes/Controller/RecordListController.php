@@ -867,40 +867,6 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Get the list of tables to render.
-     */
-    /**
-     * @return array<int, string>
-     */
-    protected function getTablesToRender(int $pageId, string $specificTable, RecordGridDataProvider $dataProvider): array
-    {
-        if ($specificTable !== '') {
-            return [$specificTable];
-        }
-
-        // Get all tables that have records on this page
-        $tables = [];
-        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
-        foreach ($allTca as $tableName => $tca) {
-            if (!is_string($tableName) || !is_array($tca)) {
-                continue;
-            }
-            // Skip hidden tables
-            $ctrlArr = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
-            if (isset($ctrlArr['hideTable']) && (bool) $ctrlArr['hideTable']) {
-                continue;
-            }
-
-            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
-            if ($count > 0) {
-                $tables[] = $tableName;
-            }
-        }
-
-        return $tables;
-    }
-
-    /**
      * Get tables that should be rendered, considering search.
      *
      * When searching, checks which tables have matching records.
