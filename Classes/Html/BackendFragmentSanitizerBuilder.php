@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Html;
 
+use Override;
 use TYPO3\CMS\Core\Html\DefaultSanitizerBuilder;
 use TYPO3\HtmlSanitizer\Behavior;
 use TYPO3\HtmlSanitizer\Behavior\Attr;
@@ -19,6 +20,7 @@ use TYPO3\HtmlSanitizer\Behavior\Tag;
  */
 final class BackendFragmentSanitizerBuilder extends DefaultSanitizerBuilder
 {
+    #[Override]
     protected function createBehavior(): Behavior
     {
         $behavior = parent::createBehavior();

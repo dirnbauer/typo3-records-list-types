@@ -17,11 +17,11 @@ use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
  * Handles AJAX requests to store the user's view mode preference
  * in their backend user configuration.
  */
-final class ViewModeController
+final readonly class ViewModeController
 {
     public function __construct(
-        private readonly ViewModeResolver $viewModeResolver,
-        private readonly LoggerInterface $logger,
+        private ViewModeResolver $viewModeResolver,
+        private LoggerInterface $logger,
     ) {}
 
     /**

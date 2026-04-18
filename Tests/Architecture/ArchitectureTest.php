@@ -7,6 +7,7 @@ namespace Webconsulting\RecordsListTypes\Tests\Architecture;
 use PHPat\Selector\Selector;
 use PHPat\Test\Builder\Rule;
 use PHPat\Test\PHPat;
+use Webconsulting\RecordsListTypes\Constants;
 
 /**
  * Architecture tests to enforce layer constraints in the extension.
@@ -72,7 +73,7 @@ final class ArchitectureTest
     public function testConstantsShouldNotDependOnAnything(): Rule
     {
         return PHPat::rule()
-            ->classes(Selector::classname('Webconsulting\RecordsListTypes\Constants'))
+            ->classes(Selector::classname(Constants::class))
             ->shouldNotDependOn()
             ->classes(
                 Selector::inNamespace('Webconsulting\RecordsListTypes\Service'),

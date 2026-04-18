@@ -18,14 +18,14 @@ use TYPO3\CMS\Core\SingletonInterface;
  * Resolves FAL file references from records and prepares them for
  * display as thumbnails in Grid and Teaser view cards.
  */
-final class ThumbnailService implements SingletonInterface
+final readonly class ThumbnailService implements SingletonInterface
 {
     /** Default thumbnail dimensions. */
-    private const DEFAULT_WIDTH = 400;
-    private const DEFAULT_HEIGHT = 225;
+    private const int DEFAULT_WIDTH = 400;
+    private const int DEFAULT_HEIGHT = 225;
 
     public function __construct(
-        private readonly FileRepository $fileRepository,
+        private FileRepository $fileRepository,
     ) {}
 
     /**
@@ -62,7 +62,7 @@ final class ThumbnailService implements SingletonInterface
             }
 
             return null;
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Log error but don't break rendering
             return null;
         }
@@ -96,7 +96,7 @@ final class ThumbnailService implements SingletonInterface
             }
 
             return $images;
-        } catch (Exception $e) {
+        } catch (Exception) {
             return [];
         }
     }
@@ -141,7 +141,7 @@ final class ThumbnailService implements SingletonInterface
             );
 
             return $processedFile->getPublicUrl();
-        } catch (Exception $e) {
+        } catch (Exception) {
             return null;
         }
     }
@@ -160,7 +160,7 @@ final class ThumbnailService implements SingletonInterface
     {
         $file = $this->getFirstImage($table, $uid, $fieldName);
 
-        if ($file === null) {
+        if (!$file instanceof FileInterface) {
             return [
                 'file' => null,
                 'url' => null,
@@ -203,7 +203,7 @@ final class ThumbnailService implements SingletonInterface
             }
 
             return null;
-        } catch (Exception $e) {
+        } catch (Exception) {
             return null;
         }
     }

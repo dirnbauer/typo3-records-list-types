@@ -8,6 +8,7 @@ use Exception;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 use TYPO3\CMS\Backend\Module\ModuleInterface;
+use TYPO3\CMS\Backend\Routing\Route;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\Components\Buttons\DropDownButton;
@@ -30,13 +31,13 @@ use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
  * one mode is allowed.
  */
 #[AsEventListener(event: ModifyButtonBarEvent::class)]
-final class GridViewButtonBarListener
+final readonly class GridViewButtonBarListener
 {
     public function __construct(
-        private readonly ViewModeResolver $viewModeResolver,
-        private readonly IconFactory $iconFactory,
-        private readonly UriBuilder $uriBuilder,
-        private readonly PageRenderer $pageRenderer,
+        private ViewModeResolver $viewModeResolver,
+        private IconFactory $iconFactory,
+        private UriBuilder $uriBuilder,
+        private PageRenderer $pageRenderer,
     ) {}
 
     private function getComponentFactory(): ComponentFactory
@@ -71,7 +72,7 @@ final class GridViewButtonBarListener
         $viewModes = $this->viewModeResolver->getViewModesForDisplay($pageId);
 
         // Filter to only allowed modes
-        $allowedModes = array_filter($viewModes, fn($config) => $config['allowed']);
+        $allowedModes = array_filter($viewModes, fn(array $config) => $config['allowed']);
 
         // Need at least 2 modes to show a toggle
         if (count($allowedModes) < 2) {
@@ -128,7 +129,7 @@ final class GridViewButtonBarListener
 
         // Create dropdown button showing the active view mode label
         $dropdownButton = $componentFactory->createDropDownButton()
-            ->setLabel($lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:button.viewMode'))
+            ->setLabel($lang->sL('records_list_types.messages:button.viewMode'))
             ->setIcon($this->iconFactory->getIcon($currentModeConfig['icon'], IconSize::SMALL))
             ->setShowLabelText(true)
             ->setShowActiveLabelText(true);
@@ -150,7 +151,7 @@ final class GridViewButtonBarListener
 
             try {
                 $url = (string) $this->uriBuilder->buildUriFromRoute(Constants::MODULE_ROUTE, $routeParams);
-            } catch (Exception $e) {
+            } catch (Exception) {
                 $params = $queryParams;
                 $params['displayMode'] = $modeId;
                 $url = (string) $request->getUri()->withQuery(http_build_query($params));
@@ -186,7 +187,7 @@ final class GridViewButtonBarListener
     private function isRecordsModule(ServerRequestInterface $request): bool
     {
         $route = $request->getAttribute('route');
-        if ($route instanceof \TYPO3\CMS\Backend\Routing\Route) {
+        if ($route instanceof Route) {
             $routePath = $route->getPath();
             if (str_contains($routePath, '/module/content/records')
                 || str_contains($routePath, '/module/web/list')) {

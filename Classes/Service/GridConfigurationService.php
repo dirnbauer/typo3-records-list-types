@@ -24,7 +24,7 @@ final class GridConfigurationService implements SingletonInterface
     private array $tableConfigCache = [];
 
     /** Default number of columns in the grid. */
-    private const DEFAULT_COLS = 4;
+    private const int DEFAULT_COLS = 4;
 
     /**
      * Get the configuration for a specific table.
@@ -78,7 +78,7 @@ final class GridConfigurationService implements SingletonInterface
         $gridViewConfig = $tsConfig['mod.']['web_list.']['gridView.'] ?? [];
 
         $allowedViewsString = $tsConfig['mod.']['web_list.']['allowedViews'] ?? 'list,grid';
-        $allowedViews = array_map('trim', explode(',', $allowedViewsString));
+        $allowedViews = array_map(trim(...), explode(',', $allowedViewsString));
 
         return [
             'cols' => $this->validateCols((int) ($gridViewConfig['cols'] ?? self::DEFAULT_COLS)),

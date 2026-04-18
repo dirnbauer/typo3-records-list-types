@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Context\Context;
@@ -26,15 +27,15 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * and Teaser views. Language information (flag identifiers) is added by
  * the controller after this provider returns the base record data.
  */
-final class RecordGridDataProvider implements SingletonInterface
+final readonly class RecordGridDataProvider implements SingletonInterface
 {
     public function __construct(
-        private readonly ConnectionPool $connectionPool,
-        private readonly IconFactory $iconFactory,
-        private readonly GridConfigurationService $configurationService,
-        private readonly ThumbnailService $thumbnailService,
-        private readonly TcaSchemaFactory $tcaSchemaFactory,
-        private readonly Context $context,
+        private ConnectionPool $connectionPool,
+        private IconFactory $iconFactory,
+        private GridConfigurationService $configurationService,
+        private ThumbnailService $thumbnailService,
+        private TcaSchemaFactory $tcaSchemaFactory,
+        private Context $context,
     ) {}
 
     /**
@@ -82,7 +83,7 @@ final class RecordGridDataProvider implements SingletonInterface
                 continue;
             }
 
-            $records[] = $this->enrichRecord($table, $row, $tableConfig, $pageId);
+            $records[] = $this->enrichRecord($table, $row, $tableConfig);
         }
 
         return $records;
@@ -101,7 +102,7 @@ final class RecordGridDataProvider implements SingletonInterface
     public function buildRecordDataFromRow(string $table, array $row, int $pageId): array
     {
         $tableConfig = $this->configurationService->getTableConfig($table, $pageId);
-        return $this->enrichRecord($table, $row, $tableConfig, $pageId);
+        return $this->enrichRecord($table, $row, $tableConfig);
     }
 
     /**
@@ -330,8 +331,8 @@ final class RecordGridDataProvider implements SingletonInterface
         // Add creation date (use actual field name from TCA)
         $crdateField = is_string($ctrl['crdate'] ?? null) ? $ctrl['crdate'] : '';
         if ($crdateField !== '') {
-            $translatedLabel = $langService !== null
-                ? $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.creationDate')
+            $translatedLabel = $langService instanceof LanguageService
+                ? $langService->sL('core.general:LGL.creationDate')
                 : '';
             $fields[] = [
                 'field' => $crdateField,
@@ -342,8 +343,8 @@ final class RecordGridDataProvider implements SingletonInterface
         // Add modification date (use actual field name from TCA)
         $tstampField = is_string($ctrl['tstamp'] ?? null) ? $ctrl['tstamp'] : '';
         if ($tstampField !== '') {
-            $translatedLabel = $langService !== null
-                ? $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.timestamp')
+            $translatedLabel = $langService instanceof LanguageService
+                ? $langService->sL('core.general:LGL.timestamp')
                 : '';
             $fields[] = [
                 'field' => $tstampField,
@@ -354,8 +355,8 @@ final class RecordGridDataProvider implements SingletonInterface
         // Add sorting field if available
         $sortbyField = is_string($ctrl['sortby'] ?? null) ? $ctrl['sortby'] : '';
         if ($sortbyField !== '') {
-            $translatedLabel = $langService !== null
-                ? $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.sorting')
+            $translatedLabel = $langService instanceof LanguageService
+                ? $langService->sL('core.general:LGL.sorting')
                 : '';
             $fields[] = [
                 'field' => $sortbyField,
@@ -434,7 +435,7 @@ final class RecordGridDataProvider implements SingletonInterface
 
         // Traditional LLL: format
         if (str_starts_with($label, 'LLL:')) {
-            if ($langService !== null) {
+            if ($langService instanceof LanguageService) {
                 $translated = $langService->sL($label);
                 return $translated !== '' ? $translated : ($fallback !== '' ? $fallback : $label);
             }
@@ -443,7 +444,7 @@ final class RecordGridDataProvider implements SingletonInterface
 
         // TYPO3 v12+ translation domain format (contains a colon but doesn't start with LLL:)
         if (str_contains($label, ':')) {
-            if ($langService !== null) {
+            if ($langService instanceof LanguageService) {
                 $translated = $langService->sL($label);
                 return $translated !== '' ? $translated : ($fallback !== '' ? $fallback : $label);
             }
@@ -517,10 +518,9 @@ final class RecordGridDataProvider implements SingletonInterface
      * @param string $table The database table name
      * @param array<string, mixed> $row The raw database row
      * @param array<string, mixed> $tableConfig The table configuration
-     * @param int $pageId The page ID
      * @return array<string, mixed> Enriched record data
      */
-    private function enrichRecord(string $table, array $row, array $tableConfig, int $pageId): array
+    private function enrichRecord(string $table, array $row, array $tableConfig): array
     {
         $uidRaw = $row['uid'] ?? 0;
         $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
@@ -682,7 +682,7 @@ final class RecordGridDataProvider implements SingletonInterface
                 ),
                 $queryBuilder->expr()->in(
                     $transOrigPointerField,
-                    $queryBuilder->createNamedParameter($parentUids, \Doctrine\DBAL\ArrayParameterType::INTEGER),
+                    $queryBuilder->createNamedParameter($parentUids, ArrayParameterType::INTEGER),
                 ),
                 $queryBuilder->expr()->gt(
                     $languageField,
@@ -707,7 +707,7 @@ final class RecordGridDataProvider implements SingletonInterface
                 continue;
             }
 
-            $grouped[$parentUid][] = $this->enrichRecord($table, $row, $tableConfig, $pageId);
+            $grouped[$parentUid][] = $this->enrichRecord($table, $row, $tableConfig);
         }
 
         return $grouped;

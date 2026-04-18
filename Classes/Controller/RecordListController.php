@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Controller;
 
 use Exception;
+use Override;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use ReflectionException;
 use ReflectionMethod;
 use RuntimeException;
+use TYPO3\CMS\Backend\Context\PageContext;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
+use TYPO3\CMS\Backend\Module\ModuleData;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
+use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Context\Context;
@@ -58,9 +62,9 @@ final class RecordListController extends CoreRecordListController
      * XClasses can't use constructor injection for additional dependencies,
      * so we fetch it from the container on demand.
      */
-    protected function getViewTypeRegistry(): ViewTypeRegistry
+    private function getViewTypeRegistry(): ViewTypeRegistry
     {
-        if ($this->viewTypeRegistry === null) {
+        if (!$this->viewTypeRegistry instanceof ViewTypeRegistry) {
             $registry = GeneralUtility::getContainer()->get(ViewTypeRegistry::class);
             if (!$registry instanceof ViewTypeRegistry) {
                 throw new RuntimeException('ViewTypeRegistry not available from container', 1735600200);
@@ -82,6 +86,7 @@ final class RecordListController extends CoreRecordListController
      *
      * We replicate the parent's initialization to ensure buttons and context are set up.
      */
+    #[Override]
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
         // Get view mode resolver
@@ -109,8 +114,8 @@ final class RecordListController extends CoreRecordListController
         // Initialize from parent's flow - type-narrow attributes for PHPStan
         $pageContextAttr = $request->getAttribute('pageContext');
         $moduleDataAttr = $request->getAttribute('moduleData');
-        if (!$pageContextAttr instanceof \TYPO3\CMS\Backend\Context\PageContext
-            || !$moduleDataAttr instanceof \TYPO3\CMS\Backend\Module\ModuleData) {
+        if (!$pageContextAttr instanceof PageContext
+            || !$moduleDataAttr instanceof ModuleData) {
             return parent::mainAction($request);
         }
         $this->pageContext = $pageContextAttr;
@@ -253,13 +258,13 @@ final class RecordListController extends CoreRecordListController
 
         // Search box - use full searchLevels (grid/compact now support search properly)
         $searchBoxHtml = '';
-        if ($this->allowSearch && $this->moduleData !== null && (bool) $this->moduleData->get('searchBox')) {
+        if ($this->allowSearch && $this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('searchBox')) {
             $searchBoxHtml = $this->renderSearchBox($request, $dbList, $this->searchTerm, $searchLevels);
         }
 
         // Clipboard
         $clipboardHtml = '';
-        if ($this->moduleData !== null && (bool) $this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
+        if ($this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
             $clipboardHtml = '<hr class="spacer"><typo3-backend-clipboard-panel return-url="' . htmlspecialchars((string) $dbList->listURL()) . '"></typo3-backend-clipboard-panel>';
         }
 
@@ -300,6 +305,7 @@ final class RecordListController extends CoreRecordListController
      * This ensures the view mode is preserved when submitting a search and that
      * the search actually goes to the grid view controller, not the core list view.
      */
+    #[Override]
     protected function renderSearchBox(
         ServerRequestInterface $request,
         DatabaseRecordList $dbList,
@@ -326,7 +332,7 @@ final class RecordListController extends CoreRecordListController
 
         try {
             $baseUrl = (string) $uriBuilder->buildUriFromRoute('records', $searchParams);
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Fallback to dbList URL if route building fails
             $baseUrl = (string) $dbList->listURL('', '-1', 'pointer,searchTerm,displayMode');
             $separator = str_contains($baseUrl, '?') ? '&' : '?';
@@ -339,13 +345,11 @@ final class RecordListController extends CoreRecordListController
             $searchLevelItems = $searchLevelCfg['items'];
         }
 
-        $searchBox = GeneralUtility::makeInstance(RecordSearchBoxComponent::class)
+        return GeneralUtility::makeInstance(RecordSearchBoxComponent::class)
             ->setAllowedSearchLevels($searchLevelItems)
             ->setSearchWord($searchWord)
             ->setSearchLevel($searchLevels)
             ->render($request, $baseUrl);
-
-        return $searchBox;
     }
 
     /**
@@ -358,7 +362,7 @@ final class RecordListController extends CoreRecordListController
      * toggle, column headers, language flags, middleware warning) for every
      * view -- templates simply ignore what they don't need.
      */
-    protected function renderViewContent(
+    private function renderViewContent(
         ServerRequestInterface $request,
         DatabaseRecordList $dbList,
         int $pageId,
@@ -580,7 +584,7 @@ final class RecordListController extends CoreRecordListController
                     }
                 }
                 $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
-            } catch (Exception $e) {
+            } catch (Exception) {
             }
 
             // Display columns (from ViewTypeRegistry config)
@@ -746,7 +750,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<int, string> $fieldNames Array of field names to include
      * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
      */
-    protected function getSpecificDisplayColumns(string $tableName, array $fieldNames): array
+    private function getSpecificDisplayColumns(string $tableName, array $fieldNames): array
     {
         $columns = [];
         $tcaForTable = $this->getTcaForTable($tableName);
@@ -807,7 +811,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $tableName The table name
      * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
      */
-    protected function getTeaserDisplayColumns(string $tableName): array
+    private function getTeaserDisplayColumns(string $tableName): array
     {
         $columns = [];
         $tcaForTable = $this->getTcaForTable($tableName);
@@ -880,7 +884,7 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return array<int, string> List of table names
      */
-    protected function getSearchableTables(
+    private function getSearchableTables(
         int $pageId,
         string $specificTable,
         string $searchTerm,
@@ -900,7 +904,10 @@ final class RecordListController extends CoreRecordListController
 
         $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
         foreach ($allTca as $tableName => $tca) {
-            if (!is_string($tableName) || !is_array($tca)) {
+            if (!is_string($tableName)) {
+                continue;
+            }
+            if (!is_array($tca)) {
                 continue;
             }
             // Skip hidden tables
@@ -933,7 +940,7 @@ final class RecordListController extends CoreRecordListController
                     if ($hasRecords) {
                         $tables[] = $tableName;
                     }
-                } catch (Exception $e) {
+                } catch (Exception) {
                     // Table might not be accessible, skip it
                     continue;
                 }
@@ -962,7 +969,7 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return DatabaseRecordList The initialized DatabaseRecordList
      */
-    protected function createDatabaseRecordListForTable(
+    private function createDatabaseRecordListForTable(
         string $tableName,
         int $pageId,
         string $searchTerm,
@@ -972,10 +979,10 @@ final class RecordListController extends CoreRecordListController
         $backendUser = $this->getBackendUserAuthentication();
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
-        if (!isset($this->moduleData)) {
+        if (!$this->moduleData instanceof ModuleData) {
             $this->moduleData = null;
         }
-        if ($this->moduleData !== null) {
+        if ($this->moduleData instanceof ModuleData) {
             $dbList->setModuleData($this->moduleData);
         }
         $dbList->calcPerms = $this->pageContext->pagePermissions;
@@ -1002,7 +1009,7 @@ final class RecordListController extends CoreRecordListController
         if (is_array($tableDisplayOrder)) {
             $dbList->setTableDisplayOrder($tableDisplayOrder);
         }
-        $clipboardEnabled = $this->moduleData !== null && (bool) $this->moduleData->get('clipBoard');
+        $clipboardEnabled = $this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('clipBoard');
         $dbList->clipObj = $this->initializeClipboard($request, $clipboardEnabled);
         $dbList->start($pageId, $tableName, 0, $searchTerm, $searchLevels);
         return $dbList;
@@ -1023,7 +1030,7 @@ final class RecordListController extends CoreRecordListController
      * @param int $offset Number of records to skip (for pagination)
      * @return array<int, array<string, mixed>> Array of enriched record data
      */
-    protected function getRecordsUsingDbList(
+    private function getRecordsUsingDbList(
         ServerRequestInterface $request,
         string $tableName,
         int $pageId,
@@ -1078,13 +1085,13 @@ final class RecordListController extends CoreRecordListController
                     $records[] = $recordData;
                 }
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Log error but don't fail - return empty results
             // This can happen if the table doesn't exist or user lacks permissions
         }
 
         if ($useWorkspaceReduction) {
-            $records = array_values($recordsByIdentity);
+            return array_values($recordsByIdentity);
         }
 
         return $records;
@@ -1098,7 +1105,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @param array<string, mixed> $row
      */
-    protected function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
+    private function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
     {
         $liveUidRaw = $row['t3ver_oid'] ?? 0;
         $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
@@ -1109,7 +1116,7 @@ final class RecordListController extends CoreRecordListController
      * Resolve the current workspace id via the Context aspect — the canonical
      * TYPO3 v14 API. Falls back to 0 (LIVE) when the aspect is missing.
      */
-    protected function getCurrentWorkspaceId(): int
+    private function getCurrentWorkspaceId(): int
     {
         $workspaceId = GeneralUtility::makeInstance(Context::class)
             ->getPropertyFromAspect('workspace', 'id', 0);
@@ -1129,7 +1136,7 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return int Total number of matching records
      */
-    protected function getSearchRecordCount(
+    private function getSearchRecordCount(
         string $tableName,
         int $pageId,
         string $searchTerm,
@@ -1139,7 +1146,7 @@ final class RecordListController extends CoreRecordListController
         return $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request);
     }
 
-    protected function getRecordCountUsingDbList(
+    private function getRecordCountUsingDbList(
         string $tableName,
         int $pageId,
         string $searchTerm,
@@ -1151,7 +1158,7 @@ final class RecordListController extends CoreRecordListController
             $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
             $count = $qb->count('*')->executeQuery()->fetchOne();
             return is_numeric($count) ? (int) $count : 0;
-        } catch (Exception $e) {
+        } catch (Exception) {
             return 0;
         }
     }
@@ -1173,7 +1180,7 @@ final class RecordListController extends CoreRecordListController
      * @param list<int> $currentRecordUids UIDs of currently rendered records
      * @param list<string> $displayColumnFields Field names of the currently displayed columns
      */
-    protected function renderMultiRecordSelectionActions(
+    private function renderMultiRecordSelectionActions(
         string $tableName,
         int $pageId,
         string $viewMode,
@@ -1201,7 +1208,7 @@ final class RecordListController extends CoreRecordListController
                 'id' => $pageId,
                 'displayMode' => $viewMode,
             ]);
-        } catch (Exception $e) {
+        } catch (Exception) {
             $returnUrl = (string) $request->getUri();
         }
 
@@ -1231,7 +1238,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array{label: string, recordCount: int, linkUrl: string, iconIdentifier: string}
      */
-    protected function buildTableHeading(
+    private function buildTableHeading(
         string $tableName,
         int $recordCount,
         bool $isSingleTableMode,
@@ -1276,7 +1283,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<int, array{field: string, label: string}> $sortableFields
      * @return array<string, mixed>|null
      */
-    protected function buildSortingDropdown(
+    private function buildSortingDropdown(
         string $tableName,
         array $sortableFields,
         string $currentSortField,
@@ -1292,11 +1299,11 @@ final class RecordListController extends CoreRecordListController
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
-        $fieldModeLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
+        $fieldModeLabelTranslated = $lang->sL('records_list_types.messages:sortingMode.field');
         $fieldModeLabel = $fieldModeLabelTranslated !== '' ? $fieldModeLabelTranslated : 'By Column';
-        $ascLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
+        $ascLabelTranslated = $lang->sL('records_list_types.messages:sort.ascending');
         $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
-        $descLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
+        $descLabelTranslated = $lang->sL('records_list_types.messages:sort.descending');
         $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
 
         $currentFieldLabel = $fieldModeLabel;
@@ -1371,7 +1378,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array<string, mixed>|null
      */
-    protected function buildSortingModeToggle(
+    private function buildSortingModeToggle(
         string $tableName,
         string $currentMode,
         string $currentDirection,
@@ -1382,19 +1389,19 @@ final class RecordListController extends CoreRecordListController
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
-        $manualLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.manual');
+        $manualLabelT = $lang->sL('records_list_types.messages:sortingMode.manual');
         $manualLabel = $manualLabelT !== '' ? $manualLabelT : 'Manual Sorting';
-        $fieldLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
+        $fieldLabelT = $lang->sL('records_list_types.messages:sortingMode.field');
         $fieldLabel = $fieldLabelT !== '' ? $fieldLabelT : 'Field Sorting';
-        $manualTitleT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.manual.title');
+        $manualTitleT = $lang->sL('records_list_types.messages:sortingMode.manual.title');
         $manualTitle = $manualTitleT !== '' ? $manualTitleT : 'Enable drag-and-drop reordering';
-        $fieldTitleT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field.title');
+        $fieldTitleT = $lang->sL('records_list_types.messages:sortingMode.field.title');
         $fieldTitle = $fieldTitleT !== '' ? $fieldTitleT : 'Sort by selected field';
-        $ascLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
+        $ascLabelT = $lang->sL('records_list_types.messages:sort.ascending');
         $ascLabel = $ascLabelT !== '' ? $ascLabelT : 'Ascending';
-        $descLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
+        $descLabelT = $lang->sL('records_list_types.messages:sort.descending');
         $descLabel = $descLabelT !== '' ? $descLabelT : 'Descending';
-        $headingLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.label');
+        $headingLabelT = $lang->sL('records_list_types.messages:sortingMode.label');
         $headingLabel = $headingLabelT !== '' ? $headingLabelT : 'Order';
 
         $queryParams = $request->getQueryParams();
@@ -1454,7 +1461,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array<string, mixed>
      */
-    protected function buildSortableColumnHeader(
+    private function buildSortableColumnHeader(
         string $tableName,
         string $field,
         string $label,
@@ -1479,9 +1486,9 @@ final class RecordListController extends CoreRecordListController
         $isActiveField = ($currentSortField === $field);
         $isAscActive = $isActiveField && $currentSortDirection !== 'desc';
         $isDescActive = $isActiveField && $currentSortDirection === 'desc';
-        $ascLabelTranslated = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.sorting.asc');
+        $ascLabelTranslated = $lang->sL('core.core:labels.sorting.asc');
         $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
-        $descLabelTranslated = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.sorting.desc');
+        $descLabelTranslated = $lang->sL('core.core:labels.sorting.desc');
         $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
 
         try {
@@ -1537,7 +1544,7 @@ final class RecordListController extends CoreRecordListController
      * @param bool $isSingleTableMode Whether we're in single table view mode
      * @return array<string, string> Array of rendered button HTML
      */
-    protected function createTableActionButtons(
+    private function createTableActionButtons(
         DatabaseRecordList $dbList,
         string $tableName,
         int $recordCount,
@@ -1551,7 +1558,7 @@ final class RecordListController extends CoreRecordListController
         ];
 
         $newRecordButton = $dbList->createActionButtonNewRecord($tableName);
-        if ($newRecordButton !== null) {
+        if ($newRecordButton instanceof ButtonInterface) {
             $buttons['newRecordButton'] = $newRecordButton->render();
         }
 
@@ -1585,7 +1592,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @param list<mixed> $arguments
      */
-    protected function renderDatabaseRecordListButton(
+    private function renderDatabaseRecordListButton(
         DatabaseRecordList $dbList,
         string $methodName,
         array $arguments,
@@ -1597,7 +1604,7 @@ final class RecordListController extends CoreRecordListController
                 return $result->render();
             }
             return is_string($result) ? $result : '';
-        } catch (ReflectionException|Exception $e) {
+        } catch (ReflectionException|Exception) {
             return '';
         }
     }
@@ -1619,7 +1626,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
      * @return array<int, array<string, mixed>>
      */
-    protected function getSortableColumnHeaders(
+    private function getSortableColumnHeaders(
         string $tableName,
         array $displayColumns,
         string $currentSortField,
@@ -1709,7 +1716,7 @@ final class RecordListController extends CoreRecordListController
     /**
      * Get a human-readable label for a table.
      */
-    protected function getTableLabel(string $tableName): string
+    private function getTableLabel(string $tableName): string
     {
         $tcaForTable = $this->getTcaForTable($tableName);
         $labelTitleVal = $tcaForTable['ctrl']['title'] ?? $tableName;
@@ -1727,7 +1734,7 @@ final class RecordListController extends CoreRecordListController
     /**
      * Get the icon identifier for a table.
      */
-    protected function getTableIcon(string $tableName): string
+    private function getTableIcon(string $tableName): string
     {
         $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $icon = $this->mapRecordTypeToIconIdentifier($iconFactory, $tableName, []);
@@ -1740,7 +1747,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @param array<string, mixed> $row
      */
-    protected function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
+    private function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
     {
         $method = new ReflectionMethod($iconFactory, 'mapRecordTypeToIconIdentifier');
 
@@ -1768,7 +1775,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
      */
-    protected function getDisplayColumns(string $tableName): array
+    private function getDisplayColumns(string $tableName): array
     {
         $columns = [];
         $tcaForTable = $this->getTcaForTable($tableName);
@@ -1877,7 +1884,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<string, mixed> $tcaColumns
      * @param array<string, mixed> $ctrl
      */
-    protected function getFieldLabel(string $field, array $tcaColumns, array $ctrl): string
+    private function getFieldLabel(string $field, array $tcaColumns, array $ctrl): string
     {
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
         if (isset($fieldDef['label'])) {
@@ -1900,15 +1907,15 @@ final class RecordListController extends CoreRecordListController
 
         // Check if field matches ctrl fields
         if ($field === ($ctrl['crdate'] ?? null) || $field === 'crdate') {
-            $translated = $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.creationDate');
+            $translated = $langService->sL('core.general:LGL.creationDate');
             return $translated !== '' ? $translated : 'Created';
         }
         if ($field === ($ctrl['tstamp'] ?? null) || $field === 'tstamp') {
-            $translated = $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.timestamp');
+            $translated = $langService->sL('core.general:LGL.timestamp');
             return $translated !== '' ? $translated : 'Modified';
         }
         if ($field === ($ctrl['sortby'] ?? null)) {
-            $translated = $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.sorting');
+            $translated = $langService->sL('core.general:LGL.sorting');
             return $translated !== '' ? $translated : 'Sorting';
         }
 
@@ -1916,7 +1923,7 @@ final class RecordListController extends CoreRecordListController
         $enableCols = is_array($ctrl['enablecolumns'] ?? null) ? $ctrl['enablecolumns'] : [];
         $disabledField = $enableCols['disabled'] ?? null;
         if ($field === $disabledField) {
-            $translated = $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.hidden');
+            $translated = $langService->sL('core.general:LGL.hidden');
             return $translated !== '' ? $translated : 'Hidden';
         }
 
@@ -1933,7 +1940,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $fallback Fallback value if translation fails
      * @return string The translated label
      */
-    protected function translateTcaLabel(string $label, string $fallback = ''): string
+    private function translateTcaLabel(string $label, string $fallback = ''): string
     {
         // Empty label - return fallback
         if ($label === '') {
@@ -1961,7 +1968,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<string, mixed> $tcaColumns
      * @param array<string, mixed> $ctrl
      */
-    protected function getFieldType(string $field, array $tcaColumns, array $ctrl): string
+    private function getFieldType(string $field, array $tcaColumns, array $ctrl): string
     {
         // System date fields
         if (in_array($field, ['crdate', 'tstamp'], true)) {
@@ -2006,7 +2013,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
      * @return array<int, array<string, mixed>>
      */
-    protected function enrichRecordsWithDisplayValues(array $records, array $displayColumns, string $tableName): array
+    private function enrichRecordsWithDisplayValues(array $records, array $displayColumns, string $tableName): array
     {
         $tcaForTable = $this->getTcaForTable($tableName);
         $tcaColumns = $tcaForTable['columns'];
@@ -2034,8 +2041,8 @@ final class RecordListController extends CoreRecordListController
                     'type' => $type,
                     'isLabelField' => $column['isLabelField'] ?? false,
                     'raw' => $displayRaw,
-                    'formatted' => $this->formatFieldValue($displayRaw, $type, $field, $tcaColumns, $tableName),
-                    'isEmpty' => $rawValue === null || $rawValue === '' || $rawValue === 0 || $rawValue === '0',
+                    'formatted' => $this->formatFieldValue($displayRaw, $type, $field, $tcaColumns),
+                    'isEmpty' => in_array($rawValue, [null, '', 0, '0'], true),
                 ];
             }
 
@@ -2056,7 +2063,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $tableName The table name
      * @return array<int, array<string, mixed>> Records with language info added
      */
-    protected function enrichRecordsWithLanguageInfo(array $records, string $tableName): array
+    private function enrichRecordsWithLanguageInfo(array $records, string $tableName): array
     {
         $tcaForTable = $this->getTcaForTable($tableName);
         $languageField = $tcaForTable['ctrl']['languageField'] ?? null;
@@ -2099,7 +2106,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<string, mixed> $record
      * @return array<string, mixed>
      */
-    protected function enrichRecordWithEditUrls(array $record): array
+    private function enrichRecordWithEditUrls(array $record): array
     {
         $uidRaw = $record['uid'] ?? null;
         $tableNameRaw = $record['tableName'] ?? null;
@@ -2148,7 +2155,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @param array<string, mixed> $record
      */
-    protected function buildContextualEditReturnUrl(array $record): string
+    private function buildContextualEditReturnUrl(array $record): string
     {
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
 
@@ -2185,7 +2192,7 @@ final class RecordListController extends CoreRecordListController
      * @param RecordGridDataProvider $dataProvider The data provider for fetching translations
      * @return array<int, array<string, mixed>> Records with translations grouped
      */
-    protected function groupTranslationsOnRecords(
+    private function groupTranslationsOnRecords(
         array $records,
         string $tableName,
         int $pageId,
@@ -2305,13 +2312,12 @@ final class RecordListController extends CoreRecordListController
      * @param string $type The field type
      * @param string $field The field name
      * @param array $tcaColumns TCA columns configuration
-     * @param string $tableName The table name
      * @return string Formatted value for display
      */
     /**
      * @param array<string, mixed> $tcaColumns
      */
-    protected function formatFieldValue(mixed $value, string $type, string $field, array $tcaColumns, string $tableName): string
+    private function formatFieldValue(mixed $value, string $type, string $field, array $tcaColumns): string
     {
         if ($value === null || $value === '') {
             return '';
@@ -2368,8 +2374,7 @@ final class RecordListController extends CoreRecordListController
                 $textInput = is_scalar($value) ? (string) $value : '';
                 $text = strip_tags(html_entity_decode($textInput));
                 $text = preg_replace('/\s+/', ' ', $text) ?? $text;
-                $text = trim($text);
-                return $text;
+                return trim($text);
         }
     }
 
@@ -2384,7 +2389,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<string, mixed> $tcaColumns TCA columns configuration
      * @return bool True if the display value should be inverted
      */
-    protected function shouldInvertBooleanDisplay(string $field, array $tcaColumns): bool
+    private function shouldInvertBooleanDisplay(string $field, array $tcaColumns): bool
     {
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
         $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
@@ -2417,7 +2422,7 @@ final class RecordListController extends CoreRecordListController
      * @param int $pageId The page ID for TSconfig resolution
      * @return int Number of items per page (0 = no pagination)
      */
-    protected function getItemsPerPage(string $viewMode, int $pageId): int
+    private function getItemsPerPage(string $viewMode, int $pageId): int
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
 
@@ -2450,7 +2455,7 @@ final class RecordListController extends CoreRecordListController
      * @param int $pageId The page ID for TSconfig resolution
      * @return int Number of records to show per table (default: 20)
      */
-    protected function getItemsLimitPerTable(int $pageId): int
+    private function getItemsLimitPerTable(int $pageId): int
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
 
@@ -2489,7 +2494,7 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return array{paginator: DatabasePaginator, pagination: SlidingWindowPagination, currentUrl: string}
      */
-    protected function buildPagination(
+    private function buildPagination(
         array $records,
         int $totalRecords,
         int $currentPage,
@@ -2527,7 +2532,7 @@ final class RecordListController extends CoreRecordListController
         $currentUrl = '';
         try {
             $currentUrl = (string) $uriBuilder->buildUriFromRoute('records', $urlParams);
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Ignore
         }
 
@@ -2548,7 +2553,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $tableName The table name
      * @return int The current page number (1-based)
      */
-    protected function getCurrentPointer(ServerRequestInterface $request, string $tableName): int
+    private function getCurrentPointer(ServerRequestInterface $request, string $tableName): int
     {
         $queryParams = $request->getQueryParams();
         $parsedBody = $request->getParsedBody();

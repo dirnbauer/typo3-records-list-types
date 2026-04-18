@@ -22,13 +22,13 @@ use TYPO3\CMS\Core\SingletonInterface;
 final class MiddlewareDiagnosticService implements SingletonInterface
 {
     /** Required request attributes for proper Grid View functioning. */
-    private const REQUIRED_ATTRIBUTES = [
+    private const array REQUIRED_ATTRIBUTES = [
         'normalizedParams',
         'applicationType',
     ];
 
     /** Core middleware packages that are known to be safe. */
-    private const CORE_PACKAGES = [
+    private const array CORE_PACKAGES = [
         'typo3/cms-core',
         'typo3/cms-backend',
         'typo3/cms-frontend',
@@ -64,14 +64,12 @@ final class MiddlewareDiagnosticService implements SingletonInterface
 
         // 2. Check for non-core middlewares (static analysis)
         $nonCoreMiddlewares = $this->detectNonCoreMiddlewares();
-        if ($nonCoreMiddlewares !== []) {
-            // Only warn if there are many custom middlewares
-            if (count($nonCoreMiddlewares) > 5) {
-                $warnings[] = sprintf(
-                    'Detected %d custom middleware(s) which may affect rendering.',
-                    count($nonCoreMiddlewares),
-                );
-            }
+        // Only warn if there are many custom middlewares
+        if ($nonCoreMiddlewares !== [] && count($nonCoreMiddlewares) > 5) {
+            $warnings[] = sprintf(
+                'Detected %d custom middleware(s) which may affect rendering.',
+                count($nonCoreMiddlewares),
+            );
         }
 
         // Build the force list view URL
@@ -148,7 +146,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
                     }
                 }
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Silently fail - diagnostic is not critical
         }
 
