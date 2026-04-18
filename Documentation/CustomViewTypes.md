@@ -71,7 +71,7 @@ falls back to the regular content-frame FormEngine.
                     </div>
                     <div class="recordlist-heading-actions">
                         <f:if condition="{table.actionButtons.newRecordButton}">
-                            <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                            <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
                         </f:if>
                     </div>
                 </div>
@@ -421,10 +421,11 @@ Each item in `tableData`:
 | `tableIcon` | TYPO3 icon identifier |
 | `records` | Array of enriched records |
 | `recordCount` | Total number of records |
-| `actionButtons` | Rendered action button HTML |
-| `sortingDropdownHtml` | Sorting dropdown HTML |
-| `sortingModeToggleHtml` | Manual/field sorting toggle HTML |
-| `sortableColumnHeaders` | Sortable column header HTML (for table views) |
+| `actionButtons` | TYPO3/core-generated table action button fragments |
+| `tableHeading` | Structured heading data (`label`, `recordCount`, `iconIdentifier`, `linkUrl`) |
+| `sortingDropdown` | Structured field-sorting dropdown data |
+| `sortingModeToggle` | Structured manual/field sorting toggle data |
+| `sortableColumnHeaders` | Structured sortable column header data (for table views) |
 | `singleTableUrl` | URL to filter by this table |
 | `clearTableUrl` | URL to show all tables |
 | `displayColumns` | Columns to display |

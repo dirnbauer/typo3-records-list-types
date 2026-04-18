@@ -259,13 +259,14 @@ base.css            ← Loaded for ALL view modes (always first)
 | `RegisterViewModesEvent` | Register, remove, or modify custom view types |
 | `GridViewButtonBarListener` | Injects view mode toggle buttons into the DocHeader |
 | `GridViewQueryListener` | Modifies database queries for grid view |
-| `GridViewRecordActionsListener` | Collects and caches record action buttons |
+| `GridViewRecordActionsListener` | Collects and caches record action fragments from TYPO3 record-list events |
 
-### ViewHelpers
+### Sanitization
 
-| ViewHelper | Purpose |
-|------------|---------|
-| `RecordActionsViewHelper` | Renders cached record actions in templates (`<gridview:recordActions>`) |
+| Item | Purpose |
+|------|---------|
+| `BackendFragmentSanitizerBuilder` | TYPO3 core htmlSanitizer preset for backend button/component fragments |
+| `f:sanitize.html(build: 'records-list-types-backend-fragments')` | Sanitizes TYPO3/core-generated backend fragments before rendering in Fluid |
 
 ### JavaScript Modules
 
@@ -289,7 +290,7 @@ The extension follows TYPO3 security best practices:
 - **CSRF Protection**: AJAX endpoints use TYPO3's built-in token handling
 - **Access Control**: Full integration with TYPO3's backend user permissions and workspace restrictions
 - **Input Validation**: View mode, table names, UIDs, and sort parameters are validated and sanitized
-- **XSS Prevention**: Fluid templates with proper escaping; no raw HTML output of user data
+- **XSS Prevention**: Fluid templates auto-escape by default; TYPO3 core `f:sanitize.html` is used for trusted backend-generated fragments
 
 ## Testing
 
@@ -336,8 +337,10 @@ records_list_types/
 │   │   ├── ThumbnailService.php               # FAL image processing
 │   │   ├── ViewModeResolver.php               # View mode determination
 │   │   └── ViewTypeRegistry.php               # View type management
+│   ├── Html/
+│   │   └── BackendFragmentSanitizerBuilder.php # TYPO3 htmlSanitizer preset for backend fragments
 │   └── ViewHelpers/
-│       └── RecordActionsViewHelper.php        # Record actions rendering
+│       └── RecordActionsViewHelper.php        # Access to cached record action fragments
 ├── Configuration/
 │   ├── Backend/AjaxRoutes.php                 # AJAX route definitions
 │   ├── Icons.php                              # Icon registration
@@ -353,8 +356,11 @@ records_list_types/
 │   │   │   ├── Card.html                      # Grid view card partial
 │   │   │   ├── CompactRow.html                # Compact view row partial
 │   │   │   ├── Pagination.html                # Pagination navigation (Core list view style)
-│   │   │   ├── RecordActions.html             # Record action buttons
-│   │   │   ├── SortingDropdown.html           # Field sorting dropdown
+│   │   │   ├── RecordActions.html             # Sanitized record action fragments
+│   │   │   ├── SortableColumnHeader.html      # Structured sortable table header
+│   │   │   ├── SortingDropdown.html           # Structured field sorting dropdown
+│   │   │   ├── SortingModeToggle.html         # Structured manual/field sorting toggle
+│   │   │   ├── TableHeading.html              # Structured table heading
 │   │   │   ├── TeaserCard.html                # Teaser view card partial
 │   │   │   └── ViewSwitcher.html              # View mode toggle buttons
 │   │   └── Templates/

@@ -20,7 +20,7 @@ All findings from the previous audit (2025-02-09) have been resolved.
 | Category | Rating | Notes |
 |----------|--------|-------|
 | SQL Injection | PASS | All queries use `createNamedParameter()` with proper types |
-| XSS Prevention | PASS | Fluid auto-escaping; `f:format.raw()` used only for trusted TYPO3-generated HTML |
+| XSS Prevention | PASS | Fluid auto-escaping; TYPO3 core `f:sanitize.html` used for backend-generated HTML fragments |
 | CSRF Protection | PASS | TYPO3 backend AJAX routes include automatic CSRF protection |
 | Input Validation | PASS | Mode, sort field, and sort direction validated against allowlists |
 | Authentication | PASS | All operations require authenticated backend user |
@@ -51,11 +51,11 @@ All database queries in `RecordGridDataProvider` use TYPO3's QueryBuilder with p
 
 **Status:** Secure
 
-Fluid templates use auto-escaping by default (`{variable}` is always escaped). The `f:format.raw()` ViewHelper is used in several places, but exclusively for trusted content:
+Fluid templates use auto-escaping by default (`{variable}` is always escaped). Backend-generated HTML fragments are rendered through TYPO3 core's `f:sanitize.html` ViewHelper with a dedicated `records-list-types-backend-fragments` preset:
 
-- **GridView.html:** Renders TYPO3-generated button HTML (`actionButtons.newRecordButton`, etc.) — produced by TYPO3's ButtonBar/ComponentFactory API with pre-escaped content.
-- **RecordActions.html:** Renders `{actionHtml}` from `GridViewRecordActionsListener` — HTML originates from TYPO3's own `ModifyRecordListRecordActionsEvent`.
-- **RecordActionsViewHelper:** Has `$escapeOutput = false` — necessary for rendering HTML action buttons from TYPO3's internal event system.
+- **Grid / Compact / Teaser / Generic templates:** Sanitize TYPO3-generated button and multi-record-selection HTML (`actionButtons.*`, `multiRecordSelectionActionsHtml`) before rendering.
+- **RecordActions.html:** Sanitizes `{actionHtml}` from `GridViewRecordActionsListener` — HTML originates from TYPO3's own `ModifyRecordListRecordActionsEvent`.
+- **Extension-generated heading/sorting markup:** No longer passed as HTML strings; these are rendered from structured data via Fluid partials (`TableHeading`, `SortingDropdown`, `SortingModeToggle`, `SortableColumnHeader`).
 
 **Card.html:** `<a href="mailto:{fieldData.raw}">` — `{fieldData.raw}` is auto-escaped by Fluid in attribute context, preventing `javascript:` injection.
 
@@ -113,7 +113,7 @@ Fluid templates use auto-escaping by default (`{variable}` is always escaped). T
 
 **Status:** Secure (all previous advisories resolved)
 
-- All classes are declared `final` (including `RecordActionsViewHelper` and `RecordListController`).
+- All extension classes are declared `final` (including `RecordActionsViewHelper` and `RecordListController`).
 - `MiddlewareDiagnosticService` validates file paths with `realpath()` and `str_starts_with()` before `include`.
 - Constructor-promoted properties use `readonly` modifier throughout.
 
@@ -193,7 +193,8 @@ Static caches persist across the PHP process lifetime. In TYPO3's PHP-FPM model 
 ## Checklist (per security-audit skill)
 
 - [x] No raw SQL — all queries use QueryBuilder with named parameters
-- [x] No `f:format.raw()` on user input — only on trusted TYPO3-generated HTML
+- [x] No direct `f:format.raw()` usage in active templates
+- [x] TYPO3 core `f:sanitize.html` protects backend HTML fragment rendering
 - [x] CSRF tokens — TYPO3 backend routes include automatic protection
 - [x] Input validation — all user inputs validated/sanitized
 - [x] Backend-only — no frontend exposure
