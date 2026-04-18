@@ -119,8 +119,8 @@ final class GridConfigurationService implements SingletonInterface
         // Fall back to TCA label field
         if ($this->tcaSchemaFactory->has($table)) {
             $schema = $this->tcaSchemaFactory->get($table);
-            if ($schema->hasCapability(TcaSchemaCapability::Label)) {
-                $labelField = $schema->getCapability(TcaSchemaCapability::Label)->getPrimaryFieldName();
+            if ($schema->hasCapability(\TYPO3\CMS\Core\Schema\TcaSchemaCapability::Label)) {
+                $labelField = $schema->getCapability(\TYPO3\CMS\Core\Schema\TcaSchemaCapability::Label)->getPrimaryFieldName();
                 if (is_string($labelField) && $labelField !== '') {
                     return $labelField;
                 }

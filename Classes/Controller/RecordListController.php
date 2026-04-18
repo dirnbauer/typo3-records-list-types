@@ -177,7 +177,9 @@ final class RecordListController extends CoreRecordListController
         // Create DatabaseRecordList (needed for URL building and other parent methods)
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
-        $dbList->setModuleData($this->moduleData);
+        if ($this->moduleData !== null) {
+            $dbList->setModuleData($this->moduleData);
+        }
         $dbList->calcPerms = $this->pageContext->pagePermissions;
         $dbList->returnUrl = $this->returnUrl;
         $dbList->showClipboardActions = true;
@@ -601,7 +603,7 @@ final class RecordListController extends CoreRecordListController
 
             // Sorting dropdown / toggle data
             $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
-            $sortingDropdown = $this->buildSortingDropdown(
+            $sortingDropdown = $this->createSortingDropdown(
                 $tableName,
                 $sortableFields,
                 $sortField,
@@ -614,7 +616,7 @@ final class RecordListController extends CoreRecordListController
             // Sorting mode toggle (used by GridView template for manual/field switch)
             $sortingModeToggle = null;
             if ($hasSortbyField) {
-                $sortingModeToggle = $this->buildSortingModeToggle(
+                $sortingModeToggle = $this->createSortingModeToggle(
                     $tableName,
                     $sortingMode,
                     $sortDirection,
@@ -891,7 +893,7 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
 
-            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $this->request);
+            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
             if ($count > 0) {
                 $tables[] = $tableName;
             }
@@ -1005,7 +1007,9 @@ final class RecordListController extends CoreRecordListController
         $backendUser = $this->getBackendUserAuthentication();
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
-        $dbList->setModuleData($this->moduleData);
+        if ($this->moduleData !== null) {
+            $dbList->setModuleData($this->moduleData);
+        }
         $dbList->calcPerms = $this->pageContext->pagePermissions;
         $dbList->returnUrl = $this->returnUrl;
         $dbList->showClipboardActions = true;
@@ -1185,6 +1189,7 @@ final class RecordListController extends CoreRecordListController
      * @return string Rendered HTML for the action buttons row
      */
     /**
+     * @param list<int> $currentRecordUids Record UIDs currently shown in the table
      * @param list<string> $displayColumnFields Field names of the currently displayed columns
      */
     protected function renderMultiRecordSelectionActions(
@@ -1264,7 +1269,8 @@ final class RecordListController extends CoreRecordListController
             ];
         }
         $schema = $schemaFactory->get($tableName);
-        $tableTitle = $schema->getTitle($lang->sL(...)) ?: $tableName;
+        $resolvedTitle = $schema->getTitle($lang->sL(...));
+        $tableTitle = $resolvedTitle !== '' ? $resolvedTitle : $tableName;
 
         if ($disableSingleTableView) {
             return [
