@@ -43,7 +43,7 @@
                         <div class="recordlist-heading-row">
                             <f:comment>Title section with table name link - identical to core</f:comment>
                             <div class="recordlist-heading-title">
-                                <f:render partial="RecordListHeadingTableTitle" arguments="{table: table, currentTable: currentTable}" />
+                                <f:format.raw>{table.tableHeadingHtml}</f:format.raw>
                             </div>
 
                             <f:comment>Actions section - matches core structure exactly</f:comment>
@@ -80,7 +80,7 @@
                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
                                 <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
                                     <span class="t3js-multi-record-selection-table-title">
-                                        <f:render partial="RecordListHeadingTableTitle" arguments="{table: table, currentTable: currentTable}" />
+                                        <f:format.raw>{table.tableHeadingHtml}</f:format.raw>
                                     </span>
                                     <strong class="text-nowrap"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
                                 </div>

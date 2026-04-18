@@ -435,7 +435,7 @@ final class RecordListController extends CoreRecordListController
             }
 
             $isSingleTableMode = ($table !== '');
-            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
+            $totalRecordCount = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
 
             // Pagination and record fetching strategy depends on mode + search state
             if ($searchTerm !== '') {
@@ -448,7 +448,19 @@ final class RecordListController extends CoreRecordListController
                     $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
                     $currentPointer = $this->getCurrentPointer($request, $tableName);
                     $offset = ($currentPointer - 1) * $itemsPerPage;
-                    $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels, $itemsPerPage, $offset);
+                    $records = $this->getRecordsUsingDbList(
+                        $request,
+                        $tableName,
+                        $pageId,
+                        $searchTerm,
+                        $searchLevels,
+                        $itemsPerPage,
+                        $offset,
+                        $sortField,
+                        $sortDirection,
+                        false,
+                        $recordGridDataProvider,
+                    );
                     $recordCount = $searchTotalCount;
                     $hasMore = false; // pagination handles navigation
                 } else {
@@ -456,7 +468,19 @@ final class RecordListController extends CoreRecordListController
                     $itemsPerPage = $this->getItemsLimitPerTable($pageId);
                     $currentPointer = 1;
                     $offset = 0;
-                    $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels, $itemsPerPage);
+                    $records = $this->getRecordsUsingDbList(
+                        $request,
+                        $tableName,
+                        $pageId,
+                        $searchTerm,
+                        $searchLevels,
+                        $itemsPerPage,
+                        0,
+                        $sortField,
+                        $sortDirection,
+                        false,
+                        $recordGridDataProvider,
+                    );
                     $recordCount = $searchTotalCount;
                     $hasMore = $searchTotalCount > count($records);
                 }
@@ -465,27 +489,19 @@ final class RecordListController extends CoreRecordListController
                 $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
                 $currentPointer = $this->getCurrentPointer($request, $tableName);
                 $offset = ($currentPointer - 1) * $itemsPerPage;
-                $backendUser = $this->getBackendUserAuthentication();
-                $useCoreDbListQuery = $backendUser->workspace > 0 && $sortingMode === 'manual' && $hasSortbyField;
-                if ($useCoreDbListQuery) {
-                    // In workspace/manual-order mode derive the effective row set from the
-                    // same core-aware query path the original list uses. TYPO3 workspaces
-                    // expose move pointers/version overlays that must be reduced the same
-                    // way as the native list before drag-reordering can target the correct
-                    // records and positions.
-                    $records = $this->getRecordsUsingDbList(
-                        $request,
-                        $tableName,
-                        $tableConfig,
-                        $pageId,
-                        $searchTerm,
-                        $searchLevels,
-                        $itemsPerPage,
-                        $offset,
-                    );
-                } else {
-                    $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
-                }
+                $records = $this->getRecordsUsingDbList(
+                    $request,
+                    $tableName,
+                    $pageId,
+                    $searchTerm,
+                    $searchLevels,
+                    $itemsPerPage,
+                    $offset,
+                    $sortField,
+                    $sortDirection,
+                    $sortingMode === 'manual' && $hasSortbyField,
+                    $recordGridDataProvider,
+                );
                 $recordCount = $totalRecordCount;
                 $hasMore = false; // pagination handles navigation
             } else {
@@ -493,7 +509,19 @@ final class RecordListController extends CoreRecordListController
                 $itemsPerPage = $this->getItemsLimitPerTable($pageId);
                 $currentPointer = 1;
                 $offset = 0;
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
+                $records = $this->getRecordsUsingDbList(
+                    $request,
+                    $tableName,
+                    $pageId,
+                    '',
+                    0,
+                    $itemsPerPage,
+                    $offset,
+                    $sortField,
+                    $sortDirection,
+                    $sortingMode === 'manual' && $hasSortbyField,
+                    $recordGridDataProvider,
+                );
                 $recordCount = $totalRecordCount;
                 $hasMore = $recordCount > count($records);
             }
@@ -627,12 +655,25 @@ final class RecordListController extends CoreRecordListController
             // Multi Record Selection action buttons (Edit, Delete, Transfer/Remove clipboard)
             $displayColumnFields = array_map(static fn(array $col): string => $col['field'], $displayColumns);
             $displayColumnFields = array_values(array_filter($displayColumnFields, static fn(string $f): bool => $f !== ''));
-            $multiRecordSelectionActionsHtml = $this->renderMultiRecordSelectionActions($tableName, $pageId, $viewMode, $request, $displayColumnFields);
+            $recordUids = array_map(
+                static fn(array $record): int => is_numeric($record['uid'] ?? null) ? (int) $record['uid'] : 0,
+                $enrichedRecords,
+            );
+            $recordUids = array_values(array_filter($recordUids, static fn(int $uid): bool => $uid > 0));
+            $multiRecordSelectionActionsHtml = $this->renderMultiRecordSelectionActions(
+                $tableName,
+                $pageId,
+                $viewMode,
+                $request,
+                $recordUids,
+                $displayColumnFields,
+            );
 
             $tableData[] = [
                 'tableName' => $tableName,
                 'tableIdentifier' => $tableName,
                 'tableLabel' => $this->getTableLabel($tableName),
+                'tableHeadingHtml' => $this->renderTableHeading($dbList, $tableName, $recordCount, $isSingleTableMode),
                 'tableIcon' => $this->getTableIcon($tableName),
                 'tableConfig' => $tableConfig,
                 'records' => $enrichedRecords,
@@ -857,7 +898,7 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
 
-            $count = $dataProvider->getRecordCount($tableName, $pageId);
+                $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $this->request);
             if ($count > 0) {
                 $tables[] = $tableName;
             }
@@ -938,8 +979,7 @@ final class RecordListController extends CoreRecordListController
                 }
             } else {
                 // No search - check if table has records on this page
-                $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
-                $count = $recordGridDataProvider->getRecordCount($tableName, $pageId);
+                $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
                 if ($count > 0) {
                     $tables[] = $tableName;
                 }
@@ -969,9 +1009,36 @@ final class RecordListController extends CoreRecordListController
         int $searchLevels,
         ServerRequestInterface $request,
     ): DatabaseRecordList {
+        $backendUser = $this->getBackendUserAuthentication();
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
+        $dbList->setModuleData($this->moduleData);
+        $dbList->calcPerms = $this->pageContext->pagePermissions;
+        $dbList->returnUrl = $this->returnUrl;
+        $dbList->showClipboardActions = true;
+        $dbList->disableSingleTableView = (bool) ($this->modTSconfig['disableSingleTableView'] ?? false);
+        $dbList->listOnlyInSingleTableMode = (bool) ($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
+        $dbList->hideTables = (string) ($this->modTSconfig['hideTables'] ?? '');
+        $dbList->hideTranslations = (string) ($this->modTSconfig['hideTranslations'] ?? '');
+        $tableOverTca = is_array($this->modTSconfig['table'] ?? null) ? $this->modTSconfig['table'] : [];
+        /** @var array<string, array<string>> $tableOverTca */
+        $dbList->tableTSconfigOverTCA = $tableOverTca;
+        $dbList->allowedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['allowedNewTables'] ?? ''), true);
+        $dbList->deniedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['deniedNewTables'] ?? ''), true);
+        /** @var array<string> $pageRecord */
+        $pageRecord = $this->pageContext->pageRecord ?? [];
+        $dbList->pageRow = $pageRecord;
         $dbList->modTSconfig = $this->modTSconfig;
+        $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
+        $dbList->setLanguagesAllowedForUser($siteLanguages);
+        $clickTitleMode = trim((string) ($this->modTSconfig['clickTitleMode'] ?? ''));
+        $dbList->clickTitleMode = $clickTitleMode === '' ? 'edit' : $clickTitleMode;
+        $tableDisplayOrder = $this->modTSconfig['tableDisplayOrder'] ?? null;
+        if (is_array($tableDisplayOrder)) {
+            $dbList->setTableDisplayOrder($tableDisplayOrder);
+        }
+        $clipboardEnabled = $this->moduleData !== null && (bool) $this->moduleData->get('clipBoard');
+        $dbList->clipObj = $this->initializeClipboard($request, $clipboardEnabled);
         $dbList->start($pageId, $tableName, 0, $searchTerm, $searchLevels);
         return $dbList;
     }
@@ -984,7 +1051,6 @@ final class RecordListController extends CoreRecordListController
      *
      * @param ServerRequestInterface $request The current request
      * @param string $tableName The table to query
-     * @param array<string, mixed> $tableConfig The grid configuration for this table
      * @param int $pageId The current page ID
      * @param string $searchTerm The search term
      * @param int $searchLevels The search depth level
@@ -995,22 +1061,27 @@ final class RecordListController extends CoreRecordListController
     protected function getRecordsUsingDbList(
         ServerRequestInterface $request,
         string $tableName,
-        array $tableConfig,
         int $pageId,
         string $searchTerm,
         int $searchLevels,
         int $limit = 100,
         int $offset = 0,
+        string $sortField = '',
+        string $sortDirection = 'asc',
+        bool $useManualSorting = false,
+        ?RecordGridDataProvider $recordGridDataProvider = null,
     ): array {
-        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $records = [];
         $recordsByIdentity = [];
         $backendUser = $this->getBackendUserAuthentication();
         $useWorkspaceReduction = $backendUser->workspace > 0;
+        $recordGridDataProvider ??= GeneralUtility::makeInstance(RecordGridDataProvider::class);
 
         try {
             // Create a properly initialized DatabaseRecordList for this table
             $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
+            $dbList->sortField = $useManualSorting ? '' : $sortField;
+            $dbList->sortRev = !$useManualSorting && strtolower($sortDirection) === 'desc';
 
             // Use DatabaseRecordList's query builder which handles search properly
             // This is the same API the core list view uses
@@ -1028,41 +1099,7 @@ final class RecordListController extends CoreRecordListController
                 }
 
                 $uid = (int) $row['uid'];
-                $recordPid = (int) ($row['pid'] ?? $pageId);
-
-                // Get title field
-                $tcaForTableRecords = $this->getTcaForTable($tableName);
-                $titleFieldVal = $tableConfig['titleField'] ?? $tcaForTableRecords['ctrl']['label'] ?? 'uid';
-                $titleField = is_string($titleFieldVal) ? $titleFieldVal : 'uid';
-                $titleRaw = $row[$titleField] ?? '[No title]';
-                if (is_array($titleRaw)) {
-                    $titleRaw = reset($titleRaw);
-                }
-                $title = is_scalar($titleRaw) ? (string) $titleRaw : '[No title]';
-
-                // Get icon identifier
-                $icon = $iconFactory->getIconForRecord($tableName, $row, \TYPO3\CMS\Core\Imaging\IconSize::SMALL);
-                $iconIdentifier = $icon->getIdentifier();
-
-                // Check hidden status
-                $enableColsRecords = is_array($tcaForTableRecords['ctrl']['enablecolumns'] ?? null) ? $tcaForTableRecords['ctrl']['enablecolumns'] : [];
-                $hiddenFieldVal = $enableColsRecords['disabled'] ?? null;
-                $hiddenField = is_string($hiddenFieldVal) ? $hiddenFieldVal : null;
-                $hidden = ($hiddenField !== null && $hiddenField !== '') ? (bool) ($row[$hiddenField] ?? false) : false;
-
-                $recordData = [
-                    'uid' => $uid,
-                    'pid' => $recordPid,
-                    'tableName' => $tableName,
-                    'title' => $title,
-                    'description' => null,
-                    'thumbnail' => null,
-                    'thumbnailUrl' => null,
-                    'iconIdentifier' => $iconIdentifier,
-                    'hidden' => $hidden,
-                    'rawRecord' => $row,
-                    'actions' => [],
-                ];
+                $recordData = $recordGridDataProvider->buildRecordDataFromRow($tableName, $row, $pageId);
 
                 if ($useWorkspaceReduction) {
                     // In workspaces the DB query can still yield both a live row and a
@@ -1122,6 +1159,16 @@ final class RecordListController extends CoreRecordListController
         int $searchLevels,
         ServerRequestInterface $request,
     ): int {
+        return $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request);
+    }
+
+    protected function getRecordCountUsingDbList(
+        string $tableName,
+        int $pageId,
+        string $searchTerm,
+        int $searchLevels,
+        ServerRequestInterface $request,
+    ): int {
         try {
             $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
             $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
@@ -1152,8 +1199,19 @@ final class RecordListController extends CoreRecordListController
         int $pageId,
         string $viewMode,
         ServerRequestInterface $request,
+        array $currentRecordUids = [],
         array $displayColumnFields = [],
     ): string {
+        $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, '', 0, $request);
+        $buttons = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'renderMultiRecordSelectionActions',
+            [$tableName, $currentRecordUids],
+        );
+
+        if ($displayColumnFields === []) {
+            return $buttons;
+        }
         $languageService = $this->getLanguageService();
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
@@ -1168,21 +1226,6 @@ final class RecordListController extends CoreRecordListController
             $returnUrl = (string) $request->getUri();
         }
 
-        $buttons = [];
-
-        // Edit action
-        $editConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'returnUrl' => $returnUrl,
-        ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="edit"'
-            . ' data-multi-record-selection-action-config="' . $editConfig . '">'
-            . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.edit', 'Edit'))
-            . '</button>';
-
         // Edit columns action - only edit the currently displayed columns
         $editColumnsConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
             'idField' => 'uid',
@@ -1190,56 +1233,51 @@ final class RecordListController extends CoreRecordListController
             'returnUrl' => $returnUrl,
             'columnsOnly' => $displayColumnFields,
         ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
+        $editColumnsButton = '<button type="button" class="btn btn-sm btn-default"'
             . ' data-multi-record-selection-action="edit"'
             . ' data-multi-record-selection-action-config="' . $editColumnsConfig . '">'
             . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns', 'Edit columns'))
             . '</button>';
 
-        // Clipboard: Transfer to clipboard
-        $copyConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'returnUrl' => $returnUrl,
-        ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="copyMarked"'
-            . ' data-multi-record-selection-action-config="' . $copyConfig . '">'
-            . $iconFactory->getIcon('actions-edit-copy', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_copyMarked', 'Transfer to clipboard'))
-            . '</button>';
+        if ($buttons === '') {
+            return $editColumnsButton;
+        }
 
-        // Clipboard: Remove from clipboard
-        $removeConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'returnUrl' => $returnUrl,
-        ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="removeMarked"'
-            . ' data-multi-record-selection-action-config="' . $removeConfig . '">'
-            . $iconFactory->getIcon('actions-minus', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_removeMarked', 'Remove from clipboard'))
-            . '</button>';
+        return $buttons . PHP_EOL . $editColumnsButton;
+    }
 
-        // Delete action
-        $deleteConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'ok' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete', 'Delete'),
-            'cancel' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel', 'Cancel'),
-            'title' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarked', 'Delete selected'),
-            'content' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarkedWarning', 'Are you sure you want to delete the selected records?'),
-        ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="delete"'
-            . ' data-multi-record-selection-action-config="' . $deleteConfig . '">'
-            . $iconFactory->getIcon('actions-edit-delete', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete', 'Delete'))
-            . '</button>';
+    /**
+     * Render the table heading using TYPO3 core list-module behavior.
+     */
+    protected function renderTableHeading(
+        DatabaseRecordList $dbList,
+        string $tableName,
+        int $recordCount,
+        bool $isSingleTableMode,
+    ): string {
+        $lang = $this->getLanguageService();
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+        if (!$schemaFactory->has($tableName)) {
+            return htmlspecialchars($tableName) . ' (' . $recordCount . ')';
+        }
+        $schema = $schemaFactory->get($tableName);
+        $tableTitle = htmlspecialchars($schema->getTitle($lang->sL(...)) ?: $tableName);
 
-        return implode(PHP_EOL, $buttons);
+        if ($dbList->disableSingleTableView) {
+            return $tableTitle . ' (' . $recordCount . ')';
+        }
+
+        $iconIdentifier = $isSingleTableMode ? 'actions-view-table-collapse' : 'actions-view-table-expand';
+        $iconTitleKey = $isSingleTableMode
+            ? 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:contractView'
+            : 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:expandView';
+        $icon = GeneralUtility::makeInstance(IconFactory::class)
+            ->getIcon($iconIdentifier, IconSize::SMALL)
+            ->setTitle($lang->sL($iconTitleKey))
+            ->render();
+
+        return $dbList->linkWrapTable($tableName, $tableTitle . ' (' . $recordCount . ') ' . $icon);
     }
 
     /**
@@ -1311,8 +1349,11 @@ final class RecordListController extends CoreRecordListController
     ): string {
         try {
             $method = new ReflectionMethod($dbList, $methodName);
-            $button = $method->invokeArgs($dbList, $arguments);
-            return is_object($button) && method_exists($button, 'render') ? $button->render() : '';
+            $result = $method->invokeArgs($dbList, $arguments);
+            if (is_object($result) && method_exists($result, 'render')) {
+                return $result->render();
+            }
+            return is_string($result) ? $result : '';
         } catch (ReflectionException|Exception $e) {
             return '';
         }
