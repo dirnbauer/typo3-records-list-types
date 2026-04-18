@@ -49,7 +49,7 @@ final class BackendFragmentSanitizerBuilder extends DefaultSanitizerBuilder
             (new Tag('typo3-backend-contextual-record-edit-trigger', Tag::ALLOW_CHILDREN))->addAttrs(...$globalAttrs),
             (new Tag('typo3-recordlist-record-download-button'))->addAttrs(...$globalAttrs),
             (new Tag('typo3-backend-new-page-wizard-button'))->addAttrs(...$globalAttrs),
-            (new Tag('typo3-backend-clipboard-panel'))->addAttrs(...$globalAttrs)
+            (new Tag('typo3-backend-clipboard-panel'))->addAttrs(...$globalAttrs),
         );
     }
 }
