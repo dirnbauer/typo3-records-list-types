@@ -1,6 +1,7 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      xmlns:rlt="http://typo3.org/ns/Webconsulting/RecordsListTypes/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
@@ -63,23 +64,23 @@
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
                                 <f:if condition="{table.sortingDropdownHtml}">
-                                    <f:format.raw>{table.sortingDropdownHtml}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.sortingDropdownHtml}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.newRecordButton}" />
                                 </f:if>
                                 
                                 <f:if condition="{table.actionButtons.downloadButton}">
-                                    <f:format.raw>{table.actionButtons.downloadButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.downloadButton}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.columnSelectorButton}">
-                                    <f:format.raw>{table.actionButtons.columnSelectorButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.columnSelectorButton}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.collapseButton}">
-                                    <f:format.raw>{table.actionButtons.collapseButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.collapseButton}" />
                                 </f:if>
                             </div>
                         </div>

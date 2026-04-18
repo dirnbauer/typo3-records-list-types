@@ -1,6 +1,7 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      xmlns:rlt="http://typo3.org/ns/Webconsulting/RecordsListTypes/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
@@ -50,7 +51,7 @@
 <f:if condition="{record.actions}">
     <div class="btn-group btn-group-sm ms-1" role="group">
         <f:for each="{record.actions}" as="actionHtml">
-            <f:format.raw>{actionHtml}</f:format.raw>
+            <rlt:renderBackendHtml html="{actionHtml}" />
         </f:for>
     </div>
 </f:if>
