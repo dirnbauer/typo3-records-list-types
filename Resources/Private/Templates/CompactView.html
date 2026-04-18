@@ -18,22 +18,7 @@
                         <div class="recordlist-heading-row">
                             <f:comment>Title section with table name link - identical to core</f:comment>
                             <div class="recordlist-heading-title">
-                                <f:if condition="{currentTable}">
-                                    <f:then>
-                                        <f:comment>In single table mode - link back to all tables</f:comment>
-                                        <a href="{table.clearTableUrl}">
-                                            {table.tableLabel} (<span>{table.recordCount}</span>)
-                                            <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
-                                        </a>
-                                    </f:then>
-                                    <f:else>
-                                        <f:comment>In multi-table mode - link to single table view</f:comment>
-                                        <a href="{table.singleTableUrl}">
-                                            {table.tableLabel} (<span>{table.recordCount}</span>)
-                                            <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
-                                        </a>
-                                    </f:else>
-                                </f:if>
+                                <f:render partial="RecordListHeadingTableTitle" arguments="{table: table, currentTable: currentTable}" />
                             </div>
 
                             <f:comment>Actions section - matches core structure exactly</f:comment>
@@ -63,8 +48,11 @@
                         <f:comment>Multi Record Selection action bar (hidden, shown by JS when records selected)</f:comment>
                         <f:if condition="{table.multiRecordSelectionActionsHtml}">
                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
-                                <div class="recordlist-heading-title">
-                                    <strong><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
+                                <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
+                                    <span class="t3js-multi-record-selection-table-title">
+                                        <f:render partial="RecordListHeadingTableTitle" arguments="{table: table, currentTable: currentTable}" />
+                                    </span>
+                                    <strong class="text-nowrap"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
                                 </div>
                                 <div class="recordlist-heading-actions">
                                     <f:format.raw>{table.multiRecordSelectionActionsHtml}</f:format.raw>

@@ -1,0 +1,18 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:comment>Shared table heading link (single vs multi-table mode)</f:comment>
+<f:if condition="{currentTable}">
+    <f:then>
+        <a href="{table.clearTableUrl}">
+            {table.tableLabel} (<span>{table.recordCount}</span>)
+            <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
+        </a>
+    </f:then>
+    <f:else>
+        <a href="{table.singleTableUrl}">
+            {table.tableLabel} (<span>{table.recordCount}</span>)
+            <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
+        </a>
+    </f:else>
+</f:if>
