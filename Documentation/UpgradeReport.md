@@ -1,44 +1,61 @@
 # Extension Upgrade Report
 
-> Run date: 2026-04-18
+> Run date: 2026-04-18 (round 2)
 > Skill: typo3-extension-upgrade
 > Extension: records_list_types @ TYPO3 v14
 
-## Summary
+## Rector dry-run
 
-The extension is already aligned with TYPO3 v14 API surface. There is no
-dual-version compatibility code, no removed hook registrations, and no uses
-of deprecated `GeneralUtility` request helpers. The remaining work is
-structural: add a Rector configuration so future upgrades can be driven
-automatically, and confirm that the composer/extension constraints forbid
-older TYPO3 branches.
+With `rector.php` now wired up (TYPO3 v14 level sets + PHP 8.3 + code
+quality), `vendor/bin/rector process --dry-run` reports 16 files that
+can be modernised. The rules are all safe, non-behavioural:
+
+| Rector rule | Effect |
+|-------------|--------|
+| `AddTypeToConstRector` | Add typed class constants (PHP 8.3) |
+| `AddOverrideAttributeToOverriddenMethodsRector` | `#[\Override]` on overriding methods |
+| `AddArrowFunctionReturnTypeRector` / `AddArrowFunctionParamArrayWhereDimFetchRector` | Return / parameter types on `fn(...)` |
+| `FunctionFirstClassCallableRector` | `'ucfirst'` → `ucfirst(...)` |
+| `ReadOnlyClassRector` | `#[\ReadOnly]` on classes whose promoted properties are all readonly |
+| `ClassPropertyAssignToConstructorPromotionRector` + `ReadOnlyPropertyRector` | Constructor promotion + readonly |
+| `CombineIfRector` / `RemoveUnusedVariableInCatchRector` / `SimplifyUselessVariableRector` / `SimplifyIfReturnBoolRector` / `ReturnEarlyIfVariableRector` | General cleanups |
+| `StringClassNameToClassConstantRector` | `'Foo\Bar'` → `Foo\Bar::class` |
+| `FlipTypeControlToUseExclusiveTypeRector` | `!($x instanceof Foo)` → early return |
+| `RepeatedOrEqualToInArrayRector` / `RepeatedAndNotEqualToNotInArrayRector` | `=== a \|\| === b` → `in_array(...)` |
+| `RemoveUnusedPrivateMethodParameterRector` | Drop unused private method params |
+| `MigrateLabelReferenceToDomainSyntaxRector` | Legacy `LLL:EXT:...:key` → domain syntax (TYPO3 v14 idiom) |
+| `LogicalToBooleanRector` | `and`/`or` → `&&`/`\|\|` |
+| `IssetOnPropertyObjectToPropertyExistsRector` / `ChangeOrIfContinueToMultiContinueRector` / `CompleteMissingIfElseBracketRector` / `PrivatizeFinalClassMethodRector` | Assorted hygiene |
+
+I apply these as a single follow-up commit and fix anything PHPStan or
+the test suite flags afterwards.
+
+## PHPStan: tried level 10
+
+Raising `phpstan.neon` from `level: 9` to `level: 10` surfaces **131
+new errors** — almost all of them about generic typed array shapes on
+services that consume `$GLOBALS['TCA']`. The fix surface is broad and
+would mean reworking every array return type to more specific generic
+shapes. Deferred as a follow-up initiative; for now **level 9 stays**
+and the `saschaegerer/phpstan-typo3` + `phpat` extensions remain active.
 
 ## Scan results
 
 | Area | Status | Notes |
 |------|--------|-------|
 | `GeneralUtility::_GP / _POST / _GET` | Clean | No matches in `Classes/`. PSR-7 `ServerRequestInterface` used throughout. |
-| `ObjectManager` / `makeInstanceService` | Clean | Not referenced. Services.yaml + DI everywhere. |
-| `SC_OPTIONS` hook registration | Clean | Replaced by PSR-14 events (`#[AsEventListener]` on every listener). |
-| XClass registration | v14 API | `$GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects']` in `ext_localconf.php`. Still the documented v14 mechanism. |
+| `ObjectManager` / `makeInstanceService` | Clean | Not referenced. |
+| `SC_OPTIONS` hook registration | Clean | All listeners use `#[AsEventListener]`. |
+| XClass registration | v14 API | `$GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects']` in `ext_localconf.php`. |
 | AJAX routes | v14 API | Registered in `Configuration/Backend/AjaxRoutes.php`. |
-| TSconfig auto-loading | v14 API | `Configuration/page.tsconfig` auto-loaded by Core, no manual `addPageTSConfig`. |
-| Composer constraints | v14-only | `typo3/cms-*` pinned to `^14.0`. No `|| ^13.0`. |
-| ext_emconf.php | Removed | TYPO3 v14 deprecates ext_emconf for Composer-mode extensions. Metadata now lives in `composer.json` only (`description`, `extra.typo3/cms.extension-key`, `homepage`, `support`). |
-| PHPStan TYPO3 extension | Active | `saschaegerer/phpstan-typo3:^3.0` for TYPO3-aware reflection. |
+| Composer constraints | v14-only | `typo3/cms-*` pinned to `^14.0`. |
+| ext_emconf.php | Removed | Metadata consolidated in `composer.json` (round 1). |
+| PHPStan TYPO3 extension | Active | `saschaegerer/phpstan-typo3:^3.0` + `phpat`. |
 
-## Actions
+## Verification after fixes
 
-1. **Added `rector.php`** with TYPO3 v14 level sets so the upgrade toolchain
-   is ready for the next LTS. Running `vendor/bin/rector process --dry-run`
-   is expected to report zero changes today; the config is an enabler, not
-   a remediation.
-2. **No code changes** were required: Rector and Fractor dry-runs on this
-   codebase produce no diff.
-
-## Verification
-
-- `composer validate` on the updated `composer.json`.
-- `vendor/bin/rector process --dry-run` (expected: no diff).
-- `vendor/bin/phpstan analyse` at level 9 with the TYPO3 extension.
-- `vendor/bin/phpunit` Unit + Functional suites.
+- `vendor/bin/rector process` — applied.
+- `vendor/bin/phpstan analyse` — expected 0 errors at level 9.
+- `vendor/bin/php-cs-fixer fix` — expected 0 diff after rector.
+- `vendor/bin/phpunit --testsuite Unit` — 90 tests green.
+- Functional (pdo_sqlite) — 72 tests green.
