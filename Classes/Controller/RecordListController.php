@@ -603,7 +603,7 @@ final class RecordListController extends CoreRecordListController
 
             // Sorting dropdown / toggle data
             $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
-            $sortingDropdown = $this->createSortingDropdown(
+            $sortingDropdown = $this->buildSortingDropdown(
                 $tableName,
                 $sortableFields,
                 $sortField,
@@ -616,7 +616,7 @@ final class RecordListController extends CoreRecordListController
             // Sorting mode toggle (used by GridView template for manual/field switch)
             $sortingModeToggle = null;
             if ($hasSortbyField) {
-                $sortingModeToggle = $this->createSortingModeToggle(
+                $sortingModeToggle = $this->buildSortingModeToggle(
                     $tableName,
                     $sortingMode,
                     $sortDirection,
@@ -893,7 +893,7 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
 
-            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
+            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $this->request);
             if ($count > 0) {
                 $tables[] = $tableName;
             }
@@ -1007,6 +1007,9 @@ final class RecordListController extends CoreRecordListController
         $backendUser = $this->getBackendUserAuthentication();
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
+        if (!isset($this->moduleData)) {
+            $this->moduleData = null;
+        }
         if ($this->moduleData !== null) {
             $dbList->setModuleData($this->moduleData);
         }
@@ -1190,6 +1193,7 @@ final class RecordListController extends CoreRecordListController
      */
     /**
      * @param list<int> $currentRecordUids Record UIDs currently shown in the table
+     * @param list<int> $currentRecordUids UIDs of currently rendered records
      * @param list<string> $displayColumnFields Field names of the currently displayed columns
      */
     protected function renderMultiRecordSelectionActions(
@@ -1287,6 +1291,259 @@ final class RecordListController extends CoreRecordListController
             'linkUrl' => $isSingleTableMode ? $clearTableUrl : $singleTableUrl,
             'iconIdentifier' => $isSingleTableMode ? 'actions-view-table-collapse' : 'actions-view-table-expand',
         ];
+    }
+
+    /**
+     * Build structured data for the field-sorting dropdown.
+     *
+     * @param array<int, array{field: string, label: string}> $sortableFields
+     * @return array<string, mixed>|null
+     */
+    protected function buildSortingDropdown(
+        string $tableName,
+        array $sortableFields,
+        string $currentSortField,
+        string $currentSortDirection,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+    ): ?array {
+        if ($sortableFields === []) {
+            return null;
+        }
+
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $lang = $this->getLanguageService();
+
+        $fieldModeLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
+        $fieldModeLabel = $fieldModeLabelTranslated !== '' ? $fieldModeLabelTranslated : 'By Column';
+        $ascLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
+        $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
+        $descLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
+        $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
+
+        $currentFieldLabel = $fieldModeLabel;
+        foreach ($sortableFields as $field) {
+            if (($field['field'] ?? '') === $currentSortField) {
+                $currentFieldLabel = $field['label'] ?? $currentSortField;
+                break;
+            }
+        }
+
+        $queryParams = $request->getQueryParams();
+        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        foreach ($preserveParams as $param) {
+            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
+                $baseParams[$param] = $queryParams[$param];
+            }
+        }
+
+        try {
+            $ascParams = $baseParams;
+            $ascParams['sortingMode'][$tableName] = 'field';
+            if ($currentSortField !== '') {
+                $ascParams['sort'][$tableName]['field'] = $currentSortField;
+            }
+            $ascParams['sort'][$tableName]['direction'] = 'asc';
+
+            $descParams = $baseParams;
+            $descParams['sortingMode'][$tableName] = 'field';
+            if ($currentSortField !== '') {
+                $descParams['sort'][$tableName]['field'] = $currentSortField;
+            }
+            $descParams['sort'][$tableName]['direction'] = 'desc';
+
+            $items = [];
+            foreach ($sortableFields as $field) {
+                $fieldName = $field['field'] ?? '';
+                if ($fieldName === '') {
+                    continue;
+                }
+                $sortParams = $baseParams;
+                $sortParams['sortingMode'][$tableName] = 'field';
+                $sortParams['sort'][$tableName]['field'] = $fieldName;
+                $sortParams['sort'][$tableName]['direction'] = $currentSortDirection;
+                $items[] = [
+                    'field' => $fieldName,
+                    'label' => $field['label'] ?? $fieldName,
+                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $sortParams),
+                    'isActive' => $fieldName === $currentSortField,
+                ];
+            }
+
+            return [
+                'fieldModeLabel' => $fieldModeLabel,
+                'currentFieldLabel' => $currentFieldLabel,
+                'sortIconIdentifier' => $currentSortDirection === 'desc' ? 'actions-sort-amount-down' : 'actions-sort-amount-up',
+                'ascLabel' => $ascLabel,
+                'descLabel' => $descLabel,
+                'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
+                'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                'isAscActive' => $currentSortDirection === 'asc',
+                'isDescActive' => $currentSortDirection === 'desc',
+                'items' => $items,
+            ];
+        } catch (Exception) {
+            return null;
+        }
+    }
+
+    /**
+     * Build structured data for the manual/field sorting toggle.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function buildSortingModeToggle(
+        string $tableName,
+        string $currentMode,
+        string $currentDirection,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+    ): ?array {
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $lang = $this->getLanguageService();
+
+        $manualLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.manual');
+        $manualLabel = $manualLabelT !== '' ? $manualLabelT : 'Manual Sorting';
+        $fieldLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
+        $fieldLabel = $fieldLabelT !== '' ? $fieldLabelT : 'Field Sorting';
+        $manualTitleT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.manual.title');
+        $manualTitle = $manualTitleT !== '' ? $manualTitleT : 'Enable drag-and-drop reordering';
+        $fieldTitleT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field.title');
+        $fieldTitle = $fieldTitleT !== '' ? $fieldTitleT : 'Sort by selected field';
+        $ascLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
+        $ascLabel = $ascLabelT !== '' ? $ascLabelT : 'Ascending';
+        $descLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
+        $descLabel = $descLabelT !== '' ? $descLabelT : 'Descending';
+        $headingLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.label');
+        $headingLabel = $headingLabelT !== '' ? $headingLabelT : 'Order';
+
+        $queryParams = $request->getQueryParams();
+        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        foreach ($preserveParams as $param) {
+            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
+                $baseParams[$param] = $queryParams[$param];
+            }
+        }
+
+        try {
+            $manualParams = $baseParams;
+            $manualParams['sortingMode'][$tableName] = 'manual';
+            $manualParams['sort'][$tableName]['direction'] = $currentDirection;
+
+            $fieldParams = $baseParams;
+            $fieldParams['sortingMode'][$tableName] = 'field';
+
+            $ascParams = $baseParams;
+            $ascParams['sortingMode'][$tableName] = 'manual';
+            $ascParams['sort'][$tableName]['direction'] = 'asc';
+
+            $descParams = $baseParams;
+            $descParams['sortingMode'][$tableName] = 'manual';
+            $descParams['sort'][$tableName]['direction'] = 'desc';
+
+            return [
+                'headingLabel' => $headingLabel,
+                'manual' => [
+                    'label' => $manualLabel,
+                    'title' => $manualTitle,
+                    'active' => $currentMode === 'manual',
+                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $manualParams),
+                    'stateLabel' => $currentDirection === 'desc' ? $descLabel : $ascLabel,
+                    'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
+                    'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                    'ascLabel' => $ascLabel,
+                    'descLabel' => $descLabel,
+                    'ascActive' => $currentDirection === 'asc',
+                    'descActive' => $currentDirection === 'desc',
+                ],
+                'field' => [
+                    'label' => $fieldLabel,
+                    'title' => $fieldTitle,
+                    'active' => $currentMode === 'field',
+                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $fieldParams),
+                ],
+            ];
+        } catch (Exception) {
+            return null;
+        }
+    }
+
+    /**
+     * Build structured data for one sortable compact-view column header.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildSortableColumnHeader(
+        string $tableName,
+        string $field,
+        string $label,
+        string $currentSortField,
+        string $currentSortDirection,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+    ): array {
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $lang = $this->getLanguageService();
+
+        $queryParams = $request->getQueryParams();
+        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        foreach ($preserveParams as $param) {
+            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
+                $baseParams[$param] = $queryParams[$param];
+            }
+        }
+
+        $isActiveField = ($currentSortField === $field);
+        $isAscActive = $isActiveField && $currentSortDirection !== 'desc';
+        $isDescActive = $isActiveField && $currentSortDirection === 'desc';
+        $ascLabelTranslated = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.sorting.asc');
+        $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
+        $descLabelTranslated = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.sorting.desc');
+        $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
+
+        try {
+            $ascParams = $baseParams;
+            $ascParams['sort'][$tableName]['field'] = $field;
+            $ascParams['sort'][$tableName]['direction'] = 'asc';
+
+            $descParams = $baseParams;
+            $descParams['sort'][$tableName]['field'] = $field;
+            $descParams['sort'][$tableName]['direction'] = 'desc';
+
+            return [
+                'label' => $label,
+                'hasSortUrls' => true,
+                'isActiveField' => $isActiveField,
+                'iconIdentifier' => $isActiveField
+                    ? ($isDescActive ? 'actions-sort-amount-down' : 'actions-sort-amount-up')
+                    : 'empty-empty',
+                'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
+                'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                'ascLabel' => $ascLabel,
+                'descLabel' => $descLabel,
+                'isAscActive' => $isAscActive,
+                'isDescActive' => $isDescActive,
+            ];
+        } catch (Exception) {
+            return [
+                'label' => $label,
+                'hasSortUrls' => false,
+                'isActiveField' => false,
+                'iconIdentifier' => 'empty-empty',
+                'ascUrl' => '',
+                'descUrl' => '',
+                'ascLabel' => $ascLabel,
+                'descLabel' => $descLabel,
+                'isAscActive' => false,
+                'isDescActive' => false,
+            ];
+        }
     }
 
     /**
