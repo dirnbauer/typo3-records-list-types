@@ -1,7 +1,6 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
-      xmlns:rlt="http://typo3.org/ns/Webconsulting/RecordsListTypes/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
@@ -64,23 +63,23 @@
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
                                 <f:if condition="{table.sortingDropdownHtml}">
-                                    <rlt:renderBackendHtml html="{table.sortingDropdownHtml}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.sortingDropdownHtml}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <rlt:renderBackendHtml html="{table.actionButtons.newRecordButton}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.newRecordButton}</f:sanitize.html>
                                 </f:if>
                                 
                                 <f:if condition="{table.actionButtons.downloadButton}">
-                                    <rlt:renderBackendHtml html="{table.actionButtons.downloadButton}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.downloadButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.columnSelectorButton}">
-                                    <rlt:renderBackendHtml html="{table.actionButtons.columnSelectorButton}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.collapseButton}">
-                                    <rlt:renderBackendHtml html="{table.actionButtons.collapseButton}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.collapseButton}</f:sanitize.html>
                                 </f:if>
                             </div>
                         </div>

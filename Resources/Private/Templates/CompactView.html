@@ -1,7 +1,6 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
-      xmlns:rlt="http://typo3.org/ns/Webconsulting/RecordsListTypes/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <div class="recordlist-compactview-container">
@@ -19,29 +18,29 @@
                         <div class="recordlist-heading-row">
                             <f:comment>Title section with table name link - identical to core</f:comment>
                             <div class="recordlist-heading-title">
-                                <rlt:renderBackendHtml html="{table.tableHeadingHtml}" />
+                                <f:sanitize.html build="recordsListTypesBackend">{table.tableHeadingHtml}</f:sanitize.html>
                             </div>
 
                             <f:comment>Actions section - matches core structure exactly</f:comment>
                             <div class="recordlist-heading-actions">
                                 <f:comment>New record button</f:comment>
                                 <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <rlt:renderBackendHtml html="{table.actionButtons.newRecordButton}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.newRecordButton}</f:sanitize.html>
                                 </f:if>
                                 
                                 <f:comment>Download/Export button</f:comment>
                                 <f:if condition="{table.actionButtons.downloadButton}">
-                                    <rlt:renderBackendHtml html="{table.actionButtons.downloadButton}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.downloadButton}</f:sanitize.html>
                                 </f:if>
                                 
                                 <f:comment>Column selector button (web component)</f:comment>
                                 <f:if condition="{table.actionButtons.columnSelectorButton}">
-                                    <rlt:renderBackendHtml html="{table.actionButtons.columnSelectorButton}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
                                 </f:if>
 
                                 <f:comment>Collapse/Expand button</f:comment>
                                 <f:if condition="{table.actionButtons.collapseButton}">
-                                    <rlt:renderBackendHtml html="{table.actionButtons.collapseButton}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.actionButtons.collapseButton}</f:sanitize.html>
                                 </f:if>
                             </div>
                         </div>
@@ -51,12 +50,12 @@
                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
                                 <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
                                     <span class="t3js-multi-record-selection-table-title">
-                                        <rlt:renderBackendHtml html="{table.tableHeadingHtml}" />
+                                        <f:sanitize.html build="recordsListTypesBackend">{table.tableHeadingHtml}</f:sanitize.html>
                                     </span>
                                     <strong class="text-nowrap"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
                                 </div>
                                 <div class="recordlist-heading-actions">
-                                    <rlt:renderBackendHtml html="{table.multiRecordSelectionActionsHtml}" />
+                                    <f:sanitize.html build="recordsListTypesBackend">{table.multiRecordSelectionActionsHtml}</f:sanitize.html>
                                 </div>
                             </div>
                         </f:if>
@@ -108,7 +107,7 @@
                                         <f:comment>Sortable column headers rendered by PHP using TYPO3 API</f:comment>
                                         <f:for each="{table.sortableColumnHeaders}" as="header">
                                             <th class="compactview-th{f:if(condition: header.isFixed, then: ' compactview-th--fixed-left')} compactview-th--{header.type}">
-                                                <rlt:renderBackendHtml html="{header.headerHtml}" />
+                                                <f:sanitize.html build="recordsListTypesBackend">{header.headerHtml}</f:sanitize.html>
                                             </th>
                                         </f:for>
                                         
