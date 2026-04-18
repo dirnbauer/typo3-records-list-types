@@ -1,0 +1,66 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:if condition="{toggle}">
+    <div class="gridview-sorting-wrapper me-2">
+        <span class="gridview-sorting-label">{toggle.headingLabel}</span>
+        <div class="gridview-sorting-controls d-flex align-items-center gap-2">
+            <div class="gridview-sorting-toggle btn-group" role="group" aria-label="{toggle.headingLabel}">
+                <f:if condition="{toggle.manual.active}">
+                    <f:then>
+                        <div class="btn-group gridview-sorting-toggle__group" role="group">
+                            <button type="button"
+                                    class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    title="{toggle.manual.title}">
+                                <core:icon identifier="actions-move" size="small" />
+                                <span class="gridview-sorting-toggle__text">{toggle.manual.label}</span>
+                                <span class="gridview-sorting-toggle__value">{toggle.manual.stateLabel}</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item{f:if(condition: toggle.manual.ascActive, then: ' active')}" href="{toggle.manual.ascUrl}">
+                                        <core:icon identifier="actions-sort-amount-up" size="small" /> {toggle.manual.ascLabel}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item{f:if(condition: toggle.manual.descActive, then: ' active')}" href="{toggle.manual.descUrl}">
+                                        <core:icon identifier="actions-sort-amount-down" size="small" /> {toggle.manual.descLabel}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </f:then>
+                    <f:else>
+                        <a href="{toggle.manual.url}"
+                           class="btn btn-default btn-sm gridview-sorting-toggle__btn"
+                           title="{toggle.manual.title}">
+                            <core:icon identifier="actions-move" size="small" />
+                            <span class="gridview-sorting-toggle__text">{toggle.manual.label}</span>
+                        </a>
+                    </f:else>
+                </f:if>
+
+                <f:if condition="{toggle.field.active}">
+                    <f:then>
+                        <div class="btn-group gridview-sorting-toggle__group" role="group">
+                            <f:render partial="SortingDropdown" arguments="{dropdown: toggle.field.dropdown}" />
+                        </div>
+                    </f:then>
+                    <f:else>
+                        <a href="{toggle.field.url}"
+                           class="btn btn-default btn-sm gridview-sorting-toggle__btn"
+                           title="{toggle.field.title}">
+                            <core:icon identifier="actions-filter" size="small" />
+                            <span class="gridview-sorting-toggle__text">{toggle.field.label}</span>
+                        </a>
+                    </f:else>
+                </f:if>
+            </div>
+        </div>
+    </div>
+</f:if>
+
+</html>

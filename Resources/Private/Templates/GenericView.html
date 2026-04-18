@@ -61,9 +61,9 @@
                             </div>
 
                             <div class="recordlist-heading-actions">
-                                <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
-                                <f:if condition="{table.sortingDropdownHtml}">
-                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.sortingDropdownHtml}</f:sanitize.html>
+                                <f:comment>Sorting dropdown rendered from structured data</f:comment>
+                                <f:if condition="{table.sortingDropdown}">
+                                    <f:render partial="SortingDropdown" arguments="{sortingDropdown: table.sortingDropdown}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
