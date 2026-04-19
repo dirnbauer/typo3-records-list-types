@@ -848,38 +848,42 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     background-color: var(--cv-bg-subtle) !important;
 }
 
-/* Icon cell on a translation row shows the same record icon as the
-   parent (dimmed) PLUS a tree-branch connector drawn as a pseudo element
-   on the td itself. Inherit `position: sticky` from the fixed-left base
-   rule so the column stays pinned when the table scrolls horizontally;
-   sticky already establishes the positioning context our ::before /
-   ::after connectors need. */
+/* Translation-row icon cell: indent the record icon so the cell reads
+   like a tree branch, and draw a clear ├ / └ connector on the LEFT side
+   of the cell (not overlapping the icon). Position stays sticky — we
+   inherit it from the fixed-left base rule. */
 .compactview-row--translation .compactview-td--icon {
     background: var(--cv-bg-subtle) !important;
+    padding-left: 0.6875rem; /* ~11px — room for the tree connector */
 }
 
+/* Vertical line (top → middle by default, so the branch ends cleanly). */
 .compactview-row--translation .compactview-td--icon::before {
     content: "";
     position: absolute;
-    left: calc(50% - 1px);
+    left: 0.4375rem;
     top: 0;
     bottom: 50%;
     width: 2px;
     background: var(--cv-border);
 }
 
+/* If this translation is followed by ANOTHER translation (same or
+   different language), extend the vertical line through the full row. */
+.compactview-row--translation:has(+ .compactview-row--translation) .compactview-td--icon::before {
+    bottom: 0;
+}
+
+/* Horizontal tick joining the vertical line to the icon */
 .compactview-row--translation .compactview-td--icon::after {
     content: "";
     position: absolute;
-    left: calc(50% - 1px);
+    left: 0.4375rem;
     top: 50%;
-    width: 0.375rem;
+    width: 0.3125rem;
     height: 2px;
     background: var(--cv-border);
 }
-
-/* Last translation in its group keeps the short vertical line — it's
-   already short by default (bottom: 50%), so nothing to add. */
 
 .compactview-row--translation .compactview-row__icon {
     opacity: 0.55;
