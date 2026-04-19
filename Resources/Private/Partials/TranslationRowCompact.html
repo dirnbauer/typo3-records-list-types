@@ -26,12 +26,23 @@
     </f:if>
 
     <f:comment>
-        Icon column becomes a tree-branch connector. No record icon — the
-        parent row already shows it once, and an indented branch reads like
-        the classic list view without duplicating chrome.
+        Icon column: record icon with TYPO3's translate overlay (automatic
+        for translated records) so users see at a glance that the row is a
+        translation. Untranslated placeholders show the parent's bare icon
+        dimmed — no overlay yet because no translation exists.
     </f:comment>
-    <td class="compactview-td compactview-td--fixed-left compactview-td--icon compactview-td--translation-connector">
+    <td class="compactview-td compactview-td--fixed-left compactview-td--icon compactview-td--translation">
         <span class="compactview-row__translation-branch" aria-hidden="true"></span>
+        <span class="compactview-row__icon compactview-row__icon--translation">
+            <f:if condition="{translation.state} == 'translated'">
+                <f:then>
+                    <core:iconForRecord table="{record.tableName}" row="{translation.rawRecord}" />
+                </f:then>
+                <f:else>
+                    <core:icon identifier="{record.iconIdentifier}" size="small" />
+                </f:else>
+            </f:if>
+        </span>
     </td>
 
     <f:comment>UID column: UID for live translations, em-dash for placeholders</f:comment>

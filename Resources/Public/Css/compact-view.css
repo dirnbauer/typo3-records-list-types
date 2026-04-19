@@ -848,11 +848,32 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     background-color: var(--cv-bg-subtle) !important;
 }
 
-/* Icon cell on a translation row is purely a branch connector — no icon */
-.compactview-row--translation .compactview-td--translation-connector {
+/* Icon cell on a translation row hosts the record icon (with TYPO3's
+   translate overlay) plus a tree-branch connector on the left side. The
+   background is opaque so the parent row's zebra striping doesn't bleed
+   through. */
+.compactview-row--translation .compactview-td--translation {
     position: relative;
-    padding: 0;
-    width: 1.5rem;
+    padding-left: 1.5rem;
+    background: var(--cv-bg-subtle) !important;
+}
+
+.compactview-row--translation .compactview-row__icon--translation {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    opacity: 0.85;
+}
+
+.compactview-row--translation .compactview-row__icon--translation .icon {
+    width: 16px;
+    height: 16px;
+}
+
+.compactview-row--translation-untranslated .compactview-row__icon--translation {
+    opacity: 0.4;
 }
 
 .compactview-row__translation-branch {
