@@ -452,3 +452,35 @@
     cursor: not-allowed;
 }
 
+/* =============================================================================
+   5. typo3-backend-contextual-record-edit-trigger — softer default
+   =============================================================================
+   The Core web component inherits `appearance: button` from PseudoButtonLit,
+   which makes some browsers paint a harsh native-button background/border.
+   Reset so our own classes (title links / action buttons) control the look,
+   and any un-classed trigger falls back to a neutral, soft appearance. */
+typo3-backend-contextual-record-edit-trigger {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    color: inherit;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    line-height: inherit;
+    text-align: inherit;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+typo3-backend-contextual-record-edit-trigger:focus-visible {
+    outline: 2px solid var(--typo3-state-default-primary-color, #3b82f6);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+typo3-backend-contextual-record-edit-trigger:hover {
+    background: color-mix(in srgb, currentColor 6%, transparent);
+    color: inherit;
+}
+
