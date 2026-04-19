@@ -6,6 +6,7 @@ namespace Webconsulting\RecordsListTypes\Controller;
 
 use Doctrine\DBAL\ParameterType;
 use Exception;
+use JsonException;
 use Override;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -1653,7 +1654,7 @@ final class RecordListController extends CoreRecordListController
 
         try {
             $columnsOnly = json_encode($editableFields, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
+        } catch (JsonException) {
             return null;
         }
 
