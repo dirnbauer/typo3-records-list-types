@@ -557,8 +557,14 @@
 .compactview-row__icon {
     display: flex;
     align-items: center;
-    justify-content: center;
+    /* Flush-left so the tree connector (drawn as ::after on the td) lands
+       naturally on the icon's horizontal center. */
+    justify-content: flex-start;
     color: var(--cv-text-subtle);
+    /* Sit above the tree connector pseudo so the line doesn't bleed
+       through the icon artwork. */
+    position: relative;
+    z-index: 2;
 }
 
 .compactview-row__icon .icon {
