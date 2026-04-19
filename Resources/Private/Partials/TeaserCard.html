@@ -40,14 +40,31 @@
                     </span>
                     
                     <h6 class="teaserview-card__title">
-                        <typo3-backend-contextual-record-edit-trigger
-                            url="{record.contextualEditUrl}"
-                            edit-url="{record.editUrl}">
-                            <f:if condition="{record.title}">
-                                <f:then>{record.title}</f:then>
-                                <f:else><em>Untitled</em></f:else>
-                            </f:if>
-                        </typo3-backend-contextual-record-edit-trigger>
+                        <f:if condition="{record.isFreeTranslation}">
+                            <span class="teaserview-card__lang-chip teaserview-card__lang-chip--free" title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free', default: 'FREE')}">
+                                <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free" default="FREE" />
+                                <span>·</span>
+                                {record.languageTitle}
+                            </span>
+                        </f:if>
+                        <f:if condition="{record.permissions.canEdit}">
+                            <f:then>
+                                <typo3-backend-contextual-record-edit-trigger
+                                    url="{record.contextualEditUrl}"
+                                    edit-url="{record.editUrl}">
+                                    <f:if condition="{record.title}">
+                                        <f:then>{record.title}</f:then>
+                                        <f:else><em>Untitled</em></f:else>
+                                    </f:if>
+                                </typo3-backend-contextual-record-edit-trigger>
+                            </f:then>
+                            <f:else>
+                                <f:if condition="{record.title}">
+                                    <f:then>{record.title}</f:then>
+                                    <f:else><em>Untitled</em></f:else>
+                                </f:if>
+                            </f:else>
+                        </f:if>
                     </h6>
                     
                     <span class="teaserview-badge teaserview-badge--uid">#{record.uid}</span>
@@ -85,49 +102,55 @@
             <f:comment>Action buttons</f:comment>
             <div class="teaserview-card__actions">
                 <f:comment>Visibility toggle</f:comment>
-                <f:if condition="{record.hidden}">
-                    <f:then>
-                        <button type="button" 
-                                class="teaserview-action teaserview-action--warning" 
-                                title="Show record"
-                                data-gridview-action="show"
-                                data-table="{record.tableName}"
-                                data-uid="{record.uid}"
-                                data-hidden-field="{tableConfig.hiddenField}">
-                            <core:icon identifier="actions-toggle-off" size="small" />
-                        </button>
-                    </f:then>
-                    <f:else>
-                        <button type="button" 
-                                class="teaserview-action teaserview-action--success" 
-                                title="Hide record"
-                                data-gridview-action="hide"
-                                data-table="{record.tableName}"
-                                data-uid="{record.uid}"
-                                data-hidden-field="{tableConfig.hiddenField}">
-                            <core:icon identifier="actions-toggle-on" size="small" />
-                        </button>
-                    </f:else>
+                <f:if condition="{record.permissions.canToggleVisibility}">
+                    <f:if condition="{record.hidden}">
+                        <f:then>
+                            <button type="button"
+                                    class="teaserview-action teaserview-action--warning"
+                                    title="Show record"
+                                    data-gridview-action="show"
+                                    data-table="{record.tableName}"
+                                    data-uid="{record.uid}"
+                                    data-hidden-field="{tableConfig.hiddenField}">
+                                <core:icon identifier="actions-toggle-off" size="small" />
+                            </button>
+                        </f:then>
+                        <f:else>
+                            <button type="button"
+                                    class="teaserview-action teaserview-action--success"
+                                    title="Hide record"
+                                    data-gridview-action="hide"
+                                    data-table="{record.tableName}"
+                                    data-uid="{record.uid}"
+                                    data-hidden-field="{tableConfig.hiddenField}">
+                                <core:icon identifier="actions-toggle-on" size="small" />
+                            </button>
+                        </f:else>
+                    </f:if>
                 </f:if>
 
                 <f:comment>Edit button</f:comment>
-                <typo3-backend-contextual-record-edit-trigger
-                    class="teaserview-action teaserview-action--primary"
-                    title="Edit"
-                    url="{record.contextualEditUrl}"
-                    edit-url="{record.editUrl}">
-                    <core:icon identifier="actions-open" size="small" />
-                </typo3-backend-contextual-record-edit-trigger>
+                <f:if condition="{record.permissions.canEdit}">
+                    <typo3-backend-contextual-record-edit-trigger
+                        class="teaserview-action teaserview-action--primary"
+                        title="Edit"
+                        url="{record.contextualEditUrl}"
+                        edit-url="{record.editUrl}">
+                        <core:icon identifier="actions-open" size="small" />
+                    </typo3-backend-contextual-record-edit-trigger>
+                </f:if>
 
                 <f:comment>Delete button</f:comment>
-                <button type="button" 
-                        class="teaserview-action teaserview-action--danger"
-                        title="Delete"
-                        data-gridview-action="delete"
-                        data-table="{record.tableName}"
-                        data-uid="{record.uid}">
-                    <core:icon identifier="actions-edit-delete" size="small" />
-                </button>
+                <f:if condition="{record.permissions.canDelete}">
+                    <button type="button"
+                            class="teaserview-action teaserview-action--danger"
+                            title="Delete"
+                            data-gridview-action="delete"
+                            data-table="{record.tableName}"
+                            data-uid="{record.uid}">
+                        <core:icon identifier="actions-edit-delete" size="small" />
+                    </button>
+                </f:if>
 
                 <f:comment>More Actions dropdown</f:comment>
                 <f:variable name="actionsPopoverId">rlt-actions-{record.tableName}-{record.uid}</f:variable>
@@ -139,43 +162,49 @@
                         <core:icon identifier="actions-menu-alternative" size="small" />
                     </button>
                     <ul id="{actionsPopoverId}" class="dropdown-menu dropdown-menu-end" popover>
-                        <li>
-                            <a class="dropdown-item" href="#"
-                               data-gridview-action="info"
-                               data-table="{record.tableName}"
-                               data-uid="{record.uid}">
-                                <core:icon identifier="actions-document-info" size="small" />
-                                <span>Info</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#"
-                               data-gridview-action="history"
-                               data-table="{record.tableName}"
-                               data-uid="{record.uid}">
-                                <core:icon identifier="actions-document-history-open" size="small" />
-                                <span>History</span>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" href="#"
-                               data-gridview-action="copy"
-                               data-table="{record.tableName}"
-                               data-uid="{record.uid}">
-                                <core:icon identifier="actions-edit-copy" size="small" />
-                                <span>Copy</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#"
-                               data-gridview-action="cut"
-                               data-table="{record.tableName}"
-                               data-uid="{record.uid}">
-                                <core:icon identifier="actions-edit-cut" size="small" />
-                                <span>Cut</span>
-                            </a>
-                        </li>
+                        <f:if condition="{record.permissions.canShowInfo}">
+                            <li>
+                                <a class="dropdown-item" href="#"
+                                   data-gridview-action="info"
+                                   data-table="{record.tableName}"
+                                   data-uid="{record.uid}">
+                                    <core:icon identifier="actions-document-info" size="small" />
+                                    <span>Info</span>
+                                </a>
+                            </li>
+                        </f:if>
+                        <f:if condition="{record.permissions.canHistory}">
+                            <li>
+                                <a class="dropdown-item" href="#"
+                                   data-gridview-action="history"
+                                   data-table="{record.tableName}"
+                                   data-uid="{record.uid}">
+                                    <core:icon identifier="actions-document-history-open" size="small" />
+                                    <span>History</span>
+                                </a>
+                            </li>
+                        </f:if>
+                        <f:if condition="{record.permissions.canCopy}">
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#"
+                                   data-gridview-action="copy"
+                                   data-table="{record.tableName}"
+                                   data-uid="{record.uid}">
+                                    <core:icon identifier="actions-edit-copy" size="small" />
+                                    <span>Copy</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#"
+                                   data-gridview-action="cut"
+                                   data-table="{record.tableName}"
+                                   data-uid="{record.uid}">
+                                    <core:icon identifier="actions-edit-cut" size="small" />
+                                    <span>Cut</span>
+                                </a>
+                            </li>
+                        </f:if>
                     </ul>
                 </div>
             </div>

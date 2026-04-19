@@ -61,66 +61,88 @@
                 <core:icon identifier="{record.iconIdentifier}" size="small" />
             </div>
             <div class="gridview-card__title">
-                <typo3-backend-contextual-record-edit-trigger
-                    url="{record.contextualEditUrl}"
-                    edit-url="{record.editUrl}">
-                    <f:if condition="{record.title}">
-                        <f:then>{record.title}</f:then>
-                        <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
-                    </f:if>
-                </typo3-backend-contextual-record-edit-trigger>
+                <f:if condition="{record.isFreeTranslation}">
+                    <span class="gridview-card__lang-chip gridview-card__lang-chip--free" title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free', default: 'FREE')}">
+                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free" default="FREE" />
+                        <span>·</span>
+                        {record.languageTitle}
+                    </span>
+                </f:if>
+                <f:if condition="{record.permissions.canEdit}">
+                    <f:then>
+                        <typo3-backend-contextual-record-edit-trigger
+                            url="{record.contextualEditUrl}"
+                            edit-url="{record.editUrl}">
+                            <f:if condition="{record.title}">
+                                <f:then>{record.title}</f:then>
+                                <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                            </f:if>
+                        </typo3-backend-contextual-record-edit-trigger>
+                    </f:then>
+                    <f:else>
+                        <f:if condition="{record.title}">
+                            <f:then>{record.title}</f:then>
+                            <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                        </f:if>
+                    </f:else>
+                </f:if>
             </div>
         </div>
         
         <f:comment>Row 2: Compact action toolbar</f:comment>
         <div class="gridview-card__header-actions">
             <f:comment>Visibility Toggle</f:comment>
-            <f:if condition="{record.hidden}">
-                <f:then>
-                    <button type="button" 
-                            class="gridview-action-sm gridview-action-sm--warning" 
-                            title="Show record (currently hidden)"
-                            data-gridview-action="show"
-                            data-table="{record.tableName}"
-                            data-uid="{record.uid}"
-                            data-hidden-field="{tableConfig.hiddenField}">
-                        <core:icon identifier="actions-toggle-off" size="small" />
-                    </button>
-                </f:then>
-                <f:else>
-                    <button type="button" 
-                            class="gridview-action-sm gridview-action-sm--success" 
-                            title="Hide record (currently visible)"
-                            data-gridview-action="hide"
-                            data-table="{record.tableName}"
-                            data-uid="{record.uid}"
-                            data-hidden-field="{tableConfig.hiddenField}">
-                        <core:icon identifier="actions-toggle-on" size="small" />
-                    </button>
-                </f:else>
+            <f:if condition="{record.permissions.canToggleVisibility}">
+                <f:if condition="{record.hidden}">
+                    <f:then>
+                        <button type="button"
+                                class="gridview-action-sm gridview-action-sm--warning"
+                                title="Show record (currently hidden)"
+                                data-gridview-action="show"
+                                data-table="{record.tableName}"
+                                data-uid="{record.uid}"
+                                data-hidden-field="{tableConfig.hiddenField}">
+                            <core:icon identifier="actions-toggle-off" size="small" />
+                        </button>
+                    </f:then>
+                    <f:else>
+                        <button type="button"
+                                class="gridview-action-sm gridview-action-sm--success"
+                                title="Hide record (currently visible)"
+                                data-gridview-action="hide"
+                                data-table="{record.tableName}"
+                                data-uid="{record.uid}"
+                                data-hidden-field="{tableConfig.hiddenField}">
+                            <core:icon identifier="actions-toggle-on" size="small" />
+                        </button>
+                    </f:else>
+                </f:if>
+                <span class="gridview-action-separator"></span>
             </f:if>
 
-            <span class="gridview-action-separator"></span>
-
             <f:comment>Edit button</f:comment>
-            <typo3-backend-contextual-record-edit-trigger
-                url="{record.contextualEditUrl}"
-                edit-url="{record.editUrl}"
-                class="gridview-action-sm gridview-action-sm--primary"
-                title="Edit"
-                aria-label="Edit">
-                <core:icon identifier="actions-open" size="small" />
-            </typo3-backend-contextual-record-edit-trigger>
+            <f:if condition="{record.permissions.canEdit}">
+                <typo3-backend-contextual-record-edit-trigger
+                    url="{record.contextualEditUrl}"
+                    edit-url="{record.editUrl}"
+                    class="gridview-action-sm gridview-action-sm--primary"
+                    title="Edit"
+                    aria-label="Edit">
+                    <core:icon identifier="actions-open" size="small" />
+                </typo3-backend-contextual-record-edit-trigger>
+            </f:if>
 
             <f:comment>Delete button</f:comment>
-            <button type="button" 
-                    class="gridview-action-sm gridview-action-sm--danger"
-                    title="Delete"
-                    data-gridview-action="delete"
-                    data-table="{record.tableName}"
-                    data-uid="{record.uid}">
-                <core:icon identifier="actions-edit-delete" size="small" />
-            </button>
+            <f:if condition="{record.permissions.canDelete}">
+                <button type="button"
+                        class="gridview-action-sm gridview-action-sm--danger"
+                        title="Delete"
+                        data-gridview-action="delete"
+                        data-table="{record.tableName}"
+                        data-uid="{record.uid}">
+                    <core:icon identifier="actions-edit-delete" size="small" />
+                </button>
+            </f:if>
 
             <f:comment>More Actions popover</f:comment>
             <div class="dropdown">
@@ -132,43 +154,49 @@
                     <core:icon identifier="actions-menu-alternative" size="small" />
                 </button>
                 <ul id="actions-{record.tableName}-{record.uid}" class="dropdown-menu dropdown-menu-end" popover>
-                    <li>
-                        <a class="dropdown-item" href="#" 
-                           data-gridview-action="info"
-                           data-table="{record.tableName}"
-                           data-uid="{record.uid}">
-                            <core:icon identifier="actions-document-info" size="small" />
-                            <span>Info</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="#"
-                           data-gridview-action="history"
-                           data-table="{record.tableName}"
-                           data-uid="{record.uid}">
-                            <core:icon identifier="actions-document-history-open" size="small" />
-                            <span>History</span>
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <a class="dropdown-item" href="#"
-                           data-gridview-action="copy"
-                           data-table="{record.tableName}"
-                           data-uid="{record.uid}">
-                            <core:icon identifier="actions-edit-copy" size="small" />
-                            <span>Copy</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="#"
-                           data-gridview-action="cut"
-                           data-table="{record.tableName}"
-                           data-uid="{record.uid}">
-                            <core:icon identifier="actions-edit-cut" size="small" />
-                            <span>Cut</span>
-                        </a>
-                    </li>
+                    <f:if condition="{record.permissions.canShowInfo}">
+                        <li>
+                            <a class="dropdown-item" href="#"
+                               data-gridview-action="info"
+                               data-table="{record.tableName}"
+                               data-uid="{record.uid}">
+                                <core:icon identifier="actions-document-info" size="small" />
+                                <span>Info</span>
+                            </a>
+                        </li>
+                    </f:if>
+                    <f:if condition="{record.permissions.canHistory}">
+                        <li>
+                            <a class="dropdown-item" href="#"
+                               data-gridview-action="history"
+                               data-table="{record.tableName}"
+                               data-uid="{record.uid}">
+                                <core:icon identifier="actions-document-history-open" size="small" />
+                                <span>History</span>
+                            </a>
+                        </li>
+                    </f:if>
+                    <f:if condition="{record.permissions.canCopy}">
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#"
+                               data-gridview-action="copy"
+                               data-table="{record.tableName}"
+                               data-uid="{record.uid}">
+                                <core:icon identifier="actions-edit-copy" size="small" />
+                                <span>Copy</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#"
+                               data-gridview-action="cut"
+                               data-table="{record.tableName}"
+                               data-uid="{record.uid}">
+                                <core:icon identifier="actions-edit-cut" size="small" />
+                                <span>Cut</span>
+                            </a>
+                        </li>
+                    </f:if>
                 </ul>
             </div>
         </div>

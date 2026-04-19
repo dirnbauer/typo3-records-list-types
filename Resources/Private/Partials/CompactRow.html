@@ -34,19 +34,40 @@
         <span class="compactview-row__uid">{record.uid}</span>
     </td>
     
-    <f:comment>Fixed left: Title</f:comment>
+    <f:comment>Fixed left: Title (clickable only when the user can edit).
+        Free translations get a leading "FREE {lang}" chip so editors
+        recognise that the row is not connected to a default record.</f:comment>
     <td class="compactview-td compactview-td--fixed-left compactview-td--title">
+        <f:if condition="{record.isFreeTranslation}">
+            <span class="compactview-row__lang-chip compactview-row__lang-chip--free" title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free', default: 'FREE')}">
+                <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free" default="FREE" />
+                <span>·</span>
+                {record.languageTitle}
+            </span>
+        </f:if>
         <f:for each="{record.displayValues}" as="fieldData">
             <f:if condition="{fieldData.isLabelField}">
-                <typo3-backend-contextual-record-edit-trigger
-                    class="compactview-row__title-link"
-                    edit-url="{record.editUrl}"
-                    url="{record.contextualEditUrl}">
-                    <f:if condition="{fieldData.formatted}">
-                        <f:then>{fieldData.formatted -> f:format.crop(maxCharacters: 50, append: '…')}</f:then>
-                        <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
-                    </f:if>
-                </typo3-backend-contextual-record-edit-trigger>
+                <f:if condition="{record.permissions.canEdit}">
+                    <f:then>
+                        <typo3-backend-contextual-record-edit-trigger
+                            class="compactview-row__title-link"
+                            edit-url="{record.editUrl}"
+                            url="{record.contextualEditUrl}">
+                            <f:if condition="{fieldData.formatted}">
+                                <f:then>{fieldData.formatted -> f:format.crop(maxCharacters: 50, append: '…')}</f:then>
+                                <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                            </f:if>
+                        </typo3-backend-contextual-record-edit-trigger>
+                    </f:then>
+                    <f:else>
+                        <span class="compactview-row__title-link">
+                            <f:if condition="{fieldData.formatted}">
+                                <f:then>{fieldData.formatted -> f:format.crop(maxCharacters: 50, append: '…')}</f:then>
+                                <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                            </f:if>
+                        </span>
+                    </f:else>
+                </f:if>
             </f:if>
         </f:for>
     </td>
@@ -115,54 +136,60 @@
     <f:comment>Spacer - absorbs remaining width (hidden from screen readers)</f:comment>
     <td class="compactview-td compactview-td--spacer" aria-hidden="true" role="presentation"></td>
     
-    <f:comment>Fixed right: Visibility toggle</f:comment>
+    <f:comment>Fixed right: Visibility toggle (only when the user can toggle)</f:comment>
     <td class="compactview-td compactview-td--fixed-right compactview-td--status">
-        <f:if condition="{record.hidden}">
-            <f:then>
-                <button type="button" 
-                        class="cv-toggle cv-toggle--hidden" 
-                        title="Hidden - click to show"
-                        data-gridview-action="show"
-                        data-table="{record.tableName}"
-                        data-uid="{record.uid}"
-                        data-hidden-field="{tableConfig.hiddenField}">
-                    <core:icon identifier="actions-toggle-off" size="small" />
-                </button>
-            </f:then>
-            <f:else>
-                <button type="button" 
-                        class="cv-toggle cv-toggle--visible" 
-                        title="Visible - click to hide"
-                        data-gridview-action="hide"
-                        data-table="{record.tableName}"
-                        data-uid="{record.uid}"
-                        data-hidden-field="{tableConfig.hiddenField}">
-                    <core:icon identifier="actions-toggle-on" size="small" />
-                </button>
-            </f:else>
+        <f:if condition="{record.permissions.canToggleVisibility}">
+            <f:if condition="{record.hidden}">
+                <f:then>
+                    <button type="button"
+                            class="cv-toggle cv-toggle--hidden"
+                            title="Hidden - click to show"
+                            data-gridview-action="show"
+                            data-table="{record.tableName}"
+                            data-uid="{record.uid}"
+                            data-hidden-field="{tableConfig.hiddenField}">
+                        <core:icon identifier="actions-toggle-off" size="small" />
+                    </button>
+                </f:then>
+                <f:else>
+                    <button type="button"
+                            class="cv-toggle cv-toggle--visible"
+                            title="Visible - click to hide"
+                            data-gridview-action="hide"
+                            data-table="{record.tableName}"
+                            data-uid="{record.uid}"
+                            data-hidden-field="{tableConfig.hiddenField}">
+                        <core:icon identifier="actions-toggle-on" size="small" />
+                    </button>
+                </f:else>
+            </f:if>
         </f:if>
     </td>
-    
+
     <f:comment>Fixed right: Edit</f:comment>
     <td class="compactview-td compactview-td--fixed-right compactview-td--action">
-        <typo3-backend-contextual-record-edit-trigger
-            class="cv-action cv-action--primary"
-            title="Edit"
-            edit-url="{record.editUrl}"
-            url="{record.contextualEditUrl}">
-            <core:icon identifier="actions-open" size="small" />
-        </typo3-backend-contextual-record-edit-trigger>
+        <f:if condition="{record.permissions.canEdit}">
+            <typo3-backend-contextual-record-edit-trigger
+                class="cv-action cv-action--primary"
+                title="Edit"
+                edit-url="{record.editUrl}"
+                url="{record.contextualEditUrl}">
+                <core:icon identifier="actions-open" size="small" />
+            </typo3-backend-contextual-record-edit-trigger>
+        </f:if>
     </td>
-    
+
     <f:comment>Fixed right: Delete</f:comment>
     <td class="compactview-td compactview-td--fixed-right compactview-td--action">
-        <button type="button" class="cv-action cv-action--danger" 
-                title="Delete"
-                data-gridview-action="delete"
-                data-table="{record.tableName}"
-                data-uid="{record.uid}">
-            <core:icon identifier="actions-edit-delete" size="small" />
-        </button>
+        <f:if condition="{record.permissions.canDelete}">
+            <button type="button" class="cv-action cv-action--danger"
+                    title="Delete"
+                    data-gridview-action="delete"
+                    data-table="{record.tableName}"
+                    data-uid="{record.uid}">
+                <core:icon identifier="actions-edit-delete" size="small" />
+            </button>
+        </f:if>
     </td>
 
     <f:comment>Fixed right: More Actions dropdown</f:comment>
@@ -175,43 +202,49 @@
                 <core:icon identifier="actions-menu-alternative" size="small" />
             </button>
             <ul id="actions-{record.tableName}-{record.uid}" class="dropdown-menu dropdown-menu-end" popover>
-                <li>
-                    <a class="dropdown-item" href="#"
-                       data-gridview-action="info"
-                       data-table="{record.tableName}"
-                       data-uid="{record.uid}">
-                        <core:icon identifier="actions-document-info" size="small" />
-                        <span>Info</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item" href="#"
-                       data-gridview-action="history"
-                       data-table="{record.tableName}"
-                       data-uid="{record.uid}">
-                        <core:icon identifier="actions-document-history-open" size="small" />
-                        <span>History</span>
-                    </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                    <a class="dropdown-item" href="#"
-                       data-gridview-action="copy"
-                       data-table="{record.tableName}"
-                       data-uid="{record.uid}">
-                        <core:icon identifier="actions-edit-copy" size="small" />
-                        <span>Copy</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item" href="#"
-                       data-gridview-action="cut"
-                       data-table="{record.tableName}"
-                       data-uid="{record.uid}">
-                        <core:icon identifier="actions-edit-cut" size="small" />
-                        <span>Cut</span>
-                    </a>
-                </li>
+                <f:if condition="{record.permissions.canShowInfo}">
+                    <li>
+                        <a class="dropdown-item" href="#"
+                           data-gridview-action="info"
+                           data-table="{record.tableName}"
+                           data-uid="{record.uid}">
+                            <core:icon identifier="actions-document-info" size="small" />
+                            <span>Info</span>
+                        </a>
+                    </li>
+                </f:if>
+                <f:if condition="{record.permissions.canHistory}">
+                    <li>
+                        <a class="dropdown-item" href="#"
+                           data-gridview-action="history"
+                           data-table="{record.tableName}"
+                           data-uid="{record.uid}">
+                            <core:icon identifier="actions-document-history-open" size="small" />
+                            <span>History</span>
+                        </a>
+                    </li>
+                </f:if>
+                <f:if condition="{record.permissions.canCopy}">
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="#"
+                           data-gridview-action="copy"
+                           data-table="{record.tableName}"
+                           data-uid="{record.uid}">
+                            <core:icon identifier="actions-edit-copy" size="small" />
+                            <span>Copy</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#"
+                           data-gridview-action="cut"
+                           data-table="{record.tableName}"
+                           data-uid="{record.uid}">
+                            <core:icon identifier="actions-edit-cut" size="small" />
+                            <span>Cut</span>
+                        </a>
+                    </li>
+                </f:if>
             </ul>
         </div>
     </td>

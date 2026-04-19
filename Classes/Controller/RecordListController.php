@@ -611,6 +611,7 @@ final class RecordListController extends CoreRecordListController
             // Enrich records
             $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
             $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
+            $enrichedRecords = $this->enrichRecordsWithPermissions($enrichedRecords, $tableName);
 
             // Separate connected translations from default-language / free-mode records
             $enrichedRecords = $this->groupTranslationsOnRecords($enrichedRecords, $tableName, $pageId, $recordGridDataProvider);
@@ -2112,6 +2113,230 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * Enrich records with permission flags derived from TYPO3's backend user
+     * API (be_groups, tables_modify, page permissions, record edit access,
+     * editlock, language access). Templates then gate action buttons on
+     * `record.permissions.*` so users never see actions they can't perform.
+     *
+     * @param array<int, array<string, mixed>> $records
+     * @return array<int, array<string, mixed>>
+     */
+    private function enrichRecordsWithPermissions(array $records, string $tableName): array
+    {
+        foreach ($records as &$record) {
+            /** @var array<string, mixed> $raw */
+            $raw = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
+            $record['permissions'] = $this->computeRecordPermissions($tableName, $raw);
+        }
+        unset($record);
+        return $records;
+    }
+
+    /**
+     * Compute the action-permission set for a single record. Mirrors the
+     * combination of checks used by TYPO3's DatabaseRecordList when it
+     * decides whether to render the edit / delete / visibility buttons.
+     *
+     * @param array<string, mixed> $row Raw database row
+     * @return array{canEdit:bool,canDelete:bool,canToggleVisibility:bool,canLocalize:bool,canCopy:bool,canHistory:bool,canShowInfo:bool}
+     */
+    private function computeRecordPermissions(string $tableName, array $row): array
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+
+        $defaults = [
+            'canEdit' => false,
+            'canDelete' => false,
+            'canToggleVisibility' => false,
+            'canLocalize' => false,
+            'canCopy' => false,
+            'canHistory' => false,
+            'canShowInfo' => true,
+        ];
+
+        if (!$schemaFactory->has($tableName)) {
+            return $defaults;
+        }
+        $schema = $schemaFactory->get($tableName);
+        $tcaCtrl = $this->getTcaForTable($tableName)['ctrl'];
+        $hiddenField = '';
+        $enableColumns = is_array($tcaCtrl['enablecolumns'] ?? null) ? $tcaCtrl['enablecolumns'] : [];
+        if (is_string($enableColumns['disabled'] ?? null)) {
+            $hiddenField = $enableColumns['disabled'];
+        }
+        $hasHiddenField = $hiddenField !== '';
+
+        $isDeletePlaceholder = $this->isDeletePlaceholder($row);
+        $languageAware = $schema->isLanguageAware();
+        $languageId = 0;
+        $parentPointer = 0;
+        if ($languageAware) {
+            $languageField = $schema->getCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::Language)
+                ->getLanguageField()->getName();
+            $transOrigField = $schema->getCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::Language)
+                ->getTranslationOriginPointerField()->getName();
+            $languageId = is_numeric($row[$languageField] ?? null) ? (int) $row[$languageField] : 0;
+            $parentPointer = is_numeric($row[$transOrigField] ?? null) ? (int) $row[$transOrigField] : 0;
+        }
+
+        if ($backendUser->isAdmin()) {
+            return [
+                'canEdit' => !$isDeletePlaceholder,
+                'canDelete' => !$isDeletePlaceholder,
+                'canToggleVisibility' => $hasHiddenField && !$isDeletePlaceholder,
+                'canLocalize' => $languageAware && $languageId === 0 && $parentPointer === 0 && !$isDeletePlaceholder,
+                'canCopy' => !$isDeletePlaceholder,
+                'canHistory' => !$isDeletePlaceholder,
+                'canShowInfo' => !$isDeletePlaceholder,
+            ];
+        }
+
+        $schemaReadOnly = $schema->hasCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::AccessReadOnly);
+        $tableModify = !$schemaReadOnly && $backendUser->check('tables_modify', $tableName);
+
+        // Page-level permissions. For content records we use the containing
+        // page's calcPerms; for page records we compute perms against the
+        // page record itself.
+        $pagePerms = $this->resolvePagePermission($tableName, $row);
+        $pageEdit = $tableName === 'pages'
+            ? $pagePerms->editPagePermissionIsGranted()
+            : $pagePerms->editContentPermissionIsGranted();
+        $pageDelete = $tableName === 'pages'
+            ? $pagePerms->deletePagePermissionIsGranted()
+            : $pagePerms->editContentPermissionIsGranted();
+
+        $recordAccess = $backendUser->checkRecordEditAccess($tableName, $row)->isAllowed;
+
+        // editlock transitive check: respects page editlock for content and
+        // page's own editlock for pages.
+        $editLockOk = $this->checkEditLock($tableName, $row, $pageEdit);
+
+        $canEdit = $tableModify && $pageEdit && $recordAccess && $editLockOk && !$isDeletePlaceholder;
+
+        $userTsConfig = $backendUser->getTSConfig();
+        $disableDelete = (bool) trim(
+            (string) ($userTsConfig['options.']['disableDelete.'][$tableName]
+                ?? $userTsConfig['options.']['disableDelete']
+                ?? ''),
+        );
+
+        $canDelete = $canEdit && !$disableDelete && $pageDelete && !$this->isCurrentBackendUser($tableName, $row);
+
+        return [
+            'canEdit' => $canEdit,
+            'canDelete' => $canDelete,
+            'canToggleVisibility' => $canEdit && $hasHiddenField && !$this->isCurrentBackendUser($tableName, $row),
+            'canLocalize' => $canEdit && $languageAware && $languageId === 0 && $parentPointer === 0,
+            'canCopy' => $tableModify && !$isDeletePlaceholder,
+            'canHistory' => !$isDeletePlaceholder,
+            'canShowInfo' => !$isDeletePlaceholder,
+        ];
+    }
+
+    /**
+     * Resolve the page-level permission bitmask for a record. For records
+     * on `pages`, we compute against the record itself; for others, we
+     * compute against the containing page.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function resolvePagePermission(string $tableName, array $row): \TYPO3\CMS\Core\Type\Bitmask\Permission
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+
+        if ($tableName === 'pages') {
+            return new \TYPO3\CMS\Core\Type\Bitmask\Permission($backendUser->calcPerms($row));
+        }
+
+        $pidRaw = $row['pid'] ?? 0;
+        $pid = is_numeric($pidRaw) ? (int) $pidRaw : 0;
+
+        // Fast path: the current page's permissions are already loaded.
+        if ($pid === $this->pageContext->pageId) {
+            return $this->pageContext->pagePermissions;
+        }
+
+        $pageRow = BackendUtility::getRecord('pages', $pid);
+        if (!is_array($pageRow)) {
+            return new \TYPO3\CMS\Core\Type\Bitmask\Permission(0);
+        }
+        return new \TYPO3\CMS\Core\Type\Bitmask\Permission($backendUser->calcPerms($pageRow));
+    }
+
+    /**
+     * Whether editing is locked on this row (mirrors DatabaseRecordList's
+     * overlayEditLockPermissions for single records). Admins bypass this
+     * via the caller; here we only evaluate when $permissionEdit is true.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function checkEditLock(string $tableName, array $row, bool $permissionEdit): bool
+    {
+        if (!$permissionEdit) {
+            return false;
+        }
+        $backendUser = $this->getBackendUserAuthentication();
+        if ($backendUser->isAdmin()) {
+            return true;
+        }
+        $pagesCtrl = $this->getTcaForTable('pages')['ctrl'];
+        $pageEditLockField = is_string($pagesCtrl['editlock'] ?? null) ? $pagesCtrl['editlock'] : '';
+        $pageHasEditLock = false;
+        if ($pageEditLockField !== '') {
+            $pageRecord = $this->pageContext->pageRecord ?? [];
+            $pageHasEditLock = (bool) ($pageRecord[$pageEditLockField] ?? false);
+        }
+
+        if ($tableName === 'pages') {
+            // pages are only blocked by their own editlock, not by the ancestor's
+            $ownEditLockField = $pageEditLockField;
+            if ($ownEditLockField !== '' && (bool) ($row[$ownEditLockField] ?? false)) {
+                return false;
+            }
+            return true;
+        }
+
+        // Non-pages rows inherit editlock from the containing page, plus
+        // honour their own table-level editlock field.
+        if ($pageHasEditLock) {
+            return false;
+        }
+        $tableCtrl = $this->getTcaForTable($tableName)['ctrl'];
+        $tableEditLockField = is_string($tableCtrl['editlock'] ?? null) ? $tableCtrl['editlock'] : '';
+        if ($tableEditLockField !== '' && (bool) ($row[$tableEditLockField] ?? false)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Forbid delete on the currently logged-in user's own be_users record.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function isCurrentBackendUser(string $tableName, array $row): bool
+    {
+        if ($tableName !== 'be_users') {
+            return false;
+        }
+        $backendUser = $this->getBackendUserAuthentication();
+        $uidRaw = $row['uid'] ?? 0;
+        $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+        $currentId = is_numeric($backendUser->user['uid'] ?? null) ? (int) $backendUser->user['uid'] : 0;
+        return $uid > 0 && $uid === $currentId;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function isDeletePlaceholder(array $row): bool
+    {
+        $stateRaw = $row['t3ver_state'] ?? 0;
+        return (is_numeric($stateRaw) ? (int) $stateRaw : 0) === 2;
+    }
+
+    /**
      * Add TYPO3 14 native edit URLs for contextual and full FormEngine editing.
      *
      * @param array<string, mixed> $record
@@ -2287,8 +2512,8 @@ final class RecordListController extends CoreRecordListController
 
     /**
      * Enrich the grouped translation records with per-language metadata
-     * (flag identifier, language title, edit URLs) and index them by
-     * language ID within each parent bucket.
+     * (flag identifier, language title, edit URLs, permissions) and index
+     * them by language ID within each parent bucket.
      *
      * @param array<int, array<int, array<string, mixed>>> $translationsGrouped
      * @return array<int, array<int, array<string, mixed>>> Parent UID => language UID => translation
@@ -2322,6 +2547,7 @@ final class RecordListController extends CoreRecordListController
                 }
 
                 $translation = $this->enrichRecordWithEditUrls($translation);
+                $translation['permissions'] = $this->computeRecordPermissions($tableName, $rawRecord);
                 $perLang[$langUid] = $translation;
             }
             $enriched[(int) $parentUid] = $perLang;
@@ -2415,6 +2641,13 @@ final class RecordListController extends CoreRecordListController
                 'languageFlagIdentifier' => $language['flagIdentifier'],
                 'parentTable' => $tableName,
                 'parentUid' => $parentUid,
+                'permissions' => [
+                    'canEdit' => false,
+                    'canDelete' => false,
+                    'canToggleVisibility' => false,
+                    'canLocalize' => $this->getBackendUserAuthentication()->checkLanguageAccess($languageId)
+                        && $this->getBackendUserAuthentication()->check('tables_modify', $tableName),
+                ],
             ];
         }
 
@@ -2788,6 +3021,7 @@ final class RecordListController extends CoreRecordListController
 
         $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
         $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
+        $enrichedRecords = $this->enrichRecordsWithPermissions($enrichedRecords, $tableName);
 
         // Translated pages are themselves translation records; they don't
         // carry further translation slots, so mark every row as a regular

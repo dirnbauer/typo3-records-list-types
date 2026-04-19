@@ -848,27 +848,86 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     background-color: var(--cv-bg-subtle) !important;
 }
 
-/* Leading indent on the icon cell — makes the row visually hang off the parent */
+/* Indented icon cell hosts a visible branch connector + the flag */
 .compactview-row--translation .compactview-td--icon {
     padding-left: 1.5rem;
     position: relative;
 }
 
-.compactview-row--translation .compactview-td--icon::before {
-    content: "";
+.compactview-row__translation-branch {
     position: absolute;
-    left: 0.625rem;
+    left: 0.4375rem;
     top: 0;
     bottom: 0;
-    width: 2px;
-    background: linear-gradient(
-        to bottom,
-        transparent 0,
-        color-mix(in srgb, var(--cv-accent) 35%, transparent) 30%,
-        color-mix(in srgb, var(--cv-accent) 35%, transparent) 70%,
-        transparent 100%
-    );
+    width: 0.75rem;
     pointer-events: none;
+}
+
+.compactview-row__translation-branch::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 50%;
+    width: 2px;
+    background: color-mix(in srgb, var(--cv-accent) 45%, transparent);
+}
+
+.compactview-row__translation-branch::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0.625rem;
+    height: 2px;
+    background: color-mix(in srgb, var(--cv-accent) 45%, transparent);
+    border-bottom-left-radius: 2px;
+}
+
+/* When the row is the last translation in its group, don't extend the
+   vertical line past the T-connector — reads like a neat branch. */
+.compactview-row--translation:last-of-type .compactview-row__translation-branch::before,
+.compactview-row--translation + .compactview-row:not(.compactview-row--translation) .compactview-row__translation-branch::before {
+    bottom: 50%;
+}
+
+.compactview-row--translation .compactview-row__flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+}
+
+.compactview-row--translation .compactview-row__flag .icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Language chip: short, muted pill inline with the title */
+.compactview-row__lang-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.375rem;
+    margin-right: 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cv-text-muted);
+    background: color-mix(in srgb, var(--cv-text-muted) 10%, transparent);
+    border-radius: 999px;
+    vertical-align: middle;
+}
+
+.compactview-row__lang-chip--free {
+    color: var(--cv-accent);
+    background: color-mix(in srgb, var(--cv-accent) 14%, transparent);
+}
+
+.compactview-row__lang-chip--free > span {
+    opacity: 0.55;
 }
 
 .compactview-row--translation .compactview-row__title-link {
@@ -881,7 +940,7 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     font-style: italic;
 }
 
-.compactview-row--translation-untranslated .compactview-row__icon {
+.compactview-row--translation-untranslated .compactview-row__flag {
     opacity: 0.55;
     filter: grayscale(0.6);
 }
