@@ -486,17 +486,17 @@
     min-width: var(--cv-col-icon);
     max-width: var(--cv-col-icon);
     /* Parent icon sits flush-left so the translation tree connector can
-       continue naturally from the icon's horizontal center. */
+       continue naturally from the icon's horizontal center.
+       Position is inherited from .compactview-td--fixed-left (sticky) —
+       DO NOT override here, or the cell drops out of the sticky layout. */
     text-align: left;
     padding: 0.1875rem 0;
-    position: relative; /* positioning context for ::after tree stub */
 }
 
 /* When a parent row is followed by a translation row, draw the bottom
    half of the vertical tree line from the icon's center (y=50%) to the
-   bottom of this cell. The translation row's ::before then continues it
-   from its own top to its middle — so the line lands exactly at the
-   vertical center of the parent icon. */
+   bottom of this cell. sticky already creates a positioning context, so
+   the absolutely-positioned ::after pins inside the td correctly. */
 .compactview-row:not(.compactview-row--translation):has(+ .compactview-row--translation) .compactview-td--icon::after {
     content: "";
     position: absolute;
@@ -858,9 +858,10 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
    ============================================================================= */
 
 .compactview-row--translation .compactview-td {
-    /* Background comes from group-parity zebra so parent + translations
-       share the same stripe. Only tweak size + padding here. */
-    font-size: 0.75rem;
+    /* Same font size as parent rows — hierarchy is conveyed by the tree
+       connector + indent, not by a smaller type scale. Background comes
+       from the group-parity zebra so parent + translations share one
+       stripe. */
     padding-top: 0.1875rem;
     padding-bottom: 0.1875rem;
 }

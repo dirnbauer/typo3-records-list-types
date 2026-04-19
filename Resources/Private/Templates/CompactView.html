@@ -142,7 +142,10 @@
                                             share the same background) instead of per row. Compute the
                                             parity class once here and pass it into both partials.
                                         </f:comment>
-                                        <f:variable name="groupClass">compactview-row--group-{f:if(condition: recordIter.isEven, then: 'even', else: 'odd')}</f:variable>
+                                        <f:variable name="groupClass" value="compactview-row--group-odd" />
+                                        <f:if condition="{recordIter.isEven}">
+                                            <f:variable name="groupClass" value="compactview-row--group-even" />
+                                        </f:if>
                                         <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, multiSelectEnabled: table.multiSelectEnabled, groupClass: groupClass}" />
                                         <f:if condition="{record.translations}">
                                             <f:for each="{record.translations}" as="translation">
