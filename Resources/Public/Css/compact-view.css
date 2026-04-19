@@ -419,15 +419,16 @@
    share the same background, so the tree connector reads as one unit.
    The parity class is pre-computed in PHP per enriched record.
 
-   Use `--cv-bg-subtle` (container-default, ~#f4f4f5) instead of the
-   near-invisible `--cv-bg-muted` so the alternation is actually readable. */
+   Concrete hex values (not CSS variables) so the contrast is guaranteed
+   visible in every install regardless of which TYPO3 surface tokens a
+   project overrides. light-dark() keeps both themes consistent. */
 .compactview-row--group-even .compactview-td {
-    background-color: var(--cv-bg-subtle);
+    background-color: light-dark(#ececef, #2a2a2e);
 }
 
 .compactview-row--group-even .compactview-td--fixed-left,
 .compactview-row--group-even .compactview-td--fixed-right {
-    background-color: var(--cv-bg-subtle) !important;
+    background-color: light-dark(#ececef, #2a2a2e) !important;
 }
 
 /* Hover state - all cells use the same opaque accent background.
