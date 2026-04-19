@@ -850,10 +850,11 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
 
 /* Icon cell on a translation row shows the same record icon as the
    parent (dimmed) PLUS a tree-branch connector drawn as a pseudo element
-   on the td itself. Keeps the column visually aligned with the parent so
-   no more empty see-through cells. */
+   on the td itself. Inherit `position: sticky` from the fixed-left base
+   rule so the column stays pinned when the table scrolls horizontally;
+   sticky already establishes the positioning context our ::before /
+   ::after connectors need. */
 .compactview-row--translation .compactview-td--icon {
-    position: relative;
     background: var(--cv-bg-subtle) !important;
 }
 
