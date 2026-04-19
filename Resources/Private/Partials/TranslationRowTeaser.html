@@ -45,22 +45,18 @@
             </f:else>
         </f:if>
     </span>
-    <span class="teaserview-translation-row__state">
-        <f:if condition="{translation.state} == 'translated'">
-            <f:then>
-                <f:if condition="{translation.hidden}">
-                    <span class="teaserview-translation-row__badge teaserview-translation-row__badge--hidden">
-                        <core:icon identifier="actions-toggle-off" size="small" />
-                    </span>
-                </f:if>
-            </f:then>
-            <f:else>
-                <span class="teaserview-translation-row__badge teaserview-translation-row__badge--untranslated">
-                    <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.untranslated" default="Not translated" />
-                </span>
-            </f:else>
-        </f:if>
-    </span>
+    <f:comment>
+        State column only for untranslated rows. Hidden state on translated
+        rows is already expressed by the show/hide action button — a second
+        icon here would just duplicate it.
+    </f:comment>
+    <f:if condition="{translation.state} != 'translated'">
+        <span class="teaserview-translation-row__state">
+            <span class="teaserview-translation-row__badge teaserview-translation-row__badge--untranslated">
+                <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.untranslated" default="Not translated" />
+            </span>
+        </span>
+    </f:if>
     <span class="teaserview-translation-row__actions">
         <f:if condition="{translation.state} == 'translated'">
             <f:then>
