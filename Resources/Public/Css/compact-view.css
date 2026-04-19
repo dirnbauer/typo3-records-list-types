@@ -407,16 +407,6 @@
     transition: background var(--cv-transition-fast);
 }
 
-/* Parent (default-language) rows: subtle left accent + bolder title so they
-   stand out from their indented translation rows without extra chrome. */
-.compactview-row:not(.compactview-row--translation) .compactview-td:first-child {
-    box-shadow: inset 2px 0 0 color-mix(in srgb, var(--cv-accent) 55%, transparent);
-}
-
-.compactview-row:not(.compactview-row--translation) .compactview-row__title-link {
-    font-weight: 600;
-}
-
 .compactview-row:last-child .compactview-td:first-child {
     border-bottom-left-radius: var(--cv-radius-sm);
 }
