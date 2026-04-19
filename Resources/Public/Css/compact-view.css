@@ -483,10 +483,10 @@
     width: var(--cv-col-icon);
     min-width: var(--cv-col-icon);
     max-width: var(--cv-col-icon);
-    /* Left-align so the parent icon sits hard-left and the translation
-       tree branch can continue from its horizontal center. */
+    /* Parent icon sits flush-left so the translation tree connector can
+       continue naturally from the icon's horizontal center. */
     text-align: left;
-    padding: 0.1875rem 0 0.1875rem 0.25rem;
+    padding: 0.1875rem 0;
 }
 
 .compactview-td--uid {
@@ -855,20 +855,20 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
    the horizontal center of the parent icon. Position stays sticky — we
    inherit it from the fixed-left base rule.
 
-   Parent icon is 16px, sits at left=4px → center at x=12px. The tree
-   connector matches that center exactly so the branch reads clean. */
+   Parent icon is 16px wide, flush-left (padding-left:0) → center at x=8.
+   The tree connector is centred on that column so the branch reads clean. */
 .compactview-row--translation .compactview-td--icon {
     background: var(--cv-bg-subtle) !important;
-    padding-left: 1.25rem; /* 20px — puts translation icon to the right of the line */
+    padding-left: 1.125rem; /* 18px — leaves the translation icon clear of the tick */
 }
 
 /* Vertical line from top to the middle of the row (last-child shape └).
-   Positioned at x = center of parent icon (4px padding + 8px half of 16px
-   icon = 12px). */
+   Centred on the parent icon: left:7px + 2px width → spans x=7..9, visually
+   centred at x=8. */
 .compactview-row--translation .compactview-td--icon::before {
     content: "";
     position: absolute;
-    left: 11px;
+    left: 7px;
     top: 0;
     bottom: 50%;
     width: 2px;
@@ -885,9 +885,9 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
 .compactview-row--translation .compactview-td--icon::after {
     content: "";
     position: absolute;
-    left: 11px;
+    left: 7px;
     top: 50%;
-    width: 9px; /* stretches to x ≈ 20 where the translation icon starts */
+    width: 10px; /* reaches x=17, leaving 1px gap to the translation icon */
     height: 2px;
     background: var(--cv-border);
 }
