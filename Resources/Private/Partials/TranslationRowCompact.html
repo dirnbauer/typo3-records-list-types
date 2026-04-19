@@ -25,12 +25,13 @@
         <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox"></td>
     </f:if>
 
-    <f:comment>Icon column mirrors the parent row: record icon + branch line</f:comment>
-    <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
+    <f:comment>
+        Icon column becomes a tree-branch connector. No record icon — the
+        parent row already shows it once, and an indented branch reads like
+        the classic list view without duplicating chrome.
+    </f:comment>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--icon compactview-td--translation-connector">
         <span class="compactview-row__translation-branch" aria-hidden="true"></span>
-        <span class="compactview-row__icon compactview-row__icon--translation">
-            <core:icon identifier="{record.iconIdentifier}" size="small" />
-        </span>
     </td>
 
     <f:comment>UID column: UID for live translations, em-dash for placeholders</f:comment>

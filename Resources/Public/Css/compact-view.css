@@ -848,15 +848,16 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     background-color: var(--cv-bg-subtle) !important;
 }
 
-/* Indented icon cell hosts a visible branch connector + the flag */
-.compactview-row--translation .compactview-td--icon {
-    padding-left: 1.5rem;
+/* Icon cell on a translation row is purely a branch connector — no icon */
+.compactview-row--translation .compactview-td--translation-connector {
     position: relative;
+    padding: 0;
+    width: 1.5rem;
 }
 
 .compactview-row__translation-branch {
     position: absolute;
-    left: 0.4375rem;
+    left: 0.5rem;
     top: 0;
     bottom: 0;
     width: 0.75rem;
@@ -868,9 +869,9 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     position: absolute;
     left: 0;
     top: 0;
-    bottom: 50%;
+    bottom: 0;
     width: 2px;
-    background: color-mix(in srgb, var(--cv-accent) 45%, transparent);
+    background: color-mix(in srgb, var(--cv-accent) 40%, transparent);
 }
 
 .compactview-row__translation-branch::after {
@@ -880,19 +881,16 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     top: 50%;
     width: 0.625rem;
     height: 2px;
-    background: color-mix(in srgb, var(--cv-accent) 45%, transparent);
+    background: color-mix(in srgb, var(--cv-accent) 40%, transparent);
     border-bottom-left-radius: 2px;
 }
 
-/* When the row is the last translation in its group, don't extend the
-   vertical line past the T-connector — reads like a neat branch. */
-.compactview-row--translation:last-of-type .compactview-row__translation-branch::before,
-.compactview-row--translation + .compactview-row:not(.compactview-row--translation) .compactview-row__translation-branch::before {
+/* Last translation in its group gets a half-height vertical line so the
+   branch ends cleanly at the T connector. Uses :has() which is widely
+   supported in TYPO3 v14's target browsers. */
+.compactview-row--translation:has(+ .compactview-row:not(.compactview-row--translation)) .compactview-row__translation-branch::before,
+.compactview-row--translation:last-child .compactview-row__translation-branch::before {
     bottom: 50%;
-}
-
-.compactview-row__icon--translation {
-    opacity: 0.55;
 }
 
 /* Inline flag icon that sits in front of a translation title */
