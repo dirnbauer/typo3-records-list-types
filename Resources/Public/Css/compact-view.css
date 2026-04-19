@@ -51,7 +51,7 @@
     
     /* Fixed column widths */
     --cv-col-checkbox: 36px;
-    --cv-col-icon: 26px;
+    --cv-col-icon: 34px;
     --cv-col-uid: 60px;
     --cv-col-title: 200px;
     --cv-col-status: 28px;
@@ -499,7 +499,7 @@
     width: var(--cv-col-title);
     min-width: 150px;
     color: var(--cv-text);
-    font-weight: 500;
+    /* Normal weight — hierarchy is conveyed by indent + tree connector, not bold */
 }
 
 /* Spacer column - no width constraints, absorbs all remaining space
@@ -854,14 +854,14 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
    inherit it from the fixed-left base rule. */
 .compactview-row--translation .compactview-td--icon {
     background: var(--cv-bg-subtle) !important;
-    padding-left: 0.6875rem; /* ~11px — room for the tree connector */
+    padding-left: 1rem; /* 16px — room for a visible tree connector */
 }
 
-/* Vertical line (top → middle by default, so the branch ends cleanly). */
+/* Vertical line (top → middle by default, so the branch ends cleanly as └). */
 .compactview-row--translation .compactview-td--icon::before {
     content: "";
     position: absolute;
-    left: 0.4375rem;
+    left: 0.5rem;
     top: 0;
     bottom: 50%;
     width: 2px;
@@ -869,7 +869,8 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
 }
 
 /* If this translation is followed by ANOTHER translation (same or
-   different language), extend the vertical line through the full row. */
+   different language), extend the vertical line through the full row
+   so a middle branch reads as ├. */
 .compactview-row--translation:has(+ .compactview-row--translation) .compactview-td--icon::before {
     bottom: 0;
 }
@@ -878,9 +879,9 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
 .compactview-row--translation .compactview-td--icon::after {
     content: "";
     position: absolute;
-    left: 0.4375rem;
+    left: 0.5rem;
     top: 50%;
-    width: 0.3125rem;
+    width: 0.5rem;
     height: 2px;
     background: var(--cv-border);
 }
