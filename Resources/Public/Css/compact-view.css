@@ -417,14 +417,17 @@
 
 /* Zebra striping runs per GROUP — a parent and all of its translations
    share the same background, so the tree connector reads as one unit.
-   The parity class is set once in the template per outer iteration. */
+   The parity class is pre-computed in PHP per enriched record.
+
+   Use `--cv-bg-subtle` (container-default, ~#f4f4f5) instead of the
+   near-invisible `--cv-bg-muted` so the alternation is actually readable. */
 .compactview-row--group-even .compactview-td {
-    background-color: var(--cv-bg-muted);
+    background-color: var(--cv-bg-subtle);
 }
 
 .compactview-row--group-even .compactview-td--fixed-left,
 .compactview-row--group-even .compactview-td--fixed-right {
-    background-color: var(--cv-bg-muted) !important;
+    background-color: var(--cv-bg-subtle) !important;
 }
 
 /* Hover state - all cells use the same opaque accent background.
