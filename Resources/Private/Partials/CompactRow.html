@@ -8,7 +8,7 @@
 </f:comment>
 
 <f:variable name="groupClass" value="compactview-row--group-odd" />
-<f:if condition="{groupCycle} % 2 == 0">
+<f:if condition="{isEvenGroup}">
     <f:variable name="groupClass" value="compactview-row--group-even" />
 </f:if>
 <tr class="compactview-row {groupClass}{f:if(condition: record.hidden, then: ' compactview-row--hidden')}{f:if(condition: record.isFreeTranslation, then: ' compactview-row--free')}"

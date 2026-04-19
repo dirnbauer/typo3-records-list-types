@@ -138,16 +138,16 @@
                                 <tbody class="compactview-tbody" {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-row-selection=\"true\"')}>
                                     <f:for each="{table.records}" as="record" iteration="recordIter">
                                         <f:comment>
-                                            Zebra runs per GROUP — parent + translations share a
-                                            stripe. Pass the 1-based cycle so each partial can compute
-                                            the parity itself; Fluid's inline {f:if(...)} inside an
-                                            attribute value is not reliably evaluated, so plain data
-                                            + modulo inside the partial is the safe path.
+                                            Zebra runs per GROUP — parent + translations share one
+                                            stripe. We pass Fluid's own `recordIter.isEven` boolean
+                                            (true on cycles 2, 4, 6, …) down to both partials. The
+                                            partial then picks between group-odd / group-even with a
+                                            plain <f:if> — no modulo, no inline arithmetic.
                                         </f:comment>
-                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, multiSelectEnabled: table.multiSelectEnabled, groupCycle: recordIter.cycle}" />
+                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, multiSelectEnabled: table.multiSelectEnabled, isEvenGroup: recordIter.isEven}" />
                                         <f:if condition="{record.translations}">
                                             <f:for each="{record.translations}" as="translation">
-                                                <f:render partial="TranslationRowCompact" arguments="{record: record, translation: translation, tableConfig: table.tableConfig, multiSelectEnabled: table.multiSelectEnabled, groupCycle: recordIter.cycle}" />
+                                                <f:render partial="TranslationRowCompact" arguments="{record: record, translation: translation, tableConfig: table.tableConfig, multiSelectEnabled: table.multiSelectEnabled, isEvenGroup: recordIter.isEven}" />
                                             </f:for>
                                         </f:if>
                                     </f:for>
