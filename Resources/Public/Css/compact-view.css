@@ -839,8 +839,8 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
 .compactview-row--translation .compactview-td {
     background-color: var(--cv-bg-subtle);
     font-size: 0.75rem;
-    padding-top: 0.125rem;
-    padding-bottom: 0.125rem;
+    padding-top: 0.1875rem;
+    padding-bottom: 0.1875rem;
 }
 
 .compactview-row--translation .compactview-td--fixed-left,
@@ -848,13 +848,60 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     background-color: var(--cv-bg-subtle) !important;
 }
 
-.compactview-row--translation .compactview-td--title {
-    padding-left: 1.25rem;
+/* Leading indent on the icon cell — makes the row visually hang off the parent */
+.compactview-row--translation .compactview-td--icon {
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.compactview-row--translation .compactview-td--icon::before {
+    content: "";
+    position: absolute;
+    left: 0.625rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(
+        to bottom,
+        transparent 0,
+        color-mix(in srgb, var(--cv-accent) 35%, transparent) 30%,
+        color-mix(in srgb, var(--cv-accent) 35%, transparent) 70%,
+        transparent 100%
+    );
+    pointer-events: none;
 }
 
 .compactview-row--translation .compactview-row__title-link {
-    color: var(--cv-text-muted);
+    color: var(--cv-text);
     font-weight: 400;
+}
+
+.compactview-row--translation-untranslated .compactview-row__title-placeholder {
+    color: var(--cv-text-muted);
+    font-style: italic;
+}
+
+.compactview-row--translation-untranslated .compactview-row__icon {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+}
+
+.compactview-row__uid--muted {
+    color: var(--cv-text-muted);
+    opacity: 0.5;
+}
+
+/* Localize-to button styling (mirrors other compact actions) */
+.cv-action--create {
+    color: var(--cv-accent);
+    border-color: color-mix(in srgb, var(--cv-accent) 30%, transparent);
+    background: color-mix(in srgb, var(--cv-accent) 10%, transparent);
+}
+
+.cv-action--create:hover {
+    color: var(--cv-accent);
+    border-color: var(--cv-accent);
+    background: color-mix(in srgb, var(--cv-accent) 18%, transparent);
 }
 
 /* Workspace state indicators on translation rows */
@@ -881,7 +928,7 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
 [data-color-scheme="dark"] .compactview-row--translation .compactview-td,
 [data-color-scheme="dark"] .compactview-row--translation .compactview-td--fixed-left,
 [data-color-scheme="dark"] .compactview-row--translation .compactview-td--fixed-right {
-    background-color: var(--cv-bg-subtle) !important;
+    background-color: color-mix(in srgb, var(--cv-bg) 88%, #000 12%) !important;
 }
 
 /* Note: Sorting toggle, pagination, and recordlist heading base styles

@@ -159,6 +159,30 @@
                 <source>FREE</source>
                 <target>FREI</target>
             </trans-unit>
+            <trans-unit id="translation.translated" resname="translation.translated">
+                <source>Translated</source>
+                <target>Übersetzt</target>
+            </trans-unit>
+            <trans-unit id="translation.untranslated" resname="translation.untranslated">
+                <source>Not translated</source>
+                <target>Nicht übersetzt</target>
+            </trans-unit>
+            <trans-unit id="translation.translateTo" resname="translation.translateTo">
+                <source>Translate to %s</source>
+                <target>Nach %s übersetzen</target>
+            </trans-unit>
+            <trans-unit id="translation.sectionLabel" resname="translation.sectionLabel">
+                <source>Translations</source>
+                <target>Übersetzungen</target>
+            </trans-unit>
+            <trans-unit id="translation.summary" resname="translation.summary">
+                <source>%d of %d translated</source>
+                <target>%d von %d übersetzt</target>
+            </trans-unit>
+            <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
+                <source>All translations complete</source>
+                <target>Alle Übersetzungen vorhanden</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

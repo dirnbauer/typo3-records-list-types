@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Controller;
 
+use Doctrine\DBAL\ParameterType;
 use Exception;
 use Override;
 use Psr\Http\Message\ResponseInterface;
@@ -21,6 +22,9 @@ use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Context\Context;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
@@ -58,6 +62,12 @@ final class RecordListController extends CoreRecordListController
     private bool $clipboardEnabled = false;
 
     /**
+     * Active request captured during mainAction() so that
+     * parent-overridden hooks (renderPageTranslations) can access it.
+     */
+    private ?ServerRequestInterface $currentRequest = null;
+
+    /**
      * Get the ViewTypeRegistry from the DI container.
      * XClasses can't use constructor injection for additional dependencies,
      * so we fetch it from the container on demand.
@@ -89,6 +99,7 @@ final class RecordListController extends CoreRecordListController
     #[Override]
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
+        $this->currentRequest = $request;
         // Get view mode resolver
         $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
 
@@ -2176,21 +2187,26 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Separate connected translations from the flat record list and attach them
-     * to their parent (default-language) records. Free translations are kept as
-     * standalone cards with an `isFreeTranslation` flag.
+     * Separate connected translations from the flat record list and attach
+     * unified translation slots to every default-language record.
      *
-     * Connected translations are fetched via RecordGridDataProvider and enriched
-     * with language info + workspace overlays, then stored under the parent's
-     * `translations` key. Only default-language records and free translations
-     * remain in the returned array -- connected translations are removed from
-     * the top-level list so they don't appear as separate grid cards.
+     * For each default-language record the returned array exposes a
+     * `translations` list with one entry per non-default site language, each
+     * tagged as either `translated` (existing connected translation record) or
+     * `untranslated` (placeholder that renders a localize-to button). The set
+     * of slots is derived from the current page's `$siteLanguages`, so views
+     * render the same "connected" information the TYPO3 core list view shows.
      *
-     * @param array<int, array<string, mixed>> $records Enriched records (may include translations)
-     * @param string $tableName The table name
-     * @param int $pageId The current page ID
-     * @param RecordGridDataProvider $dataProvider The data provider for fetching translations
-     * @return array<int, array<string, mixed>> Records with translations grouped
+     * Free translations (records with `sys_language_uid > 0` but no parent
+     * pointer) stay in the top-level list and are tagged `isFreeTranslation`.
+     * Connected translations are dropped from the top-level list so they do
+     * not render as independent cards/rows.
+     *
+     * @param array<int, array<string, mixed>> $records Enriched records
+     * @param string                            $tableName Table name
+     * @param int                               $pageId    Current page ID
+     * @param RecordGridDataProvider            $dataProvider Data provider
+     * @return array<int, array<string, mixed>> Records with slotted translations
      */
     private function groupTranslationsOnRecords(
         array $records,
@@ -2210,7 +2226,6 @@ final class RecordListController extends CoreRecordListController
             return $records;
         }
 
-        // Split records into default-language, connected translations, and free translations
         $defaultRecords = [];
         $freeTranslations = [];
 
@@ -2230,11 +2245,8 @@ final class RecordListController extends CoreRecordListController
                 $record['translations'] = [];
                 $freeTranslations[] = $record;
             }
-            // Connected translations (parentPointer > 0) are excluded from the
-            // top-level list; they will be fetched separately below.
         }
 
-        // Fetch connected translations for all default-language parent UIDs
         $parentUids = array_map(
             static function (array $r): int {
                 $uidRaw = $r['uid'] ?? 0;
@@ -2242,44 +2254,57 @@ final class RecordListController extends CoreRecordListController
             },
             $defaultRecords,
         );
-        $parentUids = array_filter($parentUids, static fn(int $uid): bool => $uid > 0);
+        $parentUids = array_values(array_filter($parentUids, static fn(int $uid): bool => $uid > 0));
 
+        $translatedByParent = [];
         if ($parentUids !== []) {
             $translationsGrouped = $dataProvider->getTranslationsForRecords($tableName, $pageId, $parentUids);
-            $translationsGrouped = $this->enrichTranslationGroups($translationsGrouped, $tableName);
-
-            foreach ($defaultRecords as &$record) {
-                $uidRaw = $record['uid'] ?? 0;
-                $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
-                $record['translations'] = $translationsGrouped[$uid] ?? [];
-            }
-            unset($record);
+            $translatedByParent = $this->enrichTranslationsWithLanguage($translationsGrouped, $tableName, $languageField);
         }
 
-        // Append free translations after all default-language records
+        $translationLanguages = $this->getTranslationLanguages($tableName);
+
+        foreach ($defaultRecords as &$record) {
+            $uidRaw = $record['uid'] ?? 0;
+            $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+            $translated = $translatedByParent[$uid] ?? [];
+            $record['translations'] = $this->buildTranslationSlots(
+                $tableName,
+                $uid,
+                $translated,
+                $translationLanguages,
+            );
+            $record['translatedCount'] = count(array_filter(
+                $record['translations'],
+                static fn(array $slot): bool => ($slot['state'] ?? '') === 'translated',
+            ));
+            $record['untranslatedCount'] = count($record['translations']) - $record['translatedCount'];
+        }
+        unset($record);
+
         return array_merge($defaultRecords, $freeTranslations);
     }
 
     /**
-     * Enrich grouped translation records with language flag info.
+     * Enrich the grouped translation records with per-language metadata
+     * (flag identifier, language title, edit URLs) and index them by
+     * language ID within each parent bucket.
      *
-     * @param array<int, array<int, array<string, mixed>>> $translationsGrouped Parent UID => translations
-     * @param string $tableName The table name
-     * @return array<int, array<int, array<string, mixed>>> Enriched translations
+     * @param array<int, array<int, array<string, mixed>>> $translationsGrouped
+     * @return array<int, array<int, array<string, mixed>>> Parent UID => language UID => translation
      */
-    private function enrichTranslationGroups(array $translationsGrouped, string $tableName): array
-    {
+    private function enrichTranslationsWithLanguage(
+        array $translationsGrouped,
+        string $tableName,
+        string $languageField,
+    ): array {
         $backendUser = $this->getBackendUserAuthentication();
         $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
-        $tcaForTable = $this->getTcaForTable($tableName);
-        $languageField = $tcaForTable['ctrl']['languageField'] ?? null;
+        $enriched = [];
 
-        if (!is_string($languageField) || $languageField === '') {
-            return $translationsGrouped;
-        }
-
-        foreach ($translationsGrouped as &$translations) {
-            foreach ($translations as &$translation) {
+        foreach ($translationsGrouped as $parentUid => $translations) {
+            $perLang = [];
+            foreach ($translations as $translation) {
                 $rawRecord = is_array($translation['rawRecord'] ?? null) ? $translation['rawRecord'] : [];
                 $langUidRaw = $rawRecord[$languageField] ?? 0;
                 $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
@@ -2297,12 +2322,98 @@ final class RecordListController extends CoreRecordListController
                 }
 
                 $translation = $this->enrichRecordWithEditUrls($translation);
+                $perLang[$langUid] = $translation;
             }
-            unset($translation);
+            $enriched[(int) $parentUid] = $perLang;
         }
-        unset($translations);
 
-        return $translationsGrouped;
+        return $enriched;
+    }
+
+    /**
+     * Return the non-default site languages that translations can target for
+     * the given table, ordered by language ID. When the site itself is not
+     * language-aware or only the default language is configured the list is
+     * empty, which causes templates to skip the translation UI entirely.
+     *
+     * @return array<int, array{id:int, title:string, flagIdentifier:string}>
+     */
+    private function getTranslationLanguages(string $tableName): array
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+        $siteLanguages = $this->pageContext->site->getAvailableLanguages(
+            $backendUser,
+            false,
+            $this->pageContext->pageId,
+        );
+
+        $languages = [];
+        foreach ($siteLanguages as $siteLanguage) {
+            $languageId = $siteLanguage->getLanguageId();
+            if ($languageId <= 0) {
+                continue;
+            }
+            if (!$backendUser->checkLanguageAccess($languageId)) {
+                continue;
+            }
+            $languages[$languageId] = [
+                'id' => $languageId,
+                'title' => $siteLanguage->getTitle(),
+                'flagIdentifier' => $siteLanguage->getFlagIdentifier(),
+            ];
+        }
+
+        ksort($languages);
+        return $languages;
+    }
+
+    /**
+     * Build the ordered translation-slot list for a single default-language
+     * record. Each slot is either a real translation record or an
+     * `untranslated` placeholder that the templates render as a localize-to
+     * button (matching TYPO3 core's DatabaseRecordList behavior).
+     *
+     * @param array<int, array<string, mixed>> $translationsByLanguage
+     *        Existing translations indexed by their `sys_language_uid`.
+     * @param array<int, array{id:int, title:string, flagIdentifier:string}> $languages
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildTranslationSlots(
+        string $tableName,
+        int $parentUid,
+        array $translationsByLanguage,
+        array $languages,
+    ): array {
+        $slots = [];
+        foreach ($languages as $language) {
+            $languageId = $language['id'];
+            if (isset($translationsByLanguage[$languageId])) {
+                $translation = $translationsByLanguage[$languageId];
+                $translation['state'] = 'translated';
+                $translation['languageId'] = $languageId;
+                // Keep the pre-existing flag/title fields but fall back to
+                // the resolved language metadata when they were empty.
+                if (($translation['languageFlagIdentifier'] ?? '') === '') {
+                    $translation['languageFlagIdentifier'] = $language['flagIdentifier'];
+                }
+                if (($translation['languageTitle'] ?? '') === '') {
+                    $translation['languageTitle'] = $language['title'];
+                }
+                $slots[] = $translation;
+                continue;
+            }
+
+            $slots[] = [
+                'state' => 'untranslated',
+                'languageId' => $languageId,
+                'languageTitle' => $language['title'],
+                'languageFlagIdentifier' => $language['flagIdentifier'],
+                'parentTable' => $tableName,
+                'parentUid' => $parentUid,
+            ];
+        }
+
+        return $slots;
     }
 
     /**
@@ -2596,5 +2707,238 @@ final class RecordListController extends CoreRecordListController
     {
         $translated = $languageService->sL($key);
         return $translated !== '' ? $translated : $fallback;
+    }
+
+    /**
+     * Render the page-translations sub-list using the active view mode
+     * whenever the user selected grid/compact/teaser/custom. List mode
+     * continues to use the parent's classic renderer so nothing changes
+     * for editors who prefer the standard experience.
+     *
+     * @param array<int|string, mixed> $siteLanguages Site languages (same shape as parent)
+     */
+    #[Override]
+    protected function renderPageTranslations(DatabaseRecordList $dbList, array $siteLanguages): string
+    {
+        $request = $this->currentRequest;
+        if (!$request instanceof ServerRequestInterface) {
+            return parent::renderPageTranslations($dbList, $siteLanguages);
+        }
+
+        $resolver = GeneralUtility::makeInstance(ViewModeResolver::class);
+        $pageId = $this->pageContext->pageId;
+        $viewMode = $resolver->getActiveViewMode($request, $pageId);
+
+        if ($viewMode === 'list' || !$resolver->isModeAllowed($viewMode, $pageId)) {
+            return parent::renderPageTranslations($dbList, $siteLanguages);
+        }
+
+        try {
+            $custom = $this->renderPageTranslationsInViewMode($request, $pageId, $viewMode);
+            if ($custom !== '') {
+                return $custom;
+            }
+        } catch (Exception) {
+            // fall through to parent renderer
+        }
+
+        return parent::renderPageTranslations($dbList, $siteLanguages);
+    }
+
+    /**
+     * Render the page-translations list using the active alternative view
+     * mode. Reuses the same `tableData` shape as the main list rendering
+     * so every template (built-in and custom) renders it correctly.
+     */
+    private function renderPageTranslationsInViewMode(
+        ServerRequestInterface $request,
+        int $pageId,
+        string $viewMode,
+    ): string {
+        $tableName = 'pages';
+        $registry = $this->getViewTypeRegistry();
+        $viewConfig = $registry->getViewType($viewMode, $pageId);
+        if ($viewConfig === null) {
+            return '';
+        }
+
+        $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
+        $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
+        $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
+
+        $records = $this->fetchPageTranslationRecords($pageId, $recordGridDataProvider);
+        if ($records === []) {
+            return '';
+        }
+
+        $columnsConfig = $registry->getDisplayColumnsConfig($viewMode, $pageId);
+        $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
+        if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
+            $displayColumns = $this->getDisplayColumns($tableName);
+        } elseif ($columnsArray !== []) {
+            $displayColumns = $this->getSpecificDisplayColumns($tableName, $columnsArray);
+        } else {
+            $displayColumns = $this->getTeaserDisplayColumns($tableName);
+        }
+
+        $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
+        $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
+
+        // Translated pages are themselves translation records; they don't
+        // carry further translation slots, so mark every row as a regular
+        // translation row in a single-table section.
+        foreach ($enrichedRecords as &$record) {
+            $record['translations'] = [];
+            $record['translatedCount'] = 0;
+            $record['untranslatedCount'] = 0;
+            $record['isFreeTranslation'] = false;
+        }
+        unset($record);
+
+        $recordCount = count($enrichedRecords);
+        $headingLabel = $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:pageTranslation');
+        if ($headingLabel === '') {
+            $headingLabel = 'Page Translations';
+        }
+
+        $tableData = [[
+            'tableName' => $tableName,
+            'tableIdentifier' => 'pages_translated',
+            'tableHeading' => [
+                'label' => $headingLabel,
+                'recordCount' => $recordCount,
+                'linkUrl' => '',
+                'iconIdentifier' => '',
+            ],
+            'tableLabel' => $headingLabel,
+            'tableIcon' => $this->getTableIcon($tableName),
+            'tableConfig' => $tableConfig,
+            'records' => $enrichedRecords,
+            'recordCount' => $recordCount,
+            'hasMore' => false,
+            'lastRecordUid' => '',
+            'actionButtons' => [],
+            'sortingDropdown' => null,
+            'sortingModeToggle' => null,
+            'sortableColumnHeaders' => [],
+            'singleTableUrl' => '',
+            'clearTableUrl' => '',
+            'formActionUrl' => '',
+            'displayColumns' => $displayColumns,
+            'isFiltered' => false,
+            'canReorder' => false,
+            'sortField' => '',
+            'sortDirection' => 'asc',
+            'hasSortbyField' => false,
+            'sortingMode' => 'field',
+            'sortbyFieldName' => '',
+            'paginator' => null,
+            'pagination' => null,
+            'paginationUrl' => '',
+            'multiRecordSelectionActionsHtml' => '',
+        ]];
+
+        $templatePaths = $registry->getTemplatePaths($viewMode, $pageId);
+        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
+        $view = $viewFactory->create(new ViewFactoryData(
+            templateRootPaths: $templatePaths['templateRootPaths'],
+            partialRootPaths: $templatePaths['partialRootPaths'],
+            layoutRootPaths: $templatePaths['layoutRootPaths'],
+            request: $request,
+        ));
+        $view->assignMultiple([
+            'pageId' => $pageId,
+            'tableData' => $tableData,
+            'currentTable' => $tableName,
+            'searchTerm' => '',
+            'viewMode' => $viewMode,
+            'viewConfig' => $viewConfig,
+            'middlewareWarning' => null,
+            'forceListViewUrl' => null,
+            'clipboardEnabled' => false,
+            'isPageTranslationsList' => true,
+        ]);
+
+        $html = $view->render($templatePaths['template']);
+
+        // Make DOM ids and selection identifiers unique so the main `pages`
+        // list (when present) and the translated-pages list can coexist on
+        // the same screen without duplicate ids.
+        $html = str_replace(
+            ['id="t3-table-pages"', 'id="recordlist-pages"', 't3-table-pages'],
+            ['id="t3-table-pages-translated"', 'id="recordlist-pages-translated"', 't3-table-pages-translated'],
+            $html,
+        );
+
+        return '<div class="records-list-types-page-translations">' . $html . '</div>';
+    }
+
+    /**
+     * Fetch translated page records on the current page and enrich them
+     * via the data provider so they share the same shape as main-list
+     * records.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchPageTranslationRecords(int $pageId, RecordGridDataProvider $dataProvider): array
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+        $workspaceId = $this->getCurrentWorkspaceId();
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
+            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $workspaceId));
+
+        $rows = $queryBuilder
+            ->select('*')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'l10n_parent',
+                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER),
+                ),
+                $queryBuilder->expr()->gt(
+                    'sys_language_uid',
+                    $queryBuilder->createNamedParameter(0, ParameterType::INTEGER),
+                ),
+            )
+            ->orderBy('sys_language_uid', 'ASC')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $records = [];
+        // In workspaces the query can return both the live row and its
+        // versioned/moved counterpart for the same effective record. Key
+        // the intermediate result by live identity so the overlay collapses
+        // to a single row per record, mirroring the native list behavior.
+        $recordsByIdentity = [];
+        $useWorkspaceReduction = $workspaceId > 0;
+
+        foreach ($rows as $row) {
+            BackendUtility::workspaceOL('pages', $row, -99, true);
+            if (!is_array($row)) {
+                continue;
+            }
+            $languageIdRaw = $row['sys_language_uid'] ?? 0;
+            $languageId = is_numeric($languageIdRaw) ? (int) $languageIdRaw : 0;
+            if (!$backendUser->checkLanguageAccess($languageId)) {
+                continue;
+            }
+
+            $recordData = $dataProvider->buildRecordDataFromRow('pages', $row, $pageId);
+
+            if ($useWorkspaceReduction) {
+                $uidRaw = $row['uid'] ?? 0;
+                $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+                $identity = $this->getWorkspaceRecordIdentity($row, $uid);
+                $recordsByIdentity[$identity] = $recordData;
+            } else {
+                $records[] = $recordData;
+            }
+        }
+
+        return $useWorkspaceReduction ? array_values($recordsByIdentity) : $records;
     }
 }

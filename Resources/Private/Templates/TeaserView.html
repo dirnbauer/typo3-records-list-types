@@ -77,48 +77,11 @@
                             <f:for each="{table.records}" as="record">
                                 <f:render partial="TeaserCard" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName}" />
                                 <f:if condition="{record.translations}">
-                                    <f:for each="{record.translations}" as="translation">
-                                        <div class="teaserview-translation-row{f:if(condition: translation.hidden, then: ' teaserview-translation-row--hidden')}{f:if(condition: translation.workspaceState, then: ' teaserview-translation-row--ws-{translation.workspaceState}')}">
-                                            <span class="teaserview-translation-row__flag" title="{translation.languageTitle}">
-                                                <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
-                                            </span>
-                                            <span class="teaserview-translation-row__uid">#{translation.uid}</span>
-                                            <span class="teaserview-translation-row__title">
-                                                <typo3-backend-contextual-record-edit-trigger
-                                                    edit-url="{translation.editUrl}"
-                                                    url="{translation.contextualEditUrl}"
-                                                    class="teaserview-translation-row__title-link">
-                                                    <f:if condition="{translation.title}">
-                                                        <f:then>{translation.title -> f:format.crop(maxCharacters: 60, append: '…')}</f:then>
-                                                        <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
-                                                    </f:if>
-                                                </typo3-backend-contextual-record-edit-trigger>
-                                            </span>
-                                            <span class="teaserview-translation-row__actions">
-                                                <f:if condition="{translation.hidden}">
-                                                    <f:then>
-                                                        <button type="button" class="teaserview-action teaserview-action--warning" title="Show"
-                                                                data-gridview-action="show" data-table="{translation.tableName}" data-uid="{translation.uid}" data-hidden-field="{tableConfig.hiddenField}">
-                                                            <core:icon identifier="actions-toggle-off" size="small" />
-                                                        </button>
-                                                    </f:then>
-                                                    <f:else>
-                                                        <button type="button" class="teaserview-action teaserview-action--success" title="Hide"
-                                                                data-gridview-action="hide" data-table="{translation.tableName}" data-uid="{translation.uid}" data-hidden-field="{tableConfig.hiddenField}">
-                                                            <core:icon identifier="actions-toggle-on" size="small" />
-                                                        </button>
-                                                    </f:else>
-                                                </f:if>
-                                                <typo3-backend-contextual-record-edit-trigger
-                                                    edit-url="{translation.editUrl}"
-                                                    url="{translation.contextualEditUrl}"
-                                                    class="teaserview-action teaserview-action--primary"
-                                                    title="Edit">
-                                                    <core:icon identifier="actions-open" size="small" />
-                                                </typo3-backend-contextual-record-edit-trigger>
-                                            </span>
-                                        </div>
-                                    </f:for>
+                                    <div class="teaserview-translations">
+                                        <f:for each="{record.translations}" as="translation">
+                                            <f:render partial="TranslationRowTeaser" arguments="{record: record, translation: translation, tableConfig: table.tableConfig}" />
+                                        </f:for>
+                                    </div>
                                 </f:if>
                             </f:for>
                         </div>

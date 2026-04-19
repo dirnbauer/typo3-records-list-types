@@ -1,0 +1,94 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Translation strip for the Grid view card.
+
+    Renders one mini-row per available non-default site language. A row
+    is either a live translation record (clickable edit trigger + hide
+    toggle) or an "untranslated" placeholder that opens the TYPO3 core
+    localization wizard via typo3-backend-localization-button.
+
+    Required arguments:
+    - record: parent (default-language) record with a translations array
+</f:comment>
+
+<div class="gridview-card__translations"
+     role="group"
+     aria-label="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.sectionLabel', default: 'Translations')}">
+    <div class="gridview-card__translations-head">
+        <core:icon identifier="flags-multiple" size="small" />
+        <span class="gridview-card__translations-title">
+            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.sectionLabel" default="Translations" />
+        </span>
+        <span class="gridview-card__translations-summary">
+            <f:if condition="{record.untranslatedCount} == 0">
+                <f:then>
+                    <span class="gridview-card__translations-badge gridview-card__translations-badge--complete">
+                        <core:icon identifier="actions-check" size="small" />
+                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.allTranslated" default="All translations complete" />
+                    </span>
+                </f:then>
+                <f:else>
+                    <span class="gridview-card__translations-badge">
+                        {record.translatedCount} / <f:count subject="{record.translations}" />
+                    </span>
+                </f:else>
+            </f:if>
+        </span>
+    </div>
+
+    <ul class="gridview-card__translations-list">
+        <f:for each="{record.translations}" as="translation">
+            <li class="gridview-card__translation{f:if(condition: '{translation.state} == \'translated\'', then: ' gridview-card__translation--translated', else: ' gridview-card__translation--untranslated')}{f:if(condition: translation.hidden, then: ' gridview-card__translation--hidden')}{f:if(condition: translation.workspaceState, then: ' gridview-card__translation--ws-{translation.workspaceState}')}">
+                <f:if condition="{translation.state} == 'translated'">
+                    <f:then>
+                        <typo3-backend-contextual-record-edit-trigger
+                            class="gridview-card__translation-link"
+                            url="{translation.contextualEditUrl}"
+                            edit-url="{translation.editUrl}"
+                            title="{translation.languageTitle}">
+                            <span class="gridview-card__translation-flag">
+                                <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+                            </span>
+                            <span class="gridview-card__translation-title">
+                                <f:if condition="{translation.title}">
+                                    <f:then>{translation.title -> f:format.crop(maxCharacters: 60, append: '…')}</f:then>
+                                    <f:else>
+                                        <em><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></em>
+                                    </f:else>
+                                </f:if>
+                            </span>
+                            <f:if condition="{translation.hidden}">
+                                <span class="gridview-card__translation-state" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:hidden', default: 'Hidden')}">
+                                    <core:icon identifier="actions-toggle-off" size="small" />
+                                </span>
+                            </f:if>
+                        </typo3-backend-contextual-record-edit-trigger>
+                    </f:then>
+                    <f:else>
+                        <typo3-backend-localization-button
+                            class="gridview-card__translation-link gridview-card__translation-link--create"
+                            record-type="{translation.parentTable}"
+                            record-uid="{translation.parentUid}"
+                            target-language="{translation.languageId}"
+                            title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.translateTo', default: 'Translate to %s', arguments: '{0: translation.languageTitle}')}">
+                            <span class="gridview-card__translation-flag gridview-card__translation-flag--muted">
+                                <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+                            </span>
+                            <span class="gridview-card__translation-title gridview-card__translation-title--muted">
+                                {translation.languageTitle}
+                            </span>
+                            <span class="gridview-card__translation-state gridview-card__translation-state--add">
+                                <core:icon identifier="actions-plus" size="small" />
+                            </span>
+                        </typo3-backend-localization-button>
+                    </f:else>
+                </f:if>
+            </li>
+        </f:for>
+    </ul>
+</div>
+
+</html>

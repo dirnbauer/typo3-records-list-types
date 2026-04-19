@@ -1265,71 +1265,225 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
 }
 
 /* =============================================================================
-   Translation Flag Pills (compact, in card footer)
+   Translation Strip (inside each card, above the footer)
    ============================================================================= */
 
-.gridview-card__translation-pills {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    flex-wrap: wrap;
+.gridview-card__translations {
+    border-top: 1px solid var(--gv-border);
+    background: var(--gv-bg-subtle);
+    padding: 0.5rem 0.75rem 0.625rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
 }
 
-.gridview-card__translation-pill {
+.gridview-card__translations-head {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gv-text-muted);
+}
+
+.gridview-card__translations-head .icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.85;
+}
+
+.gridview-card__translations-title {
+    font-weight: 600;
+}
+
+.gridview-card__translations-summary {
+    margin-left: auto;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 1.5rem;
-    height: 1.375rem;
-    padding: 0;
-    border-radius: var(--gv-radius-sm);
-    border: 1px solid var(--gv-border);
+}
+
+.gridview-card__translations-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    border-radius: 999px;
     background: var(--gv-bg);
+    border: 1px solid var(--gv-border);
+    font-size: 0.6875rem;
+    font-weight: 600;
     color: var(--gv-text-muted);
-    text-decoration: none;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.gridview-card__translations-badge--complete {
+    color: #047857;
+    background: color-mix(in srgb, #10b981 14%, transparent);
+    border-color: color-mix(in srgb, #10b981 35%, transparent);
+}
+
+.gridview-card__translations-badge--complete .icon {
+    width: 12px;
+    height: 12px;
+}
+
+.gridview-card__translations-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.gridview-card__translation {
+    border-radius: var(--gv-radius-sm);
+    overflow: hidden;
+    border: 1px solid transparent;
+    background: var(--gv-bg);
     transition:
         border-color var(--gv-transition-fast),
         background var(--gv-transition-fast),
         box-shadow var(--gv-transition-fast);
-    cursor: pointer;
-    position: relative;
 }
 
-.gridview-card__translation-pill .icon {
+.gridview-card__translation--translated {
+    border-color: var(--gv-border);
+}
+
+.gridview-card__translation--untranslated {
+    border-color: color-mix(in srgb, var(--gv-text-muted) 25%, transparent);
+    border-style: dashed;
+    background: transparent;
+}
+
+.gridview-card__translation:hover {
+    border-color: var(--gv-accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--gv-accent) 30%, transparent);
+    background: var(--gv-accent-bg);
+}
+
+.gridview-card__translation--untranslated:hover {
+    border-style: solid;
+}
+
+.gridview-card__translation-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3125rem 0.5rem;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+    text-align: start;
+    cursor: pointer;
+}
+
+.gridview-card__translation-link:hover {
+    color: inherit;
+    text-decoration: none;
+}
+
+.gridview-card__translation-flag {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.gridview-card__translation-flag .icon {
+    width: 18px;
+    height: 18px;
+}
+
+.gridview-card__translation-flag--muted {
+    opacity: 0.5;
+    filter: grayscale(0.6);
+    transition: opacity var(--gv-transition-fast), filter var(--gv-transition-fast);
+}
+
+.gridview-card__translation--untranslated:hover .gridview-card__translation-flag--muted {
+    opacity: 1;
+    filter: none;
+}
+
+.gridview-card__translation-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--gv-text);
+    font-weight: 500;
+}
+
+.gridview-card__translation-title--muted {
+    color: var(--gv-text-muted);
+    font-weight: 400;
+    font-style: italic;
+}
+
+.gridview-card__translation-state {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--gv-text-muted);
+}
+
+.gridview-card__translation-state .icon {
     width: 14px;
     height: 14px;
 }
 
-.gridview-card__translation-pill:hover {
-    border-color: var(--gv-accent);
-    background: var(--gv-accent-bg);
-    box-shadow: 0 0 0 1px var(--gv-accent-muted);
+.gridview-card__translation-state--add {
+    color: var(--gv-accent);
 }
 
-.gridview-card__translation-pill--hidden {
-    opacity: 0.4;
+.gridview-card__translation--hidden .gridview-card__translation-title {
+    opacity: 0.55;
 }
 
-/* Workspace state ring indicators on pills */
-.gridview-card__translation-pill--ws-new {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+.gridview-card__translation--hidden .gridview-card__translation-state {
+    color: #b45309;
 }
 
-.gridview-card__translation-pill--ws-changed {
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3);
+/* Workspace state indicators */
+.gridview-card__translation--ws-new {
+    border-left: 3px solid #3b82f6;
+    background: light-dark(#eff6ff, rgba(59, 130, 246, 0.1));
 }
 
-.gridview-card__translation-pill--ws-move {
-    border-color: #06b6d4;
-    box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.3);
+.gridview-card__translation--ws-changed {
+    border-left: 3px solid #8b5cf6;
+    background: light-dark(#f5f3ff, rgba(139, 92, 246, 0.1));
 }
 
-.gridview-card__translation-pill--ws-deleted {
-    border-color: #ef4444;
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
-    opacity: 0.5;
+.gridview-card__translation--ws-move {
+    border-left: 3px solid #06b6d4;
+    background: light-dark(#ecfeff, rgba(6, 182, 212, 0.1));
+}
+
+.gridview-card__translation--ws-deleted {
+    border-left: 3px solid #ef4444;
+    background: light-dark(#fef2f2, rgba(239, 68, 68, 0.1));
+}
+
+.gridview-card__translation--ws-deleted .gridview-card__translation-title {
+    text-decoration: line-through;
+    opacity: 0.6;
 }
 
 /* =============================================================================
@@ -1354,16 +1508,18 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
 }
 
 /* =============================================================================
-   Dark Mode: Translation Pills + Free Badge
+   Dark Mode: Translation strip + free badge
    ============================================================================= */
 
-[data-color-scheme="dark"] .gridview-card__translation-pill {
-    border-color: var(--gv-border);
-    background: var(--gv-bg-subtle);
+[data-color-scheme="dark"] .gridview-card__translations {
+    background: color-mix(in srgb, var(--gv-bg) 80%, #000 20%);
 }
 
-[data-color-scheme="dark"] .gridview-card__translation-pill:hover {
-    border-color: var(--gv-accent);
+[data-color-scheme="dark"] .gridview-card__translation--translated {
+    background: var(--gv-bg);
+}
+
+[data-color-scheme="dark"] .gridview-card__translation:hover {
     background: var(--gv-accent-bg);
 }
 
@@ -1372,13 +1528,15 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
 }
 
 @media (prefers-color-scheme: dark) {
-    html:not([data-color-scheme="light"]) .gridview-card__translation-pill {
-        border-color: var(--gv-border);
-        background: var(--gv-bg-subtle);
+    html:not([data-color-scheme="light"]) .gridview-card__translations {
+        background: color-mix(in srgb, var(--gv-bg) 80%, #000 20%);
     }
 
-    html:not([data-color-scheme="light"]) .gridview-card__translation-pill:hover {
-        border-color: var(--gv-accent);
+    html:not([data-color-scheme="light"]) .gridview-card__translation--translated {
+        background: var(--gv-bg);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-card__translation:hover {
         background: var(--gv-accent-bg);
     }
 

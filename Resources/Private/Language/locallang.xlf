@@ -122,6 +122,24 @@
             <trans-unit id="translation.free" resname="translation.free">
                 <source>FREE</source>
             </trans-unit>
+            <trans-unit id="translation.translated" resname="translation.translated">
+                <source>Translated</source>
+            </trans-unit>
+            <trans-unit id="translation.untranslated" resname="translation.untranslated">
+                <source>Not translated</source>
+            </trans-unit>
+            <trans-unit id="translation.translateTo" resname="translation.translateTo">
+                <source>Translate to %s</source>
+            </trans-unit>
+            <trans-unit id="translation.sectionLabel" resname="translation.sectionLabel">
+                <source>Translations</source>
+            </trans-unit>
+            <trans-unit id="translation.summary" resname="translation.summary">
+                <source>%d of %d translated</source>
+            </trans-unit>
+            <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
+                <source>All translations complete</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

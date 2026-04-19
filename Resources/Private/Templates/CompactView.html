@@ -126,61 +126,7 @@
                                         <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns}" />
                                         <f:if condition="{record.translations}">
                                             <f:for each="{record.translations}" as="translation">
-                                                <tr class="compactview-row compactview-row--translation{f:if(condition: translation.hidden, then: ' compactview-row--hidden')}{f:if(condition: translation.workspaceState, then: ' compactview-row--ws-{translation.workspaceState}')}">
-                                                    <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox"></td>
-                                                    <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
-                                                        <span class="compactview-row__icon">
-                                                            <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
-                                                        </span>
-                                                    </td>
-                                                    <td class="compactview-td compactview-td--fixed-left compactview-td--uid">
-                                                        <span class="compactview-row__uid">{translation.uid}</span>
-                                                    </td>
-                                                    <td class="compactview-td compactview-td--fixed-left compactview-td--title">
-                                                        <typo3-backend-contextual-record-edit-trigger
-                                                            class="compactview-row__title-link"
-                                                            edit-url="{translation.editUrl}"
-                                                            url="{translation.contextualEditUrl}">
-                                                            <f:if condition="{translation.title}">
-                                                                <f:then>{translation.title -> f:format.crop(maxCharacters: 50, append: '…')}</f:then>
-                                                                <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
-                                                            </f:if>
-                                                        </typo3-backend-contextual-record-edit-trigger>
-                                                    </td>
-                                                    <f:for each="{record.displayValues}" as="fieldData">
-                                                        <f:if condition="!{fieldData.isLabelField}">
-                                                            <td class="compactview-td"></td>
-                                                        </f:if>
-                                                    </f:for>
-                                                    <td class="compactview-td compactview-td--spacer" aria-hidden="true" role="presentation"></td>
-                                                    <td class="compactview-td compactview-td--fixed-right compactview-td--status">
-                                                        <f:if condition="{translation.hidden}">
-                                                            <f:then>
-                                                                <button type="button" class="cv-toggle cv-toggle--hidden" title="Show"
-                                                                        data-gridview-action="show" data-table="{translation.tableName}" data-uid="{translation.uid}" data-hidden-field="{tableConfig.hiddenField}">
-                                                                    <core:icon identifier="actions-toggle-off" size="small" />
-                                                                </button>
-                                                            </f:then>
-                                                            <f:else>
-                                                                <button type="button" class="cv-toggle cv-toggle--visible" title="Hide"
-                                                                        data-gridview-action="hide" data-table="{translation.tableName}" data-uid="{translation.uid}" data-hidden-field="{tableConfig.hiddenField}">
-                                                                    <core:icon identifier="actions-toggle-on" size="small" />
-                                                                </button>
-                                                            </f:else>
-                                                        </f:if>
-                                                    </td>
-                                                    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
-                                                        <typo3-backend-contextual-record-edit-trigger
-                                                            class="cv-action cv-action--primary"
-                                                            title="Edit"
-                                                            edit-url="{translation.editUrl}"
-                                                            url="{translation.contextualEditUrl}">
-                                                            <core:icon identifier="actions-open" size="small" />
-                                                        </typo3-backend-contextual-record-edit-trigger>
-                                                    </td>
-                                                    <td class="compactview-td compactview-td--fixed-right compactview-td--action"></td>
-                                                    <td class="compactview-td compactview-td--fixed-right compactview-td--action"></td>
-                                                </tr>
+                                                <f:render partial="TranslationRowCompact" arguments="{record: record, translation: translation, tableConfig: table.tableConfig}" />
                                             </f:for>
                                         </f:if>
                                     </f:for>
