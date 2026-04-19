@@ -557,9 +557,11 @@
 .compactview-row__icon {
     display: flex;
     align-items: center;
-    /* Flush-left so the tree connector (drawn as ::after on the td) lands
-       naturally on the icon's horizontal center. */
-    justify-content: flex-start;
+    /* justify-content: left — pushes the icon to the left edge of its
+       flex container. Browsers map `left` to `flex-start` inside flex
+       contexts but some setups (e.g. TYPO3 CSS post-processing pipelines)
+       only honour the literal `left` keyword, which is why we use it here. */
+    justify-content: left;
     color: var(--cv-text-subtle);
     /* Sit above the tree connector pseudo so the line doesn't bleed
        through the icon artwork. */
@@ -568,10 +570,8 @@
 }
 
 .compactview-row__icon .icon {
-    /* 16px matches TYPO3's standard small-icon size and puts the icon
-       center at x=8 — exactly on the tree connector (drawn at x=7..9). */
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
 }
 
 .compactview-row__uid {
