@@ -2332,9 +2332,10 @@ final class RecordListController extends CoreRecordListController
 
     /**
      * Return the non-default site languages that translations can target for
-     * the given table, ordered by language ID. When the site itself is not
-     * language-aware or only the default language is configured the list is
-     * empty, which causes templates to skip the translation UI entirely.
+     * the given table, ordered by language ID. Filtered by the docheader
+     * language selector (`PageContext::selectedLanguageIds`) so unchecking a
+     * language hides both its existing translation rows and its
+     * "translate to" placeholder — matching the classic list view.
      *
      * @return array<int, array{id:int, title:string, flagIdentifier:string}>
      */
@@ -2346,6 +2347,7 @@ final class RecordListController extends CoreRecordListController
             false,
             $this->pageContext->pageId,
         );
+        $selectedLanguageIds = $this->pageContext->selectedLanguageIds;
 
         $languages = [];
         foreach ($siteLanguages as $siteLanguage) {
@@ -2354,6 +2356,9 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
             if (!$backendUser->checkLanguageAccess($languageId)) {
+                continue;
+            }
+            if ($selectedLanguageIds !== [] && !in_array($languageId, $selectedLanguageIds, true)) {
                 continue;
             }
             $languages[$languageId] = [
@@ -2884,6 +2889,7 @@ final class RecordListController extends CoreRecordListController
     {
         $backendUser = $this->getBackendUserAuthentication();
         $workspaceId = $this->getCurrentWorkspaceId();
+        $selectedLanguageIds = $this->pageContext->selectedLanguageIds;
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable('pages');
         $queryBuilder->getRestrictions()
@@ -2924,6 +2930,10 @@ final class RecordListController extends CoreRecordListController
             $languageIdRaw = $row['sys_language_uid'] ?? 0;
             $languageId = is_numeric($languageIdRaw) ? (int) $languageIdRaw : 0;
             if (!$backendUser->checkLanguageAccess($languageId)) {
+                continue;
+            }
+            // Honour the docheader language selector.
+            if ($selectedLanguageIds !== [] && !in_array($languageId, $selectedLanguageIds, true)) {
                 continue;
             }
 
