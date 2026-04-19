@@ -641,7 +641,9 @@ final class RecordListController extends CoreRecordListController
                 );
             }
 
-            // Sortable column headers (used by CompactView template)
+            // Sortable column headers (used by CompactView template). In
+            // single-table mode we also enable native "Edit this column"
+            // multi-edit entries inside each header dropdown.
             $sortableColumnHeaders = $this->getSortableColumnHeaders(
                 $tableName,
                 $displayColumns,
@@ -650,6 +652,15 @@ final class RecordListController extends CoreRecordListController
                 $pageId,
                 $viewMode,
                 $request,
+                $isSingleTableMode,
+            );
+            $bulkEditHeader = $this->buildBulkEditHeader(
+                $tableName,
+                $displayColumns,
+                $pageId,
+                $viewMode,
+                $request,
+                $isSingleTableMode,
             );
 
             // Last record UID for drag-drop end dropzone (used by GridView template)
@@ -695,6 +706,7 @@ final class RecordListController extends CoreRecordListController
                 'sortingDropdown' => $sortingDropdown,
                 'sortingModeToggle' => $sortingModeToggle,
                 'sortableColumnHeaders' => $sortableColumnHeaders,
+                'bulkEditHeader' => $bulkEditHeader,
                 'singleTableUrl' => $singleTableUrl,
                 'clearTableUrl' => $clearTableUrl,
                 'formActionUrl' => $singleTableUrl,
@@ -1483,6 +1495,7 @@ final class RecordListController extends CoreRecordListController
         int $pageId,
         string $viewMode,
         ServerRequestInterface $request,
+        bool $isSingleTableMode = false,
     ): array {
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
@@ -1503,6 +1516,31 @@ final class RecordListController extends CoreRecordListController
         $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
         $descLabelTranslated = $lang->sL('core.core:labels.sorting.desc');
         $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
+
+        // Native multi-edit for this column: offered only in single-table mode
+        // (mirrors core DatabaseRecordList::renderListTableFieldHeader) when
+        // the field is editable for the current user. Uses TYPO3's own JS
+        // hook — `.t3js-record-edit-multiple` — which walks to the enclosing
+        // `[data-table]` element and opens FormEngine for the selected UIDs.
+        $canMultiEdit = $isSingleTableMode
+            && $field !== 'uid'
+            && $this->isTableEditableForUser($tableName)
+            && $this->isFieldEditableForUser($tableName, $field);
+        $multiEditLabel = '';
+        $multiEditColumnsOnly = '';
+        $multiEditReturnUrl = '';
+        if ($canMultiEdit) {
+            $rawLabel = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editThisColumn');
+            $multiEditLabel = $rawLabel !== ''
+                ? sprintf($rawLabel, $label)
+                : sprintf('Edit "%s"', $label);
+            $multiEditColumnsOnly = json_encode([$field], JSON_THROW_ON_ERROR);
+            try {
+                $multiEditReturnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
+            } catch (Exception) {
+                $multiEditReturnUrl = '';
+            }
+        }
 
         try {
             $ascParams = $baseParams;
@@ -1526,6 +1564,10 @@ final class RecordListController extends CoreRecordListController
                 'descLabel' => $descLabel,
                 'isAscActive' => $isAscActive,
                 'isDescActive' => $isDescActive,
+                'canMultiEdit' => $canMultiEdit,
+                'multiEditLabel' => $multiEditLabel,
+                'multiEditColumnsOnly' => $multiEditColumnsOnly,
+                'multiEditReturnUrl' => $multiEditReturnUrl,
             ];
         } catch (Exception) {
             return [
@@ -1539,8 +1581,126 @@ final class RecordListController extends CoreRecordListController
                 'descLabel' => $descLabel,
                 'isAscActive' => false,
                 'isDescActive' => false,
+                'canMultiEdit' => $canMultiEdit,
+                'multiEditLabel' => $multiEditLabel,
+                'multiEditColumnsOnly' => $multiEditColumnsOnly,
+                'multiEditReturnUrl' => $multiEditReturnUrl,
             ];
         }
+    }
+
+    /**
+     * Build the data payload for the native "Edit shown columns" bulk-edit
+     * button in the compact view thead. Returns null when not applicable
+     * (multi-table mode, read-only, missing permissions). When shown, the
+     * button uses TYPO3's `t3js-record-edit-multiple` JS hook — same code
+     * path the standard list view uses.
+     *
+     * @param array<int, array{field:string,label:string,type:string,isLabelField:bool}> $displayColumns
+     * @return array{label:string,columnsOnly:string,returnUrl:string}|null
+     */
+    private function buildBulkEditHeader(
+        string $tableName,
+        array $displayColumns,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+        bool $isSingleTableMode,
+    ): ?array {
+        if (!$isSingleTableMode) {
+            return null;
+        }
+        if (!$this->isTableEditableForUser($tableName)) {
+            return null;
+        }
+
+        $editableFields = [];
+        foreach ($displayColumns as $column) {
+            $field = $column['field'] ?? '';
+            if ($field === '' || $field === 'uid') {
+                continue;
+            }
+            if (!$this->isFieldEditableForUser($tableName, $field)) {
+                continue;
+            }
+            $editableFields[] = $field;
+        }
+        if ($editableFields === []) {
+            return null;
+        }
+
+        $lang = $this->getLanguageService();
+        $label = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editShownColumns');
+        if ($label === '') {
+            $label = 'Edit shown columns';
+        }
+
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $queryParams = $request->getQueryParams();
+        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        foreach ($preserveParams as $param) {
+            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
+                $baseParams[$param] = $queryParams[$param];
+            }
+        }
+
+        try {
+            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
+        } catch (Exception) {
+            $returnUrl = '';
+        }
+
+        try {
+            $columnsOnly = json_encode($editableFields, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        return [
+            'label' => $label,
+            'columnsOnly' => $columnsOnly,
+            'returnUrl' => $returnUrl,
+        ];
+    }
+
+    /**
+     * Table-level editability (tables_modify + schema not readOnly + workspace
+     * write allowed). Mirrors DatabaseRecordList::isEditable at table level.
+     */
+    private function isTableEditableForUser(string $tableName): bool
+    {
+        $be = $this->getBackendUserAuthentication();
+        if ($be->isAdmin()) {
+            return true;
+        }
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+        if (!$schemaFactory->has($tableName)) {
+            return false;
+        }
+        $schema = $schemaFactory->get($tableName);
+        if ($schema->hasCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::AccessReadOnly)) {
+            return false;
+        }
+        if (!$be->check('tables_modify', $tableName)) {
+            return false;
+        }
+        if (!$schema->isWorkspaceAware() && !$be->workspaceAllowsLiveEditingInTable($tableName)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Field-level editability — no `readOnly` on the column configuration.
+     */
+    private function isFieldEditableForUser(string $tableName, string $field): bool
+    {
+        $tcaForTable = $this->getTcaForTable($tableName);
+        $columns = $tcaForTable['columns'];
+        $columnConfig = is_array($columns[$field] ?? null) ? $columns[$field] : [];
+        $config = is_array($columnConfig['config'] ?? null) ? $columnConfig['config'] : [];
+        return !(bool) ($config['readOnly'] ?? false);
     }
 
     /**
@@ -1647,6 +1807,7 @@ final class RecordListController extends CoreRecordListController
         int $pageId,
         string $viewMode,
         ServerRequestInterface $request,
+        bool $isSingleTableMode = false,
     ): array {
         $headers = [];
         $tcaForTable = $this->getTcaForTable($tableName);
@@ -1668,6 +1829,7 @@ final class RecordListController extends CoreRecordListController
                 $pageId,
                 $viewMode,
                 $request,
+                $isSingleTableMode,
             ),
             'isFixed' => true,
             'type' => 'uid',
@@ -1687,6 +1849,7 @@ final class RecordListController extends CoreRecordListController
                 $pageId,
                 $viewMode,
                 $request,
+                $isSingleTableMode,
             ),
             'isFixed' => true,
             'type' => 'title',
@@ -1717,6 +1880,7 @@ final class RecordListController extends CoreRecordListController
                     $pageId,
                     $viewMode,
                     $request,
+                    $isSingleTableMode,
                 ),
                 'isFixed' => false,
                 'type' => $column['type'] ?? 'text',
@@ -3062,6 +3226,7 @@ final class RecordListController extends CoreRecordListController
             'sortingDropdown' => null,
             'sortingModeToggle' => null,
             'sortableColumnHeaders' => [],
+            'bulkEditHeader' => null,
             'singleTableUrl' => '',
             'clearTableUrl' => '',
             'formActionUrl' => '',

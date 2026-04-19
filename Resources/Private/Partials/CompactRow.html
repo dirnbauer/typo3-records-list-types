@@ -37,9 +37,15 @@
     </td>
     
     <f:comment>Fixed left: Title (clickable only when the user can edit).
-        Free translations get a leading "FREE {lang}" chip so editors
-        recognise that the row is not connected to a default record.</f:comment>
+        Default-language rows get a leading flag too (same pattern as
+        translations) so the language is visible for every row. Free
+        translations additionally get a "FREE · {lang}" chip.</f:comment>
     <td class="compactview-td compactview-td--fixed-left compactview-td--title">
+        <f:if condition="{record.languageFlagIdentifier}">
+            <span class="compactview-row__lang-flag compactview-row__lang-flag--original" title="{record.languageTitle}" aria-label="{record.languageTitle}">
+                <core:icon identifier="{record.languageFlagIdentifier}" size="small" />
+            </span>
+        </f:if>
         <f:if condition="{record.isFreeTranslation}">
             <span class="compactview-row__lang-chip compactview-row__lang-chip--free" title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free', default: 'FREE')}">
                 <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free" default="FREE" />

@@ -23,6 +23,18 @@
 
                             <f:comment>Actions section - matches core structure exactly</f:comment>
                             <div class="recordlist-heading-actions">
+                                <f:comment>Native "Edit shown columns" bulk-edit button (uses TYPO3's t3js-record-edit-multiple hook)</f:comment>
+                                <f:if condition="{table.bulkEditHeader}">
+                                    <button type="button"
+                                            class="btn btn-default t3js-record-edit-multiple"
+                                            title="{table.bulkEditHeader.label}"
+                                            aria-label="{table.bulkEditHeader.label}"
+                                            data-return-url="{table.bulkEditHeader.returnUrl}"
+                                            data-columns-only="{table.bulkEditHeader.columnsOnly}">
+                                        <core:icon identifier="actions-document-open" size="small" />
+                                    </button>
+                                </f:if>
+
                                 <f:comment>New record button</f:comment>
                                 <f:if condition="{table.actionButtons.newRecordButton}">
                                     <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>

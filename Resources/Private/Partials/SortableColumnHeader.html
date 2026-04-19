@@ -45,6 +45,27 @@
                         </span>
                     </a>
                 </li>
+                <f:if condition="{header.canMultiEdit}">
+                    <li><hr class="dropdown-divider" aria-hidden="true"></li>
+                    <li>
+                        <button
+                            type="button"
+                            class="dropdown-item t3js-record-edit-multiple"
+                            title="{header.multiEditLabel}"
+                            aria-label="{header.multiEditLabel}"
+                            data-return-url="{header.multiEditReturnUrl}"
+                            data-columns-only="{header.multiEditColumnsOnly}">
+                            <span class="dropdown-item-columns">
+                                <span class="dropdown-item-column dropdown-item-column-icon">
+                                    <core:icon identifier="actions-document-open" size="small" />
+                                </span>
+                                <span class="dropdown-item-column dropdown-item-column-title">
+                                    {header.multiEditLabel}
+                                </span>
+                            </span>
+                        </button>
+                    </li>
+                </f:if>
             </ul>
         </div>
     </f:then>
