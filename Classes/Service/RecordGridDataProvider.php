@@ -160,6 +160,12 @@ final readonly class RecordGridDataProvider implements SingletonInterface
     /**
      * Get TCA configuration for a table with proper typing.
      *
+     * NOTE: `TcaSchema::getRawConfiguration()` returns the *ctrl* section
+     * only (see `TcaSchemaBuilder::build()` — it stores
+     * `$schemaDefinition['ctrl']` as `$schemaConfiguration`). The factory
+     * does not expose the full `{ctrl, columns, …}` structure, so we read
+     * it from `$GLOBALS['TCA']` which is the canonical source.
+     *
      * @return array{ctrl: array<string, mixed>, columns: array<string, array<string, mixed>>}
      */
     private function getTca(string $table): array
@@ -167,7 +173,12 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         if (!$this->tcaSchemaFactory->has($table)) {
             return ['ctrl' => [], 'columns' => []];
         }
-        $tca = $this->tcaSchemaFactory->get($table)->getRawConfiguration();
+        /** @var array<string, mixed> $allTca */
+        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
+        $tca = $allTca[$table] ?? [];
+        if (!is_array($tca)) {
+            return ['ctrl' => [], 'columns' => []];
+        }
         /** @var array<string, mixed> $ctrl */
         $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
         /** @var array<string, array<string, mixed>> $columns */
