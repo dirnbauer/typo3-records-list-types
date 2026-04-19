@@ -557,11 +557,7 @@
 .compactview-row__icon {
     display: flex;
     align-items: center;
-    /* justify-content: left — pushes the icon to the left edge of its
-       flex container. Browsers map `left` to `flex-start` inside flex
-       contexts but some setups (e.g. TYPO3 CSS post-processing pipelines)
-       only honour the literal `left` keyword, which is why we use it here. */
-    justify-content: left;
+    justify-content: center;
     color: var(--cv-text-subtle);
     /* Sit above the tree connector pseudo so the line doesn't bleed
        through the icon artwork. */
