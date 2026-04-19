@@ -415,13 +415,15 @@
     border-bottom-right-radius: var(--cv-radius-sm);
 }
 
-/* Zebra striping - ensure fixed columns match row background (opaque for masking) */
-.compactview-row:nth-child(even) .compactview-td {
+/* Zebra striping runs per GROUP — a parent and all of its translations
+   share the same background, so the tree connector reads as one unit.
+   The parity class is set once in the template per outer iteration. */
+.compactview-row--group-even .compactview-td {
     background-color: var(--cv-bg-muted);
 }
 
-.compactview-row:nth-child(even) .compactview-td--fixed-left,
-.compactview-row:nth-child(even) .compactview-td--fixed-right {
+.compactview-row--group-even .compactview-td--fixed-left,
+.compactview-row--group-even .compactview-td--fixed-right {
     background-color: var(--cv-bg-muted) !important;
 }
 
@@ -487,6 +489,23 @@
        continue naturally from the icon's horizontal center. */
     text-align: left;
     padding: 0.1875rem 0;
+    position: relative; /* positioning context for ::after tree stub */
+}
+
+/* When a parent row is followed by a translation row, draw the bottom
+   half of the vertical tree line from the icon's center (y=50%) to the
+   bottom of this cell. The translation row's ::before then continues it
+   from its own top to its middle — so the line lands exactly at the
+   vertical center of the parent icon. */
+.compactview-row:not(.compactview-row--translation):has(+ .compactview-row--translation) .compactview-td--icon::after {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 50%;
+    bottom: 0;
+    width: 2px;
+    background: var(--cv-border);
+    pointer-events: none;
 }
 
 .compactview-td--uid {
@@ -839,15 +858,11 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
    ============================================================================= */
 
 .compactview-row--translation .compactview-td {
-    background-color: var(--cv-bg-subtle);
+    /* Background comes from group-parity zebra so parent + translations
+       share the same stripe. Only tweak size + padding here. */
     font-size: 0.75rem;
     padding-top: 0.1875rem;
     padding-bottom: 0.1875rem;
-}
-
-.compactview-row--translation .compactview-td--fixed-left,
-.compactview-row--translation .compactview-td--fixed-right {
-    background-color: var(--cv-bg-subtle) !important;
 }
 
 /* Translation-row icon cell: indent the record icon so the cell reads
@@ -856,9 +871,10 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
    inherit it from the fixed-left base rule.
 
    Parent icon is 16px wide, flush-left (padding-left:0) → center at x=8.
-   The tree connector is centred on that column so the branch reads clean. */
+   The tree connector is centred on that column so the branch reads clean.
+   Background intentionally NOT overridden here — we inherit whatever the
+   group-parity zebra set, so the whole group reads as one stripe. */
 .compactview-row--translation .compactview-td--icon {
-    background: var(--cv-bg-subtle) !important;
     padding-left: 1.125rem; /* 18px — leaves the translation icon clear of the tick */
 }
 
@@ -1018,12 +1034,9 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     border-left: 3px dashed var(--cv-accent);
 }
 
-/* Dark mode workspace state backgrounds for translation rows */
-[data-color-scheme="dark"] .compactview-row--translation .compactview-td,
-[data-color-scheme="dark"] .compactview-row--translation .compactview-td--fixed-left,
-[data-color-scheme="dark"] .compactview-row--translation .compactview-td--fixed-right {
-    background-color: color-mix(in srgb, var(--cv-bg) 88%, #000 12%) !important;
-}
+/* Dark-mode background override removed intentionally — translations
+   inherit the parent group's zebra stripe so the whole group reads as
+   one unit. */
 
 /* Note: Sorting toggle, pagination, and recordlist heading base styles
    are in base.css which is loaded automatically for all view modes. */

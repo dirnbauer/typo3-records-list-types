@@ -7,7 +7,7 @@
     Compact View Row - Table row with fixed left/right columns
 </f:comment>
 
-<tr class="compactview-row{f:if(condition: record.hidden, then: ' compactview-row--hidden')}{f:if(condition: record.isFreeTranslation, then: ' compactview-row--free')}"
+<tr class="compactview-row{f:if(condition: record.hidden, then: ' compactview-row--hidden')}{f:if(condition: record.isFreeTranslation, then: ' compactview-row--free')} {groupClass}"
     data-table="{record.tableName}"
     data-uid="{record.uid}"
     {f:if(condition: multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}>
