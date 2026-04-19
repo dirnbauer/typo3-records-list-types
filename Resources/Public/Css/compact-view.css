@@ -848,70 +848,46 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     background-color: var(--cv-bg-subtle) !important;
 }
 
-/* Icon cell on a translation row hosts the record icon (with TYPO3's
-   translate overlay) plus a tree-branch connector on the left side. The
-   background is opaque so the parent row's zebra striping doesn't bleed
-   through. */
-.compactview-row--translation .compactview-td--translation {
+/* Icon cell on a translation row shows the same record icon as the
+   parent (dimmed) PLUS a tree-branch connector drawn as a pseudo element
+   on the td itself. Keeps the column visually aligned with the parent so
+   no more empty see-through cells. */
+.compactview-row--translation .compactview-td--icon {
     position: relative;
-    padding-left: 1.5rem;
     background: var(--cv-bg-subtle) !important;
 }
 
-.compactview-row--translation .compactview-row__icon--translation {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    opacity: 0.85;
-}
-
-.compactview-row--translation .compactview-row__icon--translation .icon {
-    width: 16px;
-    height: 16px;
-}
-
-.compactview-row--translation-untranslated .compactview-row__icon--translation {
-    opacity: 0.4;
-}
-
-.compactview-row__translation-branch {
-    position: absolute;
-    left: 0.5rem;
-    top: 0;
-    bottom: 0;
-    width: 0.75rem;
-    pointer-events: none;
-}
-
-.compactview-row__translation-branch::before {
+.compactview-row--translation .compactview-td--icon::before {
     content: "";
     position: absolute;
-    left: 0;
+    left: calc(50% - 1px);
     top: 0;
-    bottom: 0;
-    width: 2px;
-    background: color-mix(in srgb, var(--cv-accent) 40%, transparent);
-}
-
-.compactview-row__translation-branch::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 50%;
-    width: 0.625rem;
-    height: 2px;
-    background: color-mix(in srgb, var(--cv-accent) 40%, transparent);
-    border-bottom-left-radius: 2px;
-}
-
-/* Last translation in its group gets a half-height vertical line so the
-   branch ends cleanly at the T connector. Uses :has() which is widely
-   supported in TYPO3 v14's target browsers. */
-.compactview-row--translation:has(+ .compactview-row:not(.compactview-row--translation)) .compactview-row__translation-branch::before,
-.compactview-row--translation:last-child .compactview-row__translation-branch::before {
     bottom: 50%;
+    width: 2px;
+    background: var(--cv-border);
+}
+
+.compactview-row--translation .compactview-td--icon::after {
+    content: "";
+    position: absolute;
+    left: calc(50% - 1px);
+    top: 50%;
+    width: 0.375rem;
+    height: 2px;
+    background: var(--cv-border);
+}
+
+/* Last translation in its group keeps the short vertical line — it's
+   already short by default (bottom: 50%), so nothing to add. */
+
+.compactview-row--translation .compactview-row__icon {
+    opacity: 0.55;
+    position: relative;
+    z-index: 1; /* sit above the branch connector */
+}
+
+.compactview-row--translation-untranslated .compactview-row__icon {
+    opacity: 0.3;
 }
 
 /* Inline flag icon that sits in front of a translation title */

@@ -26,21 +26,14 @@
     </f:if>
 
     <f:comment>
-        Icon column: same record icon as the parent (pre-computed and
-        dimmed) so users see at a glance the record type. The flag in the
-        Header column conveys the language.
+        Icon column uses the exact same markup as the parent row. The
+        parent's record icon repeats here (dimmed via CSS) so the column
+        no longer reads as an empty gap. A tree-connector line is drawn
+        as a ::before pseudo on the cell.
     </f:comment>
-    <td class="compactview-td compactview-td--fixed-left compactview-td--icon compactview-td--translation">
-        <span class="compactview-row__translation-branch" aria-hidden="true"></span>
-        <span class="compactview-row__icon compactview-row__icon--translation">
-            <f:if condition="{translation.iconIdentifier}">
-                <f:then>
-                    <core:icon identifier="{translation.iconIdentifier}" size="small" />
-                </f:then>
-                <f:else>
-                    <core:icon identifier="{record.iconIdentifier}" size="small" />
-                </f:else>
-            </f:if>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
+        <span class="compactview-row__icon">
+            <core:icon identifier="{record.iconIdentifier}" size="small" />
         </span>
     </td>
 

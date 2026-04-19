@@ -180,8 +180,8 @@
                 <target>%d von %d übersetzt</target>
             </trans-unit>
             <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
-                <source>All translations complete</source>
-                <target>Alle Übersetzungen vorhanden</target>
+                <source>All elements translated</source>
+                <target>Alle Elemente übersetzt</target>
             </trans-unit>
         </body>
     </file>
