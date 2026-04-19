@@ -7,11 +7,7 @@
     Compact View Row - Table row with fixed left/right columns
 </f:comment>
 
-<f:variable name="groupClass" value="compactview-row--group-odd" />
-<f:if condition="{isEvenGroup}">
-    <f:variable name="groupClass" value="compactview-row--group-even" />
-</f:if>
-<tr class="compactview-row {groupClass}{f:if(condition: record.hidden, then: ' compactview-row--hidden')}{f:if(condition: record.isFreeTranslation, then: ' compactview-row--free')}"
+<tr class="compactview-row {record.groupClass}{f:if(condition: record.hidden, then: ' compactview-row--hidden')}{f:if(condition: record.isFreeTranslation, then: ' compactview-row--free')}"
     data-table="{record.tableName}"
     data-uid="{record.uid}"
     {f:if(condition: multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}>

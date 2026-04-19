@@ -617,6 +617,30 @@ final class RecordListController extends CoreRecordListController
             // Separate connected translations from default-language / free-mode records
             $enrichedRecords = $this->groupTranslationsOnRecords($enrichedRecords, $tableName, $pageId, $recordGridDataProvider);
 
+            // Assign a per-GROUP zebra class here so every row a template
+            // renders (parent + all its translation slots) ends up with the
+            // same `groupClass`. Doing it in PHP removes Fluid's inline
+            // expression / boolean edge cases that were silently dropping
+            // the class client-side.
+            $groupIndex = 0;
+            foreach ($enrichedRecords as &$recordRef) {
+                $groupIndex++;
+                $groupClass = ($groupIndex % 2 === 0)
+                    ? 'compactview-row--group-even'
+                    : 'compactview-row--group-odd';
+                $recordRef['groupClass'] = $groupClass;
+                if (is_array($recordRef['translations'] ?? null)) {
+                    /** @var array<int, array<string, mixed>> $translations */
+                    $translations = $recordRef['translations'];
+                    foreach ($translations as &$translationRef) {
+                        $translationRef['groupClass'] = $groupClass;
+                    }
+                    unset($translationRef);
+                    $recordRef['translations'] = $translations;
+                }
+            }
+            unset($recordRef);
+
             // Sorting dropdown / toggle data
             $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
             $sortingDropdown = $this->buildSortingDropdown(
