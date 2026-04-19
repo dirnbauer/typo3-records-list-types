@@ -9,12 +9,12 @@
         <f:then>
             <f:for each="{tableData}" as="table">
                 <div class="recordlist" id="t3-table-{table.tableName}"
-                     data-multi-record-selection-identifier="t3-table-{table.tableName}">
+                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
                     <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
                     <input type="hidden" name="cmd_table" value="{table.tableName}" />
                     <input type="hidden" name="cmd" />
                     <f:comment>Table header - matches native List View styling exactly</f:comment>
-                    <div class="recordlist-heading multi-record-selection-panel">
+                    <div class="recordlist-heading{f:if(condition: table.multiSelectEnabled, then: ' multi-record-selection-panel')}">
                         <div class="recordlist-heading-row">
                             <f:comment>Title section with table name link - identical to core</f:comment>
                             <div class="recordlist-heading-title">
@@ -46,7 +46,7 @@
                         </div>
 
                         <f:comment>Multi Record Selection action bar (hidden, shown by JS when records selected)</f:comment>
-                        <f:if condition="{table.multiRecordSelectionActionsHtml}">
+                        <f:if condition="{table.multiSelectEnabled} && {table.multiRecordSelectionActionsHtml}">
                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
                                 <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
                                     <span class="t3js-multi-record-selection-table-title">
@@ -72,34 +72,36 @@
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
                                     <tr>
-                                        <f:comment>Checkbox column with Check All / Uncheck All / Toggle dropdown (matches TYPO3 core DatabaseRecordList::renderCheckboxActions exactly)</f:comment>
-                                        <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
-                                            <div class="btn-group dropdown">
-                                                <button type="button" class="dropdown-toggle dropdown-toggle-link t3js-multi-record-selection-check-actions-toggle" data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false" aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.openSelectionOptions', default: 'Open selection options')}">
-                                                    <core:icon identifier="actions-selection" size="small" />
-                                                </button>
-                                                <ul class="dropdown-menu t3js-multi-record-selection-check-actions">
-                                                    <li>
-                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-all" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll', default: 'Check All')}">
-                                                            <core:icon identifier="actions-selection-elements-all" size="small" />
-                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll" default="Check All" />
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-none" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll', default: 'Uncheck All')}">
-                                                            <core:icon identifier="actions-selection-elements-none" size="small" />
-                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll" default="Uncheck All" />
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="toggle" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection', default: 'Toggle Selection')}">
-                                                            <core:icon identifier="actions-selection-elements-invert" size="small" />
-                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection" default="Toggle Selection" />
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </th>
+                                        <f:if condition="{table.multiSelectEnabled}">
+                                            <f:comment>Checkbox column with Check All / Uncheck All / Toggle dropdown (matches TYPO3 core DatabaseRecordList::renderCheckboxActions exactly)</f:comment>
+                                            <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
+                                                <div class="btn-group dropdown">
+                                                    <button type="button" class="dropdown-toggle dropdown-toggle-link t3js-multi-record-selection-check-actions-toggle" data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false" aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.openSelectionOptions', default: 'Open selection options')}">
+                                                        <core:icon identifier="actions-selection" size="small" />
+                                                    </button>
+                                                    <ul class="dropdown-menu t3js-multi-record-selection-check-actions">
+                                                        <li>
+                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-all" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll', default: 'Check All')}">
+                                                                <core:icon identifier="actions-selection-elements-all" size="small" />
+                                                                <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll" default="Check All" />
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-none" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll', default: 'Uncheck All')}">
+                                                                <core:icon identifier="actions-selection-elements-none" size="small" />
+                                                                <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll" default="Uncheck All" />
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="toggle" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection', default: 'Toggle Selection')}">
+                                                                <core:icon identifier="actions-selection-elements-invert" size="small" />
+                                                                <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection" default="Toggle Selection" />
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </th>
+                                        </f:if>
 
                                         <f:comment>Icon column (no sorting)</f:comment>
                                         <th class="compactview-th compactview-th--fixed-left compactview-th--icon"></th>
@@ -121,12 +123,12 @@
                                         <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
                                     </tr>
                                 </thead>
-                                <tbody class="compactview-tbody" data-multi-record-selection-row-selection="true">
+                                <tbody class="compactview-tbody" {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-row-selection=\"true\"')}>
                                     <f:for each="{table.records}" as="record">
-                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns}" />
+                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, multiSelectEnabled: table.multiSelectEnabled}" />
                                         <f:if condition="{record.translations}">
                                             <f:for each="{record.translations}" as="translation">
-                                                <f:render partial="TranslationRowCompact" arguments="{record: record, translation: translation, tableConfig: table.tableConfig}" />
+                                                <f:render partial="TranslationRowCompact" arguments="{record: record, translation: translation, tableConfig: table.tableConfig, multiSelectEnabled: table.multiSelectEnabled}" />
                                             </f:for>
                                         </f:if>
                                     </f:for>

@@ -20,14 +20,16 @@
     data-parent-uid="{record.uid}"
     data-language-id="{translation.languageId}">
 
-    <f:comment>Empty selection cell (translations are edited via their parent)</f:comment>
-    <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox"></td>
+    <f:if condition="{multiSelectEnabled}">
+        <f:comment>Empty selection cell (translations are edited via their parent)</f:comment>
+        <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox"></td>
+    </f:if>
 
-    <f:comment>Flag + language badge so the row is instantly scan-able</f:comment>
+    <f:comment>Icon column mirrors the parent row: record icon + branch line</f:comment>
     <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
         <span class="compactview-row__translation-branch" aria-hidden="true"></span>
-        <span class="compactview-row__flag" title="{translation.languageTitle}">
-            <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+        <span class="compactview-row__icon compactview-row__icon--translation">
+            <core:icon identifier="{record.iconIdentifier}" size="small" />
         </span>
     </td>
 
@@ -43,9 +45,12 @@
         </f:if>
     </td>
 
-    <f:comment>Title column — language chip up front for quick scanning</f:comment>
+    <f:comment>Title column — flag first (language is identifiable at a glance),
+        then the translated title or a "Not translated" placeholder.</f:comment>
     <td class="compactview-td compactview-td--fixed-left compactview-td--title">
-        <span class="compactview-row__lang-chip">{translation.languageTitle}</span>
+        <span class="compactview-row__lang-flag" title="{translation.languageTitle}" aria-label="{translation.languageTitle}">
+            <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+        </span>
         <f:if condition="{translation.state} == 'translated'">
             <f:then>
                 <f:if condition="{translation.permissions.canEdit}">

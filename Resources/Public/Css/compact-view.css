@@ -891,20 +891,32 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     bottom: 50%;
 }
 
-.compactview-row--translation .compactview-row__flag {
+.compactview-row__icon--translation {
+    opacity: 0.55;
+}
+
+/* Inline flag icon that sits in front of a translation title */
+.compactview-row__lang-flag {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
+    margin-right: 0.375rem;
+    vertical-align: -3px;
 }
 
-.compactview-row--translation .compactview-row__flag .icon {
+.compactview-row__lang-flag .icon {
     width: 16px;
     height: 16px;
 }
 
-/* Language chip: short, muted pill inline with the title */
+.compactview-row--translation-untranslated .compactview-row__lang-flag {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+}
+
+/* FREE · {lang} chip for non-connected translation rows */
 .compactview-row__lang-chip {
     display: inline-flex;
     align-items: center;

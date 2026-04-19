@@ -10,17 +10,19 @@
 <tr class="compactview-row{f:if(condition: record.hidden, then: ' compactview-row--hidden')}{f:if(condition: record.isFreeTranslation, then: ' compactview-row--free')}"
     data-table="{record.tableName}"
     data-uid="{record.uid}"
-    data-multi-record-selection-element="true">
+    {f:if(condition: multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}>
 
-    <f:comment>Fixed left: Multi Record Selection checkbox (TYPO3 core API)</f:comment>
-    <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox">
-        <span class="form-check form-check-type-toggle">
-            <input class="form-check-input t3js-multi-record-selection-check"
-                   type="checkbox"
-                   name="CBC[{record.tableName}|{record.uid}]"
-                   value="1" />
-        </span>
-    </td>
+    <f:if condition="{multiSelectEnabled}">
+        <f:comment>Fixed left: Multi Record Selection checkbox (TYPO3 core API)</f:comment>
+        <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox">
+            <span class="form-check form-check-type-toggle">
+                <input class="form-check-input t3js-multi-record-selection-check"
+                       type="checkbox"
+                       name="CBC[{record.tableName}|{record.uid}]"
+                       value="1" />
+            </span>
+        </td>
+    </f:if>
     
     <f:comment>Fixed left: Icon</f:comment>
     <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
