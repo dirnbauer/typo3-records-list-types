@@ -904,6 +904,20 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     vertical-align: -3px;
 }
 
+/* Keep flag + title/placeholder on a single line inside translation rows.
+   The base title-link is `display: block`, which we opt out of here so the
+   flag sits next to the title, not above it. inline-block respects the
+   max-width/overflow combo needed for ellipsis truncation. */
+.compactview-row--translation .compactview-row__title-link,
+.compactview-row--translation .compactview-row__title-placeholder {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 1.75rem);
+    vertical-align: middle;
+}
+
 .compactview-row__lang-flag .icon {
     width: 16px;
     height: 16px;
