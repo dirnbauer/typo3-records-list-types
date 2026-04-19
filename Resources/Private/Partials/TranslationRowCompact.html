@@ -15,7 +15,11 @@
     - tableConfig: table config (for hiddenField on hide/show buttons)
 </f:comment>
 
-<tr class="compactview-row compactview-row--translation compactview-row--translation-{translation.state}{f:if(condition: translation.hidden, then: ' compactview-row--hidden')}{f:if(condition: translation.workspaceState, then: ' compactview-row--ws-{translation.workspaceState}')} {groupClass}"
+<f:variable name="groupClass" value="compactview-row--group-odd" />
+<f:if condition="{groupCycle} % 2 == 0">
+    <f:variable name="groupClass" value="compactview-row--group-even" />
+</f:if>
+<tr class="compactview-row compactview-row--translation compactview-row--translation-{translation.state} {groupClass}{f:if(condition: translation.hidden, then: ' compactview-row--hidden')}{f:if(condition: translation.workspaceState, then: ' compactview-row--ws-{translation.workspaceState}')}"
     data-table="{record.tableName}"
     data-parent-uid="{record.uid}"
     data-language-id="{translation.languageId}">
