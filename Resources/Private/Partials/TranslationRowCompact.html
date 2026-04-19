@@ -26,17 +26,16 @@
     </f:if>
 
     <f:comment>
-        Icon column: record icon with TYPO3's translate overlay (automatic
-        for translated records) so users see at a glance that the row is a
-        translation. Untranslated placeholders show the parent's bare icon
-        dimmed — no overlay yet because no translation exists.
+        Icon column: same record icon as the parent (pre-computed and
+        dimmed) so users see at a glance the record type. The flag in the
+        Header column conveys the language.
     </f:comment>
     <td class="compactview-td compactview-td--fixed-left compactview-td--icon compactview-td--translation">
         <span class="compactview-row__translation-branch" aria-hidden="true"></span>
         <span class="compactview-row__icon compactview-row__icon--translation">
-            <f:if condition="{translation.state} == 'translated'">
+            <f:if condition="{translation.iconIdentifier}">
                 <f:then>
-                    <core:iconForRecord table="{record.tableName}" row="{translation.rawRecord}" />
+                    <core:icon identifier="{translation.iconIdentifier}" size="small" />
                 </f:then>
                 <f:else>
                     <core:icon identifier="{record.iconIdentifier}" size="small" />
