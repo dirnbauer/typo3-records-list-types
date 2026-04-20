@@ -1,0 +1,1060 @@
+From fb0e292f6e89098e34cd9dc0d5a799693ebbe8ac Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Mon, 20 Apr 2026 20:32:04 +0000
+Subject: [PATCH] Sync examples with current records_list_types systematic
+
+Bring the example Timeline and Catalog Fluid templates fully in line
+with the current records_list_types template systematic so they keep
+working as the main extension evolves:
+
+- shared TableHeading partial for the table heading (single-table mode
+  + multi-record-selection panel)
+- TYPO3 core f:sanitize.html(build: 'records-list-types-backend-fragments')
+  for TYPO3-generated backend fragments (action buttons, multi-record-
+  selection actions)
+- TYPO3 14 native <typo3-backend-contextual-record-edit-trigger> for
+  every record edit link (titles, image links, edit buttons)
+- permission-aware action rendering using the precomputed
+  record.permissions.* flags (canEdit, canToggleVisibility, canDelete,
+  canShowInfo, canHistory, canCopy)
+- 'More actions' popover button (popovertarget + popover) mirroring the
+  built-in Card / TeaserCard / CompactRow partials
+- shared Pagination partial for single-table pagination
+- multi-record-selection wiring (data-multi-record-selection-* attributes
+  + checkbox name="CBC[table|uid]") gated on table.multiSelectEnabled
+
+Add translatable XLIFF labels for every example view type (Timeline,
+Catalog, Address Book, Event List, Gallery, Dashboard) plus the
+template strings (No image, Hidden, Edit, Show, Hide, Delete, More
+actions, Info, History, Copy, Cut), in English and German, and switch
+the TSconfig labels and descriptions to LLL: references that resolve
+through the standard XLIFF override mechanism. The image preview hint
+keeps reusing the existing image.previewOnly translation from the main
+records_list_types extension.
+
+Drop the dead partialRootPath references from setup.tsconfig (no
+custom partials shipped here; the built-in records_list_types partial
+paths are already fallback paths).
+
+Refresh README accordingly.
+---
+ Configuration/TsConfig/Page/setup.tsconfig    |  30 ++-
+ README.md                                     |  52 +++-
+ .../Backend/Templates/CatalogView.html        | 234 +++++++++++-------
+ .../Backend/Templates/TimelineView.html       | 217 +++++++++-------
+ Resources/Private/Language/de.locallang.xlf   | 111 +++++++++
+ Resources/Private/Language/locallang.xlf      |  87 +++++++
+ 6 files changed, 526 insertions(+), 205 deletions(-)
+ create mode 100644 Resources/Private/Language/de.locallang.xlf
+ create mode 100644 Resources/Private/Language/locallang.xlf
+
+diff --git a/Configuration/TsConfig/Page/setup.tsconfig b/Configuration/TsConfig/Page/setup.tsconfig
+index 1255039..bc647bb 100644
+--- a/Configuration/TsConfig/Page/setup.tsconfig
++++ b/Configuration/TsConfig/Page/setup.tsconfig
+@@ -18,16 +18,15 @@ mod.web_list.viewMode {
+     # -------------------------------------------------------------------------
+     # Timeline View
+     # Vertical timeline with date markers. Custom template using the
+-    # shared records_list_types heading/systematic + TYPO3 core sanitization
++    # shared records_list_types heading/systematic + TYPO3 core sanitization.
+     # Best for: events, changelog, history, milestones
+     # -------------------------------------------------------------------------
+     types.timeline {
+-        label = Timeline
++        label = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.timeline
+         icon = actions-calendar
+-        description = Chronological timeline with date markers
++        description = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.timeline.description
+         template = TimelineView
+         templateRootPath = EXT:records_list_examples/Resources/Private/Backend/Templates/
+-        partialRootPath = EXT:records_list_examples/Resources/Private/Backend/Partials/
+         css = EXT:records_list_examples/Resources/Public/Css/timeline.css
+         displayColumns = label,datetime,teaser
+         columnsFromTCA = 0
+@@ -37,16 +36,15 @@ mod.web_list.viewMode {
+     # -------------------------------------------------------------------------
+     # Catalog View
+     # Large image cards with overlay title. Custom template using the
+-    # shared records_list_types heading/systematic + TYPO3 core sanitization
++    # shared records_list_types heading/systematic + TYPO3 core sanitization.
+     # Best for: products, portfolio, team members, media assets
+     # -------------------------------------------------------------------------
+     types.catalog {
+-        label = Catalog
++        label = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.catalog
+         icon = actions-viewmode-tiles
+-        description = Visual catalog with large image cards
++        description = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.catalog.description
+         template = CatalogView
+         templateRootPath = EXT:records_list_examples/Resources/Private/Backend/Templates/
+-        partialRootPath = EXT:records_list_examples/Resources/Private/Backend/Partials/
+         css = EXT:records_list_examples/Resources/Public/Css/catalog.css
+         displayColumns = label,teaser
+         columnsFromTCA = 0
+@@ -59,9 +57,9 @@ mod.web_list.viewMode {
+     # Best for: contacts, members, employees, organizations
+     # -------------------------------------------------------------------------
+     types.addressbook {
+-        label = Address Book
++        label = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.addressbook
+         icon = actions-user
+-        description = Dense contact list with key fields
++        description = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.addressbook.description
+         template = CompactView
+         css = EXT:records_list_types/Resources/Public/Css/compact-view.css
+         displayColumns = label,teaser
+@@ -75,9 +73,9 @@ mod.web_list.viewMode {
+     # Best for: events, conferences, meetups, deadlines
+     # -------------------------------------------------------------------------
+     types.eventlist {
+-        label = Event List
++        label = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.eventlist
+         icon = actions-clock
+-        description = Date-focused event cards
++        description = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.eventlist.description
+         template = TeaserView
+         css = EXT:records_list_types/Resources/Public/Css/teaser-view.css
+         displayColumns = label,datetime,teaser
+@@ -91,9 +89,9 @@ mod.web_list.viewMode {
+     # Best for: images, media files, artwork, screenshots
+     # -------------------------------------------------------------------------
+     types.gallery {
+-        label = Gallery
++        label = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.gallery
+         icon = actions-image
+-        description = Photo gallery with large thumbnails
++        description = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.gallery.description
+         template = GridView
+         css = EXT:records_list_types/Resources/Public/Css/grid-view.css
+         displayColumns = label
+@@ -107,9 +105,9 @@ mod.web_list.viewMode {
+     # Best for: editorial overview, content dashboard, record management
+     # -------------------------------------------------------------------------
+     types.dashboard {
+-        label = Dashboard
++        label = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.dashboard
+         icon = content-widget-list
+-        description = Overview cards with editor-selected columns
++        description = LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:viewMode.dashboard.description
+         template = GridView
+         css = EXT:records_list_types/Resources/Public/Css/grid-view.css
+         columnsFromTCA = 1
+diff --git a/README.md b/README.md
+index f8718b1..5c56963 100644
+--- a/README.md
++++ b/README.md
+@@ -15,6 +15,15 @@ Example view types for the [Records List Types](https://github.com/dirnbauer/typ
+ 
+ **Timeline** and **Catalog** have custom templates and CSS with full dark mode support. The other 4 reuse built-in templates with different configurations -- demonstrating that many custom view types need only TSconfig and optional assets.
+ 
++The two custom templates follow the current `records_list_types` template systematic, so they keep working as the main extension evolves:
++
++- shared `TableHeading` partial for the table heading (single-table mode + multi-record-selection panel)
++- TYPO3 core `f:sanitize.html(build: 'records-list-types-backend-fragments')` for TYPO3-generated backend fragments (action buttons, multi-record-selection actions)
++- TYPO3 14 native `<typo3-backend-contextual-record-edit-trigger>` for record edit links
++- permission-aware action rendering (`record.permissions.canEdit`, `canToggleVisibility`, `canDelete`, `canShowInfo`, `canHistory`, `canCopy`)
++- "More actions" popover that reuses the same pattern as the records_list_types built-in templates
++- shared `Pagination` partial for single-table pagination
++
+ All views follow TYPO3 Core pagination behavior: multi-table mode shows a preview with "Expand table" button, single-table mode shows full pagination.
+ 
+ ## Requirements
+@@ -39,6 +48,17 @@ Activate the extension:
+ 
+ After activation, the 6 new custom view types appear in the view switcher in **Content > Records**.
+ 
++## Localization
++
++All view-type labels (Timeline, Catalog, Address Book, Event List, Gallery, Dashboard) and descriptions are translatable via XLIFF and shipped in:
++
++- `Resources/Private/Language/locallang.xlf` (English, default)
++- `Resources/Private/Language/de.locallang.xlf` (German)
++
++The custom Timeline and Catalog templates also use translated labels for action buttons and template strings (`No image`, `Hidden`, `Edit`, `Show`, `Hide`, `Delete`, `More actions`, `Info`, `History`, `Copy`, `Cut`). The image preview hint reuses the existing `image.previewOnly` translation from the main `records_list_types` extension.
++
++To override or extend the translations, drop your own `locallang.xlf` overrides into your sitepackage and TYPO3 will pick them up via the standard XLIFF override mechanism.
++
+ ## Customization
+ 
+ ### Restrict views to specific pages
+@@ -87,19 +107,23 @@ mod.web_list.viewMode.types.gallery.itemsPerPage = 96
+ ```
+ records_list_examples/
+ ├── Configuration/
++│   ├── page.tsconfig                       # Loads the setup.tsconfig
+ │   └── TsConfig/Page/
+-│       └── setup.tsconfig              # All 6 view type registrations
++│       └── setup.tsconfig                  # All 6 view type registrations
+ ├── Resources/
+-│   ├── Private/Backend/
+-│   │   └── Templates/
+-│   │       ├── TimelineView.html       # Timeline: vertical timeline layout
+-│   │       └── CatalogView.html        # Catalog: large image card grid
++│   ├── Private/
++│   │   ├── Backend/
++│   │   │   └── Templates/
++│   │   │       ├── TimelineView.html       # Timeline: vertical timeline layout
++│   │   │       └── CatalogView.html        # Catalog: large image card grid
++│   │   └── Language/
++│   │       ├── locallang.xlf               # English labels (view types + template strings)
++│   │       └── de.locallang.xlf            # German translations
+ │   └── Public/Css/
+-│       ├── timeline.css                # Timeline styles (dark mode support)
+-│       └── catalog.css                 # Catalog styles (dark mode support)
++│       ├── timeline.css                    # Timeline styles (dark mode support)
++│       └── catalog.css                     # Catalog styles (dark mode support)
+ ├── composer.json
+ ├── ext_emconf.php
+-├── ext_localconf.php
+ └── README.md
+ ```
+ 
+@@ -107,17 +131,21 @@ records_list_examples/
+ 
+ This extension contains **zero PHP classes**. It registers custom view types purely through TSconfig and Fluid templates:
+ 
+-- **TSconfig** (`setup.tsconfig`) -- registers 6 view types with labels, icons, templates, CSS, and column configuration
+-- **Templates** (`TimelineView.html`, `CatalogView.html`) -- custom Fluid templates for Timeline and Catalog using the current `records_list_types` heading/sanitizer systematic
++- **TSconfig** (`setup.tsconfig`) -- registers 6 view types with translated labels (`LLL:` references), icons, templates, CSS, and column configuration
++- **Templates** (`TimelineView.html`, `CatalogView.html`) -- custom Fluid templates for Timeline and Catalog using the current `records_list_types` heading/sanitizer/permissions/popover systematic
+ - **CSS** (`timeline.css`, `catalog.css`) -- view-specific styles using TYPO3 CSS variables for dark mode
++- **XLIFF** (`locallang.xlf`, `de.locallang.xlf`) -- translatable labels for view types, descriptions, action buttons, and template strings
+ 
+ The other 4 views (Address Book, Event List, Gallery, Dashboard) reuse the built-in templates (`CompactView`, `TeaserView`, `GridView`) from `records_list_types` -- they only need TSconfig configuration.
+ 
+-This is the pattern for creating your own custom view types: TSconfig + optional template + optional CSS. The two custom templates in this repo also follow the current `records_list_types` systematic for:
++This is the pattern for creating your own custom view types: TSconfig + optional template + optional CSS. The two custom templates in this repo demonstrate the current `records_list_types` systematic for:
+ 
+ - shared `TableHeading` partial rendering
+ - TYPO3 core `f:sanitize.html(build: 'records-list-types-backend-fragments')` for TYPO3/core-generated backend fragments
+-- compatibility with the built-in pagination partial and multi-record-selection handling
++- TYPO3 14 native contextual record edit trigger (`<typo3-backend-contextual-record-edit-trigger>`)
++- permission-aware actions (`record.permissions.*`)
++- "More actions" popover button (`popovertarget` + `popover`) that mirrors the built-in Card / TeaserCard / CompactRow partials
++- compatibility with the built-in `Pagination` partial and Multi Record Selection handling
+ 
+ See the [Custom View Types documentation](https://github.com/dirnbauer/typo3-records-list-types/blob/main/Documentation/CustomViewTypes.md) for full details.
+ 
+diff --git a/Resources/Private/Backend/Templates/CatalogView.html b/Resources/Private/Backend/Templates/CatalogView.html
+index 85301dd..3f6a4cf 100644
+--- a/Resources/Private/Backend/Templates/CatalogView.html
++++ b/Resources/Private/Backend/Templates/CatalogView.html
+@@ -6,6 +6,13 @@
+ <f:comment>
+     Catalog View - Large image cards with overlay title.
+     Part of EXT:records_list_examples.
++
++    Mirrors the records_list_types template systematic:
++    - shared TableHeading partial for the table heading
++    - TYPO3 core f:sanitize.html for backend-generated action button fragments
++    - TYPO3 14 native typo3-backend-contextual-record-edit-trigger for edit links
++    - permission-aware action rendering (canEdit, canToggleVisibility, canDelete, …)
++    - shared Pagination partial for single-table pagination
+ </f:comment>
+ 
+ <div class="rle-catalog-container">
+@@ -14,12 +21,12 @@
+         <f:then>
+             <f:for each="{tableData}" as="table">
+                 <div class="recordlist" id="t3-table-{table.tableName}"
+-                     data-multi-record-selection-identifier="t3-table-{table.tableName}">
++                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
+                     <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
+                     <input type="hidden" name="cmd_table" value="{table.tableName}" />
+                     <input type="hidden" name="cmd" />
+                     <f:comment>Table heading (shared records_list_types systematic)</f:comment>
+-                    <div class="recordlist-heading multi-record-selection-panel">
++                    <div class="recordlist-heading{f:if(condition: table.multiSelectEnabled, then: ' multi-record-selection-panel')}">
+                         <div class="recordlist-heading-row">
+                             <div class="recordlist-heading-title">
+                                 <f:render partial="TableHeading" arguments="{heading: table.tableHeading}" />
+@@ -38,7 +45,7 @@
+                         </div>
+ 
+                         <f:comment>Multi Record Selection action bar</f:comment>
+-                        <f:if condition="{table.multiRecordSelectionActionsHtml}">
++                        <f:if condition="{table.multiSelectEnabled} && {table.multiRecordSelectionActionsHtml}">
+                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
+                                 <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
+                                     <span class="t3js-multi-record-selection-table-title">
+@@ -58,28 +65,41 @@
+                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+                         </f:if>
+ 
+-                        <div class="rle-catalog-grid" data-multi-record-selection-row-selection="true">
++                        <div class="rle-catalog-grid"
++                             {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-row-selection=\"true\"')}>
+                             <f:for each="{table.records}" as="record">
+                                 <div class="rle-catalog-card{f:if(condition: record.hidden, then: ' rle-catalog-card--hidden')}"
+-                                     data-multi-record-selection-element="true"
++                                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}
++                                     data-table="{record.tableName}"
+                                      data-uid="{record.uid}">
+                                     <f:comment>Image area</f:comment>
+                                     <div class="rle-catalog-card__image">
+                                         <f:if condition="{record.thumbnailUrl}">
+                                             <f:then>
+-                                                <be:link.editRecord uid="{record.uid}" table="{record.tableName}">
+-                                                    <img src="{record.thumbnailUrl}" class="rle-catalog-card__img" alt="{record.title}" loading="lazy" />
+-                                                </be:link.editRecord>
++                                                <f:if condition="{record.permissions.canEdit}">
++                                                    <f:then>
++                                                        <typo3-backend-contextual-record-edit-trigger
++                                                            edit-url="{record.editUrl}"
++                                                            url="{record.contextualEditUrl}">
++                                                            <img src="{record.thumbnailUrl}" class="rle-catalog-card__img" alt="{record.title}" loading="lazy" />
++                                                        </typo3-backend-contextual-record-edit-trigger>
++                                                    </f:then>
++                                                    <f:else>
++                                                        <img src="{record.thumbnailUrl}" class="rle-catalog-card__img" alt="{record.title}" loading="lazy" />
++                                                    </f:else>
++                                                </f:if>
+                                             </f:then>
+                                             <f:else>
+                                                 <div class="rle-catalog-card__placeholder">
+                                                     <core:icon identifier="actions-image" size="default" />
+-                                                    <span class="rle-catalog-card__placeholder-text">No image</span>
++                                                    <span class="rle-catalog-card__placeholder-text">
++                                                        <f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:catalog.placeholder.noImage" default="No image" />
++                                                    </span>
+                                                 </div>
+                                             </f:else>
+                                         </f:if>
+ 
+-                                        <f:comment>Preview hint - shown when image exists</f:comment>
++                                        <f:comment>Preview hint - shown when image exists, reuses records_list_types translation</f:comment>
+                                         <f:if condition="{record.thumbnailUrl}">
+                                             <div class="rle-catalog-card__image-hint">
+                                                 <core:icon identifier="actions-info" size="small" />
+@@ -90,7 +110,8 @@
+                                         <f:comment>Hidden badge overlay</f:comment>
+                                         <f:if condition="{record.hidden}">
+                                             <span class="rle-catalog-card__badge rle-catalog-card__badge--hidden">
+-                                                <core:icon identifier="actions-edit-hide" size="small" /> Hidden
++                                                <core:icon identifier="actions-edit-hide" size="small" />
++                                                <f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:catalog.badge.hidden" default="Hidden" />
+                                             </span>
+                                         </f:if>
+                                     </div>
+@@ -98,15 +119,27 @@
+                                     <f:comment>Info area</f:comment>
+                                     <div class="rle-catalog-card__body">
+                                         <div class="rle-catalog-card__title-row">
+-                                            <label class="rle-catalog-card__checkbox">
+-                                                <input class="form-check-input t3js-multi-record-selection-check"
+-                                                       type="checkbox"
+-                                                       name="CBC[{record.tableName}|{record.uid}]"
+-                                                       value="1" />
+-                                            </label>
+-                                            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" class="rle-catalog-card__title">
+-                                                {record.title}
+-                                            </be:link.editRecord>
++                                            <f:if condition="{table.multiSelectEnabled}">
++                                                <label class="rle-catalog-card__checkbox">
++                                                    <input class="form-check-input t3js-multi-record-selection-check"
++                                                           type="checkbox"
++                                                           name="CBC[{record.tableName}|{record.uid}]"
++                                                           value="1" />
++                                                </label>
++                                            </f:if>
++                                            <f:if condition="{record.permissions.canEdit}">
++                                                <f:then>
++                                                    <typo3-backend-contextual-record-edit-trigger
++                                                        class="rle-catalog-card__title"
++                                                        edit-url="{record.editUrl}"
++                                                        url="{record.contextualEditUrl}">
++                                                        {record.title}
++                                                    </typo3-backend-contextual-record-edit-trigger>
++                                                </f:then>
++                                                <f:else>
++                                                    <span class="rle-catalog-card__title">{record.title}</span>
++                                                </f:else>
++                                            </f:if>
+                                             <span class="rle-catalog-card__uid">#{record.uid}</span>
+                                         </div>
+ 
+@@ -117,78 +150,103 @@
+                                         </f:for>
+ 
+                                         <div class="rle-catalog-card__actions">
+-                                            <be:link.editRecord uid="{record.uid}" table="{record.tableName}"
+-                                                class="rle-catalog-card__action" title="Edit">
+-                                                <core:icon identifier="actions-open" size="small" />
+-                                            </be:link.editRecord>
+-                                            <f:if condition="{record.hidden}">
+-                                                <f:then>
+-                                                    <button type="button" class="rle-catalog-card__action"
+-                                                            data-gridview-action="show"
+-                                                            data-table="{record.tableName}" data-uid="{record.uid}" title="Show">
+-                                                        <core:icon identifier="actions-edit-unhide" size="small" />
+-                                                    </button>
+-                                                </f:then>
+-                                                <f:else>
+-                                                    <button type="button" class="rle-catalog-card__action"
+-                                                            data-gridview-action="hide"
+-                                                            data-table="{record.tableName}" data-uid="{record.uid}" title="Hide">
+-                                                        <core:icon identifier="actions-edit-hide" size="small" />
+-                                                    </button>
+-                                                </f:else>
++                                            <f:comment>Edit (TYPO3 14 native contextual edit trigger)</f:comment>
++                                            <f:if condition="{record.permissions.canEdit}">
++                                                <typo3-backend-contextual-record-edit-trigger
++                                                    class="rle-catalog-card__action"
++                                                    title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.edit', default: 'Edit')}"
++                                                    edit-url="{record.editUrl}"
++                                                    url="{record.contextualEditUrl}">
++                                                    <core:icon identifier="actions-open" size="small" />
++                                                </typo3-backend-contextual-record-edit-trigger>
++                                            </f:if>
++
++                                            <f:comment>Visibility toggle (permission-aware)</f:comment>
++                                            <f:if condition="{record.permissions.canToggleVisibility}">
++                                                <f:if condition="{record.hidden}">
++                                                    <f:then>
++                                                        <button type="button" class="rle-catalog-card__action"
++                                                                data-gridview-action="show"
++                                                                data-table="{record.tableName}" data-uid="{record.uid}"
++                                                                data-hidden-field="{tableConfig.hiddenField}"
++                                                                title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.show', default: 'Show')}">
++                                                            <core:icon identifier="actions-edit-unhide" size="small" />
++                                                        </button>
++                                                    </f:then>
++                                                    <f:else>
++                                                        <button type="button" class="rle-catalog-card__action"
++                                                                data-gridview-action="hide"
++                                                                data-table="{record.tableName}" data-uid="{record.uid}"
++                                                                data-hidden-field="{tableConfig.hiddenField}"
++                                                                title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.hide', default: 'Hide')}">
++                                                            <core:icon identifier="actions-edit-hide" size="small" />
++                                                        </button>
++                                                    </f:else>
++                                                </f:if>
++                                            </f:if>
++
++                                            <f:if condition="{record.permissions.canDelete}">
++                                                <button type="button" class="rle-catalog-card__action rle-catalog-card__action--danger"
++                                                        data-gridview-action="delete"
++                                                        data-table="{record.tableName}" data-uid="{record.uid}"
++                                                        title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.delete', default: 'Delete')}">
++                                                    <core:icon identifier="actions-edit-delete" size="small" />
++                                                </button>
+                                             </f:if>
+-                                            <button type="button" class="rle-catalog-card__action rle-catalog-card__action--danger"
+-                                                    data-gridview-action="delete"
+-                                                    data-table="{record.tableName}" data-uid="{record.uid}" title="Delete">
+-                                                <core:icon identifier="actions-edit-delete" size="small" />
+-                                            </button>
+ 
+-                                            <f:comment>More Actions dropdown</f:comment>
++                                            <f:comment>More Actions popover (matches records_list_types pattern)</f:comment>
++                                            <f:variable name="actionsPopoverId">rle-catalog-actions-{record.tableName}-{record.uid}</f:variable>
+                                             <div class="dropdown">
+-                                                <button type="button" class="rle-catalog-card__action"
+-                                                        data-bs-toggle="dropdown"
+-                                                        aria-expanded="false"
+-                                                        title="More actions">
++                                                <button type="button" class="rle-catalog-card__action dropdown-toggle dropdown-toggle-no-chevron"
++                                                        popovertarget="{actionsPopoverId}"
++                                                        title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.more', default: 'More actions')}"
++                                                        aria-label="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.more', default: 'More actions')}">
+                                                     <core:icon identifier="actions-menu-alternative" size="small" />
+                                                 </button>
+-                                                <ul class="dropdown-menu dropdown-menu-end">
+-                                                    <li>
+-                                                        <a class="dropdown-item" href="#"
+-                                                           data-gridview-action="info"
+-                                                           data-table="{record.tableName}"
+-                                                           data-uid="{record.uid}">
+-                                                            <core:icon identifier="actions-document-info" size="small" />
+-                                                            <span>Info</span>
+-                                                        </a>
+-                                                    </li>
+-                                                    <li>
+-                                                        <a class="dropdown-item" href="#"
+-                                                           data-gridview-action="history"
+-                                                           data-table="{record.tableName}"
+-                                                           data-uid="{record.uid}">
+-                                                            <core:icon identifier="actions-document-history-open" size="small" />
+-                                                            <span>History</span>
+-                                                        </a>
+-                                                    </li>
+-                                                    <li><hr class="dropdown-divider"></li>
+-                                                    <li>
+-                                                        <a class="dropdown-item" href="#"
+-                                                           data-gridview-action="copy"
+-                                                           data-table="{record.tableName}"
+-                                                           data-uid="{record.uid}">
+-                                                            <core:icon identifier="actions-edit-copy" size="small" />
+-                                                            <span>Copy</span>
+-                                                        </a>
+-                                                    </li>
+-                                                    <li>
+-                                                        <a class="dropdown-item" href="#"
+-                                                           data-gridview-action="cut"
+-                                                           data-table="{record.tableName}"
+-                                                           data-uid="{record.uid}">
+-                                                            <core:icon identifier="actions-edit-cut" size="small" />
+-                                                            <span>Cut</span>
+-                                                        </a>
+-                                                    </li>
++                                                <ul id="{actionsPopoverId}" class="dropdown-menu dropdown-menu-end" popover>
++                                                    <f:if condition="{record.permissions.canShowInfo}">
++                                                        <li>
++                                                            <a class="dropdown-item" href="#"
++                                                               data-gridview-action="info"
++                                                               data-table="{record.tableName}"
++                                                               data-uid="{record.uid}">
++                                                                <core:icon identifier="actions-document-info" size="small" />
++                                                                <span><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.info" default="Info" /></span>
++                                                            </a>
++                                                        </li>
++                                                    </f:if>
++                                                    <f:if condition="{record.permissions.canHistory}">
++                                                        <li>
++                                                            <a class="dropdown-item" href="#"
++                                                               data-gridview-action="history"
++                                                               data-table="{record.tableName}"
++                                                               data-uid="{record.uid}">
++                                                                <core:icon identifier="actions-document-history-open" size="small" />
++                                                                <span><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.history" default="History" /></span>
++                                                            </a>
++                                                        </li>
++                                                    </f:if>
++                                                    <f:if condition="{record.permissions.canCopy}">
++                                                        <li><hr class="dropdown-divider"></li>
++                                                        <li>
++                                                            <a class="dropdown-item" href="#"
++                                                               data-gridview-action="copy"
++                                                               data-table="{record.tableName}"
++                                                               data-uid="{record.uid}">
++                                                                <core:icon identifier="actions-edit-copy" size="small" />
++                                                                <span><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.copy" default="Copy" /></span>
++                                                            </a>
++                                                        </li>
++                                                        <li>
++                                                            <a class="dropdown-item" href="#"
++                                                               data-gridview-action="cut"
++                                                               data-table="{record.tableName}"
++                                                               data-uid="{record.uid}">
++                                                                <core:icon identifier="actions-edit-cut" size="small" />
++                                                                <span><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.cut" default="Cut" /></span>
++                                                            </a>
++                                                        </li>
++                                                    </f:if>
+                                                 </ul>
+                                             </div>
+                                         </div>
+@@ -218,7 +276,7 @@
+             <div class="callout callout-info">
+                 <div class="callout-body">
+                     <core:icon identifier="actions-info" size="small" />
+-                    <span class="ms-2">No records found on this page.</span>
++                    <span class="ms-2"><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." /></span>
+                 </div>
+             </div>
+         </f:else>
+diff --git a/Resources/Private/Backend/Templates/TimelineView.html b/Resources/Private/Backend/Templates/TimelineView.html
+index 3ce910e..29a42ca 100644
+--- a/Resources/Private/Backend/Templates/TimelineView.html
++++ b/Resources/Private/Backend/Templates/TimelineView.html
+@@ -7,6 +7,13 @@
+     Timeline View - Classic vertical timeline.
+     Left: date circle. Right: content card.
+     Part of EXT:records_list_examples.
++
++    Mirrors the records_list_types template systematic:
++    - shared TableHeading partial for the table heading
++    - TYPO3 core f:sanitize.html for backend-generated action button fragments
++    - TYPO3 14 native typo3-backend-contextual-record-edit-trigger for edit links
++    - permission-aware action rendering (canEdit, canToggleVisibility, canDelete, …)
++    - shared Pagination partial for single-table pagination
+ </f:comment>
+ 
+ <div class="rle-timeline-container">
+@@ -15,11 +22,11 @@
+         <f:then>
+             <f:for each="{tableData}" as="table">
+                 <div class="recordlist" id="t3-table-{table.tableName}"
+-                     data-multi-record-selection-identifier="t3-table-{table.tableName}">
++                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
+                     <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
+                     <input type="hidden" name="cmd_table" value="{table.tableName}" />
+                     <input type="hidden" name="cmd" />
+-                    <div class="recordlist-heading multi-record-selection-panel">
++                    <div class="recordlist-heading{f:if(condition: table.multiSelectEnabled, then: ' multi-record-selection-panel')}">
+                         <div class="recordlist-heading-row">
+                             <div class="recordlist-heading-title">
+                                 <f:render partial="TableHeading" arguments="{heading: table.tableHeading}" />
+@@ -35,7 +42,7 @@
+                         </div>
+ 
+                         <f:comment>Multi Record Selection action bar</f:comment>
+-                        <f:if condition="{table.multiRecordSelectionActionsHtml}">
++                        <f:if condition="{table.multiSelectEnabled} && {table.multiRecordSelectionActionsHtml}">
+                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
+                                 <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
+                                     <span class="t3js-multi-record-selection-table-title">
+@@ -55,25 +62,24 @@
+                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+                         </f:if>
+ 
+-                        <div class="rle-timeline" data-multi-record-selection-row-selection="true">
++                        <div class="rle-timeline"
++                             {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-row-selection=\"true\"')}>
+                             <f:for each="{table.records}" as="record">
+                                 <div class="rle-timeline__item{f:if(condition: record.hidden, then: ' rle-timeline__item--hidden')}"
+-                                     data-multi-record-selection-element="true"
++                                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}
++                                     data-table="{record.tableName}"
+                                      data-uid="{record.uid}">
+ 
+                                     <f:comment>Left side: date circle</f:comment>
+                                     <div class="rle-timeline__date-col">
+                                         <div class="rle-timeline__date-circle">
+-                                            <f:for each="{record.displayValues}" as="field">
+-                                                <f:if condition="{field.type} == 'datetime' && !{field.isEmpty}">
+-                                                    <span class="rle-timeline__date-value">{field.formatted}</span>
+-                                                </f:if>
+-                                            </f:for>
+-                                            <f:comment>Fallback if no date</f:comment>
+                                             <f:variable name="hasDate" value="0" />
+                                             <f:for each="{record.displayValues}" as="field">
+                                                 <f:if condition="{field.type} == 'datetime' && !{field.isEmpty}">
+-                                                    <f:variable name="hasDate" value="1" />
++                                                    <f:if condition="{hasDate} == 0">
++                                                        <span class="rle-timeline__date-value">{field.formatted}</span>
++                                                        <f:variable name="hasDate" value="1" />
++                                                    </f:if>
+                                                 </f:if>
+                                             </f:for>
+                                             <f:if condition="{hasDate} == 0">
+@@ -87,18 +93,30 @@
+                                     <div class="rle-timeline__content">
+                                         <div class="rle-timeline__card">
+                                             <div class="rle-timeline__header">
+-                                                <label class="rle-timeline__checkbox">
+-                                                    <input class="form-check-input t3js-multi-record-selection-check"
+-                                                           type="checkbox"
+-                                                           name="CBC[{record.tableName}|{record.uid}]"
+-                                                           value="1" />
+-                                                </label>
++                                                <f:if condition="{table.multiSelectEnabled}">
++                                                    <label class="rle-timeline__checkbox">
++                                                        <input class="form-check-input t3js-multi-record-selection-check"
++                                                               type="checkbox"
++                                                               name="CBC[{record.tableName}|{record.uid}]"
++                                                               value="1" />
++                                                    </label>
++                                                </f:if>
+                                                 <span class="rle-timeline__icon">
+                                                     <core:icon identifier="{record.iconIdentifier}" size="small" />
+                                                 </span>
+-                                                <be:link.editRecord uid="{record.uid}" table="{record.tableName}" class="rle-timeline__title">
+-                                                    {record.title}
+-                                                </be:link.editRecord>
++                                                <f:if condition="{record.permissions.canEdit}">
++                                                    <f:then>
++                                                        <typo3-backend-contextual-record-edit-trigger
++                                                            class="rle-timeline__title"
++                                                            edit-url="{record.editUrl}"
++                                                            url="{record.contextualEditUrl}">
++                                                            {record.title}
++                                                        </typo3-backend-contextual-record-edit-trigger>
++                                                    </f:then>
++                                                    <f:else>
++                                                        <span class="rle-timeline__title">{record.title}</span>
++                                                    </f:else>
++                                                </f:if>
+                                                 <span class="rle-timeline__uid">#{record.uid}</span>
+                                             </div>
+ 
+@@ -109,78 +127,99 @@
+                                             </f:for>
+ 
+                                             <div class="rle-timeline__actions">
+-                                                <be:link.editRecord uid="{record.uid}" table="{record.tableName}"
+-                                                    class="rle-timeline__action" title="Edit">
+-                                                    <core:icon identifier="actions-open" size="small" />
+-                                                </be:link.editRecord>
+-                                                <f:if condition="{record.hidden}">
+-                                                    <f:then>
+-                                                        <button type="button" class="rle-timeline__action"
+-                                                                data-gridview-action="show"
+-                                                                data-table="{record.tableName}" data-uid="{record.uid}" title="Show">
+-                                                            <core:icon identifier="actions-edit-unhide" size="small" />
+-                                                        </button>
+-                                                    </f:then>
+-                                                    <f:else>
+-                                                        <button type="button" class="rle-timeline__action"
+-                                                                data-gridview-action="hide"
+-                                                                data-table="{record.tableName}" data-uid="{record.uid}" title="Hide">
+-                                                            <core:icon identifier="actions-edit-hide" size="small" />
+-                                                        </button>
+-                                                    </f:else>
++                                                <f:if condition="{record.permissions.canEdit}">
++                                                    <typo3-backend-contextual-record-edit-trigger
++                                                        class="rle-timeline__action"
++                                                        title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.edit', default: 'Edit')}"
++                                                        edit-url="{record.editUrl}"
++                                                        url="{record.contextualEditUrl}">
++                                                        <core:icon identifier="actions-open" size="small" />
++                                                    </typo3-backend-contextual-record-edit-trigger>
++                                                </f:if>
++                                                <f:if condition="{record.permissions.canToggleVisibility}">
++                                                    <f:if condition="{record.hidden}">
++                                                        <f:then>
++                                                            <button type="button" class="rle-timeline__action"
++                                                                    data-gridview-action="show"
++                                                                    data-table="{record.tableName}" data-uid="{record.uid}"
++                                                                    data-hidden-field="{tableConfig.hiddenField}"
++                                                                    title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.show', default: 'Show')}">
++                                                                <core:icon identifier="actions-edit-unhide" size="small" />
++                                                            </button>
++                                                        </f:then>
++                                                        <f:else>
++                                                            <button type="button" class="rle-timeline__action"
++                                                                    data-gridview-action="hide"
++                                                                    data-table="{record.tableName}" data-uid="{record.uid}"
++                                                                    data-hidden-field="{tableConfig.hiddenField}"
++                                                                    title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.hide', default: 'Hide')}">
++                                                                <core:icon identifier="actions-edit-hide" size="small" />
++                                                            </button>
++                                                        </f:else>
++                                                    </f:if>
++                                                </f:if>
++                                                <f:if condition="{record.permissions.canDelete}">
++                                                    <button type="button" class="rle-timeline__action rle-timeline__action--danger"
++                                                            data-gridview-action="delete"
++                                                            data-table="{record.tableName}" data-uid="{record.uid}"
++                                                            title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.delete', default: 'Delete')}">
++                                                        <core:icon identifier="actions-edit-delete" size="small" />
++                                                    </button>
+                                                 </f:if>
+-                                                <button type="button" class="rle-timeline__action rle-timeline__action--danger"
+-                                                        data-gridview-action="delete"
+-                                                        data-table="{record.tableName}" data-uid="{record.uid}" title="Delete">
+-                                                    <core:icon identifier="actions-edit-delete" size="small" />
+-                                                </button>
+ 
+-                                                <f:comment>More Actions dropdown</f:comment>
++                                                <f:comment>More Actions popover (matches records_list_types pattern)</f:comment>
++                                                <f:variable name="actionsPopoverId">rle-timeline-actions-{record.tableName}-{record.uid}</f:variable>
+                                                 <div class="dropdown">
+-                                                    <button type="button" class="rle-timeline__action"
+-                                                            data-bs-toggle="dropdown"
+-                                                            aria-expanded="false"
+-                                                            title="More actions">
++                                                    <button type="button" class="rle-timeline__action dropdown-toggle dropdown-toggle-no-chevron"
++                                                            popovertarget="{actionsPopoverId}"
++                                                            title="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.more', default: 'More actions')}"
++                                                            aria-label="{f:translate(key: 'LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.more', default: 'More actions')}">
+                                                         <core:icon identifier="actions-menu-alternative" size="small" />
+                                                     </button>
+-                                                    <ul class="dropdown-menu dropdown-menu-end">
+-                                                        <li>
+-                                                            <a class="dropdown-item" href="#"
+-                                                               data-gridview-action="info"
+-                                                               data-table="{record.tableName}"
+-                                                               data-uid="{record.uid}">
+-                                                                <core:icon identifier="actions-document-info" size="small" />
+-                                                                <span>Info</span>
+-                                                            </a>
+-                                                        </li>
+-                                                        <li>
+-                                                            <a class="dropdown-item" href="#"
+-                                                               data-gridview-action="history"
+-                                                               data-table="{record.tableName}"
+-                                                               data-uid="{record.uid}">
+-                                                                <core:icon identifier="actions-document-history-open" size="small" />
+-                                                                <span>History</span>
+-                                                            </a>
+-                                                        </li>
+-                                                        <li><hr class="dropdown-divider"></li>
+-                                                        <li>
+-                                                            <a class="dropdown-item" href="#"
+-                                                               data-gridview-action="copy"
+-                                                               data-table="{record.tableName}"
+-                                                               data-uid="{record.uid}">
+-                                                                <core:icon identifier="actions-edit-copy" size="small" />
+-                                                                <span>Copy</span>
+-                                                            </a>
+-                                                        </li>
+-                                                        <li>
+-                                                            <a class="dropdown-item" href="#"
+-                                                               data-gridview-action="cut"
+-                                                               data-table="{record.tableName}"
+-                                                               data-uid="{record.uid}">
+-                                                                <core:icon identifier="actions-edit-cut" size="small" />
+-                                                                <span>Cut</span>
+-                                                            </a>
+-                                                        </li>
++                                                    <ul id="{actionsPopoverId}" class="dropdown-menu dropdown-menu-end" popover>
++                                                        <f:if condition="{record.permissions.canShowInfo}">
++                                                            <li>
++                                                                <a class="dropdown-item" href="#"
++                                                                   data-gridview-action="info"
++                                                                   data-table="{record.tableName}"
++                                                                   data-uid="{record.uid}">
++                                                                    <core:icon identifier="actions-document-info" size="small" />
++                                                                    <span><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.info" default="Info" /></span>
++                                                                </a>
++                                                            </li>
++                                                        </f:if>
++                                                        <f:if condition="{record.permissions.canHistory}">
++                                                            <li>
++                                                                <a class="dropdown-item" href="#"
++                                                                   data-gridview-action="history"
++                                                                   data-table="{record.tableName}"
++                                                                   data-uid="{record.uid}">
++                                                                    <core:icon identifier="actions-document-history-open" size="small" />
++                                                                    <span><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.history" default="History" /></span>
++                                                                </a>
++                                                            </li>
++                                                        </f:if>
++                                                        <f:if condition="{record.permissions.canCopy}">
++                                                            <li><hr class="dropdown-divider"></li>
++                                                            <li>
++                                                                <a class="dropdown-item" href="#"
++                                                                   data-gridview-action="copy"
++                                                                   data-table="{record.tableName}"
++                                                                   data-uid="{record.uid}">
++                                                                    <core:icon identifier="actions-edit-copy" size="small" />
++                                                                    <span><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.copy" default="Copy" /></span>
++                                                                </a>
++                                                            </li>
++                                                            <li>
++                                                                <a class="dropdown-item" href="#"
++                                                                   data-gridview-action="cut"
++                                                                   data-table="{record.tableName}"
++                                                                   data-uid="{record.uid}">
++                                                                    <core:icon identifier="actions-edit-cut" size="small" />
++                                                                    <span><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:action.cut" default="Cut" /></span>
++                                                                </a>
++                                                            </li>
++                                                        </f:if>
+                                                     </ul>
+                                                 </div>
+                                             </div>
+@@ -212,7 +251,7 @@
+             <div class="callout callout-info">
+                 <div class="callout-body">
+                     <core:icon identifier="actions-info" size="small" />
+-                    <span class="ms-2">No records found on this page.</span>
++                    <span class="ms-2"><f:translate key="LLL:EXT:records_list_examples/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." /></span>
+                 </div>
+             </div>
+         </f:else>
+diff --git a/Resources/Private/Language/de.locallang.xlf b/Resources/Private/Language/de.locallang.xlf
+new file mode 100644
+index 0000000..b326efa
+--- /dev/null
++++ b/Resources/Private/Language/de.locallang.xlf
+@@ -0,0 +1,111 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
++    <file source-language="en" target-language="de" datatype="plaintext" original="messages" date="2026-04-20T12:00:00Z" product-name="records_list_examples">
++        <header/>
++        <body>
++            <!-- View type labels -->
++            <trans-unit id="viewMode.timeline" resname="viewMode.timeline">
++                <source>Timeline</source>
++                <target>Zeitleiste</target>
++            </trans-unit>
++            <trans-unit id="viewMode.timeline.description" resname="viewMode.timeline.description">
++                <source>Chronological timeline with date markers</source>
++                <target>Chronologische Zeitleiste mit Datumsmarkierungen</target>
++            </trans-unit>
++            <trans-unit id="viewMode.catalog" resname="viewMode.catalog">
++                <source>Catalog</source>
++                <target>Katalog</target>
++            </trans-unit>
++            <trans-unit id="viewMode.catalog.description" resname="viewMode.catalog.description">
++                <source>Visual catalog with large image cards</source>
++                <target>Visueller Katalog mit großen Bildkacheln</target>
++            </trans-unit>
++            <trans-unit id="viewMode.addressbook" resname="viewMode.addressbook">
++                <source>Address Book</source>
++                <target>Adressbuch</target>
++            </trans-unit>
++            <trans-unit id="viewMode.addressbook.description" resname="viewMode.addressbook.description">
++                <source>Dense contact list with key fields</source>
++                <target>Dichte Kontaktliste mit den wichtigsten Feldern</target>
++            </trans-unit>
++            <trans-unit id="viewMode.eventlist" resname="viewMode.eventlist">
++                <source>Event List</source>
++                <target>Veranstaltungsliste</target>
++            </trans-unit>
++            <trans-unit id="viewMode.eventlist.description" resname="viewMode.eventlist.description">
++                <source>Date-focused event cards</source>
++                <target>Datumsorientierte Veranstaltungskacheln</target>
++            </trans-unit>
++            <trans-unit id="viewMode.gallery" resname="viewMode.gallery">
++                <source>Gallery</source>
++                <target>Galerie</target>
++            </trans-unit>
++            <trans-unit id="viewMode.gallery.description" resname="viewMode.gallery.description">
++                <source>Photo gallery with large thumbnails</source>
++                <target>Fotogalerie mit großen Vorschaubildern</target>
++            </trans-unit>
++            <trans-unit id="viewMode.dashboard" resname="viewMode.dashboard">
++                <source>Dashboard</source>
++                <target>Dashboard</target>
++            </trans-unit>
++            <trans-unit id="viewMode.dashboard.description" resname="viewMode.dashboard.description">
++                <source>Overview cards with editor-selected columns</source>
++                <target>Überblickskacheln mit redaktionell gewählten Spalten</target>
++            </trans-unit>
++
++            <!-- Catalog view template strings -->
++            <trans-unit id="catalog.placeholder.noImage" resname="catalog.placeholder.noImage">
++                <source>No image</source>
++                <target>Kein Bild</target>
++            </trans-unit>
++            <trans-unit id="catalog.badge.hidden" resname="catalog.badge.hidden">
++                <source>Hidden</source>
++                <target>Ausgeblendet</target>
++            </trans-unit>
++
++            <!-- Shared action labels -->
++            <trans-unit id="action.edit" resname="action.edit">
++                <source>Edit</source>
++                <target>Bearbeiten</target>
++            </trans-unit>
++            <trans-unit id="action.show" resname="action.show">
++                <source>Show</source>
++                <target>Anzeigen</target>
++            </trans-unit>
++            <trans-unit id="action.hide" resname="action.hide">
++                <source>Hide</source>
++                <target>Ausblenden</target>
++            </trans-unit>
++            <trans-unit id="action.delete" resname="action.delete">
++                <source>Delete</source>
++                <target>Löschen</target>
++            </trans-unit>
++            <trans-unit id="action.more" resname="action.more">
++                <source>More actions</source>
++                <target>Weitere Aktionen</target>
++            </trans-unit>
++            <trans-unit id="action.info" resname="action.info">
++                <source>Info</source>
++                <target>Info</target>
++            </trans-unit>
++            <trans-unit id="action.history" resname="action.history">
++                <source>History</source>
++                <target>Verlauf</target>
++            </trans-unit>
++            <trans-unit id="action.copy" resname="action.copy">
++                <source>Copy</source>
++                <target>Kopieren</target>
++            </trans-unit>
++            <trans-unit id="action.cut" resname="action.cut">
++                <source>Cut</source>
++                <target>Ausschneiden</target>
++            </trans-unit>
++
++            <!-- Misc -->
++            <trans-unit id="noRecords" resname="noRecords">
++                <source>No records found on this page.</source>
++                <target>Keine Datensätze auf dieser Seite gefunden.</target>
++            </trans-unit>
++        </body>
++    </file>
++</xliff>
+diff --git a/Resources/Private/Language/locallang.xlf b/Resources/Private/Language/locallang.xlf
+new file mode 100644
+index 0000000..b003ed5
+--- /dev/null
++++ b/Resources/Private/Language/locallang.xlf
+@@ -0,0 +1,87 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
++    <file source-language="en" datatype="plaintext" original="messages" date="2026-04-20T12:00:00Z" product-name="records_list_examples">
++        <header/>
++        <body>
++            <!-- View type labels -->
++            <trans-unit id="viewMode.timeline" resname="viewMode.timeline">
++                <source>Timeline</source>
++            </trans-unit>
++            <trans-unit id="viewMode.timeline.description" resname="viewMode.timeline.description">
++                <source>Chronological timeline with date markers</source>
++            </trans-unit>
++            <trans-unit id="viewMode.catalog" resname="viewMode.catalog">
++                <source>Catalog</source>
++            </trans-unit>
++            <trans-unit id="viewMode.catalog.description" resname="viewMode.catalog.description">
++                <source>Visual catalog with large image cards</source>
++            </trans-unit>
++            <trans-unit id="viewMode.addressbook" resname="viewMode.addressbook">
++                <source>Address Book</source>
++            </trans-unit>
++            <trans-unit id="viewMode.addressbook.description" resname="viewMode.addressbook.description">
++                <source>Dense contact list with key fields</source>
++            </trans-unit>
++            <trans-unit id="viewMode.eventlist" resname="viewMode.eventlist">
++                <source>Event List</source>
++            </trans-unit>
++            <trans-unit id="viewMode.eventlist.description" resname="viewMode.eventlist.description">
++                <source>Date-focused event cards</source>
++            </trans-unit>
++            <trans-unit id="viewMode.gallery" resname="viewMode.gallery">
++                <source>Gallery</source>
++            </trans-unit>
++            <trans-unit id="viewMode.gallery.description" resname="viewMode.gallery.description">
++                <source>Photo gallery with large thumbnails</source>
++            </trans-unit>
++            <trans-unit id="viewMode.dashboard" resname="viewMode.dashboard">
++                <source>Dashboard</source>
++            </trans-unit>
++            <trans-unit id="viewMode.dashboard.description" resname="viewMode.dashboard.description">
++                <source>Overview cards with editor-selected columns</source>
++            </trans-unit>
++
++            <!-- Catalog view template strings -->
++            <trans-unit id="catalog.placeholder.noImage" resname="catalog.placeholder.noImage">
++                <source>No image</source>
++            </trans-unit>
++            <trans-unit id="catalog.badge.hidden" resname="catalog.badge.hidden">
++                <source>Hidden</source>
++            </trans-unit>
++
++            <!-- Shared action labels -->
++            <trans-unit id="action.edit" resname="action.edit">
++                <source>Edit</source>
++            </trans-unit>
++            <trans-unit id="action.show" resname="action.show">
++                <source>Show</source>
++            </trans-unit>
++            <trans-unit id="action.hide" resname="action.hide">
++                <source>Hide</source>
++            </trans-unit>
++            <trans-unit id="action.delete" resname="action.delete">
++                <source>Delete</source>
++            </trans-unit>
++            <trans-unit id="action.more" resname="action.more">
++                <source>More actions</source>
++            </trans-unit>
++            <trans-unit id="action.info" resname="action.info">
++                <source>Info</source>
++            </trans-unit>
++            <trans-unit id="action.history" resname="action.history">
++                <source>History</source>
++            </trans-unit>
++            <trans-unit id="action.copy" resname="action.copy">
++                <source>Copy</source>
++            </trans-unit>
++            <trans-unit id="action.cut" resname="action.cut">
++                <source>Cut</source>
++            </trans-unit>
++
++            <!-- Misc -->
++            <trans-unit id="noRecords" resname="noRecords">
++                <source>No records found on this page.</source>
++            </trans-unit>
++        </body>
++    </file>
++</xliff>
+-- 
+2.43.0
+
