@@ -11,7 +11,7 @@ jobs:
     name: Composer security audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -29,7 +29,7 @@ jobs:
     name: PHPStan (Level 9 + PHPat)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -50,7 +50,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref || github.ref_name }}
 
@@ -67,7 +67,7 @@ jobs:
         run: vendor/bin/php-cs-fixer fix --diff
 
       - name: Commit fixes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "style: auto-fix coding standards via PHP-CS-Fixer"
           commit_user_name: "github-actions[bot]"
@@ -80,7 +80,7 @@ jobs:
       matrix:
         php: ['8.3', '8.4']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload coverage
         if: matrix.php == '8.3' && always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: var/log/coverage.xml
@@ -131,7 +131,7 @@ jobs:
       typo3DatabasePassword: root
       typo3DatabaseName: typo3_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -150,7 +150,7 @@ jobs:
 
       - name: Upload functional coverage
         if: matrix.php == '8.3' && always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: functional-coverage-report
           path: var/log/functional-coverage.xml
