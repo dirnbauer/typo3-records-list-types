@@ -23,11 +23,9 @@ Features
     sitepackage-specific view types
 -   **Custom Views**: Register your own view types via PSR-14 events or
     TSconfig (see `Records List Examples
-    <https://github.com/dirnbauer/typo3-records-list-examples>`__ for 6
-    ready-to-use examples; the example Timeline and Catalog templates
-    follow the same structured heading / sanitizer / contextual-edit /
-    permission-aware / popover systematic as this extension's built-in
-    templates and ship with English + German XLIFF labels)
+    <https://github.com/dirnbauer/typo3-records-list-examples>`__
+    for 6 ready-to-use examples; this extension's built-in templates use
+    the newer structured heading/sorting rendering model)
 -   **User preferences**: Selected view mode is persisted per user
 -   **Dark mode**: Full compatibility with TYPO3's dark mode
 -   **Per-table config**: Configure which fields to display via TSconfig
