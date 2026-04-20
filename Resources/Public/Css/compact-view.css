@@ -17,6 +17,7 @@
     --cv-bg-hidden: var(--typo3-surface-container-lowest, #f5f5f5);
     --cv-border: #e4e4e7;
     --cv-border-muted: #f0f0f2;
+    --cv-tree-line: #52525b;
     --cv-text: var(--typo3-text-color-base, #18181b);
     --cv-text-muted: var(--typo3-component-color, #52525b);
     --cv-text-subtle: var(--typo3-text-color-variant, #a1a1aa);
@@ -65,6 +66,7 @@
 [data-color-scheme="dark"] .recordlist-compactview-container {
     --cv-border: #3f3f46;
     --cv-border-muted: #2e2e33;
+    --cv-tree-line: #a1a1aa;
     --cv-accent-bg-opaque: #1e2a3e;
     --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.3);
 }
@@ -73,6 +75,7 @@
     html:not([data-color-scheme="light"]) .recordlist-compactview-container {
         --cv-border: #3f3f46;
         --cv-border-muted: #2e2e33;
+        --cv-tree-line: #a1a1aa;
         --cv-accent-bg-opaque: #1e2a3e;
         --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.3);
     }
@@ -507,8 +510,8 @@
     left: 15px;
     top: 50%;
     bottom: 0;
-    width: 2px;
-    background: var(--cv-border);
+    width: 1px;
+    background: var(--cv-tree-line);
     pointer-events: none;
 }
 
@@ -894,8 +897,8 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     left: 15px;
     top: 0;
     bottom: 50%;
-    width: 2px;
-    background: var(--cv-border);
+    width: 1px;
+    background: var(--cv-tree-line);
 }
 
 /* Middle row in a group (followed by another translation) extends the
@@ -911,8 +914,8 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     left: 15px;
     top: 50%;
     width: 10px;
-    height: 2px;
-    background: var(--cv-border);
+    height: 1px;
+    background: var(--cv-tree-line);
 }
 
 .compactview-row--translation .compactview-row__icon {
