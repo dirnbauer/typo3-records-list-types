@@ -461,18 +461,24 @@ Each item in `tableData`:
 
 The companion repository
 [`typo3-records-list-examples`](https://github.com/dirnbauer/typo3-records-list-examples)
-focuses on lightweight TSconfig + template examples. Some of those example
-templates intentionally keep their own local heading markup to stay simple
-and extension-free.
+ships ready-to-use Timeline and Catalog Fluid templates that mirror the
+current `records_list_types` template systematic:
 
-This extension's built-in templates are the more systematic reference for:
+- shared `TableHeading` partial for the table heading
+- TYPO3 core `f:sanitize.html(build: 'records-list-types-backend-fragments')`
+  for TYPO3-generated backend fragments (action buttons, multi-record-selection)
+- TYPO3 14 native `<typo3-backend-contextual-record-edit-trigger>` for record
+  edit links
+- permission-aware action rendering (`record.permissions.canEdit`,
+  `canToggleVisibility`, `canDelete`, `canShowInfo`, `canHistory`, `canCopy`)
+- "More actions" popover button using `popovertarget` + `popover`
+- shared `Pagination` partial for single-table pagination
+- translatable view-type labels and template strings via XLIFF (English +
+  German out of the box)
 
-- structured heading and sorting data
-- shared Fluid partials
-- TYPO3 core `f:sanitize.html` usage for backend fragments
-
-When building new reusable templates, prefer the built-in template
-systematic from `records_list_types`.
+When building your own custom templates, this extension's built-in templates
+remain the canonical reference -- the examples repo simply demonstrates the
+same systematic in a sitepackage-friendly form.
 
 Each record in `records`:
 

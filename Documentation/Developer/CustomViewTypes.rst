@@ -60,9 +60,14 @@ For built-in templates, the current systematic is:
 
 The companion `Records List Examples
 <https://github.com/dirnbauer/typo3-records-list-examples>`__ repository
-still demonstrates a lighter TSconfig-only custom-template style for
-satellite extensions. The built-in templates in ``records_list_types``
-already use the newer structured heading/sorting approach described here.
+ships Timeline and Catalog Fluid templates that mirror the same
+systematic: shared ``TableHeading`` partial, ``f:sanitize.html`` for
+TYPO3-generated backend fragments, the TYPO3 14 native
+``<typo3-backend-contextual-record-edit-trigger>`` for edit links,
+permission-aware action rendering, the ``popovertarget`` + ``popover``
+"More actions" menu, and the shared ``Pagination`` partial. View-type
+labels and template strings in the examples extension are translatable
+via XLIFF (English + German out of the box).
 
 For record edit links in custom templates, use TYPO3 14's native
 contextual edit trigger instead of ``be:link.editRecord``. Records
