@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
-use Exception;
+use ArrayObject;
 use Psr\Http\Message\ServerRequestInterface;
-use TYPO3\CMS\Core\Package\PackageManager;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
@@ -16,7 +16,8 @@ use TYPO3\CMS\Core\SingletonInterface;
  * configurations that might interfere with alternative view mode rendering.
  *
  * Detection strategies:
- * 1. Static Analysis: Inspects middleware stack for non-core entries
+ * 1. Stack Analysis: Inspects TYPO3's resolved backend middleware execution order
+ *    for custom middlewares in rendering-critical positions
  * 2. Runtime Check: Verifies required request attributes exist
  */
 final class MiddlewareDiagnosticService implements SingletonInterface
@@ -27,27 +28,52 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         'applicationType',
     ];
 
-    /** Core middleware packages that are known to be safe. */
-    private const array CORE_PACKAGES = [
-        'typo3/cms-core',
-        'typo3/cms-backend',
-        'typo3/cms-frontend',
-        'typo3/cms-install',
+    /**
+     * Middleware positions that define the backend rendering phase.
+     *
+     * Custom middlewares executed after page context initialization can still
+     * mutate the final backend HTML and therefore affect Grid View rendering.
+     */
+    private const string PAGE_CONTEXT_MIDDLEWARE = 'typo3/cms-backend/page-context';
+    private const string RESPONSE_PROPAGATION_MIDDLEWARE = 'typo3/cms-core/response-propagation';
+    private const string NORMALIZED_PARAMS_MIDDLEWARE = 'typo3/cms-core/normalized-params-attribute';
+
+    private const array REQUIRED_CORE_MIDDLEWARES = [
+        self::NORMALIZED_PARAMS_MIDDLEWARE,
+        self::PAGE_CONTEXT_MIDDLEWARE,
+        self::RESPONSE_PROPAGATION_MIDDLEWARE,
     ];
 
-    /** @var array<string, string[]> Cache for diagnostic results */
-    private array $diagnosticCache = [];
+    private const string TYPO3_MIDDLEWARE_PREFIX = 'typo3/';
 
+    /** @var array{
+     *     missingCoreMiddlewares: string[],
+     *     invalidOrder: bool,
+     *     riskyMiddlewares: string[],
+     *     executionOrder: string[]
+     * }|null
+     */
+    private ?array $stackAnalysisCache = null;
+
+    /**
+     * @param ArrayObject<string, string> $backendMiddlewares
+     */
     public function __construct(
-        private readonly PackageManager $packageManager,
-        // DependencyOrderingService kept for potential future use
+        #[Autowire(service: 'backend.middlewares')]
+        private readonly ArrayObject $backendMiddlewares,
     ) {}
 
     /**
      * Check if there are potential middleware issues.
      *
      * @param ServerRequestInterface $request The current request
-     * @return array{hasRisk: bool, warnings: string[], forceListViewUrl: string}
+     * @return array{
+     *     hasRisk: bool,
+     *     warnings: string[],
+     *     forceListViewUrl: string,
+     *     riskyMiddlewares: string[],
+     *     executionOrder: string[]
+     * }
      */
     public function diagnose(ServerRequestInterface $request): array
     {
@@ -62,13 +88,21 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             );
         }
 
-        // 2. Check for non-core middlewares (static analysis)
-        $nonCoreMiddlewares = $this->detectNonCoreMiddlewares();
-        // Only warn if there are many custom middlewares
-        if ($nonCoreMiddlewares !== [] && count($nonCoreMiddlewares) > 5) {
+        // 2. Check for custom middlewares in rendering-critical positions
+        $stackAnalysis = $this->analyzeBackendMiddlewareStack();
+        if ($stackAnalysis['missingCoreMiddlewares'] !== []) {
             $warnings[] = sprintf(
-                'Detected %d custom middleware(s) which may affect rendering.',
-                count($nonCoreMiddlewares),
+                'Required backend middleware(s) missing from resolved stack: %s.',
+                implode(', ', $stackAnalysis['missingCoreMiddlewares']),
+            );
+        }
+        if ($stackAnalysis['invalidOrder']) {
+            $warnings[] = 'Resolved backend middleware order is invalid: page context must run before response propagation.';
+        }
+        if ($stackAnalysis['riskyMiddlewares'] !== []) {
+            $warnings[] = sprintf(
+                'Custom backend middleware(s) run in the rendering phase after page context initialization: %s.',
+                implode(', ', $stackAnalysis['riskyMiddlewares']),
             );
         }
 
@@ -81,6 +115,8 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             'hasRisk' => $warnings !== [],
             'warnings' => $warnings,
             'forceListViewUrl' => (string) $uri,
+            'riskyMiddlewares' => $stackAnalysis['riskyMiddlewares'],
+            'executionOrder' => $stackAnalysis['executionOrder'],
         ];
     }
 
@@ -104,55 +140,62 @@ final class MiddlewareDiagnosticService implements SingletonInterface
     }
 
     /**
-     * Detect non-core middlewares in the backend stack.
+     * Analyze the resolved TYPO3 backend middleware execution order.
      *
-     * @return string[] List of non-core middleware class names
+     * @return array{
+     *     missingCoreMiddlewares: string[],
+     *     invalidOrder: bool,
+     *     riskyMiddlewares: string[],
+     *     executionOrder: string[]
+     * }
      */
-    private function detectNonCoreMiddlewares(): array
+    private function analyzeBackendMiddlewareStack(): array
     {
-        if (isset($this->diagnosticCache['nonCoreMiddlewares'])) {
-            return $this->diagnosticCache['nonCoreMiddlewares'];
+        if ($this->stackAnalysisCache !== null) {
+            return $this->stackAnalysisCache;
         }
 
-        $nonCore = [];
+        /** @var array<string, string> $resolvedStack */
+        $resolvedStack = iterator_to_array($this->backendMiddlewares);
+        $executionOrder = array_values(array_reverse(array_keys($resolvedStack)));
 
-        try {
-            // Get all active packages
-            $activePackages = $this->packageManager->getActivePackages();
+        $missingCoreMiddlewares = array_values(array_filter(
+            self::REQUIRED_CORE_MIDDLEWARES,
+            static fn(string $middleware): bool => !in_array($middleware, $executionOrder, true),
+        ));
 
-            foreach ($activePackages as $package) {
-                $packageKey = $package->getPackageKey();
-                $composerName = $package->getValueFromComposerManifest('name');
+        $pageContextIndex = array_search(self::PAGE_CONTEXT_MIDDLEWARE, $executionOrder, true);
+        $responsePropagationIndex = array_search(self::RESPONSE_PROPAGATION_MIDDLEWARE, $executionOrder, true);
+        $invalidOrder = is_int($pageContextIndex)
+            && is_int($responsePropagationIndex)
+            && $pageContextIndex > $responsePropagationIndex;
 
-                // Skip core packages
-                if (in_array($composerName, self::CORE_PACKAGES, true)) {
+        $riskyMiddlewares = [];
+        if (is_int($pageContextIndex) && !$invalidOrder) {
+            foreach ($executionOrder as $index => $middlewareIdentifier) {
+                if ($index <= $pageContextIndex || !$this->isCustomMiddlewareIdentifier($middlewareIdentifier)) {
                     continue;
                 }
-
-                // Check if package has backend middlewares
-                $middlewareFile = $package->getPackagePath() . 'Configuration/RequestMiddlewares.php';
-                // Validate the file path is within the package directory (defense-in-depth)
-                $realMiddlewarePath = realpath($middlewareFile);
-                $realPackagePath = realpath($package->getPackagePath());
-                if ($realMiddlewarePath !== false
-                    && $realPackagePath !== false
-                    && str_starts_with($realMiddlewarePath, $realPackagePath)
-                ) {
-                    $middlewares = include $realMiddlewarePath;
-                    if (isset($middlewares['backend']) && is_array($middlewares['backend'])) {
-                        foreach (array_keys($middlewares['backend']) as $middlewareName) {
-                            $nonCore[] = $packageKey . '/' . $middlewareName;
-                        }
-                    }
-                }
+                $riskyMiddlewares[] = $middlewareIdentifier;
             }
-        } catch (Exception) {
-            // Silently fail - diagnostic is not critical
         }
 
-        $this->diagnosticCache['nonCoreMiddlewares'] = $nonCore;
+        /** @var array{
+         *     missingCoreMiddlewares: string[],
+         *     invalidOrder: bool,
+         *     riskyMiddlewares: string[],
+         *     executionOrder: string[]
+         * } $analysis
+         */
+        $analysis = [
+            'missingCoreMiddlewares' => $missingCoreMiddlewares,
+            'invalidOrder' => $invalidOrder,
+            'riskyMiddlewares' => $riskyMiddlewares,
+            'executionOrder' => $executionOrder,
+        ];
+        $this->stackAnalysisCache = $analysis;
 
-        return $nonCore;
+        return $this->stackAnalysisCache;
     }
 
     /**
@@ -203,10 +246,14 @@ final class MiddlewareDiagnosticService implements SingletonInterface
      */
     public function getDetailedDiagnostics(ServerRequestInterface $request): array
     {
+        $stackAnalysis = $this->analyzeBackendMiddlewareStack();
+
         return [
             'requestAttributes' => array_keys($request->getAttributes()),
             'missingRequiredAttributes' => $this->checkRequiredAttributes($request),
-            'nonCoreMiddlewares' => $this->detectNonCoreMiddlewares(),
+            'resolvedBackendExecutionOrder' => $stackAnalysis['executionOrder'],
+            'missingCoreMiddlewares' => $stackAnalysis['missingCoreMiddlewares'],
+            'riskyMiddlewares' => $stackAnalysis['riskyMiddlewares'],
             'diagnosis' => $this->diagnose($request),
         ];
     }
@@ -216,6 +263,11 @@ final class MiddlewareDiagnosticService implements SingletonInterface
      */
     public function clearCache(): void
     {
-        $this->diagnosticCache = [];
+        $this->stackAnalysisCache = null;
+    }
+
+    private function isCustomMiddlewareIdentifier(string $middlewareIdentifier): bool
+    {
+        return !str_starts_with($middlewareIdentifier, self::TYPO3_MIDDLEWARE_PREFIX);
     }
 }
