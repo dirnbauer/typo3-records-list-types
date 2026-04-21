@@ -15,6 +15,8 @@
     --tv-bg-muted: light-dark(#f8fafc, #262626);
     --tv-bg-hidden: light-dark(#fefce8, #422006);
     --tv-border: light-dark(#e2e8f0, #3f3f46);
+    --tv-connector-line: color-mix(in srgb, var(--tv-border) 72%, transparent);
+    --tv-connector-line-width: 1px;
     --tv-border-hidden: light-dark(#fef08a, #854d0e);
     --tv-text: light-dark(#1e293b, #fafafa);
     --tv-text-muted: light-dark(#64748b, #a1a1aa);
@@ -563,7 +565,7 @@ typo3-backend-contextual-record-edit-trigger.teaserview-action {
     margin: -0.25rem 0 0.75rem 1.5rem;
     display: flex;
     flex-direction: column;
-    border-left: 2px solid color-mix(in srgb, var(--tv-primary) 35%, transparent);
+    border-left: var(--tv-connector-line-width) solid var(--tv-connector-line);
     border-radius: 0 0 var(--tv-radius) var(--tv-radius);
     overflow: hidden;
 }
