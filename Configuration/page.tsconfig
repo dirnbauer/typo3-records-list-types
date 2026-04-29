@@ -104,6 +104,66 @@ mod.web_list {
     allowedViews = list,grid,compact,teaser
 
     # =================================================================
+    # Record Filters
+    # =================================================================
+    # Configurable filters are rendered in the Records module and applied
+    # to the TYPO3 record-list query via the model/query layer.
+    filters {
+        enabled = 1
+
+        # Used when a table has no explicit fields list.
+        # Built-in aliases: title/label, hidden, date/dateRange, categories.
+        autoDefaults = title
+
+        presets {
+            title {
+                type = text
+                fields = label
+            }
+            hidden {
+                type = boolean
+                field = hidden
+            }
+            dateRange {
+                type = dateRange
+                field = date
+            }
+            categories {
+                type = category
+                field = categories
+            }
+        }
+
+        table {
+            pages {
+                fields = title,hidden
+            }
+            tt_content {
+                fields = title,hidden
+            }
+            tx_news_domain_model_news {
+                fields = title,dateRange,categories,hidden
+
+                title {
+                    fields = title,teaser
+                }
+
+                # Optional nr-llm-backed record search.
+                # Enable only when EXT:nr_llm is installed and the referenced
+                # LLM configuration exists.
+                # fields = title,dateRange,categories,hidden,llm
+                # llm {
+                #     type = llm
+                #     configurationIdentifier = record-list-search
+                #     fields = title,teaser,bodytext
+                #     candidateLimit = 80
+                #     resultLimit = 25
+                # }
+            }
+        }
+    }
+
+    # =================================================================
     # Grid View Table Configuration
     # =================================================================
     gridView {

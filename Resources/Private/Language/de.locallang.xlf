@@ -183,7 +183,54 @@
                 <source>All elements translated</source>
                 <target>Alle Elemente übersetzt</target>
             </trans-unit>
+            <trans-unit id="filter.show" resname="filter.show">
+                <source>Show filters</source>
+                <target>Filter anzeigen</target>
+            </trans-unit>
+            <trans-unit id="filter.apply" resname="filter.apply">
+                <source>Apply filters</source>
+                <target>Filter anwenden</target>
+            </trans-unit>
+            <trans-unit id="filter.reset" resname="filter.reset">
+                <source>Reset</source>
+                <target>Zurücksetzen</target>
+            </trans-unit>
+            <trans-unit id="filter.option.any" resname="filter.option.any">
+                <source>Any</source>
+                <target>Alle</target>
+            </trans-unit>
+            <trans-unit id="filter.option.visible" resname="filter.option.visible">
+                <source>Visible</source>
+                <target>Sichtbar</target>
+            </trans-unit>
+            <trans-unit id="filter.option.hidden" resname="filter.option.hidden">
+                <source>Hidden</source>
+                <target>Verborgen</target>
+            </trans-unit>
+            <trans-unit id="filter.llm.label" resname="filter.llm.label">
+                <source>Ask records</source>
+                <target>Datensätze fragen</target>
+            </trans-unit>
+            <trans-unit id="filter.llm.warning.extensionMissing" resname="filter.llm.warning.extensionMissing">
+                <source>LLM filter is configured, but EXT:nr_llm is not installed.</source>
+                <target>Der LLM-Filter ist konfiguriert, aber EXT:nr_llm ist nicht installiert.</target>
+            </trans-unit>
+            <trans-unit id="filter.llm.warning.identifierMissing" resname="filter.llm.warning.identifierMissing">
+                <source>LLM filter is configured, but no nr_llm configurationIdentifier is set.</source>
+                <target>Der LLM-Filter ist konfiguriert, aber es ist keine nr_llm configurationIdentifier gesetzt.</target>
+            </trans-unit>
+            <trans-unit id="filter.llm.warning.configurationMissing" resname="filter.llm.warning.configurationMissing">
+                <source>LLM filter is configured, but no nr_llm configuration with identifier "%s" was found.</source>
+                <target>Der LLM-Filter ist konfiguriert, aber es wurde keine nr_llm-Konfiguration mit dem Identifier "%s" gefunden.</target>
+            </trans-unit>
+            <trans-unit id="filter.llm.warning.configurationInactive" resname="filter.llm.warning.configurationInactive">
+                <source>LLM filter is configured, but the nr_llm configuration "%s" is inactive.</source>
+                <target>Der LLM-Filter ist konfiguriert, aber die nr_llm-Konfiguration "%s" ist inaktiv.</target>
+            </trans-unit>
+            <trans-unit id="filter.llm.warning.providerMissing" resname="filter.llm.warning.providerMissing">
+                <source>LLM filter is configured, but nr_llm has no available provider.</source>
+                <target>Der LLM-Filter ist konfiguriert, aber nr_llm hat keinen verfügbaren Provider.</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>
-

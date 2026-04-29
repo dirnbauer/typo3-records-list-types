@@ -13,6 +13,7 @@ A TYPO3 extension that transforms the backend **Records** module with multiple v
 - **Workspace Support** -- Color-coded indicators for new, modified, moved, and deleted records
 - **Dark Mode** -- Full compatibility with TYPO3's dark mode (light/dark themes)
 - **Per-Table Config** -- Configure title, description, image, and display fields via TSconfig
+- **Record Filters** -- Configure text, visibility, date, category, select, and optional nr-llm filters via TSconfig
 - **User Preferences** -- View mode is persisted per backend user via AJAX
 - **Sorting Controls** -- Manual drag ordering and field-based sorting with direction toggle
 - **Pagination** -- Matches TYPO3 Core: multi-table mode shows limited records with "Expand table" button, single-table mode shows full pagination (record range, page input, first/prev/next/last)
@@ -159,6 +160,23 @@ mod.web_list.gridView.table.tx_news_domain_model_news {
 | `descriptionField` | Field shown as description text | *(none)* |
 | `imageField` | FAL field for thumbnail images | *(none)* |
 | `preview` | Enable thumbnail rendering (`1` or `0`) | `1` |
+
+### Record Filters
+
+Filters are configured in TSconfig and applied in the record-list query, so all view modes work from the same filtered result set.
+
+```typoscript
+mod.web_list.filters.table.tx_news_domain_model_news {
+    fields = title,dateRange,categories,hidden
+
+    title {
+        type = text
+        fields = title,teaser
+    }
+}
+```
+
+An optional `llm` filter can use EXT:nr_llm by referencing an nr-llm configuration identifier. If EXT:nr_llm is not installed, the identifier is missing, the referenced configuration is missing or inactive, or no provider is available, the LLM filter is hidden and the filter panel shows a backend warning.
 
 ### View Mode Settings
 

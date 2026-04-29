@@ -204,6 +204,106 @@ Configure how each table appears in Grid and Teaser views:
     Enable or disable thumbnail previews for this table. Set to ``0``
     to always show a placeholder icon instead of the image.
 
+.. _configuration-filters:
+
+Record filters
+==============
+
+Filters are configured in Page TSconfig and applied to the record-list
+query through TYPO3's record-list query event. The UI only submits filter
+state; the filtering itself is handled before records are fetched.
+
+TCA is used as metadata for labels and field aliases, while Page TSconfig
+decides which filters are visible for each page tree and table.
+
+..  code-block:: typoscript
+    :caption: Page TSconfig
+
+    mod.web_list.filters {
+        enabled = 1
+        autoDefaults = title
+
+        table.tx_news_domain_model_news {
+            fields = title,dateRange,categories,hidden
+
+            title {
+                type = text
+                fields = title,teaser
+            }
+        }
+    }
+
+..  confval:: mod.web_list.filters.enabled
+    :name: conf-filters-enabled
+    :type: boolean
+    :default: ``1``
+
+    Enables or disables the filter feature for the current Page TSconfig
+    scope.
+
+..  confval:: mod.web_list.filters.autoDefaults
+    :name: conf-filters-autodefaults
+    :type: string (comma-separated)
+    :default: ``title``
+
+    Filter IDs used when a table has no explicit
+    :typoscript:`mod.web_list.filters.table.<table>.fields` setting.
+
+..  confval:: mod.web_list.filters.table.<table>.fields
+    :name: conf-filters-table-fields
+    :type: string (comma-separated)
+    :default: inherited from :typoscript:`autoDefaults`
+
+    Controls which filters are displayed for a table. Use ``none`` to hide
+    all filters for a table.
+
+    Built-in aliases:
+
+    -   ``title`` or ``label``: TCA ``ctrl.label`` text filter
+    -   ``hidden``: TCA ``ctrl.enablecolumns.disabled`` boolean filter
+    -   ``date`` or ``dateRange``: date range filter using common date
+        fields or TCA ``ctrl.crdate``
+    -   ``categories``: category filter for TCA category fields
+
+..  confval:: mod.web_list.filters.table.<table>.<filter>.type
+    :name: conf-filters-filter-type
+    :type: string
+    :default: derived from the filter ID
+
+    Supported types are ``text``, ``boolean``, ``dateRange``, ``select``,
+    ``category``, and ``llm``.
+
+LLM search filter
+-----------------
+
+The ``llm`` filter is optional and integrates with EXT:nr_llm when that
+extension is installed. It sends the current table's candidate records and
+the editor's question to the configured nr-llm configuration, then applies
+the returned UID list to the record-list query.
+
+Use :typoscript:`configurationIdentifier` to reference the
+``identifier`` field of an EXT:nr_llm LLM configuration record. The older
+:typoscript:`configuration` key is accepted as an alias.
+If EXT:nr_llm is not installed, the identifier is missing, the referenced
+configuration is missing or inactive, or no provider is available, the LLM
+filter is hidden and the filter panel shows a backend warning explaining
+the reason.
+
+..  code-block:: typoscript
+    :caption: Page TSconfig
+
+    mod.web_list.filters.table.tx_news_domain_model_news {
+        fields = title,dateRange,categories,hidden,llm
+
+        llm {
+            type = llm
+            configurationIdentifier = record-list-search
+            fields = title,teaser,bodytext
+            candidateLimit = 80
+            resultLimit = 25
+        }
+    }
+
 .. _configuration-examples:
 
 Common configurations

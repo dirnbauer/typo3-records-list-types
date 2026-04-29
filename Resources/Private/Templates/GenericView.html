@@ -85,6 +85,8 @@
                         </div>
                     </div>
 
+                    <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
+
                     <f:comment>Records list - customize this section for your view type</f:comment>
                     <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
                         <f:comment>Pagination - only in single table mode</f:comment>

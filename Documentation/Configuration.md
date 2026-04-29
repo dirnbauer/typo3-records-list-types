@@ -57,6 +57,56 @@ mod.web_list.gridView.table {
 }
 ```
 
+### Record Filters
+
+Filters are configured in Page TSconfig and applied through the TYPO3 record-list query event. TCA provides field labels and aliases; TSconfig decides which filters are visible.
+
+```typoscript
+mod.web_list.filters {
+    enabled = 1
+    autoDefaults = title
+
+    table.tx_news_domain_model_news {
+        fields = title,dateRange,categories,hidden
+
+        title {
+            type = text
+            fields = title,teaser
+        }
+    }
+}
+```
+
+Built-in aliases:
+
+- `title` / `label`: text filter for the TCA label field
+- `hidden`: visibility filter from TCA enable columns
+- `dateRange`: date range filter from common date fields or `ctrl.crdate`
+- `categories`: TYPO3 category filter
+
+Optional nr-llm-backed search:
+
+```typoscript
+mod.web_list.filters.table.tx_news_domain_model_news {
+    fields = title,dateRange,categories,hidden,llm
+
+    llm {
+        type = llm
+        configurationIdentifier = record-list-search
+        fields = title,teaser,bodytext
+        candidateLimit = 80
+        resultLimit = 25
+    }
+}
+```
+
+`configurationIdentifier` must match the `identifier` field of an
+EXT:nr_llm LLM configuration record. The legacy key `configuration` is
+also accepted as an alias. If EXT:nr_llm is not installed, the identifier
+is missing, the referenced configuration is missing or inactive, or no
+provider is available, the LLM filter is hidden and the filter panel shows
+a backend warning explaining the reason.
+
 ## Common Configurations
 
 ### News Records
@@ -234,4 +284,3 @@ This means:
 - URL parameters always win (useful for sharing links)
 - User preferences are remembered across sessions
 - TSconfig defines the default for new users
-

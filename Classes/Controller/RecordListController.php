@@ -38,6 +38,7 @@ use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use Webconsulting\RecordsListTypes\Pagination\DatabasePaginator;
 use Webconsulting\RecordsListTypes\Service\GridConfigurationService;
 use Webconsulting\RecordsListTypes\Service\MiddlewareDiagnosticService;
+use Webconsulting\RecordsListTypes\Service\RecordFilterViewDataFactory;
 use Webconsulting\RecordsListTypes\Service\RecordGridDataProvider;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 use Webconsulting\RecordsListTypes\Service\ViewTypeRegistry;
@@ -337,9 +338,19 @@ final class RecordListController extends CoreRecordListController
             'displayMode' => $viewMode,
         ];
 
+        $queryParams = $request->getQueryParams();
+        $parsedBody = $request->getParsedBody();
+        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
+        $queryParams = array_replace_recursive($queryParams, $parsedBodyArray);
+
         // Preserve table filter if set
         if ($this->table !== '') {
             $searchParams['table'] = $this->table;
+        }
+        foreach (['filters', 'recordFilters', 'sort', 'sortingMode'] as $param) {
+            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
+                $searchParams[$param] = $queryParams[$param];
+            }
         }
 
         try {
@@ -395,6 +406,7 @@ final class RecordListController extends CoreRecordListController
         $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
         $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
         $middlewareDiagnosticService = GeneralUtility::makeInstance(MiddlewareDiagnosticService::class);
+        $recordFilterViewDataFactory = GeneralUtility::makeInstance(RecordFilterViewDataFactory::class);
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
 
         // Parse request parameters
@@ -423,6 +435,7 @@ final class RecordListController extends CoreRecordListController
         $tableData = [];
         foreach ($tablesToRender as $tableName) {
             $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
+            $filterViewData = $recordFilterViewDataFactory->createForTable($tableName, $pageId, $viewMode, $request);
 
             // TCA info for sorting capabilities
             $tcaForTable = $this->getTcaForTable($tableName);
@@ -576,25 +589,14 @@ final class RecordListController extends CoreRecordListController
                     'table' => $tableName,
                     'displayMode' => $viewMode,
                 ];
-                // Preserve search parameters when expanding a table during search
-                if ($searchTerm !== '') {
-                    $singleTableUrlParams['searchTerm'] = $searchTerm;
-                    if ($searchLevels > 0) {
-                        $singleTableUrlParams['search_levels'] = $searchLevels;
-                    }
-                }
+                $singleTableUrlParams = array_replace($singleTableUrlParams, $this->getPreservedListParameters($request));
                 $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $singleTableUrlParams);
                 $clearTableUrlParams = [
                     'id' => $pageId,
                     'displayMode' => $viewMode,
                 ];
-                // Preserve search parameters when collapsing back to multi-table view
-                if ($searchTerm !== '') {
-                    $clearTableUrlParams['searchTerm'] = $searchTerm;
-                    if ($searchLevels > 0) {
-                        $clearTableUrlParams['search_levels'] = $searchLevels;
-                    }
-                }
+                $clearTableUrlParams = array_replace($clearTableUrlParams, $this->getPreservedListParameters($request));
+                unset($clearTableUrlParams['table']);
                 $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
             } catch (Exception) {
             }
@@ -722,6 +724,7 @@ final class RecordListController extends CoreRecordListController
                 'tableLabel' => $this->getTableLabel($tableName),
                 'tableIcon' => $this->getTableIcon($tableName),
                 'tableConfig' => $tableConfig,
+                'filters' => $filterViewData,
                 'records' => $enrichedRecords,
                 'recordCount' => $recordCount,
                 'hasMore' => $hasMore,
@@ -1254,10 +1257,11 @@ final class RecordListController extends CoreRecordListController
 
         $returnUrl = '';
         try {
-            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', [
-                'id' => $pageId,
-                'displayMode' => $viewMode,
-            ]);
+            $returnUrlParams = array_replace(
+                ['id' => $pageId, 'displayMode' => $viewMode, 'table' => $tableName],
+                $this->getPreservedListParameters($request),
+            );
+            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $returnUrlParams);
         } catch (Exception) {
             $returnUrl = (string) $request->getUri();
         }
@@ -1364,29 +1368,21 @@ final class RecordListController extends CoreRecordListController
             }
         }
 
-        $queryParams = $request->getQueryParams();
-        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        foreach ($preserveParams as $param) {
-            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
-                $baseParams[$param] = $queryParams[$param];
-            }
-        }
+        $baseParams = array_replace($baseParams, $this->getPreservedListParameters($request));
 
         try {
-            $ascParams = $baseParams;
-            $ascParams['sortingMode'][$tableName] = 'field';
-            if ($currentSortField !== '') {
-                $ascParams['sort'][$tableName]['field'] = $currentSortField;
-            }
-            $ascParams['sort'][$tableName]['direction'] = 'asc';
+            $ascParams = $this->withSortingMode(
+                $this->withSortParams($baseParams, $tableName, $currentSortField !== '' ? $currentSortField : null, 'asc'),
+                $tableName,
+                'field',
+            );
 
-            $descParams = $baseParams;
-            $descParams['sortingMode'][$tableName] = 'field';
-            if ($currentSortField !== '') {
-                $descParams['sort'][$tableName]['field'] = $currentSortField;
-            }
-            $descParams['sort'][$tableName]['direction'] = 'desc';
+            $descParams = $this->withSortingMode(
+                $this->withSortParams($baseParams, $tableName, $currentSortField !== '' ? $currentSortField : null, 'desc'),
+                $tableName,
+                'field',
+            );
 
             $items = [];
             foreach ($sortableFields as $field) {
@@ -1394,10 +1390,11 @@ final class RecordListController extends CoreRecordListController
                 if ($fieldName === '') {
                     continue;
                 }
-                $sortParams = $baseParams;
-                $sortParams['sortingMode'][$tableName] = 'field';
-                $sortParams['sort'][$tableName]['field'] = $fieldName;
-                $sortParams['sort'][$tableName]['direction'] = $currentSortDirection;
+                $sortParams = $this->withSortingMode(
+                    $this->withSortParams($baseParams, $tableName, $fieldName, $currentSortDirection),
+                    $tableName,
+                    'field',
+                );
                 $items[] = [
                     'field' => $fieldName,
                     'label' => $field['label'] ?? $fieldName,
@@ -1421,6 +1418,59 @@ final class RecordListController extends CoreRecordListController
         } catch (Exception) {
             return null;
         }
+    }
+
+    /**
+     * Preserve list state when building links after a filter form submission.
+     *
+     * @return array<string, mixed>
+     */
+    private function getPreservedListParameters(ServerRequestInterface $request): array
+    {
+        $queryParams = $request->getQueryParams();
+        $parsedBody = $request->getParsedBody();
+        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
+        $params = array_replace_recursive($queryParams, $parsedBodyArray);
+
+        $preserved = [];
+        foreach (['table', 'searchTerm', 'search_levels', 'pointer', 'filters', 'recordFilters', 'sort', 'sortingMode'] as $param) {
+            if (isset($params[$param]) && $params[$param] !== '') {
+                $preserved[$param] = $params[$param];
+            }
+        }
+
+        return $preserved;
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     * @return array<string, mixed>
+     */
+    private function withSortingMode(array $parameters, string $tableName, string $mode): array
+    {
+        $sortingMode = is_array($parameters['sortingMode'] ?? null) ? $parameters['sortingMode'] : [];
+        $sortingMode[$tableName] = $mode;
+        $parameters['sortingMode'] = $sortingMode;
+
+        return $parameters;
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     * @return array<string, mixed>
+     */
+    private function withSortParams(array $parameters, string $tableName, ?string $field, string $direction): array
+    {
+        $sort = is_array($parameters['sort'] ?? null) ? $parameters['sort'] : [];
+        $tableSort = is_array($sort[$tableName] ?? null) ? $sort[$tableName] : [];
+        if ($field !== null) {
+            $tableSort['field'] = $field;
+        }
+        $tableSort['direction'] = $direction;
+        $sort[$tableName] = $tableSort;
+        $parameters['sort'] = $sort;
+
+        return $parameters;
     }
 
     /**
@@ -1454,30 +1504,29 @@ final class RecordListController extends CoreRecordListController
         $headingLabelT = $lang->sL('records_list_types.messages:sortingMode.label');
         $headingLabel = $headingLabelT !== '' ? $headingLabelT : 'Order';
 
-        $queryParams = $request->getQueryParams();
-        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        foreach ($preserveParams as $param) {
-            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
-                $baseParams[$param] = $queryParams[$param];
-            }
-        }
+        $baseParams = array_replace($baseParams, $this->getPreservedListParameters($request));
 
         try {
-            $manualParams = $baseParams;
-            $manualParams['sortingMode'][$tableName] = 'manual';
-            $manualParams['sort'][$tableName]['direction'] = $currentDirection;
+            $manualParams = $this->withSortingMode(
+                $this->withSortParams($baseParams, $tableName, null, $currentDirection),
+                $tableName,
+                'manual',
+            );
 
-            $fieldParams = $baseParams;
-            $fieldParams['sortingMode'][$tableName] = 'field';
+            $fieldParams = $this->withSortingMode($baseParams, $tableName, 'field');
 
-            $ascParams = $baseParams;
-            $ascParams['sortingMode'][$tableName] = 'manual';
-            $ascParams['sort'][$tableName]['direction'] = 'asc';
+            $ascParams = $this->withSortingMode(
+                $this->withSortParams($baseParams, $tableName, null, 'asc'),
+                $tableName,
+                'manual',
+            );
 
-            $descParams = $baseParams;
-            $descParams['sortingMode'][$tableName] = 'manual';
-            $descParams['sort'][$tableName]['direction'] = 'desc';
+            $descParams = $this->withSortingMode(
+                $this->withSortParams($baseParams, $tableName, null, 'desc'),
+                $tableName,
+                'manual',
+            );
 
             return [
                 'headingLabel' => $headingLabel,
@@ -1525,14 +1574,8 @@ final class RecordListController extends CoreRecordListController
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
-        $queryParams = $request->getQueryParams();
-        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        foreach ($preserveParams as $param) {
-            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
-                $baseParams[$param] = $queryParams[$param];
-            }
-        }
+        $baseParams = array_replace($baseParams, $this->getPreservedListParameters($request));
 
         $isActiveField = ($currentSortField === $field);
         $isAscActive = $isActiveField && $currentSortDirection !== 'desc';
@@ -1568,13 +1611,8 @@ final class RecordListController extends CoreRecordListController
         }
 
         try {
-            $ascParams = $baseParams;
-            $ascParams['sort'][$tableName]['field'] = $field;
-            $ascParams['sort'][$tableName]['direction'] = 'asc';
-
-            $descParams = $baseParams;
-            $descParams['sort'][$tableName]['field'] = $field;
-            $descParams['sort'][$tableName]['direction'] = 'desc';
+            $ascParams = $this->withSortParams($baseParams, $tableName, $field, 'asc');
+            $descParams = $this->withSortParams($baseParams, $tableName, $field, 'desc');
 
             return [
                 'label' => $label,
@@ -1661,14 +1699,8 @@ final class RecordListController extends CoreRecordListController
         }
 
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        $queryParams = $request->getQueryParams();
-        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        foreach ($preserveParams as $param) {
-            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
-                $baseParams[$param] = $queryParams[$param];
-            }
-        }
+        $baseParams = array_replace($baseParams, $this->getPreservedListParameters($request));
 
         try {
             $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
@@ -3049,24 +3081,14 @@ final class RecordListController extends CoreRecordListController
         // Build the currentUrl for page navigation (same pattern as Core ListNavigation).
         // The Fluid template appends &pointer[<table>]=<pageNumber> to this URL.
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        $queryParams = $request->getQueryParams();
-
         // Always include table in pagination URLs so clicking any pagination
         // link switches to single-table mode (matches TYPO3 Core behavior).
-        $urlParams = ['id' => $pageId, 'displayMode' => $viewMode, 'table' => $tableName];
-        $preserveParams = ['searchTerm', 'search_levels'];
-        foreach ($preserveParams as $param) {
-            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
-                $urlParams[$param] = $queryParams[$param];
-            }
-        }
-        // Preserve sort parameters
-        if (isset($queryParams['sort'])) {
-            $urlParams['sort'] = $queryParams['sort'];
-        }
-        if (isset($queryParams['sortingMode'])) {
-            $urlParams['sortingMode'] = $queryParams['sortingMode'];
-        }
+        $urlParams = array_replace(
+            ['id' => $pageId, 'displayMode' => $viewMode],
+            $this->getPreservedListParameters($request),
+        );
+        $urlParams['table'] = $tableName;
+        unset($urlParams['pointer']);
 
         $currentUrl = '';
         try {
@@ -3242,6 +3264,10 @@ final class RecordListController extends CoreRecordListController
             'tableLabel' => $headingLabel,
             'tableIcon' => $this->getTableIcon($tableName),
             'tableConfig' => $tableConfig,
+            'filters' => [
+                'visible' => false,
+                'items' => [],
+            ],
             'records' => $enrichedRecords,
             'recordCount' => $recordCount,
             'hasMore' => false,

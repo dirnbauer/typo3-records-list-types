@@ -1,0 +1,135 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:if condition="{filters.visible}">
+    <f:if condition="{filters.warnings}">
+        <div class="recordlist-filters__warnings">
+            <f:for each="{filters.warnings}" as="warning">
+                <div class="callout callout-warning recordlist-filters__warning">
+                    <div class="callout-body">
+                        <core:icon identifier="actions-exclamation-triangle" size="small" />
+                        <span class="ms-2">{warning}</span>
+                    </div>
+                </div>
+            </f:for>
+        </div>
+    </f:if>
+
+    <f:if condition="{filters.items}">
+        <form class="recordlist-filters" method="get" action="{filters.formActionUrl}#t3-table-{filters.tableName}">
+            <f:for each="{filters.hiddenFields}" as="hiddenField">
+                <input type="hidden" name="{hiddenField.name}" value="{hiddenField.value}" />
+            </f:for>
+
+            <div class="recordlist-filters__grid">
+                <f:for each="{filters.items}" as="filter">
+                    <div class="recordlist-filters__field recordlist-filters__field--{filter.type}">
+                        <label class="recordlist-filters__label" for="record-filter-{filters.tableName}-{filter.id}">
+                            {filter.label}
+                        </label>
+
+                        <f:switch expression="{filter.type}">
+                            <f:case value="text">
+                                <input id="record-filter-{filters.tableName}-{filter.id}"
+                                       class="form-control form-control-sm"
+                                       type="search"
+                                       name="recordFilters[{filters.tableName}][{filter.id}]"
+                                       value="{filter.value}"
+                                       placeholder="{filter.placeholder}" />
+                            </f:case>
+
+                            <f:case value="boolean">
+                                <select id="record-filter-{filters.tableName}-{filter.id}"
+                                        class="form-select form-select-sm"
+                                        name="recordFilters[{filters.tableName}][{filter.id}]">
+                                    <f:for each="{filter.options}" as="option">
+                                        <f:if condition="{filter.value} == {option.value}">
+                                            <f:then>
+                                                <option value="{option.value}" selected="selected">{option.label}</option>
+                                            </f:then>
+                                            <f:else>
+                                                <option value="{option.value}">{option.label}</option>
+                                            </f:else>
+                                        </f:if>
+                                    </f:for>
+                                </select>
+                            </f:case>
+
+                            <f:case value="select">
+                                <select id="record-filter-{filters.tableName}-{filter.id}"
+                                        class="form-select form-select-sm"
+                                        name="recordFilters[{filters.tableName}][{filter.id}]">
+                                    <f:for each="{filter.options}" as="option">
+                                        <f:if condition="{filter.value} == {option.value}">
+                                            <f:then>
+                                                <option value="{option.value}" selected="selected">{option.label}</option>
+                                            </f:then>
+                                            <f:else>
+                                                <option value="{option.value}">{option.label}</option>
+                                            </f:else>
+                                        </f:if>
+                                    </f:for>
+                                </select>
+                            </f:case>
+
+                            <f:case value="category">
+                                <select id="record-filter-{filters.tableName}-{filter.id}"
+                                        class="form-select form-select-sm"
+                                        name="recordFilters[{filters.tableName}][{filter.id}]">
+                                    <f:for each="{filter.options}" as="option">
+                                        <f:if condition="{filter.value} == {option.value}">
+                                            <f:then>
+                                                <option value="{option.value}" selected="selected">{option.label}</option>
+                                            </f:then>
+                                            <f:else>
+                                                <option value="{option.value}">{option.label}</option>
+                                            </f:else>
+                                        </f:if>
+                                    </f:for>
+                                </select>
+                            </f:case>
+
+                            <f:case value="dateRange">
+                                <div class="recordlist-filters__range">
+                                    <input id="record-filter-{filters.tableName}-{filter.id}"
+                                           class="form-control form-control-sm"
+                                           type="date"
+                                           name="recordFilters[{filters.tableName}][{filter.id}][from]"
+                                           value="{filter.fromValue}"
+                                           aria-label="{filter.label} from" />
+                                    <input class="form-control form-control-sm"
+                                           type="date"
+                                           name="recordFilters[{filters.tableName}][{filter.id}][to]"
+                                           value="{filter.toValue}"
+                                           aria-label="{filter.label} to" />
+                                </div>
+                            </f:case>
+
+                            <f:case value="llm">
+                                <textarea id="record-filter-{filters.tableName}-{filter.id}"
+                                          class="form-control form-control-sm recordlist-filters__llm"
+                                          name="recordFilters[{filters.tableName}][{filter.id}]"
+                                          rows="3"
+                                          placeholder="{filter.placeholder}">{filter.value}</textarea>
+                            </f:case>
+                        </f:switch>
+                    </div>
+                </f:for>
+            </div>
+
+            <div class="recordlist-filters__actions">
+                <button class="btn btn-sm btn-primary" type="submit">
+                    <core:icon identifier="actions-filter" size="small" />
+                    <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.apply" default="Apply filters" />
+                </button>
+                <a class="btn btn-sm btn-default" href="{filters.resetUrl}#t3-table-{filters.tableName}">
+                    <core:icon identifier="actions-close" size="small" />
+                    <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.reset" default="Reset" />
+                </a>
+            </div>
+        </form>
+    </f:if>
+</f:if>
+
+</html>
