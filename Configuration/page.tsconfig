@@ -113,7 +113,7 @@ mod.web_list {
 
         # Used when a table has no explicit fields list.
         # Filters whose backing TCA fields do not exist are skipped automatically.
-        # Built-in aliases: title/label, hidden, date/dateRange, categories.
+        # Built-in aliases: title/label, hidden, date/dateRange, category/categories.
         autoDefaults = title,dateRange,hidden,categories,llm
 
         presets {
@@ -128,6 +128,10 @@ mod.web_list {
             dateRange {
                 type = dateRange
                 field = date
+            }
+            category {
+                type = category
+                field = category
             }
             categories {
                 type = category
@@ -167,7 +171,7 @@ mod.web_list {
                 fields = title,dateRange
             }
             sys_file_metadata {
-                fields = title,dateRange,llm
+                fields = title,dateRange,categories,llm
 
                 title {
                     fields = title,alternative,description

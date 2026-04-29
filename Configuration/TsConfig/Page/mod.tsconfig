@@ -54,6 +54,10 @@ mod.web_list {
                 type = dateRange
                 field = date
             }
+            category {
+                type = category
+                field = category
+            }
             categories {
                 type = category
                 field = categories
@@ -92,7 +96,7 @@ mod.web_list {
                 fields = title,dateRange
             }
             sys_file_metadata {
-                fields = title,dateRange,llm
+                fields = title,dateRange,categories,llm
 
                 title {
                     fields = title,alternative,description

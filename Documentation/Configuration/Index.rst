@@ -274,7 +274,8 @@ decides which filters are visible for each page tree and table.
     -   ``hidden``: TCA ``ctrl.enablecolumns.disabled`` boolean filter
     -   ``date`` or ``dateRange``: date range filter using common date
         fields or TCA ``ctrl.crdate``
-    -   ``categories``: category filter for TCA category fields
+    -   ``category`` or ``categories``: category filter for TYPO3
+        many-to-many TCA category fields
     -   ``llm``: optional nr_llm search over resolvable text fields
 
 ..  confval:: mod.web_list.filters.table.<table>.<filter>.type

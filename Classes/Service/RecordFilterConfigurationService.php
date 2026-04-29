@@ -8,6 +8,7 @@ use Throwable;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\DataHandling\TableColumnType;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
@@ -122,6 +123,9 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
         if (in_array($field, ['uid', 'pid'], true)) {
             return true;
         }
+        if ($this->schemaFieldExists($table, $field)) {
+            return true;
+        }
         $tca = $this->getTca($table);
         $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
         if (isset($columns[$field])) {
@@ -156,6 +160,11 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
         }
         if ($field === 'pid') {
             return 'Page';
+        }
+
+        $schemaLabel = $this->getSchemaFieldLabel($table, $field);
+        if ($schemaLabel !== '') {
+            return $this->translateLabel($schemaLabel, $field);
         }
 
         $column = $this->getFieldConfig($table, $field);
@@ -604,18 +613,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             return is_string($crdate) ? $crdate : '';
         }
         if (in_array($field, ['category', 'categories'], true)) {
-            foreach ($columns as $fieldName => $column) {
-                if (!is_array($column)) {
-                    continue;
-                }
-                $config = is_array($column['config'] ?? null) ? $column['config'] : [];
-                $type = is_string($config['type'] ?? null) ? $config['type'] : '';
-                $foreignTable = is_string($config['foreign_table'] ?? null) ? $config['foreign_table'] : '';
-                if ($type === 'category' || $foreignTable === 'sys_category') {
-                    return (string) $fieldName;
-                }
-            }
-            return '';
+            return $this->resolveCategoryField($table);
         }
         if ($field === 'teaser') {
             foreach (['teaser', 'abstract', 'description', 'bodytext', 'short'] as $candidate) {
@@ -696,6 +694,123 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
     {
         $lang = $GLOBALS['LANG'] ?? null;
         return $lang instanceof LanguageService ? $lang : null;
+    }
+
+    private function schemaFieldExists(string $table, string $field): bool
+    {
+        if (!$this->tcaSchemaFactory->has($table)) {
+            return false;
+        }
+
+        try {
+            return $this->tcaSchemaFactory->get($table)->hasField($field);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function getSchemaFieldLabel(string $table, string $field): string
+    {
+        if (!$this->tcaSchemaFactory->has($table)) {
+            return '';
+        }
+
+        try {
+            $schema = $this->tcaSchemaFactory->get($table);
+            return $schema->hasField($field) ? $schema->getField($field)->getLabel() : '';
+        } catch (Throwable) {
+            return '';
+        }
+    }
+
+    private function resolveCategoryField(string $table): string
+    {
+        $field = $this->resolveCategoryFieldFromSchema($table);
+        return $field !== '' ? $field : $this->resolveCategoryFieldFromTca($table);
+    }
+
+    private function resolveCategoryFieldFromSchema(string $table): string
+    {
+        if (!$this->tcaSchemaFactory->has($table)) {
+            return '';
+        }
+
+        try {
+            $schema = $this->tcaSchemaFactory->get($table);
+        } catch (Throwable) {
+            return '';
+        }
+
+        $fallbackFields = [];
+        foreach ($schema->getFields() as $fieldName => $field) {
+            if (!$field->isType(TableColumnType::CATEGORY)) {
+                continue;
+            }
+            if (!$this->isManyToManyCategoryConfiguration($table, (string) $fieldName, $field->getConfiguration())) {
+                continue;
+            }
+            if ($fieldName === 'categories') {
+                return 'categories';
+            }
+            if ($fieldName === 'category') {
+                array_unshift($fallbackFields, 'category');
+                continue;
+            }
+            $fallbackFields[] = (string) $fieldName;
+        }
+
+        return $fallbackFields[0] ?? '';
+    }
+
+    private function resolveCategoryFieldFromTca(string $table): string
+    {
+        $tca = $this->getTca($table);
+        $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
+        $fallbackFields = [];
+        foreach ($columns as $fieldName => $column) {
+            if (!is_array($column)) {
+                continue;
+            }
+            $config = is_array($column['config'] ?? null) ? $column['config'] : [];
+            if (!$this->isManyToManyCategoryConfiguration($table, (string) $fieldName, $config)) {
+                continue;
+            }
+            if ($fieldName === 'categories') {
+                return 'categories';
+            }
+            if ($fieldName === 'category') {
+                array_unshift($fallbackFields, 'category');
+                continue;
+            }
+            $fallbackFields[] = (string) $fieldName;
+        }
+
+        return $fallbackFields[0] ?? '';
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function isManyToManyCategoryConfiguration(string $table, string $fieldName, array $config): bool
+    {
+        if ($table === 'sys_category') {
+            return false;
+        }
+
+        $type = is_string($config['type'] ?? null) ? $config['type'] : '';
+        $foreignTable = is_string($config['foreign_table'] ?? null) ? $config['foreign_table'] : '';
+        $mmTable = is_string($config['MM'] ?? null) ? $config['MM'] : '';
+        $relationship = is_string($config['relationship'] ?? null) ? $config['relationship'] : '';
+
+        if ($type === 'category') {
+            return $relationship === ''
+                || $relationship === 'manyToMany'
+                || $mmTable === 'sys_category_record_mm';
+        }
+
+        return $foreignTable === 'sys_category'
+            && $mmTable === 'sys_category_record_mm'
+            && $fieldName !== '';
     }
 
     /**
