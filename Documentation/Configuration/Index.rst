@@ -221,14 +221,22 @@ decides which filters are visible for each page tree and table.
 
     mod.web_list.filters {
         enabled = 1
-        autoDefaults = title
+        autoDefaults = title,dateRange,hidden,categories,llm
 
         table.tx_news_domain_model_news {
-            fields = title,dateRange,categories,hidden
+            fields = title,dateRange,categories,topNews,hidden,llm
 
             title {
                 type = text
                 fields = title,teaser
+            }
+
+            topNews {
+                type = boolean
+                field = istopnews
+                label = Top News
+                falseLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.no
+                trueLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.yes
             }
         }
     }
@@ -244,10 +252,13 @@ decides which filters are visible for each page tree and table.
 ..  confval:: mod.web_list.filters.autoDefaults
     :name: conf-filters-autodefaults
     :type: string (comma-separated)
-    :default: ``title``
+    :default: ``title,dateRange,hidden,categories,llm``
 
     Filter IDs used when a table has no explicit
     :typoscript:`mod.web_list.filters.table.<table>.fields` setting.
+    Filters whose backing TCA fields do not exist are skipped
+    automatically, so newly added tables usually get useful defaults
+    without table-specific TSconfig.
 
 ..  confval:: mod.web_list.filters.table.<table>.fields
     :name: conf-filters-table-fields
@@ -264,6 +275,7 @@ decides which filters are visible for each page tree and table.
     -   ``date`` or ``dateRange``: date range filter using common date
         fields or TCA ``ctrl.crdate``
     -   ``categories``: category filter for TCA category fields
+    -   ``llm``: optional nr_llm search over resolvable text fields
 
 ..  confval:: mod.web_list.filters.table.<table>.<filter>.type
     :name: conf-filters-filter-type
@@ -281,7 +293,8 @@ extension is installed. It sends the current table's candidate records and
 the editor's question to the configured nr-llm configuration, then applies
 the returned UID list to the record-list query.
 
-Use :typoscript:`configurationIdentifier` to reference the
+By default, the bundled TSconfig uses
+``configurationIdentifier = record-list-search``. This must reference the
 ``identifier`` field of an EXT:nr_llm LLM configuration record. The older
 :typoscript:`configuration` key is accepted as an alias.
 If EXT:nr_llm is not installed, the identifier is missing, the referenced
@@ -293,7 +306,7 @@ the reason.
     :caption: Page TSconfig
 
     mod.web_list.filters.table.tx_news_domain_model_news {
-        fields = title,dateRange,categories,hidden,llm
+        fields = title,dateRange,categories,topNews,hidden,llm
 
         llm {
             type = llm

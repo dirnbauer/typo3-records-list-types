@@ -345,9 +345,9 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             'label' => $this->resolveFilterLabel($filterConfig, $this->getFieldLabel($table, $field)),
             'field' => $field,
             'options' => [
-                ['value' => '', 'label' => $this->translate('filter.option.any', 'Any')],
-                ['value' => '0', 'label' => $this->translate('filter.option.visible', 'Visible')],
-                ['value' => '1', 'label' => $this->translate('filter.option.hidden', 'Hidden')],
+                ['value' => '', 'label' => $this->resolveOptionLabel($filterConfig, 'anyLabel', $this->translate('filter.option.any', 'Any'))],
+                ['value' => '0', 'label' => $this->resolveOptionLabel($filterConfig, 'falseLabel', $this->translate('filter.option.visible', 'Visible'))],
+                ['value' => '1', 'label' => $this->resolveOptionLabel($filterConfig, 'trueLabel', $this->translate('filter.option.hidden', 'Hidden'))],
             ],
         ];
     }
@@ -665,6 +665,15 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
     private function resolveFilterLabel(array $filterConfig, string $fallback): string
     {
         $label = is_string($filterConfig['label'] ?? null) ? $filterConfig['label'] : '';
+        return $label !== '' ? $this->translateLabel($label, $fallback) : $fallback;
+    }
+
+    /**
+     * @param array<string, mixed> $filterConfig
+     */
+    private function resolveOptionLabel(array $filterConfig, string $key, string $fallback): string
+    {
+        $label = is_string($filterConfig[$key] ?? null) ? $filterConfig[$key] : '';
         return $label !== '' ? $this->translateLabel($label, $fallback) : $fallback;
     }
 

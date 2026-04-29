@@ -167,7 +167,7 @@ Filters are configured in TSconfig and applied in the record-list query, so all 
 
 ```typoscript
 mod.web_list.filters.table.tx_news_domain_model_news {
-    fields = title,dateRange,categories,hidden
+    fields = title,dateRange,categories,topNews,hidden,llm
 
     title {
         type = text
@@ -176,7 +176,7 @@ mod.web_list.filters.table.tx_news_domain_model_news {
 }
 ```
 
-An optional `llm` filter can use EXT:nr_llm by referencing an nr-llm configuration identifier. If EXT:nr_llm is not installed, the identifier is missing, the referenced configuration is missing or inactive, or no provider is available, the LLM filter is hidden and the filter panel shows a backend warning.
+Generic defaults are TCA-derived (`title,dateRange,hidden,categories,llm`) and skip filters whose backing fields do not exist, so newly added tables usually work without table-specific TSconfig. The optional `llm` filter uses `configurationIdentifier = record-list-search` by default. If EXT:nr_llm is not installed, the identifier is missing, the referenced configuration is missing or inactive, or no provider is available, the LLM filter is hidden and the filter panel shows a backend warning.
 
 ### View Mode Settings
 

@@ -64,14 +64,22 @@ Filters are configured in Page TSconfig and applied through the TYPO3 record-lis
 ```typoscript
 mod.web_list.filters {
     enabled = 1
-    autoDefaults = title
+    autoDefaults = title,dateRange,hidden,categories,llm
 
     table.tx_news_domain_model_news {
-        fields = title,dateRange,categories,hidden
+        fields = title,dateRange,categories,topNews,hidden,llm
 
         title {
             type = text
             fields = title,teaser
+        }
+
+        topNews {
+            type = boolean
+            field = istopnews
+            label = Top News
+            falseLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.no
+            trueLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.yes
         }
     }
 }
@@ -83,12 +91,19 @@ Built-in aliases:
 - `hidden`: visibility filter from TCA enable columns
 - `dateRange`: date range filter from common date fields or `ctrl.crdate`
 - `categories`: TYPO3 category filter
+- `llm`: optional nr_llm search over resolvable text fields
 
-Optional nr-llm-backed search:
+The default `autoDefaults` are intentionally generic. When a new table is
+added later, filters whose backing TCA fields do not exist are skipped
+automatically, so most tables get a useful filter set without extra
+TSconfig. Use `mod.web_list.filters.table.<table>` only to refine important
+tables or table-specific fields.
+
+Optional nr_llm-backed search:
 
 ```typoscript
 mod.web_list.filters.table.tx_news_domain_model_news {
-    fields = title,dateRange,categories,hidden,llm
+    fields = title,dateRange,categories,topNews,hidden,llm
 
     llm {
         type = llm
@@ -100,12 +115,13 @@ mod.web_list.filters.table.tx_news_domain_model_news {
 }
 ```
 
-`configurationIdentifier` must match the `identifier` field of an
-EXT:nr_llm LLM configuration record. The legacy key `configuration` is
-also accepted as an alias. If EXT:nr_llm is not installed, the identifier
-is missing, the referenced configuration is missing or inactive, or no
-provider is available, the LLM filter is hidden and the filter panel shows
-a backend warning explaining the reason.
+By default, the bundled TSconfig uses `configurationIdentifier = record-list-search`.
+This must match the `identifier` field of an
+EXT:nr_llm LLM configuration record. The legacy key `configuration` is also
+accepted as an alias. If EXT:nr_llm is not installed, the identifier is
+missing, the referenced configuration is missing or inactive, or no provider
+is available, the LLM filter is hidden and the filter panel shows a backend
+warning explaining the reason.
 
 ## Common Configurations
 

@@ -207,6 +207,14 @@
                 <source>Hidden</source>
                 <target>Verborgen</target>
             </trans-unit>
+            <trans-unit id="filter.option.yes" resname="filter.option.yes">
+                <source>Yes</source>
+                <target>Ja</target>
+            </trans-unit>
+            <trans-unit id="filter.option.no" resname="filter.option.no">
+                <source>No</source>
+                <target>Nein</target>
+            </trans-unit>
             <trans-unit id="filter.llm.label" resname="filter.llm.label">
                 <source>Ask records</source>
                 <target>Datensätze fragen</target>

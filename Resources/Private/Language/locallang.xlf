@@ -158,6 +158,12 @@
             <trans-unit id="filter.option.hidden" resname="filter.option.hidden">
                 <source>Hidden</source>
             </trans-unit>
+            <trans-unit id="filter.option.yes" resname="filter.option.yes">
+                <source>Yes</source>
+            </trans-unit>
+            <trans-unit id="filter.option.no" resname="filter.option.no">
+                <source>No</source>
+            </trans-unit>
             <trans-unit id="filter.llm.label" resname="filter.llm.label">
                 <source>Ask records</source>
             </trans-unit>

@@ -112,13 +112,14 @@ mod.web_list {
         enabled = 1
 
         # Used when a table has no explicit fields list.
+        # Filters whose backing TCA fields do not exist are skipped automatically.
         # Built-in aliases: title/label, hidden, date/dateRange, categories.
-        autoDefaults = title
+        autoDefaults = title,dateRange,hidden,categories,llm
 
         presets {
             title {
                 type = text
-                fields = label
+                fields = label,title,header,name,username,email,teaser,description,bodytext,abstract,subheader,subtitle,nav_title,file_name,alternative
             }
             hidden {
                 type = boolean
@@ -132,34 +133,93 @@ mod.web_list {
                 type = category
                 field = categories
             }
+            llm {
+                type = llm
+                configurationIdentifier = record-list-search
+                fields = label,title,header,name,username,email,teaser,description,bodytext,abstract,subheader,subtitle,nav_title,alternative
+                candidateLimit = 80
+                resultLimit = 25
+            }
         }
 
         table {
             pages {
-                fields = title,hidden
+                fields = title,dateRange,hidden,categories,llm
+
+                title {
+                    fields = title,nav_title,subtitle,abstract,description
+                }
+                llm {
+                    fields = title,nav_title,subtitle,abstract,description
+                }
             }
             tt_content {
-                fields = title,hidden
+                fields = title,dateRange,hidden,categories,llm
+
+                title {
+                    fields = header,subheader,bodytext
+                }
+                llm {
+                    fields = header,subheader,bodytext
+                }
+            }
+            sys_category {
+                fields = title,dateRange
+            }
+            sys_file_metadata {
+                fields = title,dateRange,llm
+
+                title {
+                    fields = title,alternative,description
+                }
+                llm {
+                    fields = title,alternative,description
+                }
+            }
+            fe_users {
+                fields = title,dateRange,hidden,categories,llm
+
+                title {
+                    fields = name,username,email,company
+                }
+                llm {
+                    fields = name,username,email,company
+                }
             }
             tx_news_domain_model_news {
-                fields = title,dateRange,categories,hidden
+                fields = title,dateRange,categories,topNews,hidden,llm
 
                 title {
                     fields = title,teaser
                 }
-
-                # Optional nr-llm-backed record search.
-                # Enable only when EXT:nr_llm is installed and the referenced
-                # LLM configuration exists.
-                # fields = title,dateRange,categories,hidden,llm
-                # llm {
-                #     type = llm
-                #     configurationIdentifier = record-list-search
-                #     fields = title,teaser,bodytext
-                #     candidateLimit = 80
-                #     resultLimit = 25
-                # }
+                dateRange {
+                    field = datetime
+                }
+                topNews {
+                    type = boolean
+                    field = istopnews
+                    label = Top News
+                    falseLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.no
+                    trueLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.yes
+                }
+                llm {
+                    fields = title,teaser,bodytext
+                }
             }
+            tx_news_domain_model_category {
+                fields = title,dateRange,hidden
+            }
+            tx_news_domain_model_tag {
+                fields = title,dateRange
+            }
+            tx_news_domain_model_author {
+                fields = title,dateRange,hidden
+            }
+
+            # LLM filters are active for the text-heavy tables above. If
+            # EXT:nr_llm is missing, the record-list-search configuration does
+            # not exist or no provider is available, the filter panel shows a
+            # warning instead of the LLM textarea.
         }
     }
 
