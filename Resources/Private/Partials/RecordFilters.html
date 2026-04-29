@@ -17,7 +17,7 @@
     </f:if>
 
     <f:if condition="{filters.items}">
-        <form class="recordlist-filters" method="get" action="{filters.formActionUrl}#t3-table-{filters.tableName}">
+        <form class="recordlist-filters" method="post" action="{filters.formActionUrl}#t3-table-{filters.tableName}">
             <f:for each="{filters.hiddenFields}" as="hiddenField">
                 <input type="hidden" name="{hiddenField.name}" value="{hiddenField.value}" />
             </f:for>
