@@ -29,6 +29,13 @@ final readonly class RecordFilterStateService
         return isset($params[self::VALUES_PARAMETER]) && is_array($params[self::VALUES_PARAMETER]);
     }
 
+    public function getSelectedTable(ServerRequestInterface $request): string
+    {
+        $params = $this->getMergedParameters($request);
+        $table = $params['table'] ?? null;
+        return is_scalar($table) ? trim((string) $table) : '';
+    }
+
     /**
      * @return array<string, mixed>
      */

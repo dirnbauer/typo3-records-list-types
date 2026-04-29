@@ -41,6 +41,10 @@ final readonly class RecordFilterButtonBarListener
         if (!$this->configurationService->isEnabled($pageId)) {
             return;
         }
+        $table = $this->stateService->getSelectedTable($request);
+        if ($table === '' || !$this->hasFilterPanelContent($table, $pageId)) {
+            return;
+        }
         $this->pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/base.css');
 
         $lang = $this->getLanguageService();
@@ -90,6 +94,12 @@ final readonly class RecordFilterButtonBarListener
         }
 
         return (string) $request->getUri()->withQuery(http_build_query($params));
+    }
+
+    private function hasFilterPanelContent(string $table, int $pageId): bool
+    {
+        return $this->configurationService->getFiltersForTable($table, $pageId) !== []
+            || $this->configurationService->getWarningsForTable($table, $pageId) !== [];
     }
 
     private function isRecordsModule(ServerRequestInterface $request): bool

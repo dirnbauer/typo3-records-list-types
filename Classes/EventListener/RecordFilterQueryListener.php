@@ -31,6 +31,10 @@ final readonly class RecordFilterQueryListener
         }
 
         $table = $event->getTable();
+        if ($this->stateService->getSelectedTable($request) !== $table) {
+            return;
+        }
+
         $values = $this->stateService->getActiveValuesForTable($request, $table);
         if ($values === []) {
             return;

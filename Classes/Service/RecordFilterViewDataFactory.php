@@ -30,9 +30,10 @@ final readonly class RecordFilterViewDataFactory
     ): array {
         $filters = $this->configurationService->getFiltersForTable($table, $pageId);
         $filters = $this->stateService->attachValues($filters, $request, $table);
+        $selectedTable = $this->stateService->getSelectedTable($request);
 
         return [
-            'visible' => $this->stateService->shouldShow($request),
+            'visible' => $this->stateService->shouldShow($request) && $selectedTable === $table,
             'tableName' => $table,
             'items' => $filters,
             'warnings' => $this->configurationService->getWarningsForTable($table, $pageId),

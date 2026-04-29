@@ -76,6 +76,34 @@ final class RecordFilterStateServiceTest extends TestCase
     }
 
     #[Test]
+    public function getSelectedTableReturnsTableParameter(): void
+    {
+        $request = $this->createRequest([
+            'table' => 'tt_content',
+        ]);
+
+        self::assertSame('tt_content', $this->createSubject()->getSelectedTable($request));
+    }
+
+    #[Test]
+    public function getSelectedTableReturnsEmptyStringWhenTableIsMissing(): void
+    {
+        $request = $this->createRequest([]);
+
+        self::assertSame('', $this->createSubject()->getSelectedTable($request));
+    }
+
+    #[Test]
+    public function getSelectedTableReturnsEmptyStringForNestedTableParameter(): void
+    {
+        $request = $this->createRequest([
+            'table' => ['tt_content'],
+        ]);
+
+        self::assertSame('', $this->createSubject()->getSelectedTable($request));
+    }
+
+    #[Test]
     public function attachValuesAddsScalarAndDateRangeValuesToFilters(): void
     {
         $request = $this->createRequest([
