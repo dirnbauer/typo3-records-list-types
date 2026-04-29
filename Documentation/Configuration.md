@@ -90,7 +90,10 @@ Built-in aliases:
 - `title` / `label`: text filter for the TCA label field
 - `hidden`: visibility filter from TCA enable columns
 - `dateRange`: date range filter from common date fields or `ctrl.crdate`
-- `category` / `categories`: TYPO3 many-to-many TCA category filter
+- `category` / `categories`: TYPO3 many-to-many TCA category filter. Category
+  options are grouped by default-language category and show translations in
+  brackets; selecting an option matches the default category UID and its
+  translation UIDs.
 - `llm`: optional nr_llm search over resolvable text fields
 
 The default `autoDefaults` are intentionally generic. When a new table is

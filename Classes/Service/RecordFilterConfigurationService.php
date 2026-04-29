@@ -193,7 +193,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
     }
 
     /**
-     * @return array<int, array{value: string, label: string}>
+     * @return array<int, array{value: string, label: string, primaryLabel: string, translationLabel: string, fullLabel: string}>
      */
     public function getCategoryOptions(): array
     {
@@ -207,23 +207,66 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
 
         $rows = $queryBuilder
-            ->select('uid', 'title')
+            ->select('uid', 'title', 'sys_language_uid', 'l10n_parent')
             ->from('sys_category')
-            ->orderBy('title')
-            ->setMaxResults(200)
+            ->orderBy('l10n_parent')
+            ->addOrderBy('sys_language_uid')
+            ->addOrderBy('title')
+            ->setMaxResults(1000)
             ->executeQuery()
             ->fetchAllAssociative();
 
-        $options = [];
+        $defaultLanguageCategories = [];
+        $translationsByParent = [];
         foreach ($rows as $row) {
             $uid = $row['uid'] ?? null;
             $title = $row['title'] ?? '';
             if (!is_numeric($uid)) {
                 continue;
             }
+            $uid = (int) $uid;
+            $languageUid = is_numeric($row['sys_language_uid'] ?? null) ? (int) $row['sys_language_uid'] : 0;
+            $parentUid = is_numeric($row['l10n_parent'] ?? null) ? (int) $row['l10n_parent'] : 0;
+            $label = is_scalar($title) && trim((string) $title) !== '' ? trim((string) $title) : (string) $uid;
+            if ($languageUid > 0 && $parentUid > 0) {
+                $translationsByParent[$parentUid][] = [
+                    'uid' => $uid,
+                    'label' => $label,
+                    'languageUid' => $languageUid,
+                ];
+                continue;
+            }
+
+            $defaultLanguageCategories[$uid] = [
+                'uid' => $uid,
+                'label' => $label,
+            ];
+        }
+
+        uasort($defaultLanguageCategories, static fn(array $a, array $b): int => strcasecmp($a['label'], $b['label']));
+
+        $options = [];
+        foreach ($defaultLanguageCategories as $category) {
+            $uid = $category['uid'];
+            $translations = $translationsByParent[$uid] ?? [];
+            usort($translations, static function (array $a, array $b): int {
+                $languageComparison = $a['languageUid'] <=> $b['languageUid'];
+                return $languageComparison !== 0 ? $languageComparison : strcasecmp($a['label'], $b['label']);
+            });
+
+            $translationLabels = array_map(static fn(array $translation): string => $translation['label'], $translations);
+            $relatedUids = array_merge(
+                [$uid],
+                array_map(static fn(array $translation): int => $translation['uid'], $translations),
+            );
+            $translationLabel = implode(', ', $translationLabels);
+            $primaryLabel = $category['label'];
             $options[] = [
-                'value' => (string) (int) $uid,
-                'label' => is_scalar($title) ? (string) $title : (string) (int) $uid,
+                'value' => implode(',', $relatedUids),
+                'label' => $translationLabel !== '' ? $primaryLabel . ' (' . $translationLabel . ')' : $primaryLabel,
+                'primaryLabel' => $primaryLabel,
+                'translationLabel' => $translationLabel,
+                'fullLabel' => $translationLabel !== '' ? $primaryLabel . ' (' . $translationLabel . ')' : $primaryLabel,
             ];
         }
 
@@ -420,7 +463,14 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             return null;
         }
 
-        array_unshift($options, ['value' => '', 'label' => $this->translate('filter.option.any', 'Any')]);
+        $anyLabel = $this->translate('filter.option.any', 'Any');
+        array_unshift($options, [
+            'value' => '',
+            'label' => $anyLabel,
+            'primaryLabel' => $anyLabel,
+            'translationLabel' => '',
+            'fullLabel' => $anyLabel,
+        ]);
         return [
             'id' => $filterId,
             'type' => 'category',

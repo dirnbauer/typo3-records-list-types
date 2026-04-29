@@ -72,10 +72,68 @@ final readonly class RecordFilterStateService
                 $filter['fromValue'] = '';
                 $filter['toValue'] = '';
             }
+            $options = is_array($filter['options'] ?? null) ? $this->normalizeOptions($filter['options']) : [];
+            if ($options !== []) {
+                $filter['selectedOption'] = $this->findSelectedOption($options, $filter['value']);
+                if (is_scalar($filter['selectedOption']['value'] ?? null)) {
+                    $filter['value'] = (string) $filter['selectedOption']['value'];
+                }
+            }
         }
         unset($filter);
 
         return $filters;
+    }
+
+    /**
+     * @param array<mixed, mixed> $options
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeOptions(array $options): array
+    {
+        $normalized = [];
+        foreach ($options as $option) {
+            if (is_array($option)) {
+                $normalized[] = $option;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $options
+     * @return array<string, mixed>
+     */
+    private function findSelectedOption(array $options, string $value): array
+    {
+        $fallback = [];
+        foreach ($options as $option) {
+            if (!is_array($option)) {
+                continue;
+            }
+            $optionValue = $option['value'] ?? null;
+            if ($optionValue === '') {
+                $fallback = $option;
+            }
+            if (is_scalar($optionValue) && (string) $optionValue === $value) {
+                return $option;
+            }
+            if (is_scalar($optionValue) && $this->optionValueContainsUid((string) $optionValue, $value)) {
+                return $option;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function optionValueContainsUid(string $optionValue, string $value): bool
+    {
+        if (!is_numeric($value)) {
+            return false;
+        }
+
+        return in_array((string) (int) $value, explode(',', $optionValue), true);
     }
 
     /**

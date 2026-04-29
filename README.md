@@ -176,7 +176,7 @@ mod.web_list.filters.table.tx_news_domain_model_news {
 }
 ```
 
-Generic defaults are TCA-derived (`title,dateRange,hidden,categories,llm`) and skip filters whose backing fields do not exist, so newly added tables usually work without table-specific TSconfig. `category` and `categories` both resolve to TYPO3 many-to-many TCA category fields. The optional `llm` filter uses `configurationIdentifier = record-list-search` by default. If EXT:nr_llm is not installed, the identifier is missing, the referenced configuration is missing or inactive, or no provider is available, the LLM filter is hidden and the filter panel shows a backend warning.
+Generic defaults are TCA-derived (`title,dateRange,hidden,categories,llm`) and skip filters whose backing fields do not exist, so newly added tables usually work without table-specific TSconfig. `category` and `categories` both resolve to TYPO3 many-to-many TCA category fields. Category options show the default-language category once and append available translations in brackets; selecting it matches the default category UID and its translation UIDs. The optional `llm` filter uses `configurationIdentifier = record-list-search` by default. If EXT:nr_llm is not installed, the identifier is missing, the referenced configuration is missing or inactive, or no provider is available, the LLM filter is hidden and the filter panel shows a backend warning.
 
 ### View Mode Settings
 

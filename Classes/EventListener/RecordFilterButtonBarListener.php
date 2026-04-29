@@ -46,6 +46,7 @@ final readonly class RecordFilterButtonBarListener
             return;
         }
         $this->pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/base.css');
+        $this->pageRenderer->loadJavaScriptModule('@webconsulting/records-list-types/RecordFilters.js');
 
         $lang = $this->getLanguageService();
         $translatedLabel = $lang?->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.show') ?? '';

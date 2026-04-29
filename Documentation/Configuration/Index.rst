@@ -275,7 +275,9 @@ decides which filters are visible for each page tree and table.
     -   ``date`` or ``dateRange``: date range filter using common date
         fields or TCA ``ctrl.crdate``
     -   ``category`` or ``categories``: category filter for TYPO3
-        many-to-many TCA category fields
+        many-to-many TCA category fields. Category options are grouped by
+        default-language category and show translations in brackets; selecting
+        an option matches the default category UID and its translation UIDs.
     -   ``llm``: optional nr_llm search over resolvable text fields
 
 ..  confval:: mod.web_list.filters.table.<table>.<filter>.type

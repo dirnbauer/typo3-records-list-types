@@ -74,20 +74,69 @@
                             </f:case>
 
                             <f:case value="category">
-                                <select id="record-filter-{filters.tableName}-{filter.id}"
-                                        class="form-select form-select-sm"
-                                        name="recordFilters[{filters.tableName}][{filter.id}]">
-                                    <f:for each="{filter.options}" as="option">
-                                        <f:if condition="{filter.value} == {option.value}">
-                                            <f:then>
-                                                <option value="{option.value}" selected="selected">{option.label}</option>
-                                            </f:then>
-                                            <f:else>
-                                                <option value="{option.value}">{option.label}</option>
-                                            </f:else>
-                                        </f:if>
-                                    </f:for>
-                                </select>
+                                <div class="recordlist-category-filter" data-recordlist-category-filter>
+                                    <button id="record-filter-{filters.tableName}-{filter.id}"
+                                            class="form-select form-select-sm recordlist-category-filter__toggle"
+                                            type="button"
+                                            title="{filter.selectedOption.fullLabel}"
+                                            aria-haspopup="listbox"
+                                            aria-expanded="false"
+                                            data-recordlist-category-filter-toggle>
+                                        <span class="recordlist-category-filter__text">
+                                            <span class="recordlist-category-filter__primary" data-recordlist-category-filter-primary>{filter.selectedOption.primaryLabel}</span>
+                                            <f:if condition="{filter.selectedOption.translationLabel}">
+                                                <span class="recordlist-category-filter__translations" data-recordlist-category-filter-translations>
+                                                    ({filter.selectedOption.translationLabel})
+                                                </span>
+                                            </f:if>
+                                        </span>
+                                    </button>
+                                    <div class="recordlist-category-filter__menu"
+                                         role="listbox"
+                                         aria-labelledby="record-filter-{filters.tableName}-{filter.id}"
+                                         hidden="hidden"
+                                         data-recordlist-category-filter-menu>
+                                        <f:for each="{filter.options}" as="option" iteration="optionIterator">
+                                            <f:if condition="{filter.value} == {option.value}">
+                                                <f:then>
+                                                    <label class="recordlist-category-filter__option"
+                                                           for="record-filter-{filters.tableName}-{filter.id}-{optionIterator.index}"
+                                                           title="{option.fullLabel}"
+                                                           data-recordlist-category-filter-option>
+                                                        <input id="record-filter-{filters.tableName}-{filter.id}-{optionIterator.index}"
+                                                               class="visually-hidden"
+                                                               type="radio"
+                                                               name="recordFilters[{filters.tableName}][{filter.id}]"
+                                                               value="{option.value}"
+                                                               checked="checked"
+                                                               data-recordlist-category-filter-input />
+                                                        <span class="recordlist-category-filter__primary">{option.primaryLabel}</span>
+                                                        <f:if condition="{option.translationLabel}">
+                                                            <span class="recordlist-category-filter__translations">({option.translationLabel})</span>
+                                                        </f:if>
+                                                    </label>
+                                                </f:then>
+                                                <f:else>
+                                                    <label class="recordlist-category-filter__option"
+                                                           for="record-filter-{filters.tableName}-{filter.id}-{optionIterator.index}"
+                                                           title="{option.fullLabel}"
+                                                           data-recordlist-category-filter-option>
+                                                        <input id="record-filter-{filters.tableName}-{filter.id}-{optionIterator.index}"
+                                                               class="visually-hidden"
+                                                               type="radio"
+                                                               name="recordFilters[{filters.tableName}][{filter.id}]"
+                                                               value="{option.value}"
+                                                               data-recordlist-category-filter-input />
+                                                        <span class="recordlist-category-filter__primary">{option.primaryLabel}</span>
+                                                        <f:if condition="{option.translationLabel}">
+                                                            <span class="recordlist-category-filter__translations">({option.translationLabel})</span>
+                                                        </f:if>
+                                                    </label>
+                                                </f:else>
+                                            </f:if>
+                                        </f:for>
+                                    </div>
+                                </div>
                             </f:case>
 
                             <f:case value="dateRange">

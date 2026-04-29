@@ -150,6 +150,60 @@ final class RecordFilterStateServiceTest extends TestCase
         );
     }
 
+    #[Test]
+    public function attachValuesSelectsCanonicalCategoryOptionForTranslatedCategoryUid(): void
+    {
+        $request = $this->createRequest([
+            RecordFilterStateService::VALUES_PARAMETER => [
+                'tt_content' => [
+                    'categories' => '12',
+                ],
+            ],
+        ]);
+
+        $filters = [[
+            'id' => 'categories',
+            'type' => 'category',
+            'options' => [
+                [
+                    'value' => '',
+                    'label' => 'Any',
+                ],
+                [
+                    'value' => '10,11,12',
+                    'label' => 'News (Nachrichten, Notizie)',
+                ],
+            ],
+        ]];
+
+        self::assertSame(
+            [
+                [
+                    'id' => 'categories',
+                    'type' => 'category',
+                    'options' => [
+                        [
+                            'value' => '',
+                            'label' => 'Any',
+                        ],
+                        [
+                            'value' => '10,11,12',
+                            'label' => 'News (Nachrichten, Notizie)',
+                        ],
+                    ],
+                    'value' => '10,11,12',
+                    'fromValue' => '',
+                    'toValue' => '',
+                    'selectedOption' => [
+                        'value' => '10,11,12',
+                        'label' => 'News (Nachrichten, Notizie)',
+                    ],
+                ],
+            ],
+            $this->createSubject()->attachValues($filters, $request, 'tt_content'),
+        );
+    }
+
     /**
      * @param array<string, mixed> $queryParams
      */

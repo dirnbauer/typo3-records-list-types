@@ -160,11 +160,8 @@ final readonly class RecordFilterQueryListener
      */
     private function applyCategoryFilter(QueryBuilder $queryBuilder, string $table, array $filter, mixed $value): void
     {
-        if (!is_numeric($value)) {
-            return;
-        }
-        $categoryUid = (int) $value;
-        if ($categoryUid <= 0) {
+        $categoryUids = $this->normalizeCategoryValue($value);
+        if ($categoryUids === []) {
             return;
         }
         $field = is_string($filter['field'] ?? null) ? $filter['field'] : '';
@@ -174,7 +171,10 @@ final readonly class RecordFilterQueryListener
 
         $subQuery = 'SELECT 1 FROM sys_category_record_mm record_filter_category_mm'
             . ' WHERE record_filter_category_mm.uid_foreign = ' . $queryBuilder->quoteIdentifier($table . '.uid')
-            . ' AND record_filter_category_mm.uid_local = ' . $queryBuilder->createNamedParameter($categoryUid, ParameterType::INTEGER)
+            . ' AND ' . $queryBuilder->expr()->in(
+                'record_filter_category_mm.uid_local',
+                $queryBuilder->createNamedParameter($categoryUids, ArrayParameterType::INTEGER),
+            )
             . ' AND record_filter_category_mm.tablenames = ' . $queryBuilder->createNamedParameter($table)
             . ' AND record_filter_category_mm.fieldname = ' . $queryBuilder->createNamedParameter($field);
 
@@ -203,6 +203,29 @@ final readonly class RecordFilterQueryListener
                 $queryBuilder->createNamedParameter($uids, ArrayParameterType::INTEGER),
             ),
         );
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function normalizeCategoryValue(mixed $value): array
+    {
+        if (!is_scalar($value)) {
+            return [];
+        }
+
+        $uids = [];
+        foreach (explode(',', (string) $value) as $uid) {
+            if (!is_numeric($uid)) {
+                continue;
+            }
+            $uid = (int) $uid;
+            if ($uid > 0) {
+                $uids[] = $uid;
+            }
+        }
+
+        return array_values(array_unique($uids));
     }
 
     private function normalizeDateValue(string $table, string $field, string $date, bool $endOfDay): int|string
