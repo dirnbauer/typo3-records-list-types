@@ -13,6 +13,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use ReflectionException;
 use ReflectionMethod;
 use RuntimeException;
+use Stringable;
 use TYPO3\CMS\Backend\Context\PageContext;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
@@ -488,7 +489,6 @@ final class RecordListController extends CoreRecordListController
                         $offset,
                         $sortField,
                         $sortDirection,
-                        false,
                         $recordGridDataProvider,
                     );
                     $recordCount = $searchTotalCount;
@@ -508,7 +508,6 @@ final class RecordListController extends CoreRecordListController
                         0,
                         $sortField,
                         $sortDirection,
-                        false,
                         $recordGridDataProvider,
                     );
                     $recordCount = $searchTotalCount;
@@ -529,7 +528,6 @@ final class RecordListController extends CoreRecordListController
                     $offset,
                     $sortField,
                     $sortDirection,
-                    $sortingMode === 'manual' && $hasSortbyField,
                     $recordGridDataProvider,
                 );
                 $recordCount = $totalRecordCount;
@@ -549,7 +547,6 @@ final class RecordListController extends CoreRecordListController
                     $offset,
                     $sortField,
                     $sortDirection,
-                    $sortingMode === 'manual' && $hasSortbyField,
                     $recordGridDataProvider,
                 );
                 $recordCount = $totalRecordCount;
@@ -1093,7 +1090,6 @@ final class RecordListController extends CoreRecordListController
         int $offset = 0,
         string $sortField = '',
         string $sortDirection = 'asc',
-        bool $useManualSorting = false,
         ?RecordGridDataProvider $recordGridDataProvider = null,
     ): array {
         $records = [];
@@ -1105,8 +1101,8 @@ final class RecordListController extends CoreRecordListController
         try {
             // Create a properly initialized DatabaseRecordList for this table
             $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
-            $dbList->sortField = $useManualSorting ? '' : $sortField;
-            $dbList->sortRev = !$useManualSorting && strtolower($sortDirection) === 'desc';
+            $dbList->sortField = $sortField;
+            $dbList->sortRev = strtolower($sortDirection) === 'desc';
 
             // Use DatabaseRecordList's query builder which handles search properly
             // This is the same API the core list view uses
@@ -1144,10 +1140,88 @@ final class RecordListController extends CoreRecordListController
         }
 
         if ($useWorkspaceReduction) {
-            return array_values($recordsByIdentity);
+            $records = array_values($recordsByIdentity);
+            if ($sortField !== '') {
+                $this->sortRecordsByRawField($records, $sortField, $sortDirection);
+            }
+            return $records;
         }
 
         return $records;
+    }
+
+    /**
+     * Sort overlaid workspace rows by their effective field value.
+     *
+     * The SQL query has to fetch live rows first and workspaceOL() overlays
+     * draft values afterwards. Re-sorting the reduced result keeps manual
+     * `sortby` ordering and field sorting aligned with workspace changes.
+     *
+     * @param array<int, array<string, mixed>> $records
+     */
+    private function sortRecordsByRawField(array &$records, string $sortField, string $sortDirection): void
+    {
+        $descending = strtolower($sortDirection) === 'desc';
+
+        usort(
+            $records,
+            static function (array $left, array $right) use ($sortField, $descending): int {
+                $leftRaw = is_array($left['rawRecord'] ?? null) ? $left['rawRecord'] : [];
+                $rightRaw = is_array($right['rawRecord'] ?? null) ? $right['rawRecord'] : [];
+
+                $comparison = self::compareSortableValues($leftRaw[$sortField] ?? null, $rightRaw[$sortField] ?? null);
+                if ($comparison === 0) {
+                    $comparison = self::compareSortableValues($leftRaw['uid'] ?? null, $rightRaw['uid'] ?? null);
+                }
+
+                return $descending ? -$comparison : $comparison;
+            },
+        );
+    }
+
+    private static function compareSortableValues(mixed $left, mixed $right): int
+    {
+        if ($left === $right) {
+            return 0;
+        }
+        if ($left === null || $left === '') {
+            return 1;
+        }
+        if ($right === null || $right === '') {
+            return -1;
+        }
+        if (is_numeric($left) && is_numeric($right)) {
+            return (float) $left <=> (float) $right;
+        }
+
+        $leftString = self::sortableValueAsString($left);
+        $rightString = self::sortableValueAsString($right);
+        if ($leftString === $rightString) {
+            return 0;
+        }
+        if ($leftString === null) {
+            return 1;
+        }
+        if ($rightString === null) {
+            return -1;
+        }
+
+        return strnatcasecmp($leftString, $rightString);
+    }
+
+    private static function sortableValueAsString(mixed $value): ?string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+        if (is_int($value) || is_float($value) || is_string($value)) {
+            return (string) $value;
+        }
+        if ($value instanceof Stringable) {
+            return (string) $value;
+        }
+
+        return null;
     }
 
     /**
