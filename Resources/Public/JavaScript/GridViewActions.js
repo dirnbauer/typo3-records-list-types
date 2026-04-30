@@ -211,10 +211,7 @@ class GridViewActions {
         
         e.dataTransfer.dropEffect = 'move';
         
-        // Clear other drop indicators
-        document.querySelectorAll('.gridview-drop-before, .gridview-drop-after').forEach(el => {
-            el.classList.remove('gridview-drop-before', 'gridview-drop-after');
-        });
+        this.clearDropIndicators();
         
         // Activate this dropzone
         dropzone.classList.add('gridview-drop-active');
@@ -268,8 +265,15 @@ class GridViewActions {
         
         const card = e.target.closest('.gridview-card');
         if (!card || card === this.draggedCard) return;
-        if (card.dataset.table !== this.draggedTable) return;
-        
+        if (card.dataset.table !== this.draggedTable) {
+            this.clearCurrentDropTarget();
+            return;
+        }
+        if (!this.isCompatibleReorderTarget(card)) {
+            this.clearCurrentDropTarget();
+            return;
+        }
+
         const wrapper = card.closest('.gridview-card-wrapper');
         
         e.dataTransfer.dropEffect = 'move';
@@ -280,7 +284,7 @@ class GridViewActions {
         const rect = card.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const grid = card.closest('.gridview-card-grid');
-        const allWrappers = grid ? Array.from(grid.querySelectorAll('.gridview-card-wrapper')) : [];
+        const allWrappers = grid ? this.getCompatibleReorderWrappers(grid) : [];
         // Filter out the dragged card's wrapper to find the real last visible card
         const visibleWrappers = allWrappers.filter(w => w !== this.draggedWrapper);
         const isLastCard = visibleWrappers.length > 0 && visibleWrappers[visibleWrappers.length - 1] === wrapper;
@@ -289,10 +293,7 @@ class GridViewActions {
         
         // Only update if changed
         if (this.currentTargetWrapper !== wrapper || this.dropPosition !== position) {
-            // Clear previous
-            document.querySelectorAll('.gridview-drop-before, .gridview-drop-after').forEach(el => {
-                el.classList.remove('gridview-drop-before', 'gridview-drop-after');
-            });
+            this.clearDropIndicators();
             
             // Set new - apply classes to wrapper, not card
             this.currentTarget = card;
@@ -333,6 +334,9 @@ class GridViewActions {
             return;
         }
         if (targetCard.dataset.table !== this.draggedTable) {
+            return;
+        }
+        if (!this.isCompatibleReorderTarget(targetCard)) {
             return;
         }
         
@@ -412,7 +416,7 @@ class GridViewActions {
         const grid = this.keyboardDragWrapper?.closest('.gridview-card-grid');
         if (!grid) return;
         
-        const wrappers = Array.from(grid.querySelectorAll('.gridview-card-wrapper'));
+        const wrappers = this.getCompatibleReorderWrappers(grid);
         const hasEndDropzone = grid.querySelector('.gridview-end-dropzone') !== null;
         const maxIndex = hasEndDropzone ? wrappers.length : wrappers.length - 1;
         const currentIndex = this.keyboardTargetIndex;
@@ -462,7 +466,7 @@ class GridViewActions {
         const grid = wrapper.closest('.gridview-card-grid');
         if (!grid) return;
         
-        const wrappers = Array.from(grid.querySelectorAll('.gridview-card-wrapper'));
+        const wrappers = this.getCompatibleReorderWrappers(grid);
         const index = wrappers.indexOf(wrapper);
         
         this.isKeyboardDragMode = true;
@@ -487,10 +491,7 @@ class GridViewActions {
     keyboardMoveTo(newIndex, wrappers) {
         const grid = this.keyboardDragWrapper?.closest('.gridview-card-grid');
         
-        // Clear previous indicators
-        document.querySelectorAll('.gridview-drop-before, .gridview-drop-after').forEach(el => {
-            el.classList.remove('gridview-drop-before', 'gridview-drop-after');
-        });
+        this.clearDropIndicators();
         document.querySelectorAll('.gridview-end-dropzone').forEach(el => {
             el.classList.remove('gridview-keyboard-target');
         });
@@ -535,7 +536,7 @@ class GridViewActions {
             return;
         }
         
-        const wrappers = Array.from(grid.querySelectorAll('.gridview-card-wrapper'));
+        const wrappers = this.getCompatibleReorderWrappers(grid);
         const targetIndex = this.keyboardTargetIndex;
         const originalIndex = this.keyboardOriginalIndex;
         
@@ -645,6 +646,71 @@ class GridViewActions {
         return element.closest('.gridview-card-grid');
     }
 
+    getActiveDraggedCard() {
+        return this.draggedCard || this.keyboardDragCard;
+    }
+
+    getReorderGroup(card) {
+        return card?.dataset?.reorderGroup || '';
+    }
+
+    isSameReorderContext(card, draggedCard = this.getActiveDraggedCard()) {
+        if (!card || !draggedCard) {
+            return false;
+        }
+
+        return card.dataset.table === draggedCard.dataset.table
+            && this.getReorderGroup(card) === this.getReorderGroup(draggedCard);
+    }
+
+    isCompatibleReorderTarget(card) {
+        const draggedCard = this.getActiveDraggedCard();
+        return card !== draggedCard && this.isSameReorderContext(card, draggedCard);
+    }
+
+    getCompatibleReorderWrappers(grid) {
+        const draggedCard = this.getActiveDraggedCard();
+        if (!grid || !draggedCard) {
+            return [];
+        }
+
+        return Array.from(grid.querySelectorAll('.gridview-card-wrapper')).filter(wrapper => {
+            const card = wrapper.querySelector('.gridview-card');
+            return card === draggedCard || this.isCompatibleReorderTarget(card);
+        });
+    }
+
+    getCompatibleReorderCards(grid, includeDragged = false) {
+        const draggedCard = this.getActiveDraggedCard();
+        if (!grid || !draggedCard) {
+            return [];
+        }
+
+        return Array.from(grid.querySelectorAll('.gridview-card')).filter(card => {
+            if (card === draggedCard) {
+                return includeDragged;
+            }
+
+            return this.isCompatibleReorderTarget(card);
+        });
+    }
+
+    clearDropIndicators() {
+        document.querySelectorAll('.gridview-drop-before, .gridview-drop-after').forEach(el => {
+            el.classList.remove('gridview-drop-before', 'gridview-drop-after');
+        });
+        document.querySelectorAll('.gridview-end-dropzone').forEach(el => {
+            el.classList.remove('gridview-drop-active');
+        });
+    }
+
+    clearCurrentDropTarget() {
+        this.clearDropIndicators();
+        this.currentTarget = null;
+        this.currentTargetWrapper = null;
+        this.dropPosition = null;
+    }
+
     getSortDirection(element) {
         const grid = this.getGridElement(element);
         return grid?.dataset?.sortDirection === 'desc' ? 'desc' : 'asc';
@@ -659,12 +725,10 @@ class GridViewActions {
         const siblingProperty = searchDirection === 'next' ? 'nextElementSibling' : 'previousElementSibling';
         let adjacentWrapper = wrapper?.[siblingProperty] ?? null;
         let adjacentCard = null;
-        const draggedCard = this.draggedCard || this.keyboardDragCard;
-        const draggedTable = this.draggedTable || draggedCard?.dataset.table;
 
         while (adjacentWrapper) {
             const candidate = adjacentWrapper.querySelector('.gridview-card');
-            if (candidate && candidate !== draggedCard && candidate.dataset.table === draggedTable) {
+            if (this.isCompatibleReorderTarget(candidate)) {
                 adjacentCard = candidate;
                 break;
             }
@@ -683,12 +747,23 @@ class GridViewActions {
             return null;
         }
 
+        const compatibleCards = this.getCompatibleReorderCards(grid, true);
+        const lastCompatibleCard = compatibleCards[compatibleCards.length - 1] || null;
+        const draggedCard = this.getActiveDraggedCard();
+
+        if (!lastCompatibleCard) {
+            return null;
+        }
+
+        if (lastCompatibleCard === draggedCard) {
+            return '-' + draggedCard.dataset.uid;
+        }
+
         if (this.isDescendingSortDirection(grid)) {
             return grid.dataset.pageId || fallbackPid;
         }
 
-        const lastUid = grid.dataset.lastUid;
-        return lastUid ? '-' + lastUid : null;
+        return '-' + lastCompatibleCard.dataset.uid;
     }
 
     /**
