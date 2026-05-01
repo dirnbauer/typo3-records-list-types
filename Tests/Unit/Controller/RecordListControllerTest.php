@@ -54,6 +54,32 @@ final class RecordListControllerTest extends TestCase
         self::assertSame([1, 2, 3], $this->extractRawUids($records));
     }
 
+    #[Test]
+    public function withColumnSortParamsSwitchesTableToFieldSorting(): void
+    {
+        $parameters = [
+            'id' => 123,
+            'displayMode' => 'compact',
+            'sortingMode' => [
+                'tt_content' => 'manual',
+            ],
+            'sort' => [
+                'tt_content' => [
+                    'field' => 'sorting',
+                    'direction' => 'asc',
+                ],
+            ],
+        ];
+
+        $result = $this->withColumnSortParams($parameters, 'tt_content', 'header', 'desc');
+
+        self::assertSame('field', $result['sortingMode']['tt_content']);
+        self::assertSame('header', $result['sort']['tt_content']['field']);
+        self::assertSame('desc', $result['sort']['tt_content']['direction']);
+        self::assertSame(123, $result['id']);
+        self::assertSame('compact', $result['displayMode']);
+    }
+
     /**
      * @param array<int, array<string, mixed>> $records
      */
@@ -62,6 +88,20 @@ final class RecordListControllerTest extends TestCase
         $controller = (new ReflectionClass(RecordListController::class))->newInstanceWithoutConstructor();
         $method = new ReflectionMethod(RecordListController::class, 'sortRecordsByRawField');
         $method->invokeArgs($controller, [&$records, $sortField, $sortDirection]);
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     * @return array<string, mixed>
+     */
+    private function withColumnSortParams(array $parameters, string $tableName, string $field, string $direction): array
+    {
+        $controller = (new ReflectionClass(RecordListController::class))->newInstanceWithoutConstructor();
+        $method = new ReflectionMethod(RecordListController::class, 'withColumnSortParams');
+        $result = $method->invoke($controller, $parameters, $tableName, $field, $direction);
+
+        self::assertIsArray($result);
+        return $result;
     }
 
     /**

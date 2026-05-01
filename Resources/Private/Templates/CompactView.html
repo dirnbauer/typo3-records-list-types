@@ -122,7 +122,7 @@
                                         <f:comment>Sortable column headers rendered by PHP using TYPO3 API</f:comment>
                                         <f:for each="{table.sortableColumnHeaders}" as="header">
                                             <th class="compactview-th{f:if(condition: header.isFixed, then: ' compactview-th--fixed-left')} compactview-th--{header.type}">
-                                                <f:render partial="SortableColumnHeader" arguments="{header: header}" />
+                                                <f:render partial="SortableColumnHeader" arguments="{header: header.header}" />
                                             </th>
                                         </f:for>
                                         

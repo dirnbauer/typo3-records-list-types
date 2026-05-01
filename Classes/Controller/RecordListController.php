@@ -1565,6 +1565,19 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * @param array<string, mixed> $parameters
+     * @return array<string, mixed>
+     */
+    private function withColumnSortParams(array $parameters, string $tableName, string $field, string $direction): array
+    {
+        return $this->withSortingMode(
+            $this->withSortParams($parameters, $tableName, $field, $direction),
+            $tableName,
+            'field',
+        );
+    }
+
+    /**
      * Build structured data for the manual/field sorting toggle.
      *
      * @return array<string, mixed>|null
@@ -1702,8 +1715,8 @@ final class RecordListController extends CoreRecordListController
         }
 
         try {
-            $ascParams = $this->withSortParams($baseParams, $tableName, $field, 'asc');
-            $descParams = $this->withSortParams($baseParams, $tableName, $field, 'desc');
+            $ascParams = $this->withColumnSortParams($baseParams, $tableName, $field, 'asc');
+            $descParams = $this->withColumnSortParams($baseParams, $tableName, $field, 'desc');
 
             return [
                 'label' => $label,
