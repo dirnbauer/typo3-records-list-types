@@ -51,6 +51,25 @@ final readonly class RecordFilterStateService
         return is_array($tableValues) ? $tableValues : [];
     }
 
+    public function hasActiveValuesForTable(ServerRequestInterface $request, string $table): bool
+    {
+        foreach ($this->getActiveValuesForTable($request, $table) as $value) {
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                return true;
+            }
+            if (!is_array($value)) {
+                continue;
+            }
+            foreach ($value as $nestedValue) {
+                if (is_scalar($nestedValue) && trim((string) $nestedValue) !== '') {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @param array<int, array<string, mixed>> $filters
      * @return array<int, array<string, mixed>>

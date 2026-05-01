@@ -155,6 +155,9 @@
                                 </div>
                             </f:for>
                         </div>
+                        <f:if condition="!{table.records}">
+                            <f:render partial="EmptyRecordsNotice" arguments="{table: table, searchTerm: searchTerm}" />
+                        </f:if>
 
                         <f:comment>Expand table button - multi-table mode with more records</f:comment>
                         <f:if condition="!{currentTable} && {table.hasMore}">
@@ -178,7 +181,9 @@
             <div class="callout callout-info">
                 <div class="callout-body">
                     <core:icon identifier="actions-info" size="small" />
-                    <span class="ms-2">No records found on this page.</span>
+                    <span class="ms-2">
+                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." />
+                    </span>
                 </div>
             </div>
         </f:else>

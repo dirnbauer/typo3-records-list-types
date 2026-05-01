@@ -24,6 +24,15 @@
             <trans-unit id="noRecords" resname="noRecords">
                 <source>No records found on this page.</source>
             </trans-unit>
+            <trans-unit id="noRecords.search" resname="noRecords.search">
+                <source>No records match the current search.</source>
+            </trans-unit>
+            <trans-unit id="noRecords.filtered" resname="noRecords.filtered">
+                <source>No records match the current filters.</source>
+            </trans-unit>
+            <trans-unit id="noRecords.filteredAndSearch" resname="noRecords.filteredAndSearch">
+                <source>No records match the current filters or search.</source>
+            </trans-unit>
             <trans-unit id="action.edit" resname="action.edit">
                 <source>Edit record</source>
             </trans-unit>

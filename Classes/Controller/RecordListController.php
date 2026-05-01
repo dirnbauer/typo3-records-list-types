@@ -39,6 +39,8 @@ use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use Webconsulting\RecordsListTypes\Pagination\DatabasePaginator;
 use Webconsulting\RecordsListTypes\Service\GridConfigurationService;
 use Webconsulting\RecordsListTypes\Service\MiddlewareDiagnosticService;
+use Webconsulting\RecordsListTypes\Service\RecordFilterQueryService;
+use Webconsulting\RecordsListTypes\Service\RecordFilterStateService;
 use Webconsulting\RecordsListTypes\Service\RecordFilterViewDataFactory;
 use Webconsulting\RecordsListTypes\Service\RecordGridDataProvider;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
@@ -407,6 +409,8 @@ final class RecordListController extends CoreRecordListController
         $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
         $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
         $middlewareDiagnosticService = GeneralUtility::makeInstance(MiddlewareDiagnosticService::class);
+        $recordFilterQueryService = GeneralUtility::makeInstance(RecordFilterQueryService::class);
+        $recordFilterStateService = GeneralUtility::makeInstance(RecordFilterStateService::class);
         $recordFilterViewDataFactory = GeneralUtility::makeInstance(RecordFilterViewDataFactory::class);
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
 
@@ -466,13 +470,14 @@ final class RecordListController extends CoreRecordListController
             }
 
             $isSingleTableMode = ($table !== '');
-            $totalRecordCount = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
+            $hasActiveFilters = $recordFilterStateService->hasActiveValuesForTable($request, $tableName);
+            $totalRecordCount = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request, $recordFilterQueryService);
 
             // Pagination and record fetching strategy depends on mode + search state
             if ($searchTerm !== '') {
                 // ---- SEARCH MODE ----
                 // Get total count of matching records for this table
-                $searchTotalCount = $this->getSearchRecordCount($tableName, $pageId, $searchTerm, $searchLevels, $request);
+                $searchTotalCount = $this->getSearchRecordCount($tableName, $pageId, $searchTerm, $searchLevels, $request, $recordFilterQueryService);
 
                 if ($isSingleTableMode) {
                     // Single-table search: full pagination support
@@ -490,6 +495,7 @@ final class RecordListController extends CoreRecordListController
                         $sortField,
                         $sortDirection,
                         $recordGridDataProvider,
+                        $recordFilterQueryService,
                     );
                     $recordCount = $searchTotalCount;
                     $hasMore = false; // pagination handles navigation
@@ -509,6 +515,7 @@ final class RecordListController extends CoreRecordListController
                         $sortField,
                         $sortDirection,
                         $recordGridDataProvider,
+                        $recordFilterQueryService,
                     );
                     $recordCount = $searchTotalCount;
                     $hasMore = $searchTotalCount > count($records);
@@ -529,6 +536,7 @@ final class RecordListController extends CoreRecordListController
                     $sortField,
                     $sortDirection,
                     $recordGridDataProvider,
+                    $recordFilterQueryService,
                 );
                 $recordCount = $totalRecordCount;
                 $hasMore = false; // pagination handles navigation
@@ -548,12 +556,13 @@ final class RecordListController extends CoreRecordListController
                     $sortField,
                     $sortDirection,
                     $recordGridDataProvider,
+                    $recordFilterQueryService,
                 );
                 $recordCount = $totalRecordCount;
                 $hasMore = $recordCount > count($records);
             }
 
-            if ($records === []) {
+            if ($records === [] && !$isSingleTableMode) {
                 continue;
             }
 
@@ -725,6 +734,7 @@ final class RecordListController extends CoreRecordListController
                 'records' => $enrichedRecords,
                 'recordCount' => $recordCount,
                 'hasMore' => $hasMore,
+                'hasActiveFilters' => $hasActiveFilters,
                 'multiSelectEnabled' => true,
                 'lastRecordUid' => $lastRecordUid,
                 'actionButtons' => $actionButtons,
@@ -1091,6 +1101,7 @@ final class RecordListController extends CoreRecordListController
         string $sortField = '',
         string $sortDirection = 'asc',
         ?RecordGridDataProvider $recordGridDataProvider = null,
+        ?RecordFilterQueryService $recordFilterQueryService = null,
     ): array {
         $records = [];
         $recordsByIdentity = [];
@@ -1107,6 +1118,8 @@ final class RecordListController extends CoreRecordListController
             // Use DatabaseRecordList's query builder which handles search properly
             // This is the same API the core list view uses
             $queryBuilder = $dbList->getQueryBuilder($tableName, ['*'], true, $offset, $limit);
+            $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
+            $recordFilterQueryService->applyActiveFilters($queryBuilder, $tableName, $pageId, $request);
             $result = $queryBuilder->executeQuery();
 
             while ($row = $result->fetchAssociative()) {
@@ -1269,8 +1282,9 @@ final class RecordListController extends CoreRecordListController
         string $searchTerm,
         int $searchLevels,
         ServerRequestInterface $request,
+        ?RecordFilterQueryService $recordFilterQueryService = null,
     ): int {
-        return $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request);
+        return $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request, $recordFilterQueryService);
     }
 
     private function getRecordCountUsingDbList(
@@ -1279,10 +1293,13 @@ final class RecordListController extends CoreRecordListController
         string $searchTerm,
         int $searchLevels,
         ServerRequestInterface $request,
+        ?RecordFilterQueryService $recordFilterQueryService = null,
     ): int {
         try {
             $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
             $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
+            $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
+            $recordFilterQueryService->applyActiveFilters($qb, $tableName, $pageId, $request);
             $count = $qb->count('*')->executeQuery()->fetchOne();
             return is_numeric($count) ? (int) $count : 0;
         } catch (Exception) {
@@ -3345,6 +3362,7 @@ final class RecordListController extends CoreRecordListController
             'records' => $enrichedRecords,
             'recordCount' => $recordCount,
             'hasMore' => false,
+            'hasActiveFilters' => false,
             'multiSelectEnabled' => false,
             'lastRecordUid' => '',
             'actionButtons' => [],

@@ -76,6 +76,48 @@ final class RecordFilterStateServiceTest extends TestCase
     }
 
     #[Test]
+    public function hasActiveValuesForTableIgnoresEmptyValues(): void
+    {
+        $request = $this->createRequest([
+            RecordFilterStateService::VALUES_PARAMETER => [
+                'tt_content' => [
+                    'title' => '   ',
+                    'dateRange' => [
+                        'from' => '',
+                        'to' => '',
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertFalse($this->createSubject()->hasActiveValuesForTable($request, 'tt_content'));
+    }
+
+    #[Test]
+    public function hasActiveValuesForTableDetectsScalarAndNestedValues(): void
+    {
+        $request = $this->createRequest([
+            RecordFilterStateService::VALUES_PARAMETER => [
+                'pages' => [
+                    'title' => 'blog',
+                ],
+                'tt_content' => [
+                    'dateRange' => [
+                        'from' => '',
+                        'to' => '2026-05-01',
+                    ],
+                ],
+            ],
+        ]);
+
+        $subject = $this->createSubject();
+
+        self::assertTrue($subject->hasActiveValuesForTable($request, 'pages'));
+        self::assertTrue($subject->hasActiveValuesForTable($request, 'tt_content'));
+        self::assertFalse($subject->hasActiveValuesForTable($request, 'sys_category'));
+    }
+
+    #[Test]
     public function getSelectedTableReturnsTableParameter(): void
     {
         $request = $this->createRequest([
