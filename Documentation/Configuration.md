@@ -59,7 +59,14 @@ mod.web_list.gridView.table {
 
 ### Record Filters
 
-Filters are configured in Page TSconfig and applied through the TYPO3 record-list query event. TCA provides field labels and aliases; TSconfig decides which filters are visible.
+Filters are configured in Page TSconfig and applied in the query layer before
+records are fetched. The classic List View and all alternative view modes
+therefore use the same filtered result set.
+
+The filter panel is table-scoped. Editors enable it with **View > Show
+filters** after a specific table has been selected. If filters or search return
+no records, the selected table section and filter panel stay visible with an
+empty-result notice.
 
 ```typoscript
 mod.web_list.filters {
@@ -78,8 +85,8 @@ mod.web_list.filters {
             type = boolean
             field = istopnews
             label = Top News
-            falseLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.no
-            trueLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.yes
+            falseLabel = No
+            trueLabel = Yes
         }
     }
 }
@@ -94,7 +101,8 @@ Built-in aliases:
   options are grouped by default-language category and show translations in
   brackets; selecting an option matches the default category UID and its
   translation UIDs.
-- `llm`: optional nr_llm search over resolvable text fields
+- `llm` / `ai`: optional nr_llm-backed question search over resolvable text
+  fields
 
 The default `autoDefaults` are intentionally generic. When a new table is
 added later, filters whose backing TCA fields do not exist are skipped
@@ -125,6 +133,8 @@ accepted as an alias. If EXT:nr_llm is not installed, the identifier is
 missing, the referenced configuration is missing or inactive, or no provider
 is available, the LLM filter is hidden and the filter panel shows a backend
 warning explaining the reason.
+
+Full RST documentation: [Record filters](Configuration/Filters.rst).
 
 ## Common Configurations
 

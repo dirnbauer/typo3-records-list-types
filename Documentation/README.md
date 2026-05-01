@@ -1,12 +1,16 @@
-# Records Grid View for TYPO3 v14
+# Records List Types for TYPO3 v14
 
-A TYPO3 extension that adds a **Grid View** (card-based layout) to the Records module, providing a visual alternative to the traditional table-based List View.
+A TYPO3 extension that adds Grid, Compact, Teaser, and custom view modes to
+the backend Records module. It also provides TSconfig-driven record filters
+that work across all view modes.
 
 ## Features
 
 - **Card-based Layout**: View records as Bootstrap 5 cards with thumbnails
 - **Visual Browsing**: Quickly identify records by their images (news, products, team members)
 - **Per-Table Configuration**: Configure which fields to display via TSconfig
+- **Record Filters**: Configure text, visibility, date, category, select, and
+  optional EXT:nr_llm filters via Page TSconfig
 - **User Preference Persistence**: Selected view mode is remembered per user
 - **Dark Mode Support**: Fully compatible with TYPO3's dark mode
 - **PSR-14 Integration**: Extends the core module without modifying it
@@ -87,6 +91,8 @@ The standard table-based list view:
 The extension automatically loads its default TSconfig from `Configuration/page.tsconfig`.
 
 See [Configuration.md](Configuration.md) for the complete TSconfig reference.
+See [Record filters](Configuration/Filters.rst) for the dedicated filter
+configuration chapter.
 
 ## Architecture
 
@@ -249,4 +255,3 @@ If you see a middleware warning, a custom middleware may be interfering with the
 ## License
 
 GPL-2.0-or-later
-

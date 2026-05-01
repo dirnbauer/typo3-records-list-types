@@ -1,6 +1,6 @@
 # Records List Types for TYPO3 v14
 
-A TYPO3 extension that transforms the backend **Records** module with multiple view modes -- Grid, Compact, Teaser -- providing rich visual alternatives to the traditional table-based List View. Browse records as cards with thumbnails, reorder them with drag-and-drop, and configure everything via TSconfig.
+A TYPO3 extension that transforms the backend **Records** module with multiple view modes -- Grid, Compact, Teaser -- providing rich visual alternatives to the traditional table-based List View. Browse records as cards with thumbnails, reorder them with drag-and-drop, and configure view modes and filters via TSconfig.
 
 ## Features at a Glance
 
@@ -13,7 +13,7 @@ A TYPO3 extension that transforms the backend **Records** module with multiple v
 - **Workspace Support** -- Color-coded indicators for new, modified, moved, and deleted records
 - **Dark Mode** -- Full compatibility with TYPO3's dark mode (light/dark themes)
 - **Per-Table Config** -- Configure title, description, image, and display fields via TSconfig
-- **Record Filters** -- Configure text, visibility, date, category, select, and optional nr-llm filters via TSconfig
+- **Record Filters** -- Configure text, visibility, date, category, select, and optional EXT:nr_llm filters via TSconfig
 - **User Preferences** -- View mode is persisted per backend user via AJAX
 - **Sorting Controls** -- Manual drag ordering and field-based sorting with direction toggle
 - **Pagination** -- Matches TYPO3 Core: multi-table mode shows limited records with "Expand table" button, single-table mode shows full pagination (record range, page input, first/prev/next/last)
@@ -154,29 +154,84 @@ mod.web_list.gridView.table.tx_news_domain_model_news {
 }
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `titleField` | Field used as card title | TCA `ctrl.label` |
-| `descriptionField` | Field shown as description text | *(none)* |
-| `imageField` | FAL field for thumbnail images | *(none)* |
-| `preview` | Enable thumbnail rendering (`1` or `0`) | `1` |
+| Option             | Description                             | Default          |
+| ------------------ | --------------------------------------- | ---------------- |
+| `titleField`       | Field used as card title                | TCA `ctrl.label` |
+| `descriptionField` | Field shown as description text         | *(none)*         |
+| `imageField`       | FAL field for thumbnail images          | *(none)*         |
+| `preview`          | Enable thumbnail rendering (`1` or `0`) | `1`              |
 
 ### Record Filters
 
-Filters are configured in TSconfig and applied in the record-list query, so all view modes work from the same filtered result set.
+Filters are configured in Page TSconfig and applied in the query layer before
+records are fetched. The classic List View and all alternative view modes
+therefore use the same filtered result set.
+
+The filter toggle appears in **View > Show filters** after a table has been
+selected. If filters or search return no records, the selected table section
+and filter panel stay visible with an empty-result notice.
 
 ```typoscript
-mod.web_list.filters.table.tx_news_domain_model_news {
-    fields = title,dateRange,categories,topNews,hidden,llm
+mod.web_list.filters {
+    enabled = 1
+    autoDefaults = title,dateRange,hidden,categories,llm
 
-    title {
-        type = text
-        fields = title,teaser
+    table.tx_news_domain_model_news {
+        fields = title,dateRange,categories,topNews,hidden,llm
+
+        title {
+            type = text
+            fields = title,teaser
+        }
+
+        dateRange {
+            field = datetime
+        }
+
+        topNews {
+            type = boolean
+            field = istopnews
+            label = Top News
+            falseLabel = No
+            trueLabel = Yes
+        }
+
+        llm {
+            type = llm
+            configurationIdentifier = record-list-search
+            fields = title,teaser,bodytext
+            candidateLimit = 80
+            resultLimit = 25
+        }
     }
 }
 ```
 
-Generic defaults are TCA-derived (`title,dateRange,hidden,categories,llm`) and skip filters whose backing fields do not exist, so newly added tables usually work without table-specific TSconfig. `category` and `categories` both resolve to TYPO3 many-to-many TCA category fields. Category options show the default-language category once and append available translations in brackets; selecting it matches the default category UID and its translation UIDs. The optional `llm` filter uses `configurationIdentifier = record-list-search` by default. If EXT:nr_llm is not installed, the identifier is missing, the referenced configuration is missing or inactive, or no provider is available, the LLM filter is hidden and the filter panel shows a backend warning.
+Generic defaults are TCA-derived and skip filters whose backing fields do not
+exist, so newly added tables usually work without table-specific TSconfig.
+
+Built-in aliases:
+
+| Alias | Type | Behavior |
+|-------|------|----------|
+| `title`, `label` | `text` | Searches the TCA label field or configured `fields`. |
+| `hidden` | `boolean` | Uses TCA `ctrl.enablecolumns.disabled`. |
+| `date`, `dateRange` | `dateRange` | Uses common date fields or `ctrl.crdate`. |
+| `category`, `categories` | `category` | Uses TYPO3 many-to-many category fields. |
+| `llm`, `ai` | `llm` | Optional EXT:nr_llm-backed question search. |
+
+Category options show the default-language category once and append available
+translations in brackets. Selecting a category matches the default category UID
+and all translated category UIDs.
+
+The optional LLM filter uses `configurationIdentifier = record-list-search` by
+default. This must match the `identifier` of an EXT:nr_llm configuration
+record. If EXT:nr_llm is not installed, the identifier is missing, the
+configuration is missing or inactive, or no provider is available, the LLM
+textarea is hidden and the filter panel shows a backend warning.
+
+See [Record filters](Documentation/Configuration/Filters.rst) for the full
+configuration reference.
 
 ### View Mode Settings
 
@@ -198,7 +253,8 @@ Tables with a TCA `sortby` field support two sorting modes:
 - **Manual** (default): Drag-and-drop reordering using the TCA sorting field
 - **Field**: Sort by any column with ascending/descending direction
 
-A segmented toggle control switches between modes. When in field sorting mode, a dropdown lets users pick the sort column.
+A segmented toggle control switches between modes. When in field sorting mode,
+a dropdown lets users pick the sort column.
 
 ## Accessibility
 
@@ -223,12 +279,12 @@ The extension is fully workspace-aware on TYPO3 v14:
 - `t3ver_state` is mapped to colour-coded visual indicators. The legacy
   `t3ver_state = 3` branch was removed in TYPO3 v11 and is not handled.
 
-| State | `t3ver_state` | Color | Header Style |
-|-------|---------------|-------|--------------|
-| New | 1 | Blue | Blue background + left border |
-| Modified | 0 + `t3ver_oid > 0` | Purple | Purple background + left border |
-| Moved | 4 | Cyan | Cyan background + left border |
-| Deleted | 2 | Red | Red background + strikethrough title |
+| State    | `t3ver_state`       | Color  | Header Style                         |
+| -------- | ------------------- | ------ | ------------------------------------ |
+| New      | 1                   | Blue   | Blue background + left border        |
+| Modified | 0 + `t3ver_oid > 0` | Purple | Purple background + left border      |
+| Moved    | 4                   | Cyan   | Cyan background + left border        |
+| Deleted  | 2                   | Red    | Red background + strikethrough title |
 
 See [Documentation/Developer/Workspaces.rst](Documentation/Developer/Workspaces.rst)
 for the full API reference and known FAL limitations.
@@ -254,14 +310,14 @@ base.css            ← Loaded for ALL view modes (always first)
 └── view-mode-toggle.css ← DocHeader toggle buttons (always loaded)
 ```
 
-**`base.css`** contains shared components that every view mode needs:
+**base.css** contains shared components that every view mode needs:
 
-| Component | Description |
-|-----------|-------------|
-| Recordlist heading | Table header bar with title and action buttons |
-| Pagination | Core list view navigation (record range, page input, nav buttons) |
-| Sorting mode toggle | Segmented control for manual/field sorting modes |
-| Sorting dropdown | Field sorting dropdown and disabled state |
+| Component           | Description                                                       |
+| ------------------- | ----------------------------------------------------------------- |
+| Recordlist heading  | Table header bar with title and action buttons                    |
+| Pagination          | Core list view navigation (record range, page input, nav buttons) |
+| Sorting mode toggle | Segmented control for manual/field sorting modes                  |
+| Sorting dropdown    | Field sorting dropdown and disabled state                         |
 
 **View-specific files** only contain styles unique to that view mode -- design tokens, card/row layouts, field type formatting, and responsive overrides. They reference TYPO3 CSS variables with hardcoded fallbacks for standalone use.
 
@@ -273,8 +329,12 @@ base.css            ← Loaded for ALL view modes (always first)
 
 | Service | Purpose |
 |---------|---------|
-| `RecordGridDataProvider` | Fetches and enriches records with thumbnails, icons, workspace state, and language info |
+| `RecordGridDataProvider` | Enriches records with thumbnails, icons, workspace state, and language info |
 | `GridConfigurationService` | Parses TSconfig for per-table field configuration |
+| `RecordFilterConfigurationService` | Resolves TSconfig/TCA filter definitions |
+| `RecordFilterQueryService` | Applies active filters to record-list queries |
+| `RecordFilterViewDataFactory` | Builds Fluid-ready filter panel data |
+| `LlmRecordSearchService` | Optional EXT:nr_llm-backed record matching |
 | `ThumbnailService` | Resolves FAL references and generates thumbnail URLs |
 | `ViewModeResolver` | Determines active view mode from request, user preference, or TSconfig |
 | `ViewTypeRegistry` | Registry for built-in and custom view types |
@@ -286,14 +346,16 @@ base.css            ← Loaded for ALL view modes (always first)
 |------------------|---------|
 | `RegisterViewModesEvent` | Register, remove, or modify custom view types |
 | `GridViewButtonBarListener` | Injects view mode toggle buttons into the DocHeader |
-| `GridViewQueryListener` | Modifies database queries for grid view |
+| `RecordFilterButtonBarListener` | Adds the **Show filters** View menu entry for selected tables |
+| `RecordFilterAdditionalContentListener` | Renders filters above the classic List View |
+| `RecordFilterQueryListener` | Applies filters through TYPO3's record-list query event |
 | `GridViewRecordActionsListener` | Collects and caches record action fragments from TYPO3 record-list events |
 
 ### Sanitization
 
-| Item | Purpose |
-|------|---------|
-| `BackendFragmentSanitizerBuilder` | TYPO3 core htmlSanitizer preset for backend button/component fragments |
+| Item                                                             | Purpose                                                                    |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `BackendFragmentSanitizerBuilder`                                | TYPO3 core htmlSanitizer preset for backend button/component fragments     |
 | `f:sanitize.html(build: 'records-list-types-backend-fragments')` | Sanitizes TYPO3/core-generated backend fragments before rendering in Fluid |
 
 ### Template systematic
@@ -318,13 +380,14 @@ component APIs.
 
 | Module | Purpose |
 |--------|---------|
-| `GridViewActions.js` | Drag-and-drop, record actions, sorting, search, pagination input, scroll shadows, ARIA announcements, view-mode switching + AJAX persistence |
+| `GridViewActions.js` | Drag-and-drop, record actions, sorting, pagination input, scroll shadows, ARIA announcements, and view-mode switching |
+| `RecordFilters.js` | Category filter menu behavior and selected-label updates |
 
 ### AJAX Routes
 
-| Route | Purpose |
-|-------|---------|
-| `records_list_types_set_view_mode` | Persist user's view mode preference |
+| Route                              | Purpose                               |
+| ---------------------------------- | ------------------------------------- |
+| `records_list_types_set_view_mode` | Persist user's view mode preference   |
 | `records_list_types_get_view_mode` | Retrieve current view mode preference |
 
 ## Security
@@ -372,12 +435,20 @@ records_list_types/
 │   ├── EventListener/
 │   │   ├── GridViewButtonBarListener.php      # Injects toggle buttons
 │   │   ├── GridViewQueryListener.php          # Query modification bridge
-│   │   └── GridViewRecordActionsListener.php  # Record action collection
+│   │   ├── GridViewRecordActionsListener.php  # Record action collection
+│   │   ├── RecordFilterButtonBarListener.php  # Show filters menu entry
+│   │   ├── RecordFilterAdditionalContentListener.php
+│   │   └── RecordFilterQueryListener.php      # Filter query integration
 │   ├── Pagination/
 │   │   └── DatabasePaginator.php              # Paginator for pre-fetched database records
 │   ├── Service/
 │   │   ├── GridConfigurationService.php       # TSconfig parsing
+│   │   ├── LlmRecordSearchService.php         # Optional nr_llm search
 │   │   ├── MiddlewareDiagnosticService.php    # Middleware diagnostics
+│   │   ├── RecordFilterConfigurationService.php
+│   │   ├── RecordFilterQueryService.php
+│   │   ├── RecordFilterStateService.php
+│   │   ├── RecordFilterViewDataFactory.php
 │   │   ├── RecordGridDataProvider.php         # Record fetching & enrichment
 │   │   ├── ThumbnailService.php               # FAL image processing
 │   │   ├── ViewModeResolver.php               # View mode determination
@@ -400,7 +471,9 @@ records_list_types/
 │   │   ├── Partials/
 │   │   │   ├── Card.html                      # Grid view card partial
 │   │   │   ├── CompactRow.html                # Compact view row partial
+│   │   │   ├── EmptyRecordsNotice.html        # Search/filter empty state
 │   │   │   ├── Pagination.html                # Pagination navigation (Core list view style)
+│   │   │   ├── RecordFilters.html             # Configurable filter panel
 │   │   │   ├── RecordActions.html             # Sanitized record action fragments
 │   │   │   ├── SortableColumnHeader.html      # Structured sortable table header
 │   │   │   ├── SortingDropdown.html           # Structured field sorting dropdown
@@ -422,7 +495,8 @@ records_list_types/
 │       │   └── view-mode-toggle.css           # Toggle button styles
 │       ├── Icons/
 │       └── JavaScript/
-│           └── GridViewActions.js             # Drag-drop, actions, sorting, search, view switching
+│           ├── GridViewActions.js             # Drag-drop, actions, sorting, view switching
+│           └── RecordFilters.js               # Category filter interaction
 ├── Tests/
 │   ├── Unit/                                  # Unit tests
 │   ├── Functional/                            # Functional tests with fixtures
@@ -434,7 +508,6 @@ records_list_types/
 ## Known Limitations
 
 - **Workspace FAL limitation.** TYPO3 does not version physical files. Thumbnails rendered in the Grid and Teaser views always reflect the live binary, regardless of the active workspace. When preparing workspace content that changes imagery, upload new files with unique names instead of overwriting existing ones. See [Documentation/Developer/Workspaces.rst](Documentation/Developer/Workspaces.rst) for the full rationale.
-
 - **Drag-and-drop accessibility has limited assistive technology coverage.** Keyboard-based drag-and-drop is implemented with ARIA attributes and live region announcements, but has primarily been tested with keyboard navigation in modern browsers. Testing with dedicated screen readers (NVDA, JAWS, VoiceOver) has been limited. If drag-and-drop reordering is critical for users relying on assistive technology, the standard List View provides a more thoroughly tested fallback. Please [report accessibility barriers on GitHub](https://github.com/dirnbauer/typo3-records-list-types/issues).
 
 ## Documentation
@@ -443,12 +516,13 @@ Comprehensive documentation is available in the `Documentation/` folder:
 
 | Document | Description |
 |----------|-------------|
-| [README.md](Documentation/README.md) | Full documentation overview |
-| [Architecture.md](Documentation/Architecture.md) | Technical architecture and component diagrams |
-| [Configuration.md](Documentation/Configuration.md) | Complete TSconfig reference |
-| [CustomViewTypes.md](Documentation/CustomViewTypes.md) | Creating custom view types |
-| [Extending.md](Documentation/Extending.md) | Extension points and PSR-14 events |
-| [Records List Examples](https://github.com/dirnbauer/typo3-records-list-examples) | Companion extension with 6 ready-to-use example view types |
+| [Documentation](Documentation/Index.rst) | Main RST documentation |
+| [Configuration](Documentation/Configuration/Index.rst) | TSconfig reference |
+| [Record filters](Documentation/Configuration/Filters.rst) | Filter configuration and LLM setup |
+| [Architecture](Documentation/Developer/Architecture.rst) | Technical architecture |
+| [Custom view types](Documentation/Developer/CustomViewTypes.rst) | Creating custom view types |
+| [Extending](Documentation/Developer/Extending.rst) | Extension points and PSR-14 events |
+| [Records List Examples](https://github.com/dirnbauer/typo3-records-list-examples) | Companion extension with example view types |
 
 ## License
 
