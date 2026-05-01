@@ -45,6 +45,7 @@ final readonly class RecordFilterButtonBarListener
         if ($table === '' || !$this->hasFilterPanelContent($table, $pageId)) {
             return;
         }
+        $this->stateService->persistVisibilityPreferenceFromRequest($request);
         $this->pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/base.css');
         $this->pageRenderer->loadJavaScriptModule('@webconsulting/records-list-types/RecordFilters.js');
 

@@ -10,7 +10,8 @@ Record filters add an optional filter panel to the TYPO3 Records module.
 Editors enable the panel through :guilabel:`View > Show filters` after a
 specific table has been selected. The panel is intentionally table-scoped:
 multi-table page overviews keep their compact overview, while single-table
-views can expose fields that fit the selected record type.
+views can expose fields that fit the selected record type. Its visibility is
+stored in the user's Records module settings, like search and clipboard.
 
 Filters are configured with Page TSconfig and use TCA as metadata for labels,
 field aliases, and field availability. The submitted UI state is applied in
@@ -202,8 +203,7 @@ editors can ask a question about the current table's candidate records. The
 adapter sends candidate record data to EXT:nr_llm and applies the returned UID
 list to the same record-list query as the other filters.
 
-When EXT:nr_llm is unavailable or unconfigured, the LLM textarea is hidden and
-the filter panel shows a backend warning.
+When EXT:nr_llm is unavailable or unconfigured, the LLM textarea is hidden and the filter panel shows a backend warning.
 
 ..  code-block:: typoscript
     :caption: Page TSconfig

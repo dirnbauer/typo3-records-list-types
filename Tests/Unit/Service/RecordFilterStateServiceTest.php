@@ -6,12 +6,20 @@ namespace Webconsulting\RecordsListTypes\Tests\Unit\Service;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Backend\Module\ModuleData;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Http\Uri;
 use Webconsulting\RecordsListTypes\Service\RecordFilterStateService;
 
 final class RecordFilterStateServiceTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        unset($GLOBALS['BE_USER']);
+        parent::tearDown();
+    }
+
     #[Test]
     public function shouldShowReturnsTrueWhenFilterPanelIsEnabled(): void
     {
@@ -49,6 +57,75 @@ final class RecordFilterStateServiceTest extends TestCase
         ]);
 
         self::assertTrue($this->createSubject()->shouldShow($request));
+    }
+
+    #[Test]
+    public function shouldShowReturnsTrueWhenStoredModulePreferenceIsEnabled(): void
+    {
+        $request = $this->createRequest([], new ModuleData('records', [
+            RecordFilterStateService::SHOW_PARAMETER => true,
+        ]));
+
+        self::assertTrue($this->createSubject()->shouldShow($request));
+    }
+
+    #[Test]
+    public function shouldShowReturnsFalseWhenStoredModulePreferenceIsDisabled(): void
+    {
+        $request = $this->createRequest([], new ModuleData('records', [
+            RecordFilterStateService::SHOW_PARAMETER => false,
+        ]));
+
+        self::assertFalse($this->createSubject()->shouldShow($request));
+    }
+
+    #[Test]
+    public function shouldShowPrefersExplicitRequestParameterOverStoredModulePreference(): void
+    {
+        $request = $this->createRequest([
+            RecordFilterStateService::SHOW_PARAMETER => '0',
+        ], new ModuleData('records', [
+            RecordFilterStateService::SHOW_PARAMETER => true,
+        ]));
+
+        self::assertFalse($this->createSubject()->shouldShow($request));
+    }
+
+    #[Test]
+    public function persistVisibilityPreferenceFromRequestStoresExplicitModulePreference(): void
+    {
+        $moduleData = new ModuleData('records', [
+            'clipBoard' => true,
+        ]);
+        $request = $this->createRequest([
+            RecordFilterStateService::SHOW_PARAMETER => '1',
+        ], $moduleData);
+
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->expects(self::once())
+            ->method('pushModuleData')
+            ->with(
+                'records',
+                self::callback(
+                    static fn(array $data): bool => ($data[RecordFilterStateService::SHOW_PARAMETER] ?? null) === true,
+                ),
+            );
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $this->createSubject()->persistVisibilityPreferenceFromRequest($request);
+
+        self::assertTrue($moduleData->get(RecordFilterStateService::SHOW_PARAMETER));
+    }
+
+    #[Test]
+    public function persistVisibilityPreferenceFromRequestIgnoresRequestsWithoutExplicitPreference(): void
+    {
+        $moduleData = new ModuleData('records', []);
+        $request = $this->createRequest([], $moduleData);
+
+        $this->createSubject()->persistVisibilityPreferenceFromRequest($request);
+
+        self::assertNull($moduleData->get(RecordFilterStateService::SHOW_PARAMETER));
     }
 
     #[Test]
@@ -249,10 +326,16 @@ final class RecordFilterStateServiceTest extends TestCase
     /**
      * @param array<string, mixed> $queryParams
      */
-    private function createRequest(array $queryParams): ServerRequest
+    private function createRequest(array $queryParams, ?ModuleData $moduleData = null): ServerRequest
     {
-        return (new ServerRequest(new Uri('https://example.test/typo3/module/content/records'), 'GET'))
+        $request = (new ServerRequest(new Uri('https://example.test/typo3/module/content/records'), 'GET'))
             ->withQueryParams($queryParams);
+
+        if ($moduleData instanceof ModuleData) {
+            $request = $request->withAttribute('moduleData', $moduleData);
+        }
+
+        return $request;
     }
 
     private function createSubject(): RecordFilterStateService

@@ -64,9 +64,10 @@ records are fetched. The classic List View and all alternative view modes
 therefore use the same filtered result set.
 
 The filter panel is table-scoped. Editors enable it with **View > Show
-filters** after a specific table has been selected. If filters or search return
-no records, the selected table section and filter panel stay visible with an
-empty-result notice.
+filters** after a specific table has been selected. The visibility setting is
+stored in the user's Records module settings, like the core search and
+clipboard toggles. If filters or search return no records, the selected table
+section and filter panel stay visible with an empty-result notice.
 
 ```typoscript
 mod.web_list.filters {

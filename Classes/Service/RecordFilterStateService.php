@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Backend\Module\ModuleData;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
- * Reads record-list filter state from query/body parameters.
+ * Reads record-list filter state from query/body parameters and module data.
  */
 final readonly class RecordFilterStateService
 {
@@ -17,16 +19,41 @@ final readonly class RecordFilterStateService
     public function shouldShow(ServerRequestInterface $request): bool
     {
         $params = $this->getMergedParameters($request);
-        $show = $params[self::SHOW_PARAMETER] ?? null;
 
-        if ($show !== null) {
-            if (!is_scalar($show)) {
-                return false;
-            }
-            return !in_array((string) $show, ['0', 'false', 'off', ''], true);
+        if (array_key_exists(self::SHOW_PARAMETER, $params)) {
+            return $this->isTruthy($params[self::SHOW_PARAMETER] ?? null);
         }
 
-        return isset($params[self::VALUES_PARAMETER]) && is_array($params[self::VALUES_PARAMETER]);
+        if (isset($params[self::VALUES_PARAMETER]) && is_array($params[self::VALUES_PARAMETER])) {
+            return true;
+        }
+
+        $moduleData = $request->getAttribute('moduleData');
+        if ($moduleData instanceof ModuleData) {
+            return $this->isTruthy($moduleData->get(self::SHOW_PARAMETER, false));
+        }
+
+        return false;
+    }
+
+    public function persistVisibilityPreferenceFromRequest(ServerRequestInterface $request): void
+    {
+        $params = $this->getMergedParameters($request);
+        if (!array_key_exists(self::SHOW_PARAMETER, $params)) {
+            return;
+        }
+
+        $moduleData = $request->getAttribute('moduleData');
+        if (!$moduleData instanceof ModuleData) {
+            return;
+        }
+
+        $moduleData->set(self::SHOW_PARAMETER, $this->isTruthy($params[self::SHOW_PARAMETER] ?? null));
+
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        if ($backendUser instanceof BackendUserAuthentication) {
+            $backendUser->pushModuleData($moduleData->getModuleIdentifier(), $moduleData->toArray());
+        }
     }
 
     public function getSelectedTable(ServerRequestInterface $request): string
@@ -153,6 +180,15 @@ final readonly class RecordFilterStateService
         }
 
         return in_array((string) (int) $value, explode(',', $optionValue), true);
+    }
+
+    private function isTruthy(mixed $value): bool
+    {
+        if (!is_scalar($value)) {
+            return false;
+        }
+
+        return !in_array((string) $value, ['0', 'false', 'off', ''], true);
     }
 
     /**
