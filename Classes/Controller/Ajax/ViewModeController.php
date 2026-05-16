@@ -10,6 +10,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * ViewModeController - AJAX endpoint for persisting view mode preferences.
@@ -85,7 +86,7 @@ final readonly class ViewModeController
     {
         try {
             $queryParams = $request->getQueryParams();
-            $pageId = (int) ($queryParams['pageId'] ?? 0);
+            $pageId = ArrayUtility::intValue($queryParams['pageId'] ?? null);
 
             $currentMode = $this->viewModeResolver->getActiveViewMode($request, $pageId);
             $userPreference = $this->viewModeResolver->getUserPreference();

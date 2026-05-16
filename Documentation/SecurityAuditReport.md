@@ -1,6 +1,6 @@
 # Security Audit Report (OWASP / CWE)
 
-> Run date: 2026-04-18 (round 2)
+> Run date: 2026-05-16 (round 3)
 > Skill: security-audit
 > Extension: records_list_types @ TYPO3 v14
 > Frameworks: OWASP Top 10 (2021), CWE Top 25 (2025), CVSS v4.0
@@ -72,5 +72,5 @@ remain resolved in the committed CI config.
 - CWE sink grep sweep — 0 hits.
 - `composer audit --locked` — 0 advisories.
 - `composer validate --strict` — valid.
-- `vendor/bin/phpstan analyse` — level 9, 0 errors.
-- `vendor/bin/phpunit` — 90 unit + 72 functional tests pass.
+- `vendor/bin/phpstan analyse` — level max, 0 errors.
+- `vendor/bin/phpunit` — 118 unit + 72 functional tests pass.

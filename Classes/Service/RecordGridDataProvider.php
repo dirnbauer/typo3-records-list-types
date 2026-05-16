@@ -18,6 +18,7 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * RecordGridDataProvider - Fetches and enriches records for alternative view modes.
@@ -83,7 +84,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
                 continue;
             }
 
-            $records[] = $this->enrichRecord($table, $row, $tableConfig);
+            $records[] = $this->enrichRecord($table, ArrayUtility::stringKeyArray($row), $tableConfig);
         }
 
         return $records;
@@ -740,7 +741,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
                 continue;
             }
 
-            $grouped[$parentUid][] = $this->enrichRecord($table, $row, $tableConfig);
+            $grouped[$parentUid][] = $this->enrichRecord($table, ArrayUtility::stringKeyArray($row), $tableConfig);
         }
 
         return $grouped;

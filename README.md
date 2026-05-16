@@ -37,7 +37,7 @@ All views work with any table -- `tx_news`, `tt_content`, `fe_users`, `pages`, o
 
 ## Requirements
 
-- TYPO3 v14.0+
+- TYPO3 v14.3 LTS+
 - PHP 8.3+
 
 ## Installation
@@ -397,11 +397,11 @@ The extension includes a comprehensive test suite:
 - **Unit Tests**: Services, events, controllers, and event listeners
 - **Functional Tests**: Database integration with fixtures
 - **Architecture Tests**: Dependency rules via PHPat
-- **Code Quality**: PHPStan Level 9, PHP-CS-Fixer (PER-CS2.0), strict types
+- **Code Quality**: PHPStan level max, PHP-CS-Fixer (PER-CS2.0), strict types
 
 ### CI/CD (GitHub Actions)
 
-- PHPStan analysis (Level 9 with PHPat architecture rules)
+- PHPStan analysis (level max with PHPat architecture rules)
 - PHP-CS-Fixer (auto-fix)
 - Unit tests (PHP 8.3 + 8.4)
 - Functional tests (PHP 8.3 + 8.4, MySQL 8.0)
@@ -444,6 +444,8 @@ records_list_types/
 │   │   └── ViewTypeRegistry.php               # View type management
 │   ├── Html/
 │   │   └── BackendFragmentSanitizerBuilder.php # TYPO3 htmlSanitizer preset for backend fragments
+│   ├── Utility/
+│   │   └── ArrayUtility.php                  # Typed TSconfig/request array boundary helpers
 │   └── ViewHelpers/
 │       └── RecordActionsViewHelper.php        # Access to cached record action fragments
 ├── Configuration/
@@ -491,6 +493,7 @@ records_list_types/
 │   ├── Functional/                            # Functional tests with fixtures
 │   └── Architecture/                          # PHPat architecture tests
 ├── composer.json
+├── ext_emconf.php
 └── ext_localconf.php
 ```
 

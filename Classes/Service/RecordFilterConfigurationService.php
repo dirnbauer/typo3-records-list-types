@@ -13,6 +13,7 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * Resolves configurable record filters from Page TSconfig and TCA metadata.
@@ -70,10 +71,9 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
      */
     public function getTca(string $table): array
     {
-        /** @var array<string, mixed> $allTca */
         $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
         $tca = $allTca[$table] ?? [];
-        return is_array($tca) ? $tca : [];
+        return is_array($tca) ? ArrayUtility::stringKeyArray($tca) : [];
     }
 
     /**
@@ -124,7 +124,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
         $tca = $this->getTca($table);
         $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
         $column = $columns[$field] ?? [];
-        return is_array($column) ? $column : [];
+        return is_array($column) ? ArrayUtility::stringKeyArray($column) : [];
     }
 
     public function getFieldLabel(string $table, string $field): string
@@ -252,9 +252,10 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
      */
     private function getFilterTsConfig(int $pageId): array
     {
-        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $filters = $tsConfig['mod.']['web_list.']['filters.'] ?? [];
-        return is_array($filters) ? $filters : [];
+        return ArrayUtility::arrayPath(
+            BackendUtility::getPagesTSconfig($pageId),
+            ['mod.', 'web_list.', 'filters.'],
+        );
     }
 
     /**
@@ -265,7 +266,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
     {
         $tables = is_array($config['table.'] ?? null) ? $config['table.'] : [];
         $tableConfig = $tables[$table . '.'] ?? [];
-        return is_array($tableConfig) ? $tableConfig : [];
+        return is_array($tableConfig) ? ArrayUtility::stringKeyArray($tableConfig) : [];
     }
 
     /**
@@ -327,10 +328,11 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
         $globalPreset = [];
         $presets = is_array($globalConfig['presets.'] ?? null) ? $globalConfig['presets.'] : [];
         if (is_array($presets[$filterId . '.'] ?? null)) {
-            $globalPreset = $presets[$filterId . '.'];
+            $globalPreset = ArrayUtility::stringKeyArray($presets[$filterId . '.']);
         }
-        $local = is_array($tableConfig[$filterId . '.'] ?? null) ? $tableConfig[$filterId . '.'] : [];
-        return array_replace_recursive($globalPreset, $local);
+        $localRaw = $tableConfig[$filterId . '.'] ?? [];
+        $local = is_array($localRaw) ? ArrayUtility::stringKeyArray($localRaw) : [];
+        return ArrayUtility::stringKeyArray(array_replace_recursive($globalPreset, $local));
     }
 
     /**
@@ -623,7 +625,11 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             if (!$field->isType(TableColumnType::CATEGORY)) {
                 continue;
             }
-            if (!$this->isManyToManyCategoryConfiguration($table, (string) $fieldName, $field->getConfiguration())) {
+            if (!$this->isManyToManyCategoryConfiguration(
+                $table,
+                ArrayUtility::stringValue($fieldName),
+                ArrayUtility::stringKeyArray($field->getConfiguration()),
+            )) {
                 continue;
             }
             if ($fieldName === 'categories') {
@@ -633,7 +639,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
                 array_unshift($fallbackFields, 'category');
                 continue;
             }
-            $fallbackFields[] = (string) $fieldName;
+            $fallbackFields[] = ArrayUtility::stringValue($fieldName);
         }
 
         return $fallbackFields[0] ?? '';
@@ -648,8 +654,8 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             if (!is_array($column)) {
                 continue;
             }
-            $config = is_array($column['config'] ?? null) ? $column['config'] : [];
-            if (!$this->isManyToManyCategoryConfiguration($table, (string) $fieldName, $config)) {
+            $config = is_array($column['config'] ?? null) ? ArrayUtility::stringKeyArray($column['config']) : [];
+            if (!$this->isManyToManyCategoryConfiguration($table, ArrayUtility::stringValue($fieldName), $config)) {
                 continue;
             }
             if ($fieldName === 'categories') {

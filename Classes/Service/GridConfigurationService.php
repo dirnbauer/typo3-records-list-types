@@ -7,6 +7,7 @@ namespace Webconsulting\RecordsListTypes\Service;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * GridConfigurationService - Resolves per-table field mappings from TSconfig.
@@ -41,8 +42,10 @@ final class GridConfigurationService implements SingletonInterface
             return $this->tableConfigCache[$cacheKey];
         }
 
-        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $tableConfig = $tsConfig['mod.']['web_list.']['gridView.']['table.'][$table . '.'] ?? [];
+        $tableConfig = ArrayUtility::arrayPath(
+            BackendUtility::getPagesTSconfig($pageId),
+            ['mod.', 'web_list.', 'gridView.', 'table.', $table . '.'],
+        );
 
         $hiddenField = $this->getHiddenFieldName($table);
 
@@ -75,14 +78,18 @@ final class GridConfigurationService implements SingletonInterface
     public function getGlobalConfig(int $pageId): array
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $gridViewConfig = $tsConfig['mod.']['web_list.']['gridView.'] ?? [];
+        $gridViewConfig = ArrayUtility::arrayPath($tsConfig, ['mod.', 'web_list.', 'gridView.']);
 
-        $allowedViewsString = $tsConfig['mod.']['web_list.']['allowedViews'] ?? 'list,grid';
-        $allowedViews = array_map(trim(...), explode(',', $allowedViewsString));
+        $allowedViews = ArrayUtility::commaSeparatedList(
+            ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'allowedViews']),
+        );
+        if ($allowedViews === []) {
+            $allowedViews = ['list', 'grid'];
+        }
 
         return [
-            'cols' => $this->validateCols((int) ($gridViewConfig['cols'] ?? self::DEFAULT_COLS)),
-            'default' => $gridViewConfig['default'] ?? 'list',
+            'cols' => $this->validateCols(ArrayUtility::intValue($gridViewConfig['cols'] ?? null, self::DEFAULT_COLS)),
+            'default' => ArrayUtility::stringValue($gridViewConfig['default'] ?? null, 'list'),
             'allowedViews' => $allowedViews,
         ];
     }
@@ -222,8 +229,10 @@ final class GridConfigurationService implements SingletonInterface
      */
     public function getConfiguredTables(int $pageId): array
     {
-        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $tableConfigs = $tsConfig['mod.']['web_list.']['gridView.']['table.'] ?? [];
+        $tableConfigs = ArrayUtility::arrayPath(
+            BackendUtility::getPagesTSconfig($pageId),
+            ['mod.', 'web_list.', 'gridView.', 'table.'],
+        );
 
         $tables = [];
         foreach (array_keys($tableConfigs) as $key) {

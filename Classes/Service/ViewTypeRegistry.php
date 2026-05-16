@@ -9,6 +9,7 @@ use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * ViewTypeRegistry - Manages view types from TSconfig for the records module.
@@ -106,8 +107,10 @@ final class ViewTypeRegistry implements SingletonInterface
         $types = $event->getViewModes();
 
         // Merge TSconfig types
-        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $tsTypes = $tsConfig['mod.']['web_list.']['viewMode.']['types.'] ?? [];
+        $tsTypes = ArrayUtility::arrayPath(
+            BackendUtility::getPagesTSconfig($pageId),
+            ['mod.', 'web_list.', 'viewMode.', 'types.'],
+        );
 
         foreach ($tsTypes as $typeId => $config) {
             $typeId = rtrim((string) $typeId, '.');
@@ -115,9 +118,7 @@ final class ViewTypeRegistry implements SingletonInterface
                 continue;
             }
 
-            // Cast TSconfig array keys to string (they come as mixed from BackendUtility)
-            /** @var array<string, mixed> $typedConfig */
-            $typedConfig = $config;
+            $typedConfig = ArrayUtility::stringKeyArray($config);
 
             // Merge with existing type or create new
             if (isset($types[$typeId])) {
@@ -165,11 +166,12 @@ final class ViewTypeRegistry implements SingletonInterface
         $allTypes = $this->getViewTypes($pageId);
 
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $allowedString = $tsConfig['mod.']['web_list.']['viewMode.']['allowed']
-            ?? $tsConfig['mod.']['web_list.']['allowedViews']
-            ?? implode(',', array_keys($allTypes));
-
-        $allowedIds = array_map(trim(...), explode(',', $allowedString));
+        $allowedValue = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'allowed'])
+            ?? ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'allowedViews']);
+        $allowedIds = ArrayUtility::commaSeparatedList($allowedValue);
+        if ($allowedIds === []) {
+            $allowedIds = array_keys($allTypes);
+        }
 
         return array_filter(
             $allTypes,
@@ -184,9 +186,11 @@ final class ViewTypeRegistry implements SingletonInterface
     public function getDefaultViewType(int $pageId): string
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $default = $tsConfig['mod.']['web_list.']['viewMode.']['default']
-            ?? $tsConfig['mod.']['web_list.']['gridView.']['default']
-            ?? 'list';
+        $default = ArrayUtility::stringValue(
+            ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'default'])
+                ?? ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'gridView.', 'default']),
+            'list',
+        );
 
         // Validate it exists
         if (!$this->hasViewType($default, $pageId)) {
@@ -285,7 +289,7 @@ final class ViewTypeRegistry implements SingletonInterface
             $modules = array_merge($modules, $custom);
         }
 
-        return array_unique($modules);
+        return array_values(array_unique($modules));
     }
 
     /**
@@ -305,7 +309,10 @@ final class ViewTypeRegistry implements SingletonInterface
         $displayColumns = $config['displayColumns'] ?? null;
         if (!in_array($displayColumns, [null, '', []], true)) {
             if (is_array($displayColumns)) {
-                $columns = array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $displayColumns);
+                $columns = array_values(array_filter(
+                    array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $displayColumns),
+                    static fn(string $column): bool => $column !== '',
+                ));
             } else {
                 $columns = GeneralUtility::trimExplode(',', is_scalar($displayColumns) ? (string) $displayColumns : '', true);
             }

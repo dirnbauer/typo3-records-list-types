@@ -1,6 +1,6 @@
 # Extension Upgrade Report
 
-> Run date: 2026-04-18 (round 2)
+> Run date: 2026-05-16 (round 3)
 > Skill: typo3-extension-upgrade
 > Extension: records_list_types @ TYPO3 v14
 
@@ -48,14 +48,11 @@ can be modernised. The rules are all safe, non-behavioural:
 I apply these as a single follow-up commit and fix anything PHPStan or
 the test suite flags afterwards.
 
-## PHPStan: tried level 10
+## PHPStan: level max
 
-Raising `phpstan.neon` from `level: 9` to `level: 10` surfaces **131
-new errors** — almost all of them about generic typed array shapes on
-services that consume `$GLOBALS['TCA']`. The fix surface is broad and
-would mean reworking every array return type to more specific generic
-shapes. Deferred as a follow-up initiative; for now **level 9 stays**
-and the `saschaegerer/phpstan-typo3` + `phpat` extensions remain active.
+`phpstan.neon` now uses `level: max`. The previous generic-array issues
+were fixed by normalizing TYPO3 TSconfig, request, and TCA arrays at
+their boundaries. No baseline or inline ignores are used.
 
 ## Scan results
 
@@ -66,14 +63,14 @@ and the `saschaegerer/phpstan-typo3` + `phpat` extensions remain active.
 | `SC_OPTIONS` hook registration | Clean | All listeners use `#[AsEventListener]`. |
 | XClass registration | v14 API | `$GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects']` in `ext_localconf.php`. |
 | AJAX routes | v14 API | Registered in `Configuration/Backend/AjaxRoutes.php`. |
-| Composer constraints | v14-only | `typo3/cms-*` pinned to `^14.0`. |
-| ext_emconf.php | Removed | Metadata consolidated in `composer.json` (round 1). |
+| Composer constraints | v14-only | `typo3/cms-*` pinned to `^14.3`. |
+| ext_emconf.php | Present for tooling | Mirrors v14-only constraints. Composer carries `extra.typo3/cms.version` and empty `Package.providesPackages` per TYPO3 14.3 metadata rules. |
 | PHPStan TYPO3 extension | Active | `saschaegerer/phpstan-typo3:^3.0` + `phpat`. |
 
 ## Verification after fixes
 
 - `vendor/bin/rector process` — applied.
-- `vendor/bin/phpstan analyse` — expected 0 errors at level 9.
+- `vendor/bin/phpstan analyse` — 0 errors at level max.
 - `vendor/bin/php-cs-fixer fix` — expected 0 diff after rector.
-- `vendor/bin/phpunit --testsuite Unit` — 90 tests green.
+- `vendor/bin/phpunit --testsuite Unit` — 118 tests green.
 - Functional (pdo_sqlite) — 72 tests green.

@@ -45,6 +45,7 @@ use Webconsulting\RecordsListTypes\Service\RecordFilterViewDataFactory;
 use Webconsulting\RecordsListTypes\Service\RecordGridDataProvider;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 use Webconsulting\RecordsListTypes\Service\ViewTypeRegistry;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * Extended RecordListController with multiple view mode support.
@@ -90,6 +91,47 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * @return array<array<mixed>>
+     */
+    private function getNestedModTsConfig(): array
+    {
+        $nested = [];
+        foreach ($this->modTSconfig as $key => $value) {
+            if (is_array($value)) {
+                $nested[$key] = $value;
+            }
+        }
+
+        return $nested;
+    }
+
+    /**
+     * @return array<array<string>>
+     */
+    private function getTableTsConfigOverTca(): array
+    {
+        $tableConfig = $this->modTSconfig['table'] ?? [];
+        if (!is_array($tableConfig)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($tableConfig as $table => $config) {
+            if (!is_string($table) || !is_array($config)) {
+                continue;
+            }
+            $normalized[$table] = [];
+            foreach ($config as $key => $value) {
+                if (is_scalar($value)) {
+                    $normalized[$table][(string) $key] = (string) $value;
+                }
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
      * Main action - renders the appropriate view based on displayMode.
      *
      * Supported modes:
@@ -112,7 +154,7 @@ final class RecordListController extends CoreRecordListController
         $queryParams = $request->getQueryParams();
         $parsedBody = $request->getParsedBody();
         $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        $pageId = (int) ($queryParams['id'] ?? $parsedBodyArray['id'] ?? 0);
+        $pageId = ArrayUtility::intValue($queryParams['id'] ?? $parsedBodyArray['id'] ?? null);
 
         // Get the active view mode
         $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId);
@@ -145,11 +187,13 @@ final class RecordListController extends CoreRecordListController
         $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/contextual-record-edit-trigger.js');
 
         BackendUtility::lockRecords();
-        $pointer = max(0, (int) ($parsedBodyArray['pointer'] ?? $queryParams['pointer'] ?? 0));
-        $this->table = (string) ($parsedBodyArray['table'] ?? $queryParams['table'] ?? '');
-        $this->searchTerm = trim((string) ($parsedBodyArray['searchTerm'] ?? $queryParams['searchTerm'] ?? ''));
-        $this->returnUrl = GeneralUtility::sanitizeLocalUrl((string) ($parsedBodyArray['returnUrl'] ?? $queryParams['returnUrl'] ?? ''));
-        $cmd = (string) ($parsedBodyArray['cmd'] ?? $queryParams['cmd'] ?? '');
+        $pointer = max(0, ArrayUtility::intValue($parsedBodyArray['pointer'] ?? $queryParams['pointer'] ?? null));
+        $this->table = ArrayUtility::stringValue($parsedBodyArray['table'] ?? $queryParams['table'] ?? null);
+        $this->searchTerm = trim(ArrayUtility::stringValue($parsedBodyArray['searchTerm'] ?? $queryParams['searchTerm'] ?? null));
+        $this->returnUrl = GeneralUtility::sanitizeLocalUrl(
+            ArrayUtility::stringValue($parsedBodyArray['returnUrl'] ?? $queryParams['returnUrl'] ?? null),
+        );
+        $cmd = ArrayUtility::stringValue($parsedBodyArray['cmd'] ?? $queryParams['cmd'] ?? null);
 
         // Ensure default language is included
         $languagesToDisplay = $this->pageContext->selectedLanguageIds;
@@ -194,7 +238,7 @@ final class RecordListController extends CoreRecordListController
             $rawDefault = $searchLevelConfig['default'] ?? 0;
             $searchLevelDefault = is_numeric($rawDefault) ? (int) $rawDefault : 0;
         }
-        $searchLevels = (int) ($parsedBodyArray['search_levels'] ?? $queryParams['search_levels'] ?? $searchLevelDefault);
+        $searchLevels = ArrayUtility::intValue($parsedBodyArray['search_levels'] ?? $queryParams['search_levels'] ?? null, $searchLevelDefault);
 
         // Create DatabaseRecordList (needed for URL building and other parent methods)
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
@@ -205,19 +249,17 @@ final class RecordListController extends CoreRecordListController
         $dbList->showClipboardActions = true;
         $dbList->disableSingleTableView = (bool) ($this->modTSconfig['disableSingleTableView'] ?? false);
         $dbList->listOnlyInSingleTableMode = (bool) ($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
-        $dbList->hideTables = (string) ($this->modTSconfig['hideTables'] ?? '');
-        $dbList->hideTranslations = (string) ($this->modTSconfig['hideTranslations'] ?? '');
-        $tableOverTca = is_array($this->modTSconfig['table'] ?? null) ? $this->modTSconfig['table'] : [];
-        /** @var array<string, array<string>> $tableOverTca */
-        $dbList->tableTSconfigOverTCA = $tableOverTca;
-        $dbList->allowedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['allowedNewTables'] ?? ''), true);
-        $dbList->deniedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['deniedNewTables'] ?? ''), true);
+        $dbList->hideTables = ArrayUtility::stringValue($this->modTSconfig['hideTables'] ?? null);
+        $dbList->hideTranslations = ArrayUtility::stringValue($this->modTSconfig['hideTranslations'] ?? null);
+        $dbList->tableTSconfigOverTCA = $this->getTableTsConfigOverTca();
+        $dbList->allowedNewTables = ArrayUtility::commaSeparatedList($this->modTSconfig['allowedNewTables'] ?? null);
+        $dbList->deniedNewTables = ArrayUtility::commaSeparatedList($this->modTSconfig['deniedNewTables'] ?? null);
         /** @var array<string> $pageRecord */
         $pageRecord = $this->pageContext->pageRecord ?? [];
         $dbList->pageRow = $pageRecord;
-        $dbList->modTSconfig = $this->modTSconfig;
+        $dbList->modTSconfig = $this->getNestedModTsConfig();
         $dbList->setLanguagesAllowedForUser($siteLanguages);
-        $clickTitleMode = trim((string) ($this->modTSconfig['clickTitleMode'] ?? ''));
+        $clickTitleMode = trim(ArrayUtility::stringValue($this->modTSconfig['clickTitleMode'] ?? null));
         $dbList->clickTitleMode = $clickTitleMode === '' ? 'edit' : $clickTitleMode;
         $tableDisplayOrder = $this->modTSconfig['tableDisplayOrder'] ?? null;
         if (is_array($tableDisplayOrder)) {
@@ -960,7 +1002,7 @@ final class RecordListController extends CoreRecordListController
         $backendUser = $this->getBackendUserAuthentication();
 
         // Get hidden tables from TSconfig
-        $hideTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['hideTables'] ?? ''), true);
+        $hideTables = ArrayUtility::commaSeparatedList($this->modTSconfig['hideTables'] ?? null);
 
         $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
         foreach ($allTca as $tableName => $tca) {
@@ -1050,20 +1092,18 @@ final class RecordListController extends CoreRecordListController
         $dbList->showClipboardActions = true;
         $dbList->disableSingleTableView = (bool) ($this->modTSconfig['disableSingleTableView'] ?? false);
         $dbList->listOnlyInSingleTableMode = (bool) ($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
-        $dbList->hideTables = (string) ($this->modTSconfig['hideTables'] ?? '');
-        $dbList->hideTranslations = (string) ($this->modTSconfig['hideTranslations'] ?? '');
-        $tableOverTca = is_array($this->modTSconfig['table'] ?? null) ? $this->modTSconfig['table'] : [];
-        /** @var array<string, array<string>> $tableOverTca */
-        $dbList->tableTSconfigOverTCA = $tableOverTca;
-        $dbList->allowedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['allowedNewTables'] ?? ''), true);
-        $dbList->deniedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['deniedNewTables'] ?? ''), true);
+        $dbList->hideTables = ArrayUtility::stringValue($this->modTSconfig['hideTables'] ?? null);
+        $dbList->hideTranslations = ArrayUtility::stringValue($this->modTSconfig['hideTranslations'] ?? null);
+        $dbList->tableTSconfigOverTCA = $this->getTableTsConfigOverTca();
+        $dbList->allowedNewTables = ArrayUtility::commaSeparatedList($this->modTSconfig['allowedNewTables'] ?? null);
+        $dbList->deniedNewTables = ArrayUtility::commaSeparatedList($this->modTSconfig['deniedNewTables'] ?? null);
         /** @var array<string> $pageRecord */
         $pageRecord = $this->pageContext->pageRecord ?? [];
         $dbList->pageRow = $pageRecord;
-        $dbList->modTSconfig = $this->modTSconfig;
+        $dbList->modTSconfig = $this->getNestedModTsConfig();
         $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
         $dbList->setLanguagesAllowedForUser($siteLanguages);
-        $clickTitleMode = trim((string) ($this->modTSconfig['clickTitleMode'] ?? ''));
+        $clickTitleMode = trim(ArrayUtility::stringValue($this->modTSconfig['clickTitleMode'] ?? null));
         $dbList->clickTitleMode = $clickTitleMode === '' ? 'edit' : $clickTitleMode;
         $tableDisplayOrder = $this->modTSconfig['tableDisplayOrder'] ?? null;
         if (is_array($tableDisplayOrder)) {
@@ -1133,15 +1173,16 @@ final class RecordListController extends CoreRecordListController
                     continue;
                 }
 
-                $uid = (int) $row['uid'];
-                $recordData = $recordGridDataProvider->buildRecordDataFromRow($tableName, $row, $pageId);
+                $typedRow = ArrayUtility::stringKeyArray($row);
+                $uid = ArrayUtility::intValue($typedRow['uid'] ?? null);
+                $recordData = $recordGridDataProvider->buildRecordDataFromRow($tableName, $typedRow, $pageId);
 
                 if ($useWorkspaceReduction) {
                     // In workspaces the DB query can still yield both a live row and a
                     // versioned/moved row that overlay to the same effective record.
                     // Reduce them by their live identity so custom views mirror the
                     // native list's single effective row per record.
-                    $identity = $this->getWorkspaceRecordIdentity($row, $uid);
+                    $identity = $this->getWorkspaceRecordIdentity($typedRow, $uid);
                     $recordsByIdentity[$identity] = $recordData;
                 } else {
                     $records[] = $recordData;
@@ -1935,7 +1976,8 @@ final class RecordListController extends CoreRecordListController
             $method = new ReflectionMethod($dbList, $methodName);
             $result = $method->invokeArgs($dbList, $arguments);
             if (is_object($result) && method_exists($result, 'render')) {
-                return $result->render();
+                $rendered = $result->render();
+                return is_string($rendered) ? $rendered : '';
             }
             return is_string($result) ? $result : '';
         } catch (ReflectionException|Exception) {
@@ -2022,8 +2064,8 @@ final class RecordListController extends CoreRecordListController
                 continue; // Skip label field, already added
             }
 
-            $field = $column['field'] ?? '';
-            $label = $column['label'] ?? $field;
+            $field = ArrayUtility::stringValue($column['field'] ?? null);
+            $label = ArrayUtility::stringValue($column['label'] ?? null, $field);
 
             if ($field === '') {
                 continue;
@@ -2544,11 +2586,10 @@ final class RecordListController extends CoreRecordListController
         $canEdit = $tableModify && $pageEdit && $recordAccess && $editLockOk && !$isDeletePlaceholder;
 
         $userTsConfig = $backendUser->getTSConfig();
-        $disableDelete = (bool) trim(
-            (string) ($userTsConfig['options.']['disableDelete.'][$tableName]
-                ?? $userTsConfig['options.']['disableDelete']
-                ?? ''),
-        );
+        $disableDelete = (bool) trim(ArrayUtility::stringValue(
+            ArrayUtility::valuePath($userTsConfig, ['options.', 'disableDelete.', $tableName])
+                ?? ArrayUtility::valuePath($userTsConfig, ['options.', 'disableDelete']),
+        ));
 
         $canDelete = $canEdit && !$disableDelete && $pageDelete && !$this->isCurrentBackendUser($tableName, $row);
 
@@ -2877,7 +2918,7 @@ final class RecordListController extends CoreRecordListController
 
                 $translation = $this->enrichRecordWithEditUrls($translation);
                 $translation['title'] = BackendUtility::getRecordTitle($tableName, $rawRecord, false, true);
-                $translation['permissions'] = $this->computeRecordPermissions($tableName, $rawRecord);
+                $translation['permissions'] = $this->computeRecordPermissions($tableName, ArrayUtility::stringKeyArray($rawRecord));
                 $perLang[$langUid] = $translation;
             }
             $enriched[(int) $parentUid] = $perLang;
@@ -3106,13 +3147,16 @@ final class RecordListController extends CoreRecordListController
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
 
         // 1. Per-type TSconfig
-        $perType = $tsConfig['mod.']['web_list.']['viewMode.']['types.'][$viewMode . '.']['itemsPerPage'] ?? null;
+        $perType = ArrayUtility::valuePath(
+            $tsConfig,
+            ['mod.', 'web_list.', 'viewMode.', 'types.', $viewMode . '.', 'itemsPerPage'],
+        );
         if ($perType !== null && is_numeric($perType)) {
             return max(0, (int) $perType);
         }
 
         // 2. Global TSconfig
-        $global = $tsConfig['mod.']['web_list.']['viewMode.']['itemsPerPage'] ?? null;
+        $global = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'itemsPerPage']);
         if ($global !== null && is_numeric($global)) {
             return max(0, (int) $global);
         }
@@ -3139,13 +3183,13 @@ final class RecordListController extends CoreRecordListController
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
 
         // Check extension-specific setting first
-        $extLimit = $tsConfig['mod.']['web_list.']['viewMode.']['itemsLimitPerTable'] ?? null;
+        $extLimit = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'itemsLimitPerTable']);
         if ($extLimit !== null && is_numeric($extLimit)) {
             return max(1, (int) $extLimit);
         }
 
         // Fall back to TYPO3 Core's itemsLimitPerTable
-        $coreLimit = $tsConfig['mod.']['web_list.']['itemsLimitPerTable'] ?? null;
+        $coreLimit = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'itemsLimitPerTable']);
         if ($coreLimit !== null && is_numeric($coreLimit)) {
             return max(1, (int) $coreLimit);
         }
@@ -3498,12 +3542,13 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
 
-            $recordData = $dataProvider->buildRecordDataFromRow('pages', $row, $pageId);
+            $typedRow = ArrayUtility::stringKeyArray($row);
+            $recordData = $dataProvider->buildRecordDataFromRow('pages', $typedRow, $pageId);
 
             if ($useWorkspaceReduction) {
-                $uidRaw = $row['uid'] ?? 0;
+                $uidRaw = $typedRow['uid'] ?? 0;
                 $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
-                $identity = $this->getWorkspaceRecordIdentity($row, $uid);
+                $identity = $this->getWorkspaceRecordIdentity($typedRow, $uid);
                 $recordsByIdentity[$identity] = $recordData;
             } else {
                 $records[] = $recordData;

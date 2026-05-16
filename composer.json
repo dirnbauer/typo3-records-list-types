@@ -44,6 +44,10 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "records_list_types",
+            "version": "14.0.0",
+            "Package": {
+                "providesPackages": {}
+            },
             "web-dir": "public"
         }
     },

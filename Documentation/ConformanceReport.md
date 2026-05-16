@@ -1,6 +1,6 @@
 # TYPO3 Conformance Report
 
-> Run date: 2026-04-18 (round 2)
+> Run date: 2026-05-16 (round 3)
 > Skill: typo3-conformance
 > Extension: records_list_types @ TYPO3 v14
 
@@ -14,14 +14,14 @@ landed since.
 |----------|------:|-------:|-------|
 | Architecture | 18 | 20 | Services.yaml with autowire+autoconfigure, PSR-14 events via `#[AsEventListener]`, PHPat architecture rules enforced. The XClass controller must use `GeneralUtility::makeInstance()` because it inherits the Core constructor signature. |
 | Coding guidelines | 20 | 20 | `declare(strict_types=1)` in every `Classes/**/*.php`. PHP 8.3 typed constants (`private const string`) everywhere Rector reached. PSR-12 via PHP-CS-Fixer PER-CS 2.0. |
-| PHP quality | 19 | 20 | PHPStan level 9 + strict rules + PHPat + `saschaegerer/phpstan-typo3:^3.0`. Level 10 surfaces 131 generic-array findings — deferred. No `@phpstan-ignore` markers in source. |
-| Testing | 16 | 20 | 162 tests (90 unit + 72 functional). `RecordGridDataProvider`, `RecordListController` and ViewHelpers still uncovered. |
+| PHP quality | 20 | 20 | PHPStan level max + strict rules + PHPat + `saschaegerer/phpstan-typo3:^3.0`. No `@phpstan-ignore` markers or baseline. |
+| Testing | 17 | 20 | 190 tests (118 unit + 72 functional). `RecordGridDataProvider`, `RecordListController` and ViewHelpers still uncovered. |
 | Practices | 18 | 20 | GitHub Actions CI (PHP 8.3 + 8.4, MySQL 8), PHP-CS-Fixer auto-fix, PHPStan, dedicated `composer audit` job. Rector config committed. |
-| **Subtotal** | **91** | 100 | |
+| **Subtotal** | **93** | 100 | |
 | Excellence bonus | +4 | up to 22 | `#[\ReadOnly]` on services where Rector could prove it safe; `#[\Override]` on inherited methods; PHPat layer rules; TrustedHtml/sanitizer pattern for XSS hardening. |
-| **Final** | **95** | | **Excellent — TER-ready** |
+| **Final** | **97** | | **Excellent — TER-ready** |
 
-Delta since round 1: **94 → 95**.
+Delta since round 2: **95 → 97**.
 
 ## Scan results
 
@@ -61,9 +61,9 @@ Delta since round 1: **94 → 95**.
 
 ## Verification
 
-- `vendor/bin/phpstan analyse` — level 9, 0 errors.
+- `vendor/bin/phpstan analyse` — level max, 0 errors.
 - `vendor/bin/php-cs-fixer fix --dry-run --diff` — 0 diff.
-- `vendor/bin/phpunit --testsuite Unit` — 90 tests / 158 assertions.
+- `vendor/bin/phpunit --testsuite Unit` — 118 tests / 214 assertions.
 - `typo3DatabaseDriver=pdo_sqlite vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml`
   — 72 tests / 155 assertions.
 - `composer validate --strict` + `composer audit --locked` — both clean.

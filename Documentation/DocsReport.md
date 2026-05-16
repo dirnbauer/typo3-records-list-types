@@ -1,6 +1,6 @@
 # Documentation Report
 
-> Run date: 2026-04-18 (round 2)
+> Run date: 2026-05-16 (round 3)
 > Skill: typo3-docs
 > Extension: records_list_types @ TYPO3 v14
 
@@ -14,7 +14,7 @@ Supersedes the round-1 snapshot.
 | `Index.rst` in every subdirectory | Pass | `find Documentation -mindepth 1 -type d` → 0 misses. |
 | Permalink anchor before every heading | Pass | All `.rst` files (except `Sitemap.rst`, auto-generated) open with a `.. _label:` anchor. |
 | No `mailto:` links in RST | Pass | Only matches are prose references in the `*.md` report files. |
-| README and Documentation synchronized | Pass | Round-2 README updates (workspace API, view-switcher removal, ext_emconf retirement) already match the RST content. |
+| README and Documentation synchronized | Pass | README and RST now describe TYPO3 14.3 LTS, PHPStan level max, and the retained `ext_emconf.php` metadata. |
 | 4-space indent, LF endings, UTF-8 | Pass | Enforced by `Documentation/.editorconfig` + `.editorconfig` at repo root. |
 
 ## Page length observations
