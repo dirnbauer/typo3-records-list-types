@@ -7,7 +7,7 @@ A TYPO3 extension that transforms the backend **Records** module with multiple v
 - **Grid View** -- Card-based layout with thumbnails, drag-and-drop reordering, and field display
 - **Compact View** -- Dense single-line rows with fixed columns and horizontal scrolling
 - **Teaser View** -- News-style cards with title, date, and description excerpt
-- **Custom Views** -- Register your own view types via PSR-14 events or TSconfig
+- **Custom Views** -- Add view types with TSconfig, Fluid templates, and optional PSR-14 registration hooks
 - **Drag & Drop** -- Mouse and keyboard reordering with full WCAG 2.1 accessibility
 - **Language Flags** -- Language flag icons displayed per record in grid cards
 - **Workspace Support** -- Color-coded indicators for new, modified, moved, and deleted records
@@ -139,7 +139,7 @@ Restrict a view type to a specific page using TSconfig conditions:
 [end]
 ```
 
-See [Custom View Types](Documentation/CustomViewTypes.md) for full documentation with step-by-step guide, real-world examples, and template variable reference.
+See [Custom View Types](Documentation/Developer/CustomViewTypes.rst) for full documentation with step-by-step guide, real-world examples, and template variable reference.
 
 For ready-to-use examples, install the companion extension [Records List Examples](https://github.com/dirnbauer/typo3-records-list-examples) which adds 6 additional view types (Timeline, Catalog, Address Book, Event List, Gallery, Dashboard) with zero PHP.
 
@@ -339,7 +339,7 @@ base.css            ← Loaded for ALL view modes (always first)
 | `RecordFilterButtonBarListener` | Adds the **Show filters** View menu entry for selected tables |
 | `RecordFilterAdditionalContentListener` | Renders filters above the classic List View |
 | `RecordFilterQueryListener` | Applies filters through TYPO3's record-list query event |
-| `GridViewRecordActionsListener` | Collects and caches record action fragments from TYPO3 record-list events |
+| `GridViewRecordActionsListener` | Observes TYPO3 record-list action events and keeps helper access for custom templates |
 
 ### Sanitization
 
@@ -425,7 +425,7 @@ records_list_types/
 │   ├── EventListener/
 │   │   ├── GridViewButtonBarListener.php      # Injects toggle buttons
 │   │   ├── GridViewQueryListener.php          # Query modification bridge
-│   │   ├── GridViewRecordActionsListener.php  # Record action collection
+│   │   ├── GridViewRecordActionsListener.php  # Record action event bridge
 │   │   ├── RecordFilterButtonBarListener.php  # Show filters menu entry
 │   │   ├── RecordFilterAdditionalContentListener.php
 │   │   └── RecordFilterQueryListener.php      # Filter query integration
@@ -465,7 +465,7 @@ records_list_types/
 │   │   │   ├── EmptyRecordsNotice.html        # Search/filter empty state
 │   │   │   ├── Pagination.html                # Pagination navigation (Core list view style)
 │   │   │   ├── RecordFilters.html             # Configurable filter panel
-│   │   │   ├── RecordActions.html             # Sanitized record action fragments
+│   │   │   ├── RecordActions.html             # Legacy custom-template record action partial
 │   │   │   ├── SortableColumnHeader.html      # Structured sortable table header
 │   │   │   ├── SortingDropdown.html           # Structured field sorting dropdown
 │   │   │   ├── SortingModeToggle.html         # Structured manual/field sorting toggle
@@ -485,6 +485,7 @@ records_list_types/
 │       │   ├── teaser-view.css                # Teaser view styles
 │       │   └── view-mode-toggle.css           # Toggle button styles
 │       ├── Icons/
+│       │   └── Extension.svg                  # Extension icon
 │       └── JavaScript/
 │           ├── GridViewActions.js             # Lit actions component, drag-drop, actions, sorting
 │           └── RecordFilters.js               # Category filter interaction
@@ -509,6 +510,7 @@ Comprehensive documentation is available in the `Documentation/` folder:
 | Document | Description |
 |----------|-------------|
 | [Documentation](Documentation/Index.rst) | Main RST documentation |
+| [Usage](Documentation/Usage/Index.rst) | Daily editor workflows |
 | [Configuration](Documentation/Configuration/Index.rst) | TSconfig reference |
 | [Record filters](Documentation/Configuration/Filters.rst) | Filter configuration |
 | [Architecture](Documentation/Developer/Architecture.rst) | Technical architecture |

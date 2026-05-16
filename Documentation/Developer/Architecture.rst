@@ -32,6 +32,18 @@ Services
     *   -   :php:`RecordGridDataProvider`
         -   Fetches records with resolved FAL references for thumbnails
 
+    *   -   :php:`RecordFilterConfigurationService`
+        -   Resolves TSconfig and TCA metadata for configurable filters
+
+    *   -   :php:`RecordFilterStateService`
+        -   Reads filter visibility and selected values from request/module data
+
+    *   -   :php:`RecordFilterQueryService`
+        -   Applies active filters to TYPO3 record-list query builders
+
+    *   -   :php:`RecordFilterViewDataFactory`
+        -   Builds Fluid-ready filter panel data
+
     *   -   :php:`ThumbnailService`
         -   Generates backend thumbnails using TYPO3's ProcessedFile API
 
@@ -40,6 +52,10 @@ Services
 
     *   -   :php:`MiddlewareDiagnosticService`
         -   Detects middleware configurations that could break rendering
+
+    *   -   :php:`ArrayUtility`
+        -   Normalizes TYPO3 TSconfig, request, and TCA arrays at typed
+            boundaries for PHPStan max
 
     *   -   :php:`DatabasePaginator`
         -   Paginator for pre-fetched database records, extending
@@ -60,15 +76,27 @@ Event listeners
 
     *   -   :php:`GridViewButtonBarListener`
         -   ``ModifyButtonBarEvent``
-        -   Injects List/Grid/Compact/Teaser toggle into DocHeader
+        -   Injects the view-mode dropdown into the DocHeader
 
     *   -   :php:`GridViewQueryListener`
         -   ``ModifyDatabaseQueryForRecordListingEvent``
-        -   Ensures Grid View respects query modifications
+        -   Caches query modifications made by other record-list listeners
 
     *   -   :php:`GridViewRecordActionsListener`
         -   ``ModifyRecordListRecordActionsEvent``
-        -   Bridges record actions to card footers
+        -   Observes Core record-action events and keeps helper access for custom templates
+
+    *   -   :php:`RecordFilterButtonBarListener`
+        -   ``ModifyButtonBarEvent``
+        -   Adds the :guilabel:`Show filters` menu entry
+
+    *   -   :php:`RecordFilterAdditionalContentListener`
+        -   ``RenderAdditionalContentToRecordListEvent``
+        -   Renders the filter panel above the classic List View
+
+    *   -   :php:`RecordFilterQueryListener`
+        -   ``ModifyDatabaseQueryForRecordListingEvent``
+        -   Applies configured filters to the classic List View query
 
 .. _architecture-resolution:
 
@@ -205,23 +233,43 @@ File structure
     ├── EventListener/
     │   ├── GridViewButtonBarListener.php
     │   ├── GridViewQueryListener.php
-    │   └── GridViewRecordActionsListener.php
+    │   ├── GridViewRecordActionsListener.php
+    │   ├── RecordFilterAdditionalContentListener.php
+    │   ├── RecordFilterButtonBarListener.php
+    │   └── RecordFilterQueryListener.php
+    ├── Html/
+    │   └── BackendFragmentSanitizerBuilder.php
     ├── Pagination/
     │   └── DatabasePaginator.php
     ├── Service/
     │   ├── GridConfigurationService.php
     │   ├── MiddlewareDiagnosticService.php
+    │   ├── RecordFilterConfigurationService.php
+    │   ├── RecordFilterQueryService.php
+    │   ├── RecordFilterStateService.php
+    │   ├── RecordFilterViewDataFactory.php
     │   ├── RecordGridDataProvider.php
     │   ├── ThumbnailService.php
     │   ├── ViewModeResolver.php
     │   └── ViewTypeRegistry.php
+    ├── Utility/
+    │   └── ArrayUtility.php
     └── ViewHelpers/
         └── RecordActionsViewHelper.php
 
-Resources/
-    └── Private/
-        └── Partials/
-            ├── TableHeading.html
-            ├── SortingDropdown.html
-            ├── SortingModeToggle.html
-            └── SortableColumnHeader.html
+    Configuration/
+    ├── Backend/AjaxRoutes.php
+    ├── Icons.php
+    ├── JavaScriptModules.php
+    ├── Services.yaml
+    └── page.tsconfig
+
+    Resources/
+    ├── Private/
+    │   ├── Language/
+    │   ├── Layouts/
+    │   ├── Partials/
+    │   └── Templates/
+    └── Public/
+        ├── Css/
+        └── JavaScript/

@@ -9,10 +9,11 @@ use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 use Webconsulting\RecordsListTypes\EventListener\GridViewRecordActionsListener;
 
 /**
- * RecordActionsViewHelper - Renders record actions in Grid View cards.
+ * RecordActionsViewHelper - renders cached action fragments for custom templates.
  *
- * This ViewHelper retrieves cached record actions from the
- * GridViewRecordActionsListener and renders them as HTML.
+ * Built-in TYPO3 v14 templates use controller-provided edit URLs and
+ * DataHandler action attributes. This ViewHelper is available for custom
+ * templates that explicitly populate the GridViewRecordActionsListener cache.
  *
  * Usage:
  * <gridview:recordActions table="tx_news_domain_model_news" uid="{record.uid}" />

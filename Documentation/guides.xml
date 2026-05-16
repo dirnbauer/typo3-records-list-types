@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <guides xmlns="https://www.phpdoc.org/guides" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="https://www.phpdoc.org/guides https://docs.typo3.org/render-guides/guides.xsd">
-    <project title="Records List Types" version="14.0.0"/>
-    <extension name="records_list_types"/>
+        xsi:schemaLocation="https://www.phpdoc.org/guides https://docs.typo3.org/render-guides/guides.xsd"
+        theme="typo3docs">
+    <project title="Records List Types" version="14.0.0" release="14.0.0" copyright="since 2024 by Webconsulting"/>
+    <extension
+            class="\T3Docs\Typo3DocsTheme\DependencyInjection\Typo3DocsThemeExtension"
+            typo3-core-preferred="stable"
+            interlink-shortcode="webconsulting/records-list-types"
+            project-home="https://github.com/dirnbauer/typo3-records-list-types"
+            project-contact="https://github.com/dirnbauer/typo3-records-list-types/issues"
+            project-repository="https://github.com/dirnbauer/typo3-records-list-types"
+            project-issues="https://github.com/dirnbauer/typo3-records-list-types/issues"
+            edit-on-github="dirnbauer/typo3-records-list-types"
+            edit-on-github-branch="main"
+            edit-on-github-directory="Documentation"/>
     <inventory id="t3coreapi" url="https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/"/>
     <inventory id="t3tsref" url="https://docs.typo3.org/m/typo3/reference-typoscript/main/en-us/"/>
-    <settings>
-        <setting name="edit_on_github" value="https://github.com/dirnbauer/typo3-records-list-types/edit/main/Documentation/"/>
-        <setting name="edit_on_github_branch" value="main"/>
-    </settings>
 </guides>

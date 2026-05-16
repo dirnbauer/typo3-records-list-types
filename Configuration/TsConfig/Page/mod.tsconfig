@@ -5,7 +5,7 @@
 # This file provides the default configuration for the Records List Types extension.
 # You can override these settings in your site's Page TSconfig.
 #
-# Documentation: EXT:records_list_types/Documentation/Configuration.md
+# Documentation: EXT:records_list_types/Documentation/Configuration/Index.rst
 # =============================================================================
 
 mod.web_list {
