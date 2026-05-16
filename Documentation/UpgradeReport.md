@@ -4,6 +4,24 @@
 > Skill: typo3-extension-upgrade
 > Extension: records_list_types @ TYPO3 v14
 
+## Breaking changes
+
+### Lit action host for custom templates
+
+Custom Fluid templates that rely on the shared action JavaScript must wrap
+their rendered content in:
+
+```html
+<records-list-types-actions>
+    <!-- custom view markup -->
+</records-list-types-actions>
+```
+
+The built-in Grid, Compact, Teaser, and Generic templates already include
+this wrapper. Custom templates copied before the Lit migration need the
+wrapper so drag-and-drop, record actions, sorting, pagination inputs,
+compact-view scroll shadows, and client-side search are initialized.
+
 ## Rector dry-run
 
 With `rector.php` now wired up (TYPO3 v14 level sets + PHP 8.3 + code

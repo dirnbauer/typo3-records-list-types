@@ -85,6 +85,19 @@ This mirrors TYPO3 core behavior: contextual editing opens the native
 sheet editor when enabled for the current backend user and otherwise
 falls back to the regular FormEngine in the content frame.
 
+Wrap custom templates in ``<records-list-types-actions>`` when they need
+the extension's shared interactions. The base ``GridViewActions.js``
+module registers that Lit custom element and initializes drag-and-drop,
+record actions, sorting, pagination input handling, scroll shadows, and
+client-side search inside it:
+
+..  code-block:: html
+    :caption: Resources/Private/Templates/TimelineView.html
+
+    <records-list-types-actions>
+        <!-- custom view markup -->
+    </records-list-types-actions>
+
 **Step 3 -- Add CSS (optional):**
 
 Your CSS file is loaded after ``base.css``, which already provides
@@ -444,8 +457,9 @@ What is loaded automatically
 Every view type automatically receives:
 
 -   ``base.css`` -- shared heading, pagination, sorting styles
--   ``GridViewActions.js`` -- drag-drop, record actions, pagination,
-    sorting, search
+-   ``GridViewActions.js`` -- Lit custom element for drag-drop, record
+    actions, pagination input handling, sorting, scroll shadows, and
+    search
 -   ``column-selector-button.js`` -- TYPO3 column selector web component
 
 You only need to add assets for view-specific styling or behavior.
@@ -475,7 +489,9 @@ JavaScript
 ----------
 
 Add custom JS modules via the ``js`` option. Your module loads alongside
-the base ``GridViewActions.js``:
+the base ``GridViewActions.js``. If your template needs the extension's
+shared interactions, keep the ``<records-list-types-actions>`` wrapper in
+the rendered markup:
 
 ..  code-block:: typoscript
     :caption: Page TSconfig
@@ -550,7 +566,7 @@ Asset loading order
 
 1.  ``base.css`` -- always (shared components)
 2.  Your ``css`` file -- view-specific styles
-3.  ``GridViewActions.js`` -- always (core interactions)
+3.  ``GridViewActions.js`` -- always (Lit actions component)
 4.  ``column-selector-button.js`` -- always (TYPO3 component)
 5.  Your ``js`` module -- custom behavior
 

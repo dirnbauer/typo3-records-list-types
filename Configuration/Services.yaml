@@ -41,6 +41,22 @@ services:
   Webconsulting\RecordsListTypes\Service\ViewTypeRegistry:
     public: true
 
+  # Record Filter Configuration Service - Parses TSconfig/TCA filter metadata
+  Webconsulting\RecordsListTypes\Service\RecordFilterConfigurationService:
+    public: true
+
+  # Record Filter State Service - Reads selected table and filter values
+  Webconsulting\RecordsListTypes\Service\RecordFilterStateService:
+    public: true
+
+  # Record Filter Query Service - Applies filters to list query builders
+  Webconsulting\RecordsListTypes\Service\RecordFilterQueryService:
+    public: true
+
+  # Record Filter View Data Factory - Builds Fluid-ready filter state
+  Webconsulting\RecordsListTypes\Service\RecordFilterViewDataFactory:
+    public: true
+
   # ==========================================================================
   # Controllers
   # ==========================================================================

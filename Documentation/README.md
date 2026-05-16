@@ -1,12 +1,16 @@
-# Records Grid View for TYPO3 v14
+# Records List Types for TYPO3 v14
 
-A TYPO3 extension that adds a **Grid View** (card-based layout) to the Records module, providing a visual alternative to the traditional table-based List View.
+A TYPO3 extension that adds Grid, Compact, Teaser, and custom view modes to
+the backend Records module. It also provides TSconfig-driven record filters
+that work across all view modes.
 
 ## Features
 
 - **Card-based Layout**: View records as Bootstrap 5 cards with thumbnails
 - **Visual Browsing**: Quickly identify records by their images (news, products, team members)
 - **Per-Table Configuration**: Configure which fields to display via TSconfig
+- **Record Filters**: Configure text, visibility, date, category, and select
+  filters via Page TSconfig
 - **User Preference Persistence**: Selected view mode is remembered per user
 - **Dark Mode Support**: Fully compatible with TYPO3's dark mode
 - **PSR-14 Integration**: Extends the core module without modifying it
@@ -33,9 +37,11 @@ Then activate the extension in the Extension Manager or via CLI:
 
 ## Quick Start
 
-### 1. Enable Grid View (Default)
+### 1. Use the Records Module
 
-The Grid View is enabled by default. After installation, navigate to **Content > Records** and you'll see the List/Grid toggle buttons in the module header.
+After installation, navigate to **Content > Records**. The view-mode dropdown
+appears in the module header and lets editors switch between List, Grid,
+Compact, Teaser, and any configured custom views.
 
 ### 2. Configure Fields per Table
 
@@ -55,7 +61,7 @@ mod.web_list.gridView.table.tx_news_domain_model_news {
 To default to Grid View instead of List View:
 
 ```typoscript
-mod.web_list.gridView.default = grid
+mod.web_list.viewMode.default = grid
 ```
 
 ## Screenshots
@@ -87,6 +93,8 @@ The standard table-based list view:
 The extension automatically loads its default TSconfig from `Configuration/page.tsconfig`.
 
 See [Configuration.md](Configuration.md) for the complete TSconfig reference.
+See [Record filters](Configuration/Filters.rst) for the dedicated filter
+configuration chapter.
 
 ## Architecture
 
@@ -233,7 +241,7 @@ See [Extending.md](Extending.md) for more information on customizing the Grid Vi
 ### Grid View toggle not appearing
 
 1. Ensure the extension is activated
-2. Check that `mod.web_list.allowedViews` includes `grid`
+2. Check that `mod.web_list.viewMode.allowed` includes `grid`
 3. Clear all caches
 
 ### Thumbnails not showing
@@ -249,4 +257,3 @@ If you see a middleware warning, a custom middleware may be interfering with the
 ## License
 
 GPL-2.0-or-later
-

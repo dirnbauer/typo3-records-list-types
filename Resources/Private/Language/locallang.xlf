@@ -24,6 +24,15 @@
             <trans-unit id="noRecords" resname="noRecords">
                 <source>No records found on this page.</source>
             </trans-unit>
+            <trans-unit id="noRecords.search" resname="noRecords.search">
+                <source>No records match the current search.</source>
+            </trans-unit>
+            <trans-unit id="noRecords.filtered" resname="noRecords.filtered">
+                <source>No records match the current filters.</source>
+            </trans-unit>
+            <trans-unit id="noRecords.filteredAndSearch" resname="noRecords.filteredAndSearch">
+                <source>No records match the current filters or search.</source>
+            </trans-unit>
             <trans-unit id="action.edit" resname="action.edit">
                 <source>Edit record</source>
             </trans-unit>
@@ -139,6 +148,33 @@
             </trans-unit>
             <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
                 <source>All elements translated</source>
+            </trans-unit>
+            <trans-unit id="filter.show" resname="filter.show">
+                <source>Show filters</source>
+            </trans-unit>
+            <trans-unit id="filter.title" resname="filter.title">
+                <source>Filter</source>
+            </trans-unit>
+            <trans-unit id="filter.apply" resname="filter.apply">
+                <source>Apply filters</source>
+            </trans-unit>
+            <trans-unit id="filter.reset" resname="filter.reset">
+                <source>Reset</source>
+            </trans-unit>
+            <trans-unit id="filter.option.any" resname="filter.option.any">
+                <source>Any</source>
+            </trans-unit>
+            <trans-unit id="filter.option.visible" resname="filter.option.visible">
+                <source>Visible</source>
+            </trans-unit>
+            <trans-unit id="filter.option.hidden" resname="filter.option.hidden">
+                <source>Hidden</source>
+            </trans-unit>
+            <trans-unit id="filter.option.yes" resname="filter.option.yes">
+                <source>Yes</source>
+            </trans-unit>
+            <trans-unit id="filter.option.no" resname="filter.option.no">
+                <source>No</source>
             </trans-unit>
         </body>
     </file>

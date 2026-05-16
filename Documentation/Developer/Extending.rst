@@ -151,20 +151,20 @@ Override styles in your extension:
 
 .. _extending-javascript:
 
-JavaScript hooks
-================
+JavaScript
+==========
 
-The view switcher dispatches a custom event you can listen to:
+The shared action module is a Lit custom element. Custom templates that
+need drag-and-drop, record actions, sorting, pagination input handling,
+compact-view scroll shadows, or client-side search must wrap their
+rendered content:
 
-..  code-block:: javascript
-    :caption: Resources/Public/JavaScript/my-extension.js
+..  code-block:: html
+    :caption: Resources/Private/Templates/MyView.html
 
-    document.addEventListener(
-        'recordsGridview:viewModeChanged',
-        (event) => {
-            console.log('View mode:', event.detail.mode);
-        },
-    );
+    <records-list-types-actions>
+        <!-- custom view markup -->
+    </records-list-types-actions>
 
 .. _extending-troubleshooting:
 

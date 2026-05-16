@@ -1,0 +1,35 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<div class="callout callout-info m-3">
+    <div class="callout-body">
+        <core:icon identifier="actions-info" size="small" />
+        <span class="ms-2">
+            <f:if condition="{table.hasActiveFilters}">
+                <f:then>
+                    <f:if condition="{searchTerm}">
+                        <f:then>
+                            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords.filteredAndSearch" default="No records match the current filters or search." />
+                        </f:then>
+                        <f:else>
+                            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords.filtered" default="No records match the current filters." />
+                        </f:else>
+                    </f:if>
+                </f:then>
+                <f:else>
+                    <f:if condition="{searchTerm}">
+                        <f:then>
+                            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords.search" default="No records match the current search." />
+                        </f:then>
+                        <f:else>
+                            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." />
+                        </f:else>
+                    </f:if>
+                </f:else>
+            </f:if>
+        </span>
+    </div>
+</div>
+
+</html>

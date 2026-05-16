@@ -204,6 +204,21 @@ Configure how each table appears in Grid and Teaser views:
     Enable or disable thumbnail previews for this table. Set to ``0``
     to always show a placeholder icon instead of the image.
 
+.. _configuration-filter-chapter:
+
+Record filters
+==============
+
+Record filters have their own chapter because they are shared by all
+view modes and support both generic TCA-derived defaults and
+table-specific TSconfig.
+
+..  toctree::
+    :maxdepth: 1
+    :titlesonly:
+
+    Filters
+
 .. _configuration-examples:
 
 Common configurations

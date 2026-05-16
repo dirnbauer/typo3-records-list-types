@@ -1,6 +1,6 @@
 # Architecture
 
-This document explains the technical architecture of the Records Grid View extension.
+This document explains the technical architecture of the Records List Types extension.
 
 ## Overview
 
@@ -112,9 +112,9 @@ The view mode is determined with strict precedence:
 ```
 1. Request Parameter (?displayMode=grid)
    │
-   └─ if not set ─▶ 2. User Preference ($BE_USER->uc['web_list_view_mode'])
+   └─ if not set ─▶ 2. User Preference ($BE_USER->uc['records_view_mode'])
                      │
-                     └─ if not set ─▶ 3. Page TSconfig (mod.web_list.gridView.default)
+                     └─ if not set ─▶ 3. Page TSconfig (mod.web_list.viewMode.default)
                                        │
                                        └─ if not set ─▶ 4. Fallback: "list"
 ```
@@ -126,27 +126,27 @@ public function getActiveViewMode(ServerRequestInterface $request, int $pageId):
 {
     // 1. Explicit request parameter (highest priority)
     $queryParams = $request->getQueryParams();
-    if (isset($queryParams['displayMode']) && in_array($queryParams['displayMode'], ['list', 'grid'])) {
+    if (isset($queryParams['displayMode']) && in_array($queryParams['displayMode'], $allowedModes, true)) {
         return $queryParams['displayMode'];
     }
 
     // 2. User preference (stored in backend user configuration)
-    $userPreference = $this->backendUser->uc['web_list_view_mode'] ?? null;
-    if ($userPreference && in_array($userPreference, ['list', 'grid'])) {
+    $userPreference = $this->backendUser->uc['records_view_mode'] ?? null;
+    if ($userPreference && in_array($userPreference, $allowedModes, true)) {
         return $userPreference;
     }
 
     // 3. Page TSconfig default
     $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-    $default = $tsConfig['mod.']['web_list.']['gridView.']['default'] ?? 'list';
+    $default = $tsConfig['mod.']['web_list.']['viewMode.']['default'] ?? 'list';
     
-    return in_array($default, ['list', 'grid']) ? $default : 'list';
+    return in_array($default, $allowedModes, true) ? $default : ($allowedModes[0] ?? 'list');
 }
 ```
 
 ## User Preference Persistence
 
-User preferences are stored in `$GLOBALS['BE_USER']->uc['web_list_view_mode']`.
+User preferences are stored in `$GLOBALS['BE_USER']->uc['records_view_mode']`.
 
 ### AJAX Flow
 
@@ -346,4 +346,3 @@ Configuration/
 ├── page.tsconfig                       # Default Page TSconfig (auto-loaded in v14)
 └── Services.yaml                       # DI configuration
 ```
-
