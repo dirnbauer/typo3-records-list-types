@@ -14,8 +14,12 @@ Records List Types extension.
 Custom record actions
 =====================
 
-The Grid View automatically displays all actions registered via
-``ModifyRecordListRecordActionsEvent``. To add custom actions:
+The built-in card templates render TYPO3 v14 edit URLs and DataHandler based
+actions from the view data prepared by
+:php:`Webconsulting\\RecordsListTypes\\Controller\\RecordListController`.
+
+For TYPO3 Core list-module actions, use
+``ModifyRecordListRecordActionsEvent`` as usual:
 
 ..  code-block:: php
     :caption: Classes/EventListener/CustomRecordActionListener.php
@@ -45,6 +49,14 @@ The Grid View automatically displays all actions registered via
             }
         }
     }
+
+..  note::
+
+    The extension listens to ``ModifyRecordListRecordActionsEvent`` only as a
+    lightweight compatibility bridge. The default Grid, Compact, and Teaser
+    templates do not automatically render arbitrary Core action fragments.
+    Add custom card actions in a custom Fluid template configured via Page
+    TSconfig, or expose the needed action URLs in your own view data.
 
 .. _extending-thumbnails:
 

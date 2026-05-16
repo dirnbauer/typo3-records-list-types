@@ -7,10 +7,10 @@ Records List Types
 ==================
 
 :Extension key:
-    |extension_key|
+    records_list_types
 
 :Package name:
-    |composer_name|
+    webconsulting/records-list-types
 
 :Version:
     |release|
@@ -46,6 +46,7 @@ configuration, and PSR-14 extensibility.
 
     Introduction/Index
     Installation/Index
+    Usage/Index
     Configuration/Index
     Developer/Index
     KnownProblems/Index

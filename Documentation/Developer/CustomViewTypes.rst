@@ -312,28 +312,28 @@ Built-in view types
 Configuration reference
 =======================
 
-..  confval:: types.<id>.label
+..  confval:: mod.web_list.viewMode.types.<id>.label
     :name: conf-type-label
     :type: string
     :required: true
 
     Display name in the view switcher. Supports ``LLL:`` references.
 
-..  confval:: types.<id>.icon
+..  confval:: mod.web_list.viewMode.types.<id>.icon
     :name: conf-type-icon
     :type: string
     :required: true
 
     TYPO3 icon identifier.
 
-..  confval:: types.<id>.template
+..  confval:: mod.web_list.viewMode.types.<id>.template
     :name: conf-type-template
     :type: string
     :default: ``<TypeId>View``
 
     Fluid template name (without :file:`.html`).
 
-..  confval:: types.<id>.css
+..  confval:: mod.web_list.viewMode.types.<id>.css
     :name: conf-type-css
     :type: string
     :default: *(none)*
@@ -341,14 +341,14 @@ Configuration reference
     CSS file to load (``EXT:`` syntax). ``base.css`` is always loaded
     automatically before this file.
 
-..  confval:: types.<id>.js
+..  confval:: mod.web_list.viewMode.types.<id>.js
     :name: conf-type-js
     :type: string
     :default: *(none)*
 
     JavaScript module (``@vendor/module.js`` syntax).
 
-..  confval:: types.<id>.columnsFromTCA
+..  confval:: mod.web_list.viewMode.types.<id>.columnsFromTCA
     :name: conf-type-columnsfromtca
     :type: boolean
     :default: ``1``
@@ -356,7 +356,7 @@ Configuration reference
     Controls how display columns are determined. See
     :ref:`custom-view-types-columns` below.
 
-..  confval:: types.<id>.displayColumns
+..  confval:: mod.web_list.viewMode.types.<id>.displayColumns
     :name: conf-type-displaycolumns
     :type: string (comma-separated)
     :default: *(empty)*
@@ -365,7 +365,7 @@ Configuration reference
     Special names: ``label`` (title field), ``datetime`` (first date
     field), ``teaser`` (first description field).
 
-..  confval:: types.<id>.itemsPerPage
+..  confval:: mod.web_list.viewMode.types.<id>.itemsPerPage
     :name: conf-type-itemsperpage
     :type: int
     :default: ``100``
@@ -572,10 +572,13 @@ Asset loading order
 
 .. _custom-view-types-psr14:
 
-Method 2: PSR-14 event (for extensions)
-========================================
+PSR-14 registration hook
+========================
 
-If building a TYPO3 extension, register view types via PSR-14:
+If building a TYPO3 extension, use PSR-14 to add, remove, or rename view
+mode entries before TSconfig is merged. The event API accepts the view
+mode identity data (label, icon, description). Use Page TSconfig for
+template paths, CSS, JavaScript, and display-column settings.
 
 ..  code-block:: php
     :caption: Classes/EventListener/RegisterCustomViewListener.php
@@ -598,10 +601,18 @@ If building a TYPO3 extension, register view types via PSR-14:
                 'label' => 'LLL:EXT:my_extension/Resources/Private/Language/locallang.xlf:viewMode.kanban',
                 'icon' => 'actions-view-table-columns',
                 'description' => 'Kanban board view',
-                'template' => 'KanbanView',
-                'css' => 'EXT:my_extension/Resources/Public/Css/kanban.css',
             ]);
         }
     }
 
-Templates and CSS work exactly the same as with TSconfig registration.
+Then configure rendering details in Page TSconfig:
+
+..  code-block:: typoscript
+    :caption: Page TSconfig
+
+    mod.web_list.viewMode.types.kanban {
+        template = KanbanView
+        templateRootPath = EXT:my_extension/Resources/Private/Templates/
+        css = EXT:my_extension/Resources/Public/Css/kanban.css
+        columnsFromTCA = 1
+    }

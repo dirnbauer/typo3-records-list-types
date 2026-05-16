@@ -9,16 +9,12 @@ use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
- * GridViewRecordActionsListener - Bridges record actions to view mode cards.
+ * GridViewRecordActionsListener - observes Core record-action events.
  *
- * This listener collects record actions (edit, copy, delete, custom) from the
- * standard RecordList event and stores them for later use in Grid, Compact,
- * and Teaser view cards.
- *
- * It does not modify the actions - it only caches them for the Grid View renderer.
- *
- * Note: In TYPO3 v14, the event API has changed. This listener is kept minimal
- * to avoid compatibility issues.
+ * TYPO3 v14 provides native edit URLs and DataHandler action attributes to the
+ * built-in view templates. This listener remains intentionally small: it records
+ * that Core dispatched ModifyRecordListRecordActionsEvent and keeps helper
+ * methods for custom templates that explicitly store action HTML.
  */
 #[AsEventListener]
 final class GridViewRecordActionsListener implements SingletonInterface

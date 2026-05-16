@@ -597,7 +597,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
             'hidden' => $hidden,
             'workspaceState' => $workspaceState,
             'rawRecord' => $row,
-            'actions' => [], // To be filled by RecordActionsListener
+            'actions' => [], // Reserved for custom templates that pass additional action fragments.
         ];
     }
 

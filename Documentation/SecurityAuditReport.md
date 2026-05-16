@@ -42,9 +42,9 @@ Grepped `Classes/` for the high-risk sinks:
 
 ## GitHub Actions review (`.github/workflows/ci.yml`)
 
-- Third-party actions pinned to major: `actions/checkout@v4`,
-  `shivammathur/setup-php@v2`, `actions/upload-artifact@v4`,
-  `stefanzweifel/git-auto-commit-action@v5`. Safe against repo takeover
+- Third-party actions pinned to major: `actions/checkout@v6`,
+  `shivammathur/setup-php@v2`, `actions/upload-artifact@v7`,
+  `stefanzweifel/git-auto-commit-action@v7`. Safe against repo takeover
   of a single tag as long as the maintainers keep semver discipline.
   SHA-pinning would be stricter; left as a follow-up.
 - `contents: write` scoped only to the PHP-CS-Fixer job, which needs to

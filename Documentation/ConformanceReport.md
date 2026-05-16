@@ -51,13 +51,11 @@ Delta since round 2: **95 → 97**.
   "cache has/get" anti-pattern — this is the documented v14 way to
   guard against unknown tables (`get()` throws on missing schema).
 
-### Addressed in this pass
+### Confirmed in this pass
 
-- Deleted **`Resources/Public/JavaScript/view-switcher.js`** — orphaned
-  file, not referenced by any Fluid template, PHP class, or
-  `Configuration/JavaScriptModules.php` import. The live JS module is
-  `GridViewActions.js`, registered via the `@webconsulting/records-list-types/`
-  namespace.
+- **`Resources/Public/JavaScript/view-switcher.js` is absent**. The live
+  shared JS module is `GridViewActions.js`, registered via the
+  `@webconsulting/records-list-types/` namespace.
 
 ## Verification
 

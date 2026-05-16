@@ -42,10 +42,13 @@ use InvalidArgumentException;
  *       identifier: 'my-extension/register-kanban-view'
  * ```
  *
- * After registering a custom view mode, you need to:
- * 1. Add a template for it in your extension
- * 2. Handle rendering in a custom controller or via XClass
- * 3. Add it to the allowed views in TSconfig: mod.web_list.viewMode.allowed = list,grid,compact,teaser,kanban
+ * After registering a custom view mode, add rendering details such as
+ * template paths, CSS, JavaScript, display columns, and allowed modes in
+ * Page TSconfig:
+ *
+ * mod.web_list.viewMode.allowed = list,grid,compact,teaser,kanban
+ * mod.web_list.viewMode.types.kanban.template = KanbanView
+ * mod.web_list.viewMode.types.kanban.templateRootPath = EXT:my_extension/Resources/Private/Templates/
  *
  * @see \Webconsulting\RecordsListTypes\Service\ViewModeResolver
  */

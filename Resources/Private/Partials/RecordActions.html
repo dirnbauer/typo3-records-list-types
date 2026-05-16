@@ -4,11 +4,11 @@
       data-namespace-typo3-fluid="true">
 
 <f:comment>
-    Record Actions for Grid View Cards
+    Record Actions for custom Grid View cards
     
-    This partial renders the action buttons in the card footer.
-    Actions are collected by the GridViewRecordActionsListener and
-    passed to the template.
+    This legacy partial renders action buttons when a custom template
+    explicitly passes record.actions. Built-in TYPO3 v14 templates use
+    controller-provided edit URLs and DataHandler action attributes.
 </f:comment>
 
 <div class="btn-group btn-group-sm" role="group">
@@ -56,4 +56,3 @@
 </f:if>
 
 </html>
-

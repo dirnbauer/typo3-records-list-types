@@ -29,15 +29,15 @@ behind Core's backend auth middleware.
 | Authorisation | Pass — table visibility + `tables_select` + TSconfig `hideTables` are checked before data is read. |
 | File handling | Pass — thumbnail resolution uses TYPO3's FAL `ProcessedFile` API; no raw filesystem paths from user input. |
 | Error handling | Pass — AJAX responses return a generic error string; full exception detail is written to `LoggerInterface` only. |
-| JavaScript | Pass — 0 `innerHTML =` assignments in `Resources/Public/JavaScript/`, 0 `eval()` / `document.write`. URLs built via `URL` / `URLSearchParams`, HTML parsed via `DOMParser`. Orphaned `view-switcher.js` deleted in the conformance commit. |
+| JavaScript | Pass — 0 `innerHTML =` assignments in `Resources/Public/JavaScript/`, 0 `eval()` / `document.write`. URLs built via `URL` / `URLSearchParams`, HTML parsed via `DOMParser`. The live shared action module is `GridViewActions.js`. |
 | Response headers | Pass (in scope) — Core's `JsonResponse` sets `Content-Type: application/json`. `X-Content-Type-Options: nosniff`, `X-Frame-Options`, etc. are server-level and therefore outside the extension's scope. |
 | Hardening | Pass — every class `final`, services now `final readonly` where Rector could prove it safe, no `eval`, no `include` with user input. |
 
 ## v14-specific hardening confirmations
 
 - Frontend CSP feature flags are not applicable — the extension does
-  not render frontend content. Backend CSP is enforced by Core by
-  default on v13+.
+  not render frontend content. Backend requests stay inside the TYPO3
+  v14 backend security stack.
 - `security.backend.enforceReferrer` compatibility verified: the
   extension works under the strict referrer policy.
 - Password policy / MFA are not altered by the extension; installations
