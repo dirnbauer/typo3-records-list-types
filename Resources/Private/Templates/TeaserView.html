@@ -9,14 +9,15 @@
     Ideal for news, blog posts, and similar content types.
 </f:comment>
 
+<records-list-types-actions>
 <div class="recordlist-teaserview-container">
 
     <f:if condition="{tableData}">
         <f:then>
             <f:for each="{tableData}" as="table">
+                <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
                 <div class="recordlist" id="t3-table-{table.tableName}"
                      {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
-                    <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
                     <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
                     <input type="hidden" name="cmd_table" value="{table.tableName}" />
                     <input type="hidden" name="cmd" />
@@ -122,5 +123,6 @@
     </f:if>
 
 </div>
+</records-list-types-actions>
 
 </html>

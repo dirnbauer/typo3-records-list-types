@@ -3,6 +3,7 @@
       xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
+<records-list-types-actions>
 <div class="recordlist-gridview-container">
 
     <f:comment>WCAG 2.1: Screen reader live region for drag and drop announcements</f:comment>
@@ -33,9 +34,9 @@
     <f:if condition="{tableData}">
         <f:then>
             <f:for each="{tableData}" as="table">
+                <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
                 <div class="recordlist" id="t3-table-{table.tableName}"
                      {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
-                    <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
                     <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
                     <input type="hidden" name="cmd_table" value="{table.tableName}" />
                     <input type="hidden" name="cmd" />
@@ -163,5 +164,6 @@
     </f:if>
 
 </div>
+</records-list-types-actions>
 
 </html>

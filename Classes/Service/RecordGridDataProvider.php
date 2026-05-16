@@ -586,6 +586,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
             'uid' => $uid,
             'pid' => (isset($row['pid']) && is_numeric($row['pid'])) ? (int) $row['pid'] : 0,
             'tableName' => $table,
+            'reorderGroup' => $this->getReorderGroup($table, $row),
             'title' => $title,
             'description' => $description,
             'thumbnail' => $thumbnail,
@@ -597,6 +598,27 @@ final readonly class RecordGridDataProvider implements SingletonInterface
             'rawRecord' => $row,
             'actions' => [], // To be filled by RecordActionsListener
         ];
+    }
+
+    /**
+     * Return the client-side grouping boundary for drag-and-drop ordering.
+     *
+     * TYPO3 validates tt_content moves against the target record's colPos.
+     * Keeping content elements scoped to their current colPos avoids creating
+     * DataHandler move commands that backend layout restrictions reject.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function getReorderGroup(string $table, array $row): string
+    {
+        if ($table !== 'tt_content') {
+            return '';
+        }
+
+        $colPosRaw = $row['colPos'] ?? 0;
+        $colPos = is_numeric($colPosRaw) ? (int) $colPosRaw : 0;
+
+        return 'colPos:' . $colPos;
     }
 
     /**
