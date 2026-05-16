@@ -15,6 +15,7 @@ use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
+use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -33,6 +34,7 @@ final class RecordGridDataProvider implements SingletonInterface
         private readonly IconFactory $iconFactory,
         private readonly GridConfigurationService $configurationService,
         private readonly ThumbnailService $thumbnailService,
+        private readonly TcaSchemaFactory $tcaSchemaFactory,
     ) {}
 
     /**
@@ -72,7 +74,8 @@ final class RecordGridDataProvider implements SingletonInterface
 
         while ($row = $result->fetchAssociative()) {
             // Apply workspace overlay to get the correct version for the current workspace
-            BackendUtility::workspaceOL($table, $row);
+            $backendUser = $this->getBackendUserAuthentication();
+            BackendUtility::workspaceOL($table, $row, $backendUser->workspace, true);
 
             // workspaceOL returns false/null if record is deleted in workspace or should not be shown
             if (!is_array($row)) {
@@ -83,6 +86,22 @@ final class RecordGridDataProvider implements SingletonInterface
         }
 
         return $records;
+    }
+
+    /**
+     * Build the enriched record payload for a row already fetched elsewhere.
+     *
+     * This allows the controller to delegate querying to TYPO3's
+     * DatabaseRecordList while reusing the provider's thumbnail / metadata
+     * enrichment for custom view modes.
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    public function buildRecordDataFromRow(string $table, array $row, int $pageId): array
+    {
+        $tableConfig = $this->configurationService->getTableConfig($table, $pageId);
+        return $this->enrichRecord($table, $row, $tableConfig, $pageId);
     }
 
     /**
@@ -152,12 +171,10 @@ final class RecordGridDataProvider implements SingletonInterface
      */
     private function getTca(string $table): array
     {
-        /** @var array<string, mixed> $allTca */
-        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
-        $tca = $allTca[$table] ?? [];
-        if (!is_array($tca)) {
+        if (!$this->tcaSchemaFactory->has($table)) {
             return ['ctrl' => [], 'columns' => []];
         }
+        $tca = $this->tcaSchemaFactory->get($table)->getRawConfiguration();
         /** @var array<string, mixed> $ctrl */
         $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
         /** @var array<string, array<string, mixed>> $columns */
@@ -690,7 +707,8 @@ final class RecordGridDataProvider implements SingletonInterface
         $grouped = [];
 
         while ($row = $result->fetchAssociative()) {
-            BackendUtility::workspaceOL($table, $row);
+            $backendUser = $this->getBackendUserAuthentication();
+            BackendUtility::workspaceOL($table, $row, $backendUser->workspace, true);
             if (!is_array($row)) {
                 continue;
             }

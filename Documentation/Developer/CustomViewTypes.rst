@@ -48,6 +48,27 @@ to your sitepackage and customize it. The template receives ``tableData``
 with all records, ``paginator``/``pagination`` for paging, and
 ``actionButtons`` for the heading bar.
 
+For record edit links in custom templates, use TYPO3 14's native
+contextual edit trigger instead of ``be:link.editRecord``. Records
+rendered by the extension already expose:
+
+-   ``record.editUrl``
+-   ``record.contextualEditUrl``
+
+Example:
+
+..  code-block:: html
+
+    <typo3-backend-contextual-record-edit-trigger
+        edit-url="{record.editUrl}"
+        url="{record.contextualEditUrl}">
+        {record.title}
+    </typo3-backend-contextual-record-edit-trigger>
+
+This mirrors TYPO3 core behavior: contextual editing opens the native
+sheet editor when enabled for the current backend user and otherwise
+falls back to the regular FormEngine in the content frame.
+
 **Step 3 -- Add CSS (optional):**
 
 Your CSS file is loaded after ``base.css``, which already provides

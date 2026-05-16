@@ -64,7 +64,7 @@ A card-based layout designed for visual browsing of records.
 - **Field display**: Type-aware formatting -- booleans as badges, dates in monospace, relations with count indicators, links as clickable, text truncated with ellipsis
 - **Two-column field layout**: Small fields display side-by-side; text/richtext fields span full width
 - **Drag-and-drop reordering**: Both mouse and keyboard (Space to grab, arrows to move, Space to drop, Escape to cancel)
-- **Record actions**: Inline visibility toggle, edit, delete, plus dropdown for info, history, copy, and cut
+- **Record actions**: Inline visibility toggle, TYPO3 14 native contextual edit trigger, delete, plus dropdown for info, history, copy, and cut
 - **State indicators**: Hidden records get amber headers; workspace records show blue (new), purple (changed), cyan (moved), or red (deleted) headers
 - **Language flags**: Each card shows the record's language flag icon in the bottom-right corner
 - **Responsive grid**: Auto-fills columns from 320px minimum, scales from 1 column on mobile to multiple on wide screens
@@ -73,7 +73,7 @@ A card-based layout designed for visual browsing of records.
 
 A dense table layout for efficient data scanning with many records.
 
-- **Fixed columns**: Icon, UID, and title are pinned on the left; status toggle, edit, and delete are pinned on the right
+- **Fixed columns**: Icon, UID, and title are pinned on the left; status toggle, TYPO3 14 native contextual edit, and delete are pinned on the right
 - **Scrollable middle**: Additional fields scroll horizontally between the fixed columns
 - **Scroll shadows**: Visual indicators appear when content extends beyond the visible area
 - **Sortable headers**: Click column headers to sort ascending/descending via TYPO3's native dropdown API
@@ -86,7 +86,7 @@ A minimal card layout inspired by news/blog listings.
 
 - **Clean design**: Title, date with calendar icon, and description excerpt (2-line clamp)
 - **Status badges**: UID pill and hidden/visible indicator
-- **Compact actions**: Visibility toggle, edit, and delete buttons
+- **Compact actions**: Visibility toggle, TYPO3 14 native contextual edit, and delete buttons
 - **Hidden state**: Accent bar on hidden records
 - **CSS `light-dark()`**: Native theme switching support
 

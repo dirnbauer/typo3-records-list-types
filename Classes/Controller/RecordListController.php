@@ -7,13 +7,13 @@ namespace Webconsulting\RecordsListTypes\Controller;
 use Exception;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use ReflectionException;
 use ReflectionMethod;
 use RuntimeException;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
-use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Imaging\IconFactory;
@@ -120,6 +120,7 @@ final class RecordListController extends CoreRecordListController
 
         $this->pageRenderer->addInlineLanguageLabelFile('EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf');
         $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/dispatch-modal-button.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/contextual-record-edit-trigger.js');
 
         BackendUtility::lockRecords();
         $pointer = max(0, (int) ($parsedBodyArray['pointer'] ?? $queryParams['pointer'] ?? 0));
@@ -231,7 +232,7 @@ final class RecordListController extends CoreRecordListController
         $dbList->start($this->pageContext->pageId, $this->table, $pointer, $this->searchTerm, $searchLevels);
 
         // Render the appropriate view (all view types use the same render path)
-        $customContent = $this->renderViewContent($request, $pageId, $this->table, $this->searchTerm, $searchLevels, $viewMode);
+        $customContent = $this->renderViewContent($request, $dbList, $pageId, $this->table, $this->searchTerm, $searchLevels, $viewMode);
 
         // Page title
         if ($this->pageContext->pageId === 0) {
@@ -358,6 +359,7 @@ final class RecordListController extends CoreRecordListController
      */
     protected function renderViewContent(
         ServerRequestInterface $request,
+        DatabaseRecordList $dbList,
         int $pageId,
         string $table,
         string $searchTerm,
@@ -433,7 +435,7 @@ final class RecordListController extends CoreRecordListController
             }
 
             $isSingleTableMode = ($table !== '');
-            $totalRecordCount = $recordGridDataProvider->getRecordCount($tableName, $pageId);
+            $totalRecordCount = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
 
             // Pagination and record fetching strategy depends on mode + search state
             if ($searchTerm !== '') {
@@ -446,7 +448,19 @@ final class RecordListController extends CoreRecordListController
                     $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
                     $currentPointer = $this->getCurrentPointer($request, $tableName);
                     $offset = ($currentPointer - 1) * $itemsPerPage;
-                    $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels, $itemsPerPage, $offset);
+                    $records = $this->getRecordsUsingDbList(
+                        $request,
+                        $tableName,
+                        $pageId,
+                        $searchTerm,
+                        $searchLevels,
+                        $itemsPerPage,
+                        $offset,
+                        $sortField,
+                        $sortDirection,
+                        false,
+                        $recordGridDataProvider,
+                    );
                     $recordCount = $searchTotalCount;
                     $hasMore = false; // pagination handles navigation
                 } else {
@@ -454,7 +468,19 @@ final class RecordListController extends CoreRecordListController
                     $itemsPerPage = $this->getItemsLimitPerTable($pageId);
                     $currentPointer = 1;
                     $offset = 0;
-                    $records = $this->getRecordsUsingDbList($request, $tableName, $tableConfig, $pageId, $searchTerm, $searchLevels, $itemsPerPage);
+                    $records = $this->getRecordsUsingDbList(
+                        $request,
+                        $tableName,
+                        $pageId,
+                        $searchTerm,
+                        $searchLevels,
+                        $itemsPerPage,
+                        0,
+                        $sortField,
+                        $sortDirection,
+                        false,
+                        $recordGridDataProvider,
+                    );
                     $recordCount = $searchTotalCount;
                     $hasMore = $searchTotalCount > count($records);
                 }
@@ -463,7 +489,19 @@ final class RecordListController extends CoreRecordListController
                 $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
                 $currentPointer = $this->getCurrentPointer($request, $tableName);
                 $offset = ($currentPointer - 1) * $itemsPerPage;
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
+                $records = $this->getRecordsUsingDbList(
+                    $request,
+                    $tableName,
+                    $pageId,
+                    $searchTerm,
+                    $searchLevels,
+                    $itemsPerPage,
+                    $offset,
+                    $sortField,
+                    $sortDirection,
+                    $sortingMode === 'manual' && $hasSortbyField,
+                    $recordGridDataProvider,
+                );
                 $recordCount = $totalRecordCount;
                 $hasMore = false; // pagination handles navigation
             } else {
@@ -471,7 +509,19 @@ final class RecordListController extends CoreRecordListController
                 $itemsPerPage = $this->getItemsLimitPerTable($pageId);
                 $currentPointer = 1;
                 $offset = 0;
-                $records = $recordGridDataProvider->getRecordsForTable($tableName, $pageId, $itemsPerPage, $offset, $searchTerm, $sortField, $sortDirection);
+                $records = $this->getRecordsUsingDbList(
+                    $request,
+                    $tableName,
+                    $pageId,
+                    '',
+                    0,
+                    $itemsPerPage,
+                    $offset,
+                    $sortField,
+                    $sortDirection,
+                    $sortingMode === 'manual' && $hasSortbyField,
+                    $recordGridDataProvider,
+                );
                 $recordCount = $totalRecordCount;
                 $hasMore = $recordCount > count($records);
             }
@@ -494,10 +544,8 @@ final class RecordListController extends CoreRecordListController
 
             // Action buttons
             $actionButtons = $this->createTableActionButtons(
+                $dbList,
                 $tableName,
-                $pageId,
-                $viewMode,
-                $request,
                 $recordCount,
                 $isSingleTableMode,
             );
@@ -607,12 +655,25 @@ final class RecordListController extends CoreRecordListController
             // Multi Record Selection action buttons (Edit, Delete, Transfer/Remove clipboard)
             $displayColumnFields = array_map(static fn(array $col): string => $col['field'], $displayColumns);
             $displayColumnFields = array_values(array_filter($displayColumnFields, static fn(string $f): bool => $f !== ''));
-            $multiRecordSelectionActionsHtml = $this->renderMultiRecordSelectionActions($tableName, $pageId, $viewMode, $request, $displayColumnFields);
+            $recordUids = array_map(
+                static fn(array $record): int => is_numeric($record['uid'] ?? null) ? (int) $record['uid'] : 0,
+                $enrichedRecords,
+            );
+            $recordUids = array_values(array_filter($recordUids, static fn(int $uid): bool => $uid > 0));
+            $multiRecordSelectionActionsHtml = $this->renderMultiRecordSelectionActions(
+                $tableName,
+                $pageId,
+                $viewMode,
+                $request,
+                $recordUids,
+                $displayColumnFields,
+            );
 
             $tableData[] = [
                 'tableName' => $tableName,
                 'tableIdentifier' => $tableName,
                 'tableLabel' => $this->getTableLabel($tableName),
+                'tableHeadingHtml' => $this->renderTableHeading($dbList, $tableName, $recordCount, $isSingleTableMode),
                 'tableIcon' => $this->getTableIcon($tableName),
                 'tableConfig' => $tableConfig,
                 'records' => $enrichedRecords,
@@ -837,7 +898,7 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
 
-            $count = $dataProvider->getRecordCount($tableName, $pageId);
+            $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $this->request);
             if ($count > 0) {
                 $tables[] = $tableName;
             }
@@ -918,8 +979,7 @@ final class RecordListController extends CoreRecordListController
                 }
             } else {
                 // No search - check if table has records on this page
-                $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
-                $count = $recordGridDataProvider->getRecordCount($tableName, $pageId);
+                $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
                 if ($count > 0) {
                     $tables[] = $tableName;
                 }
@@ -949,9 +1009,36 @@ final class RecordListController extends CoreRecordListController
         int $searchLevels,
         ServerRequestInterface $request,
     ): DatabaseRecordList {
+        $backendUser = $this->getBackendUserAuthentication();
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
+        $dbList->setModuleData($this->moduleData);
+        $dbList->calcPerms = $this->pageContext->pagePermissions;
+        $dbList->returnUrl = $this->returnUrl;
+        $dbList->showClipboardActions = true;
+        $dbList->disableSingleTableView = (bool) ($this->modTSconfig['disableSingleTableView'] ?? false);
+        $dbList->listOnlyInSingleTableMode = (bool) ($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
+        $dbList->hideTables = (string) ($this->modTSconfig['hideTables'] ?? '');
+        $dbList->hideTranslations = (string) ($this->modTSconfig['hideTranslations'] ?? '');
+        $tableOverTca = is_array($this->modTSconfig['table'] ?? null) ? $this->modTSconfig['table'] : [];
+        /** @var array<string, array<string>> $tableOverTca */
+        $dbList->tableTSconfigOverTCA = $tableOverTca;
+        $dbList->allowedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['allowedNewTables'] ?? ''), true);
+        $dbList->deniedNewTables = GeneralUtility::trimExplode(',', (string) ($this->modTSconfig['deniedNewTables'] ?? ''), true);
+        /** @var array<string> $pageRecord */
+        $pageRecord = $this->pageContext->pageRecord ?? [];
+        $dbList->pageRow = $pageRecord;
         $dbList->modTSconfig = $this->modTSconfig;
+        $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
+        $dbList->setLanguagesAllowedForUser($siteLanguages);
+        $clickTitleMode = trim((string) ($this->modTSconfig['clickTitleMode'] ?? ''));
+        $dbList->clickTitleMode = $clickTitleMode === '' ? 'edit' : $clickTitleMode;
+        $tableDisplayOrder = $this->modTSconfig['tableDisplayOrder'] ?? null;
+        if (is_array($tableDisplayOrder)) {
+            $dbList->setTableDisplayOrder($tableDisplayOrder);
+        }
+        $clipboardEnabled = $this->moduleData !== null && (bool) $this->moduleData->get('clipBoard');
+        $dbList->clipObj = $this->initializeClipboard($request, $clipboardEnabled);
         $dbList->start($pageId, $tableName, 0, $searchTerm, $searchLevels);
         return $dbList;
     }
@@ -964,7 +1051,6 @@ final class RecordListController extends CoreRecordListController
      *
      * @param ServerRequestInterface $request The current request
      * @param string $tableName The table to query
-     * @param array<string, mixed> $tableConfig The grid configuration for this table
      * @param int $pageId The current page ID
      * @param string $searchTerm The search term
      * @param int $searchLevels The search depth level
@@ -975,19 +1061,27 @@ final class RecordListController extends CoreRecordListController
     protected function getRecordsUsingDbList(
         ServerRequestInterface $request,
         string $tableName,
-        array $tableConfig,
         int $pageId,
         string $searchTerm,
         int $searchLevels,
         int $limit = 100,
         int $offset = 0,
+        string $sortField = '',
+        string $sortDirection = 'asc',
+        bool $useManualSorting = false,
+        ?RecordGridDataProvider $recordGridDataProvider = null,
     ): array {
-        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $records = [];
+        $recordsByIdentity = [];
+        $backendUser = $this->getBackendUserAuthentication();
+        $useWorkspaceReduction = $backendUser->workspace > 0;
+        $recordGridDataProvider ??= GeneralUtility::makeInstance(RecordGridDataProvider::class);
 
         try {
             // Create a properly initialized DatabaseRecordList for this table
             $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
+            $dbList->sortField = $useManualSorting ? '' : $sortField;
+            $dbList->sortRev = !$useManualSorting && strtolower($sortDirection) === 'desc';
 
             // Use DatabaseRecordList's query builder which handles search properly
             // This is the same API the core list view uses
@@ -996,7 +1090,8 @@ final class RecordListController extends CoreRecordListController
 
             while ($row = $result->fetchAssociative()) {
                 // Apply workspace overlay to get the correct version for the current workspace
-                BackendUtility::workspaceOL($tableName, $row);
+                $backendUser = $this->getBackendUserAuthentication();
+                BackendUtility::workspaceOL($tableName, $row, $backendUser->workspace, true);
 
                 // workspaceOL returns false/null if record is deleted in workspace or should not be shown
                 if (!is_array($row)) {
@@ -1004,48 +1099,44 @@ final class RecordListController extends CoreRecordListController
                 }
 
                 $uid = (int) $row['uid'];
-                $recordPid = (int) ($row['pid'] ?? $pageId);
+                $recordData = $recordGridDataProvider->buildRecordDataFromRow($tableName, $row, $pageId);
 
-                // Get title field
-                $tcaForTableRecords = $this->getTcaForTable($tableName);
-                $titleFieldVal = $tableConfig['titleField'] ?? $tcaForTableRecords['ctrl']['label'] ?? 'uid';
-                $titleField = is_string($titleFieldVal) ? $titleFieldVal : 'uid';
-                $titleRaw = $row[$titleField] ?? '[No title]';
-                if (is_array($titleRaw)) {
-                    $titleRaw = reset($titleRaw);
+                if ($useWorkspaceReduction) {
+                    // In workspaces the DB query can still yield both a live row and a
+                    // versioned/moved row that overlay to the same effective record.
+                    // Reduce them by their live identity so custom views mirror the
+                    // native list's single effective row per record.
+                    $identity = $this->getWorkspaceRecordIdentity($row, $uid);
+                    $recordsByIdentity[$identity] = $recordData;
+                } else {
+                    $records[] = $recordData;
                 }
-                $title = is_scalar($titleRaw) ? (string) $titleRaw : '[No title]';
-
-                // Get icon identifier
-                $icon = $iconFactory->getIconForRecord($tableName, $row, \TYPO3\CMS\Core\Imaging\IconSize::SMALL);
-                $iconIdentifier = $icon->getIdentifier();
-
-                // Check hidden status
-                $enableColsRecords = is_array($tcaForTableRecords['ctrl']['enablecolumns'] ?? null) ? $tcaForTableRecords['ctrl']['enablecolumns'] : [];
-                $hiddenFieldVal = $enableColsRecords['disabled'] ?? null;
-                $hiddenField = is_string($hiddenFieldVal) ? $hiddenFieldVal : null;
-                $hidden = ($hiddenField !== null && $hiddenField !== '') ? (bool) ($row[$hiddenField] ?? false) : false;
-
-                $records[] = [
-                    'uid' => $uid,
-                    'pid' => $recordPid,
-                    'tableName' => $tableName,
-                    'title' => $title,
-                    'description' => null,
-                    'thumbnail' => null,
-                    'thumbnailUrl' => null,
-                    'iconIdentifier' => $iconIdentifier,
-                    'hidden' => $hidden,
-                    'rawRecord' => $row,
-                    'actions' => [],
-                ];
             }
         } catch (Exception $e) {
             // Log error but don't fail - return empty results
             // This can happen if the table doesn't exist or user lacks permissions
         }
 
+        if ($useWorkspaceReduction) {
+            $records = array_values($recordsByIdentity);
+        }
+
         return $records;
+    }
+
+    /**
+     * Return a stable workspace identity for a row after overlay.
+     *
+     * Versioned records point back to the live row via t3ver_oid; live rows and
+     * new workspace-only records fall back to their own uid.
+     *
+     * @param array<string, mixed> $row
+     */
+    protected function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
+    {
+        $liveUidRaw = $row['t3ver_oid'] ?? 0;
+        $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
+        return (string) ($liveUid > 0 ? $liveUid : $fallbackUid);
     }
 
     /**
@@ -1062,6 +1153,16 @@ final class RecordListController extends CoreRecordListController
      * @return int Total number of matching records
      */
     protected function getSearchRecordCount(
+        string $tableName,
+        int $pageId,
+        string $searchTerm,
+        int $searchLevels,
+        ServerRequestInterface $request,
+    ): int {
+        return $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request);
+    }
+
+    protected function getRecordCountUsingDbList(
         string $tableName,
         int $pageId,
         string $searchTerm,
@@ -1098,8 +1199,19 @@ final class RecordListController extends CoreRecordListController
         int $pageId,
         string $viewMode,
         ServerRequestInterface $request,
+        array $currentRecordUids = [],
         array $displayColumnFields = [],
     ): string {
+        $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, '', 0, $request);
+        $buttons = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'renderMultiRecordSelectionActions',
+            [$tableName, $currentRecordUids],
+        );
+
+        if ($displayColumnFields === []) {
+            return $buttons;
+        }
         $languageService = $this->getLanguageService();
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
@@ -1114,21 +1226,6 @@ final class RecordListController extends CoreRecordListController
             $returnUrl = (string) $request->getUri();
         }
 
-        $buttons = [];
-
-        // Edit action
-        $editConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'returnUrl' => $returnUrl,
-        ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="edit"'
-            . ' data-multi-record-selection-action-config="' . $editConfig . '">'
-            . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.edit', 'Edit'))
-            . '</button>';
-
         // Edit columns action - only edit the currently displayed columns
         $editColumnsConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
             'idField' => 'uid',
@@ -1136,56 +1233,51 @@ final class RecordListController extends CoreRecordListController
             'returnUrl' => $returnUrl,
             'columnsOnly' => $displayColumnFields,
         ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
+        $editColumnsButton = '<button type="button" class="btn btn-sm btn-default"'
             . ' data-multi-record-selection-action="edit"'
             . ' data-multi-record-selection-action-config="' . $editColumnsConfig . '">'
             . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns', 'Edit columns'))
             . '</button>';
 
-        // Clipboard: Transfer to clipboard
-        $copyConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'returnUrl' => $returnUrl,
-        ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="copyMarked"'
-            . ' data-multi-record-selection-action-config="' . $copyConfig . '">'
-            . $iconFactory->getIcon('actions-edit-copy', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_copyMarked', 'Transfer to clipboard'))
-            . '</button>';
+        if ($buttons === '') {
+            return $editColumnsButton;
+        }
 
-        // Clipboard: Remove from clipboard
-        $removeConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'returnUrl' => $returnUrl,
-        ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="removeMarked"'
-            . ' data-multi-record-selection-action-config="' . $removeConfig . '">'
-            . $iconFactory->getIcon('actions-minus', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_removeMarked', 'Remove from clipboard'))
-            . '</button>';
+        return $buttons . PHP_EOL . $editColumnsButton;
+    }
 
-        // Delete action
-        $deleteConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
-            'idField' => 'uid',
-            'tableName' => $tableName,
-            'ok' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete', 'Delete'),
-            'cancel' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel', 'Cancel'),
-            'title' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarked', 'Delete selected'),
-            'content' => $this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:clip_deleteMarkedWarning', 'Are you sure you want to delete the selected records?'),
-        ], true);
-        $buttons[] = '<button type="button" class="btn btn-sm btn-default"'
-            . ' data-multi-record-selection-action="delete"'
-            . ' data-multi-record-selection-action-config="' . $deleteConfig . '">'
-            . $iconFactory->getIcon('actions-edit-delete', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:delete', 'Delete'))
-            . '</button>';
+    /**
+     * Render the table heading using TYPO3 core list-module behavior.
+     */
+    protected function renderTableHeading(
+        DatabaseRecordList $dbList,
+        string $tableName,
+        int $recordCount,
+        bool $isSingleTableMode,
+    ): string {
+        $lang = $this->getLanguageService();
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+        if (!$schemaFactory->has($tableName)) {
+            return htmlspecialchars($tableName) . ' (' . $recordCount . ')';
+        }
+        $schema = $schemaFactory->get($tableName);
+        $tableTitle = htmlspecialchars($schema->getTitle($lang->sL(...)) ?: $tableName);
 
-        return implode(PHP_EOL, $buttons);
+        if ($dbList->disableSingleTableView) {
+            return $tableTitle . ' (' . $recordCount . ')';
+        }
+
+        $iconIdentifier = $isSingleTableMode ? 'actions-view-table-collapse' : 'actions-view-table-expand';
+        $iconTitleKey = $isSingleTableMode
+            ? 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:contractView'
+            : 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:expandView';
+        $icon = GeneralUtility::makeInstance(IconFactory::class)
+            ->getIcon($iconIdentifier, IconSize::SMALL)
+            ->setTitle($lang->sL($iconTitleKey))
+            ->render();
+
+        return $dbList->linkWrapTable($tableName, $tableTitle . ' (' . $recordCount . ') ' . $icon);
     }
 
     /**
@@ -1198,27 +1290,16 @@ final class RecordListController extends CoreRecordListController
      * - collapseButton: HTML for "Collapse/Expand" button
      *
      * @param string $tableName The database table name
-     * @param int $pageId The current page ID
-     * @param string $viewMode The current view mode (grid/compact)
-     * @param ServerRequestInterface $request The current request
      * @param int $recordCount Number of records for this table
      * @param bool $isSingleTableMode Whether we're in single table view mode
      * @return array<string, string> Array of rendered button HTML
      */
     protected function createTableActionButtons(
+        DatabaseRecordList $dbList,
         string $tableName,
-        int $pageId,
-        string $viewMode,
-        ServerRequestInterface $request,
         int $recordCount,
         bool $isSingleTableMode,
     ): array {
-        $componentFactory = GeneralUtility::makeInstance(ComponentFactory::class);
-        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        $lang = $this->getLanguageService();
-        $backendUser = $this->getBackendUserAuthentication();
-
         $buttons = [
             'newRecordButton' => '',
             'downloadButton' => '',
@@ -1226,105 +1307,56 @@ final class RecordListController extends CoreRecordListController
             'collapseButton' => '',
         ];
 
-        // New record button - check if user can modify this table
-        if ($backendUser->check('tables_modify', $tableName)) {
-            try {
-                $newRecordUrl = (string) $uriBuilder->buildUriFromRoute('record_edit', [
-                    'edit' => [$tableName => [$pageId => 'new']],
-                    'returnUrl' => (string) $request->getUri(),
-                ]);
-
-                $newButton = $componentFactory->createLinkButton()
-                    ->setHref($newRecordUrl)
-                    ->setTitle($lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:newRecordGeneral'))
-                    ->setIcon($iconFactory->getIcon('actions-plus', IconSize::SMALL))
-                    ->setShowLabelText(true);
-
-                $buttons['newRecordButton'] = $newButton->render();
-            } catch (Exception $e) {
-                // Route not found
-            }
+        $newRecordButton = $dbList->createActionButtonNewRecord($tableName);
+        if ($newRecordButton !== null) {
+            $buttons['newRecordButton'] = $newRecordButton->render();
         }
 
-        // Download/Export button
-        if ($backendUser->isExportEnabled() && $recordCount > 0) {
-            try {
-                $downloadUrl = (string) $uriBuilder->buildUriFromRoute('tx_impexp_export', [
-                    'tx_impexp' => ['list' => [$tableName . ':' . $pageId]],
-                ]);
-
-                $exportLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:export');
-                $downloadButton = $componentFactory->createLinkButton()
-                    ->setHref($downloadUrl)
-                    ->setTitle($exportLabel !== '' ? $exportLabel : 'Download')
-                    ->setIcon($iconFactory->getIcon('actions-download', IconSize::SMALL))
-                    ->setShowLabelText(true);
-
-                $buttons['downloadButton'] = $downloadButton->render();
-            } catch (Exception $e) {
-                // impexp not installed
-            }
-        }
-
-        // Column selector button (using TYPO3 web component)
-        try {
-            $columnSelectorUrl = (string) $uriBuilder->buildUriFromRoute('ajax_show_columns_selector', [
-                'id' => $pageId,
-                'table' => $tableName,
-            ]);
-            $columnSelectorTarget = (string) $uriBuilder->buildUriFromRoute('records', [
-                'id' => $pageId,
-                'displayMode' => $viewMode,
-            ]) . '#recordlist-' . $tableName;
-
-            $tableLabel = $this->getTableLabel($tableName);
-            $showColumnsSelectionLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_column_selector.xlf:showColumnsSelection');
-            $updateColumnViewLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_column_selector.xlf:updateColumnView');
-            $cancelLabel = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.cancel');
-            $errorLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_column_selector.xlf:updateColumnView.error');
-            $showColumnsLabel = $lang->sL('LLL:EXT:backend/Resources/Private/Language/locallang_column_selector.xlf:showColumns');
-            $buttons['columnSelectorButton'] = sprintf(
-                '<typo3-backend-column-selector-button
-                    data-url="%s"
-                    data-target="%s"
-                    data-title="%s"
-                    data-button-ok="%s"
-                    data-button-close="%s"
-                    data-error-message="%s">
-                    <button type="button" class="btn btn-default btn-sm">%s <span>%s</span></button>
-                </typo3-backend-column-selector-button>',
-                htmlspecialchars($columnSelectorUrl),
-                htmlspecialchars($columnSelectorTarget),
-                htmlspecialchars($showColumnsSelectionLabel),
-                htmlspecialchars($updateColumnViewLabel !== '' ? $updateColumnViewLabel : 'Update'),
-                htmlspecialchars($cancelLabel !== '' ? $cancelLabel : 'Cancel'),
-                htmlspecialchars($errorLabel !== '' ? $errorLabel : 'Error'),
-                $iconFactory->getIcon('actions-options', IconSize::SMALL)->render(),
-                htmlspecialchars($showColumnsLabel !== '' ? $showColumnsLabel : 'Show columns'),
-            );
-        } catch (Exception $e) {
-            // Route not found
-        }
-
-        // Collapse/Expand button (only in multi-table mode)
+        $buttons['downloadButton'] = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'createActionButtonDownload',
+            [$tableName, $recordCount],
+        );
+        $buttons['columnSelectorButton'] = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'createActionButtonColumnSelector',
+            [$tableName],
+        );
         if (!$isSingleTableMode) {
-            $collapseButton = $componentFactory->createGenericButton()
-                ->setTag('button')
-                ->setAttributes([
-                    'type' => 'button',
-                    'class' => 'btn btn-default btn-sm t3js-toggle-recordlist',
-                    'data-bs-toggle' => 'collapse',
-                    'data-bs-target' => '#recordlist-' . $tableName,
-                    'aria-expanded' => 'true',
-                    'data-table' => $tableName,
-                ])
-                ->setTitle($lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:collapseExpandTable'))
-                ->setIcon($iconFactory->getIcon('actions-view-list-collapse', IconSize::SMALL));
-
-            $buttons['collapseButton'] = $collapseButton->render();
+            $buttons['collapseButton'] = $this->renderDatabaseRecordListButton(
+                $dbList,
+                'createActionButtonCollapse',
+                [$tableName],
+            );
         }
 
         return $buttons;
+    }
+
+    /**
+     * Render a TYPO3 core DatabaseRecordList button via its native button builder.
+     *
+     * The core keeps some table header button methods protected. Using reflection
+     * here lets the custom views render the exact same button markup and behavior
+     * as the native list view instead of approximating it.
+     *
+     * @param list<mixed> $arguments
+     */
+    protected function renderDatabaseRecordListButton(
+        DatabaseRecordList $dbList,
+        string $methodName,
+        array $arguments,
+    ): string {
+        try {
+            $method = new ReflectionMethod($dbList, $methodName);
+            $result = $method->invokeArgs($dbList, $arguments);
+            if (is_object($result) && method_exists($result, 'render')) {
+                return $result->render();
+            }
+            return is_string($result) ? $result : '';
+        } catch (ReflectionException|Exception $e) {
+            return '';
+        }
     }
 
     /**
@@ -1355,14 +1387,14 @@ final class RecordListController extends CoreRecordListController
         // Determine current icon based on direction
         $sortIcon = $currentSortDirection === 'desc' ? 'actions-sort-amount-down' : 'actions-sort-amount-up';
 
-        // Get label for "Nach Spalte" - show current field name if selected
-        $fieldLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
-        $fieldLabel = $fieldLabelTranslated !== '' ? $fieldLabelTranslated : 'Nach Spalte';
+        $fieldModeLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
+        $fieldModeLabel = $fieldModeLabelTranslated !== '' ? $fieldModeLabelTranslated : 'By Column';
+        $currentFieldLabel = $fieldModeLabel;
         if ($currentSortField !== '') {
             // Find the label for the current sort field
             foreach ($sortableFields as $field) {
                 if (($field['field'] ?? '') === $currentSortField) {
-                    $fieldLabel = $field['label'] ?? $currentSortField;
+                    $currentFieldLabel = $field['label'] ?? $currentSortField;
                     break;
                 }
             }
@@ -1380,42 +1412,16 @@ final class RecordListController extends CoreRecordListController
 
         // Build custom dropdown HTML matching the toggle button styling
         $html = '<button type="button" class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">';
+        $html .= $iconFactory->getIcon('actions-filter', IconSize::SMALL)->render();
+        $html .= '<span class="gridview-sorting-toggle__text">' . htmlspecialchars($fieldModeLabel) . '</span>';
+        $html .= '<span class="gridview-sorting-toggle__value">';
         $html .= $iconFactory->getIcon($sortIcon, IconSize::SMALL)->render();
-        $html .= ' <span>' . htmlspecialchars($fieldLabel) . '</span>';
+        $html .= '<span>' . htmlspecialchars($currentFieldLabel) . '</span>';
+        $html .= '</span>';
         $html .= '</button>';
         $html .= '<ul class="dropdown-menu">';
 
-        // Add sort field options
-        foreach ($sortableFields as $field) {
-            $fieldName = $field['field'] ?? '';
-            $itemLabel = $field['label'] ?? $fieldName;
-
-            if ($fieldName === '') {
-                continue;
-            }
-
-            $isActive = ($fieldName === $currentSortField);
-
-            try {
-                $sortParams = $baseParams;
-                $sortParams['sortingMode'][$tableName] = 'field';
-                $sortParams['sort'][$tableName]['field'] = $fieldName;
-                $sortParams['sort'][$tableName]['direction'] = $currentSortDirection;
-
-                $url = (string) $uriBuilder->buildUriFromRoute('records', $sortParams);
-
-                $html .= '<li><a class="dropdown-item' . ($isActive ? ' active' : '') . '" href="' . htmlspecialchars($url) . '">';
-                $html .= htmlspecialchars($itemLabel);
-                $html .= '</a></li>';
-            } catch (Exception $e) {
-                // Skip if URL building fails
-            }
-        }
-
-        // Add divider
-        $html .= '<li><hr class="dropdown-divider"></li>';
-
-        // Add direction options
+        // Add direction options first, then the sortable field list.
         $ascLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
         $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Aufsteigend';
         $descLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
@@ -1449,6 +1455,34 @@ final class RecordListController extends CoreRecordListController
             $html .= '</a></li>';
         } catch (Exception $e) {
             // Skip if URL building fails
+        }
+
+        $html .= '<li><hr class="dropdown-divider"></li>';
+
+        foreach ($sortableFields as $field) {
+            $fieldName = $field['field'] ?? '';
+            $itemLabel = $field['label'] ?? $fieldName;
+
+            if ($fieldName === '') {
+                continue;
+            }
+
+            $isActive = ($fieldName === $currentSortField);
+
+            try {
+                $sortParams = $baseParams;
+                $sortParams['sortingMode'][$tableName] = 'field';
+                $sortParams['sort'][$tableName]['field'] = $fieldName;
+                $sortParams['sort'][$tableName]['direction'] = $currentSortDirection;
+
+                $url = (string) $uriBuilder->buildUriFromRoute('records', $sortParams);
+
+                $html .= '<li><a class="dropdown-item' . ($isActive ? ' active' : '') . '" href="' . htmlspecialchars($url) . '">';
+                $html .= htmlspecialchars($itemLabel);
+                $html .= '</a></li>';
+            } catch (Exception $e) {
+                // Skip if URL building fails
+            }
         }
 
         $html .= '</ul>';
@@ -1544,6 +1578,7 @@ final class RecordListController extends CoreRecordListController
         $isFieldActive = ($currentMode === 'field');
         $isAscActive = $currentDirection === 'asc';
         $isDescActive = $currentDirection === 'desc';
+        $manualStateLabel = $isDescActive ? $descLabel : $ascLabel;
 
         // Get the heading label
         $headingLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.label');
@@ -1558,10 +1593,11 @@ final class RecordListController extends CoreRecordListController
         // Manual sorting button with dropdown for asc/desc
         if ($isManualActive) {
             // When manual is active, show dropdown for direction
-            $html .= '<div class="btn-group" role="group">';
+            $html .= '<div class="btn-group gridview-sorting-toggle__group" role="group">';
             $html .= '<button type="button" class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="' . htmlspecialchars($manualTitle) . '">';
-            $html .= $iconFactory->getIcon('actions-sort-amount-' . ($isAscActive ? 'up' : 'down'), IconSize::SMALL)->render();
-            $html .= ' <span>' . htmlspecialchars($manualLabel) . '</span>';
+            $html .= $iconFactory->getIcon('actions-move', IconSize::SMALL)->render();
+            $html .= '<span class="gridview-sorting-toggle__text">' . htmlspecialchars($manualLabel) . '</span>';
+            $html .= '<span class="gridview-sorting-toggle__value">' . htmlspecialchars($manualStateLabel) . '</span>';
             $html .= '</button>';
             $html .= '<ul class="dropdown-menu">';
             $html .= '<li><a class="dropdown-item' . ($isAscActive ? ' active' : '') . '" href="' . htmlspecialchars($ascUrl) . '">' . $iconFactory->getIcon('actions-sort-amount-up', IconSize::SMALL)->render() . ' ' . htmlspecialchars($ascLabel) . '</a></li>';
@@ -1572,21 +1608,21 @@ final class RecordListController extends CoreRecordListController
             // When not active, simple link button
             $html .= '<a href="' . htmlspecialchars($manualUrl) . '" class="btn btn-default btn-sm gridview-sorting-toggle__btn" title="' . htmlspecialchars($manualTitle) . '">';
             $html .= $iconFactory->getIcon('actions-move', IconSize::SMALL)->render();
-            $html .= ' <span>' . htmlspecialchars($manualLabel) . '</span>';
+            $html .= '<span class="gridview-sorting-toggle__text">' . htmlspecialchars($manualLabel) . '</span>';
             $html .= '</a>';
         }
 
         // Field sorting button - when active, show as dropdown with sorting options
         if ($isFieldActive && $sortingDropdownHtml !== '') {
             // When field mode is active, integrate the sorting dropdown into the button
-            $html .= '<div class="btn-group" role="group">';
+            $html .= '<div class="btn-group gridview-sorting-toggle__group" role="group">';
             $html .= $sortingDropdownHtml; // The dropdown already has proper button styling
             $html .= '</div>';
         } else {
             // When not active, simple link button to switch to field mode
             $html .= '<a href="' . htmlspecialchars($fieldUrl) . '" class="btn btn-default btn-sm gridview-sorting-toggle__btn" title="' . htmlspecialchars($fieldTitle) . '">';
             $html .= $iconFactory->getIcon('actions-filter', IconSize::SMALL)->render();
-            $html .= ' <span>' . htmlspecialchars($fieldLabel) . '</span>';
+            $html .= '<span class="gridview-sorting-toggle__text">' . htmlspecialchars($fieldLabel) . '</span>';
             $html .= '</a>';
         }
 
@@ -2156,6 +2192,7 @@ final class RecordListController extends CoreRecordListController
             }
 
             $record['displayValues'] = $displayValues;
+            $record = $this->enrichRecordWithEditUrls($record);
         }
 
         return $records;
@@ -2206,6 +2243,81 @@ final class RecordListController extends CoreRecordListController
         }
 
         return $records;
+    }
+
+    /**
+     * Add TYPO3 14 native edit URLs for contextual and full FormEngine editing.
+     *
+     * @param array<string, mixed> $record
+     * @return array<string, mixed>
+     */
+    protected function enrichRecordWithEditUrls(array $record): array
+    {
+        $uidRaw = $record['uid'] ?? null;
+        $tableNameRaw = $record['tableName'] ?? null;
+
+        if (!is_numeric($uidRaw) || !is_string($tableNameRaw) || $tableNameRaw === '') {
+            return $record;
+        }
+
+        $uid = (int) $uidRaw;
+        if ($uid <= 0) {
+            return $record;
+        }
+
+        $returnUrl = $this->buildContextualEditReturnUrl($record);
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+
+        try {
+            $record['editUrl'] = (string) $uriBuilder->buildUriFromRoute('record_edit', [
+                'edit' => [
+                    $tableNameRaw => [
+                        $uid => 'edit',
+                    ],
+                ],
+                'module' => 'records',
+                'returnUrl' => $returnUrl,
+            ]);
+            $record['contextualEditUrl'] = (string) $uriBuilder->buildUriFromRoute('record_edit_contextual', [
+                'edit' => [
+                    $tableNameRaw => [
+                        $uid => 'edit',
+                    ],
+                ],
+                'module' => 'records',
+                'returnUrl' => $returnUrl,
+            ]);
+        } catch (Exception) {
+            $record['editUrl'] = '';
+            $record['contextualEditUrl'] = '';
+        }
+
+        return $record;
+    }
+
+    /**
+     * Build a stable Records-module return URL for contextual edit dialogs.
+     *
+     * @param array<string, mixed> $record
+     */
+    protected function buildContextualEditReturnUrl(array $record): string
+    {
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+
+        $params = [
+            'id' => $this->pageContext->pageId,
+        ];
+
+        $tableName = $record['tableName'] ?? null;
+        if (is_string($tableName) && $tableName !== '') {
+            $params['table'] = $tableName;
+        }
+
+        try {
+            return (string) $uriBuilder->buildUriFromRoute('records', $params);
+        } catch (Exception) {
+            return '';
+        }
     }
 
     /**
@@ -2328,6 +2440,8 @@ final class RecordListController extends CoreRecordListController
                         break;
                     }
                 }
+
+                $translation = $this->enrichRecordWithEditUrls($translation);
             }
             unset($translation);
         }

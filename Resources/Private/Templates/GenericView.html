@@ -1,6 +1,7 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      xmlns:rlt="http://typo3.org/ns/Webconsulting/RecordsListTypes/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
@@ -47,15 +48,13 @@
                                 <f:if condition="{currentTable}">
                                     <f:then>
                                         <a href="{table.clearTableUrl}">
-                                            <span class="fw-bold">{table.tableLabel}</span>
-                                            <span>({table.recordCount})</span>
+                                            {table.tableLabel} (<span>{table.recordCount}</span>)
                                             <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
                                         </a>
                                     </f:then>
                                     <f:else>
                                         <a href="{table.singleTableUrl}">
-                                            <span class="fw-bold">{table.tableLabel}</span>
-                                            <span>({table.recordCount})</span>
+                                            {table.tableLabel} (<span>{table.recordCount}</span>)
                                             <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
                                         </a>
                                     </f:else>
@@ -65,19 +64,23 @@
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
                                 <f:if condition="{table.sortingDropdownHtml}">
-                                    <f:format.raw>{table.sortingDropdownHtml}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.sortingDropdownHtml}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.newRecordButton}" />
                                 </f:if>
                                 
                                 <f:if condition="{table.actionButtons.downloadButton}">
-                                    <f:format.raw>{table.actionButtons.downloadButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.downloadButton}" />
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.columnSelectorButton}">
+                                    <rlt:renderBackendHtml html="{table.actionButtons.columnSelectorButton}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.collapseButton}">
-                                    <f:format.raw>{table.actionButtons.collapseButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.collapseButton}" />
                                 </f:if>
                             </div>
                         </div>
@@ -107,11 +110,14 @@
                                         <f:comment>UID</f:comment>
                                         <span class="badge bg-secondary bg-opacity-25 text-muted">#{record.uid}</span>
                                         
-                                        <f:comment>Title with edit link</f:comment>
+                                        <f:comment>Title with native TYPO3 contextual edit trigger</f:comment>
                                         <div class="flex-grow-1">
-                                            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" class="text-decoration-none fw-medium">
+                                            <typo3-backend-contextual-record-edit-trigger
+                                                class="text-decoration-none fw-medium"
+                                                edit-url="{record.editUrl}"
+                                                url="{record.contextualEditUrl}">
                                                 {record.title}
-                                            </be:link.editRecord>
+                                            </typo3-backend-contextual-record-edit-trigger>
                                         </div>
                                         
                                         <f:comment>Display fields</f:comment>
@@ -125,10 +131,13 @@
                                         
                                         <f:comment>Actions</f:comment>
                                         <div class="btn-group btn-group-sm">
-                                            <be:link.editRecord uid="{record.uid}" table="{record.tableName}" 
-                                                class="btn btn-outline-primary btn-sm" title="Edit">
+                                            <typo3-backend-contextual-record-edit-trigger
+                                                class="btn btn-outline-primary btn-sm"
+                                                title="Edit"
+                                                edit-url="{record.editUrl}"
+                                                url="{record.contextualEditUrl}">
                                                 <core:icon identifier="actions-open" size="small" />
-                                            </be:link.editRecord>
+                                            </typo3-backend-contextual-record-edit-trigger>
                                             <button type="button" 
                                                     class="btn btn-outline-danger btn-sm"
                                                     title="Delete"
@@ -174,4 +183,3 @@
 </div>
 
 </html>
-

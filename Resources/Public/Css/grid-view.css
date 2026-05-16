@@ -174,7 +174,6 @@
     box-shadow: var(--gv-shadow-sm);
     overflow: visible; /* Allow dropdowns to overflow */
     transition: 
-        transform var(--gv-transition),
         box-shadow var(--gv-transition),
         border-color var(--gv-transition);
     position: relative;
@@ -194,7 +193,6 @@
 .gridview-card:hover {
     box-shadow: var(--gv-shadow-md);
     border-color: var(--gv-border);
-    transform: translateY(-1px);
 }
 
 .gridview-card:focus-within {
@@ -244,7 +242,8 @@
     border-left: 3px solid var(--gv-danger);
 }
 
-.gridview-card--ws-deleted .gridview-card__title a {
+.gridview-card--ws-deleted .gridview-card__title a,
+.gridview-card--ws-deleted .gridview-card__title typo3-backend-contextual-record-edit-trigger {
     text-decoration: line-through;
     opacity: 0.6;
 }
@@ -361,7 +360,8 @@
     color: var(--gv-text);
 }
 
-.gridview-card__title a {
+.gridview-card__title a,
+.gridview-card__title typo3-backend-contextual-record-edit-trigger {
     color: inherit;
     text-decoration: none;
     display: block;
@@ -371,7 +371,8 @@
     transition: color var(--gv-transition-fast);
 }
 
-.gridview-card__title a:hover {
+.gridview-card__title a:hover,
+.gridview-card__title typo3-backend-contextual-record-edit-trigger:hover {
     color: var(--gv-accent);
 }
 
@@ -402,6 +403,12 @@
         background var(--gv-transition-fast),
         color var(--gv-transition-fast);
     text-decoration: none;
+}
+
+typo3-backend-contextual-record-edit-trigger.gridview-action-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .gridview-action-sm .icon {
@@ -810,6 +817,15 @@
 }
 
 /* Dropdown styling - in header actions */
+.gridview-card__header-actions .dropdown {
+    position: relative;
+    display: inline-flex;
+}
+
+.gridview-card__header-actions .dropdown-toggle-no-chevron::after {
+    display: none;
+}
+
 .gridview-card__header-actions .dropdown-menu {
     background: var(--gv-bg);
     border: 1px solid var(--gv-border);
@@ -817,6 +833,21 @@
     box-shadow: var(--gv-shadow-lg);
     padding: var(--gv-space-1);
     min-width: 10rem;
+    z-index: 1050;
+    margin: 0;
+}
+
+.gridview-card__header-actions .dropdown-menu[popover] {
+    position-anchor: auto;
+    position-area: block-end span-inline-end;
+    margin: 0;
+    inset: auto;
+    min-inline-size: 10rem;
+}
+
+.gridview-card__header-actions .dropdown-menu:popover-open {
+    display: block;
+    margin-block-start: 2px;
 }
 
 .gridview-card__header-actions .dropdown-item {

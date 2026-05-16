@@ -79,7 +79,6 @@ class GridViewActions {
         this.initializeSearch();
         this.initializeScrollShadows();
         this.initializePaginationInputs();
-        this.initializeCompactDropdowns();
         this.initializeCheckAllToggle();
     }
 
@@ -251,17 +250,16 @@ class GridViewActions {
         const dropzone = e.target.closest('.gridview-end-dropzone');
         if (!dropzone) return;
         if (dropzone.dataset.table !== this.draggedTable) return;
-        
-        // Get the last UID - we want to move after this element
-        const lastUid = dropzone.dataset.lastUid;
-        if (!lastUid) {
-            console.error('[GridView] No lastUid found on end dropzone');
+
+        const grid = this.getGridElement(dropzone);
+        const fallbackPid = this.draggedCard?.dataset.pid || this.keyboardDragCard?.dataset.pid || null;
+        const moveTarget = this.calculateEndMoveTarget(grid, fallbackPid);
+
+        if (moveTarget === null || moveTarget === '') {
+            console.error('[GridView] No move target found for end dropzone');
             return;
         }
-        
-        // Move after the last element (negative UID)
-        const moveTarget = '-' + lastUid;
-        
+
         this.executeMove(this.draggedTable, this.draggedUid, moveTarget);
     }
     
@@ -556,14 +554,12 @@ class GridViewActions {
         
         // Check if dropping at end position
         if (targetIndex >= wrappers.length) {
-            // End position - move after the last element
-            const lastUid = grid.dataset.lastUid;
-            if (!lastUid) {
-                console.error('[GridView] No lastUid found on grid');
+            moveTarget = this.calculateEndMoveTarget(grid, draggedCard.dataset.pid || null);
+            if (moveTarget === null || moveTarget === '') {
+                console.error('[GridView] No move target found on grid');
                 this.keyboardCancelDrag();
                 return;
             }
-            moveTarget = '-' + lastUid;
             announcePosition = 'end';
         } else {
             // Get the target card and calculate move target
@@ -641,38 +637,77 @@ class GridViewActions {
     // Shared Move Logic
     // =========================================================================
 
+    getGridElement(element) {
+        if (!element || typeof element.closest !== 'function') {
+            return null;
+        }
+
+        return element.closest('.gridview-card-grid');
+    }
+
+    getSortDirection(element) {
+        const grid = this.getGridElement(element);
+        return grid?.dataset?.sortDirection === 'desc' ? 'desc' : 'asc';
+    }
+
+    isDescendingSortDirection(element) {
+        return this.getSortDirection(element) === 'desc';
+    }
+
+    calculateMoveTargetBeforeTarget(targetCard, targetPid, searchDirection = 'previous') {
+        const wrapper = targetCard.closest('.gridview-card-wrapper');
+        const siblingProperty = searchDirection === 'next' ? 'nextElementSibling' : 'previousElementSibling';
+        let adjacentWrapper = wrapper?.[siblingProperty] ?? null;
+        let adjacentCard = null;
+        const draggedCard = this.draggedCard || this.keyboardDragCard;
+        const draggedTable = this.draggedTable || draggedCard?.dataset.table;
+
+        while (adjacentWrapper) {
+            const candidate = adjacentWrapper.querySelector('.gridview-card');
+            if (candidate && candidate !== draggedCard && candidate.dataset.table === draggedTable) {
+                adjacentCard = candidate;
+                break;
+            }
+            adjacentWrapper = adjacentWrapper[siblingProperty];
+        }
+
+        if (adjacentCard) {
+            return '-' + adjacentCard.dataset.uid;
+        }
+
+        return targetPid;
+    }
+
+    calculateEndMoveTarget(grid, fallbackPid = null) {
+        if (!grid) {
+            return null;
+        }
+
+        if (this.isDescendingSortDirection(grid)) {
+            return grid.dataset.pageId || fallbackPid;
+        }
+
+        const lastUid = grid.dataset.lastUid;
+        return lastUid ? '-' + lastUid : null;
+    }
+
     /**
      * Calculate the TYPO3 move target based on position
      */
     calculateMoveTarget(targetCard, position, targetUid, targetPid) {
-        if (position === 'after') {
-            // Move after target = negative target UID
-            return '-' + targetUid;
-        } else {
-            // Move before target = find previous card (skipping the dragged card)
-            const wrapper = targetCard.closest('.gridview-card-wrapper');
-            let prevWrapper = wrapper?.previousElementSibling;
-            let prevCard = null;
-            const draggedCard = this.draggedCard || this.keyboardDragCard;
-            const draggedTable = this.draggedTable || draggedCard?.dataset.table;
-            
-            // Skip the dragged card if it's the previous sibling
-            while (prevWrapper) {
-                const candidate = prevWrapper.querySelector('.gridview-card');
-                if (candidate && candidate !== draggedCard && candidate.dataset.table === draggedTable) {
-                    prevCard = candidate;
-                    break;
-                }
-                prevWrapper = prevWrapper.previousElementSibling;
+        if (this.isDescendingSortDirection(targetCard)) {
+            if (position === 'before') {
+                return '-' + targetUid;
             }
-            
-            if (prevCard) {
-                return '-' + prevCard.dataset.uid;
-            } else {
-                // First position - use page ID
-                return targetPid;
-            }
+
+            return this.calculateMoveTargetBeforeTarget(targetCard, targetPid, 'next');
         }
+
+        if (position === 'after') {
+            return '-' + targetUid;
+        }
+
+        return this.calculateMoveTargetBeforeTarget(targetCard, targetPid, 'previous');
     }
     
     async executeMove(table, uid, target) {
@@ -1490,68 +1525,6 @@ class GridViewActions {
         }
         
         window.location.href = url.toString();
-    }
-
-    // =========================================================================
-    // Compact View Dropdowns - Teleport to body
-    // =========================================================================
-
-    /**
-     * Teleport compact view dropdown menus to <body> when opened.
-     *
-     * Sticky columns + overflow-x:auto on the table wrapper create a stacking
-     * context that clips absolutely-positioned dropdown menus. By moving the
-     * menu to <body> and using position:fixed we escape all overflow and
-     * z-index constraints. The menu is returned to its original parent on close.
-     */
-    initializeCompactDropdowns() {
-        document.querySelectorAll('[data-cv-dropdown]').forEach(dropdown => {
-            const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
-            const menu = dropdown.querySelector('.dropdown-menu');
-            if (!toggle || !menu) return;
-
-            // On show: teleport menu to body and position it
-            toggle.addEventListener('show.bs.dropdown', () => {
-                // Store original parent so we can return the menu later
-                menu._cvOriginalParent = dropdown;
-
-                // Get toggle button position
-                const rect = toggle.getBoundingClientRect();
-
-                // Move menu to body
-                document.body.appendChild(menu);
-                menu.classList.add('cv-dropdown-teleported');
-
-                // Position: align right edge with toggle, below it
-                const menuWidth = menu.offsetWidth || 160;
-                let top = rect.bottom + 2;
-                let left = rect.right - menuWidth;
-
-                // If menu would overflow bottom of viewport, open upward
-                const menuHeight = menu.offsetHeight || 200;
-                if (top + menuHeight > window.innerHeight) {
-                    top = rect.top - menuHeight - 2;
-                }
-
-                // Keep within viewport
-                if (left < 4) left = 4;
-                if (top < 4) top = 4;
-
-                menu.style.top = top + 'px';
-                menu.style.left = left + 'px';
-            });
-
-            // On hidden: return menu to original parent
-            toggle.addEventListener('hidden.bs.dropdown', () => {
-                menu.classList.remove('cv-dropdown-teleported');
-                menu.style.top = '';
-                menu.style.left = '';
-                if (menu._cvOriginalParent) {
-                    menu._cvOriginalParent.appendChild(menu);
-                    delete menu._cvOriginalParent;
-                }
-            });
-        });
     }
 
     /**

@@ -1,6 +1,7 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      xmlns:rlt="http://typo3.org/ns/Webconsulting/RecordsListTypes/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
@@ -23,40 +24,29 @@
                     <div class="recordlist-heading multi-record-selection-panel">
                         <div class="recordlist-heading-row">
                             <div class="recordlist-heading-title">
-                                <f:if condition="{currentTable}">
-                                    <f:then>
-                                        <a href="{table.clearTableUrl}">
-                                            <span class="fw-bold">{table.tableLabel}</span>
-                                            <span>({table.recordCount})</span>
-                                            <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
-                                        </a>
-                                    </f:then>
-                                    <f:else>
-                                        <a href="{table.singleTableUrl}">
-                                            <span class="fw-bold">{table.tableLabel}</span>
-                                            <span>({table.recordCount})</span>
-                                            <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
-                                        </a>
-                                    </f:else>
-                                </f:if>
+                                <rlt:renderBackendHtml html="{table.tableHeadingHtml}" />
                             </div>
 
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
                                 <f:if condition="{table.sortingDropdownHtml}">
-                                    <f:format.raw>{table.sortingDropdownHtml}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.sortingDropdownHtml}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.newRecordButton}" />
                                 </f:if>
                                 
                                 <f:if condition="{table.actionButtons.downloadButton}">
-                                    <f:format.raw>{table.actionButtons.downloadButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.downloadButton}" />
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.columnSelectorButton}">
+                                    <rlt:renderBackendHtml html="{table.actionButtons.columnSelectorButton}" />
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.collapseButton}">
-                                    <f:format.raw>{table.actionButtons.collapseButton}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.actionButtons.collapseButton}" />
                                 </f:if>
                             </div>
                         </div>
@@ -64,11 +54,14 @@
                         <f:comment>Multi Record Selection action bar</f:comment>
                         <f:if condition="{table.multiRecordSelectionActionsHtml}">
                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
-                                <div class="recordlist-heading-title">
-                                    <strong><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
+                                <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
+                                    <span class="t3js-multi-record-selection-table-title">
+                                        <rlt:renderBackendHtml html="{table.tableHeadingHtml}" />
+                                    </span>
+                                    <strong class="text-nowrap"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
                                 </div>
                                 <div class="recordlist-heading-actions">
-                                    <f:format.raw>{table.multiRecordSelectionActionsHtml}</f:format.raw>
+                                    <rlt:renderBackendHtml html="{table.multiRecordSelectionActionsHtml}" />
                                 </div>
                             </div>
                         </f:if>
@@ -92,12 +85,15 @@
                                             </span>
                                             <span class="teaserview-translation-row__uid">#{translation.uid}</span>
                                             <span class="teaserview-translation-row__title">
-                                                <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}">
+                                                <typo3-backend-contextual-record-edit-trigger
+                                                    edit-url="{translation.editUrl}"
+                                                    url="{translation.contextualEditUrl}"
+                                                    class="teaserview-translation-row__title-link">
                                                     <f:if condition="{translation.title}">
                                                         <f:then>{translation.title -> f:format.crop(maxCharacters: 60, append: '…')}</f:then>
                                                         <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
                                                     </f:if>
-                                                </be:link.editRecord>
+                                                </typo3-backend-contextual-record-edit-trigger>
                                             </span>
                                             <span class="teaserview-translation-row__actions">
                                                 <f:if condition="{translation.hidden}">
@@ -114,10 +110,13 @@
                                                         </button>
                                                     </f:else>
                                                 </f:if>
-                                                <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}"
-                                                    class="teaserview-action teaserview-action--primary" title="Edit">
+                                                <typo3-backend-contextual-record-edit-trigger
+                                                    edit-url="{translation.editUrl}"
+                                                    url="{translation.contextualEditUrl}"
+                                                    class="teaserview-action teaserview-action--primary"
+                                                    title="Edit">
                                                     <core:icon identifier="actions-open" size="small" />
-                                                </be:link.editRecord>
+                                                </typo3-backend-contextual-record-edit-trigger>
                                             </span>
                                         </div>
                                     </f:for>
@@ -157,4 +156,3 @@
 </div>
 
 </html>
-
