@@ -138,10 +138,10 @@ final class ViewModeResolver implements SingletonInterface
         $eventDispatcher->dispatch($event);
         $modes = $event->getViewModes();
 
-        // Also check TSconfig for custom modes
-        if ($pageId > 0) {
-            $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-            $customModes = $tsConfig['mod.']['web_list.']['viewMode.']['types.'] ?? [];
+        // Also check TSconfig for custom modes (including root page = 0)
+        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
+        $customModes = $tsConfig['mod.']['web_list.']['viewMode.']['types.'] ?? [];
+        if ($customModes !== []) {
 
             foreach ($customModes as $modeId => $config) {
                 $modeId = rtrim((string) $modeId, '.');

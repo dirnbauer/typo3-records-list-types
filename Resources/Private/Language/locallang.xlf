@@ -108,6 +108,20 @@
             <trans-unit id="image.previewOnly" resname="image.previewOnly">
                 <source>Preview only — may not appear on the frontend for this record type.</source>
             </trans-unit>
+            
+            <!-- Translations -->
+            <trans-unit id="translation.label" resname="translation.label">
+                <source>translation(s)</source>
+            </trans-unit>
+            <trans-unit id="translation.expand" resname="translation.expand">
+                <source>Show translations</source>
+            </trans-unit>
+            <trans-unit id="translation.collapse" resname="translation.collapse">
+                <source>Hide translations</source>
+            </trans-unit>
+            <trans-unit id="translation.free" resname="translation.free">
+                <source>FREE</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

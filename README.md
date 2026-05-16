@@ -78,7 +78,7 @@ A dense table layout for efficient data scanning with many records.
 - **Scroll shadows**: Visual indicators appear when content extends beyond the visible area
 - **Sortable headers**: Click column headers to sort ascending/descending via TYPO3's native dropdown API
 - **Zebra striping**: Alternating row colors for readability
-- **Hidden record styling**: Muted background and strikethrough title for hidden records
+- **Hidden record styling**: Muted background and dimmed title for hidden records
 
 ### Teaser View
 
@@ -116,7 +116,7 @@ You can also reuse built-in templates without creating a new one:
 # Address book using the compact table layout with custom columns
 mod.web_list.viewMode.types.addressbook {
     label = Address Book
-    icon = actions-address
+    icon = actions-user
     template = CompactView
     displayColumns = name,email,phone,company,city
     columnsFromTCA = 0
@@ -327,6 +327,8 @@ records_list_types/
 │   │   ├── GridViewButtonBarListener.php      # Injects toggle buttons
 │   │   ├── GridViewQueryListener.php          # Query modification bridge
 │   │   └── GridViewRecordActionsListener.php  # Record action collection
+│   ├── Pagination/
+│   │   └── DatabasePaginator.php              # Paginator for pre-fetched database records
 │   ├── Service/
 │   │   ├── GridConfigurationService.php       # TSconfig parsing
 │   │   ├── MiddlewareDiagnosticService.php    # Middleware diagnostics
@@ -348,13 +350,17 @@ records_list_types/
 │   │   ├── Language/                          # XLIFF translations (en, de)
 │   │   ├── Layouts/
 │   │   ├── Partials/
-│   │   │   ├── Card.html                      # Grid view card
-│   │   │   ├── CompactRow.html                # Compact view row
+│   │   │   ├── Card.html                      # Grid view card partial
+│   │   │   ├── CompactRow.html                # Compact view row partial
 │   │   │   ├── Pagination.html                # Pagination navigation (Core list view style)
-│   │   │   └── TeaserCard.html                # Teaser view card
+│   │   │   ├── RecordActions.html             # Record action buttons
+│   │   │   ├── SortingDropdown.html           # Field sorting dropdown
+│   │   │   ├── TeaserCard.html                # Teaser view card partial
+│   │   │   └── ViewSwitcher.html              # View mode toggle buttons
 │   │   └── Templates/
-│   │       ├── GridView.html                  # Grid view template
 │   │       ├── CompactView.html               # Compact view template
+│   │       ├── GenericView.html               # Generic view (base for custom types)
+│   │       ├── GridView.html                  # Grid view template
 │   │       └── TeaserView.html                # Teaser view template
 │   └── Public/
 │       ├── Css/

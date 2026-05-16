@@ -8,9 +8,13 @@
     <f:if condition="{tableData}">
         <f:then>
             <f:for each="{tableData}" as="table">
-                <div class="recordlist" id="t3-table-{table.tableName}">
+                <div class="recordlist" id="t3-table-{table.tableName}"
+                     data-multi-record-selection-identifier="t3-table-{table.tableName}">
+                    <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
+                    <input type="hidden" name="cmd_table" value="{table.tableName}" />
+                    <input type="hidden" name="cmd" />
                     <f:comment>Table header - matches native List View styling exactly</f:comment>
-                    <div class="recordlist-heading">
+                    <div class="recordlist-heading multi-record-selection-panel">
                         <div class="recordlist-heading-row">
                             <f:comment>Title section with table name link - identical to core</f:comment>
                             <div class="recordlist-heading-title">
@@ -57,6 +61,18 @@
                                 </f:if>
                             </div>
                         </div>
+
+                        <f:comment>Multi Record Selection action bar (hidden, shown by JS when records selected)</f:comment>
+                        <f:if condition="{table.multiRecordSelectionActionsHtml}">
+                            <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
+                                <div class="recordlist-heading-title">
+                                    <strong><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
+                                </div>
+                                <div class="recordlist-heading-actions">
+                                    <f:format.raw>{table.multiRecordSelectionActionsHtml}</f:format.raw>
+                                </div>
+                            </div>
+                        </f:if>
                     </div>
 
                     <f:comment>Records table with sortable column headers (like core list view)</f:comment>
@@ -66,10 +82,39 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
-                        <div class="compactview-table-wrapper" data-scroll-container>
+                        <div class="compactview-table-wrapper has-clipboard" data-scroll-container>
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
                                     <tr>
+                                        <f:comment>Checkbox column with Check All / Uncheck All / Toggle dropdown (matches TYPO3 core DatabaseRecordList::renderCheckboxActions exactly)</f:comment>
+                                        <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
+                                            <div class="btn-group dropdown">
+                                                <button type="button" class="dropdown-toggle dropdown-toggle-link t3js-multi-record-selection-check-actions-toggle" data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false" aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.openSelectionOptions', default: 'Open selection options')}">
+                                                    <core:icon identifier="actions-selection" size="small" />
+                                                </button>
+                                                <ul class="dropdown-menu t3js-multi-record-selection-check-actions">
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-all" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll', default: 'Check All')}">
+                                                            <core:icon identifier="actions-selection-elements-all" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll" default="Check All" />
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-none" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll', default: 'Uncheck All')}">
+                                                            <core:icon identifier="actions-selection-elements-none" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll" default="Uncheck All" />
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="toggle" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection', default: 'Toggle Selection')}">
+                                                            <core:icon identifier="actions-selection-elements-invert" size="small" />
+                                                            <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection" default="Toggle Selection" />
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </th>
+
                                         <f:comment>Icon column (no sorting)</f:comment>
                                         <th class="compactview-th compactview-th--fixed-left compactview-th--icon"></th>
                                         
@@ -80,15 +125,71 @@
                                             </th>
                                         </f:for>
                                         
-                                        <f:comment>Fixed right columns: Status, Edit, Delete</f:comment>
+                                        <f:comment>Spacer column - absorbs remaining width so right columns stay at the edge</f:comment>
+                                        <th class="compactview-th compactview-th--spacer" aria-hidden="true" role="presentation"></th>
+
+                                        <f:comment>Fixed right columns: Status, Edit, Delete, More</f:comment>
                                         <th class="compactview-th compactview-th--fixed-right compactview-th--status"></th>
+                                        <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
                                         <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
                                         <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
                                     </tr>
                                 </thead>
-                                <tbody class="compactview-tbody">
+                                <tbody class="compactview-tbody" data-multi-record-selection-row-selection="true">
                                     <f:for each="{table.records}" as="record">
                                         <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns}" />
+                                        <f:if condition="{record.translations}">
+                                            <f:for each="{record.translations}" as="translation">
+                                                <tr class="compactview-row compactview-row--translation{f:if(condition: translation.hidden, then: ' compactview-row--hidden')}{f:if(condition: translation.workspaceState, then: ' compactview-row--ws-{translation.workspaceState}')}">
+                                                    <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox"></td>
+                                                    <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
+                                                        <span class="compactview-row__icon">
+                                                            <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+                                                        </span>
+                                                    </td>
+                                                    <td class="compactview-td compactview-td--fixed-left compactview-td--uid">
+                                                        <span class="compactview-row__uid">{translation.uid}</span>
+                                                    </td>
+                                                    <td class="compactview-td compactview-td--fixed-left compactview-td--title">
+                                                        <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}" class="compactview-row__title-link">
+                                                            <f:if condition="{translation.title}">
+                                                                <f:then>{translation.title -> f:format.crop(maxCharacters: 50, append: '…')}</f:then>
+                                                                <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                                                            </f:if>
+                                                        </be:link.editRecord>
+                                                    </td>
+                                                    <f:for each="{record.displayValues}" as="fieldData">
+                                                        <f:if condition="!{fieldData.isLabelField}">
+                                                            <td class="compactview-td"></td>
+                                                        </f:if>
+                                                    </f:for>
+                                                    <td class="compactview-td compactview-td--spacer" aria-hidden="true" role="presentation"></td>
+                                                    <td class="compactview-td compactview-td--fixed-right compactview-td--status">
+                                                        <f:if condition="{translation.hidden}">
+                                                            <f:then>
+                                                                <button type="button" class="cv-toggle cv-toggle--hidden" title="Show"
+                                                                        data-gridview-action="show" data-table="{translation.tableName}" data-uid="{translation.uid}" data-hidden-field="{tableConfig.hiddenField}">
+                                                                    <core:icon identifier="actions-toggle-off" size="small" />
+                                                                </button>
+                                                            </f:then>
+                                                            <f:else>
+                                                                <button type="button" class="cv-toggle cv-toggle--visible" title="Hide"
+                                                                        data-gridview-action="hide" data-table="{translation.tableName}" data-uid="{translation.uid}" data-hidden-field="{tableConfig.hiddenField}">
+                                                                    <core:icon identifier="actions-toggle-on" size="small" />
+                                                                </button>
+                                                            </f:else>
+                                                        </f:if>
+                                                    </td>
+                                                    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
+                                                        <be:link.editRecord uid="{translation.uid}" table="{translation.tableName}" class="cv-action cv-action--primary" title="Edit">
+                                                            <core:icon identifier="actions-open" size="small" />
+                                                        </be:link.editRecord>
+                                                    </td>
+                                                    <td class="compactview-td compactview-td--fixed-right compactview-td--action"></td>
+                                                    <td class="compactview-td compactview-td--fixed-right compactview-td--action"></td>
+                                                </tr>
+                                            </f:for>
+                                        </f:if>
                                     </f:for>
                                 </tbody>
                             </table>
@@ -109,6 +210,7 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
                         </f:if>
                     </div>
+                    </form>
                 </div>
             </f:for>
         </f:then>

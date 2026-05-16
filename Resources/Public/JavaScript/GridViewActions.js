@@ -79,6 +79,8 @@ class GridViewActions {
         this.initializeSearch();
         this.initializeScrollShadows();
         this.initializePaginationInputs();
+        this.initializeCompactDropdowns();
+        this.initializeCheckAllToggle();
     }
 
     // =========================================================================
@@ -274,10 +276,18 @@ class GridViewActions {
         
         e.dataTransfer.dropEffect = 'move';
         
-        // Calculate position: top half = before, bottom half = after
+        // Calculate position based on cursor relative to card
+        // For the last visible card in the grid, use a more generous "after" zone (top 25% = before, rest = after)
+        // so it's easier to drop after the last element without needing to reach the bottom half
         const rect = card.getBoundingClientRect();
         const y = e.clientY - rect.top;
-        const position = y < rect.height / 2 ? 'before' : 'after';
+        const grid = card.closest('.gridview-card-grid');
+        const allWrappers = grid ? Array.from(grid.querySelectorAll('.gridview-card-wrapper')) : [];
+        // Filter out the dragged card's wrapper to find the real last visible card
+        const visibleWrappers = allWrappers.filter(w => w !== this.draggedWrapper);
+        const isLastCard = visibleWrappers.length > 0 && visibleWrappers[visibleWrappers.length - 1] === wrapper;
+        const threshold = isLastCard ? rect.height * 0.25 : rect.height / 2;
+        const position = y < threshold ? 'before' : 'after';
         
         // Only update if changed
         if (this.currentTargetWrapper !== wrapper || this.dropPosition !== position) {
@@ -1481,6 +1491,90 @@ class GridViewActions {
         
         window.location.href = url.toString();
     }
+
+    // =========================================================================
+    // Compact View Dropdowns - Teleport to body
+    // =========================================================================
+
+    /**
+     * Teleport compact view dropdown menus to <body> when opened.
+     *
+     * Sticky columns + overflow-x:auto on the table wrapper create a stacking
+     * context that clips absolutely-positioned dropdown menus. By moving the
+     * menu to <body> and using position:fixed we escape all overflow and
+     * z-index constraints. The menu is returned to its original parent on close.
+     */
+    initializeCompactDropdowns() {
+        document.querySelectorAll('[data-cv-dropdown]').forEach(dropdown => {
+            const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+            const menu = dropdown.querySelector('.dropdown-menu');
+            if (!toggle || !menu) return;
+
+            // On show: teleport menu to body and position it
+            toggle.addEventListener('show.bs.dropdown', () => {
+                // Store original parent so we can return the menu later
+                menu._cvOriginalParent = dropdown;
+
+                // Get toggle button position
+                const rect = toggle.getBoundingClientRect();
+
+                // Move menu to body
+                document.body.appendChild(menu);
+                menu.classList.add('cv-dropdown-teleported');
+
+                // Position: align right edge with toggle, below it
+                const menuWidth = menu.offsetWidth || 160;
+                let top = rect.bottom + 2;
+                let left = rect.right - menuWidth;
+
+                // If menu would overflow bottom of viewport, open upward
+                const menuHeight = menu.offsetHeight || 200;
+                if (top + menuHeight > window.innerHeight) {
+                    top = rect.top - menuHeight - 2;
+                }
+
+                // Keep within viewport
+                if (left < 4) left = 4;
+                if (top < 4) top = 4;
+
+                menu.style.top = top + 'px';
+                menu.style.left = left + 'px';
+            });
+
+            // On hidden: return menu to original parent
+            toggle.addEventListener('hidden.bs.dropdown', () => {
+                menu.classList.remove('cv-dropdown-teleported');
+                menu.style.top = '';
+                menu.style.left = '';
+                if (menu._cvOriginalParent) {
+                    menu._cvOriginalParent.appendChild(menu);
+                    delete menu._cvOriginalParent;
+                }
+            });
+        });
+    }
+
+    /**
+     * Toggle all checkboxes when the header checkbox is clicked.
+     * The TYPO3 multi-record-selection dropdown doesn't fit the
+     * narrow compact view column, so we use a simple checkbox toggle.
+     */
+    initializeCheckAllToggle() {
+        document.querySelectorAll('.compactview-th--checkbox .form-check-input').forEach(toggle => {
+            toggle.addEventListener('change', () => {
+                const table = toggle.closest('table');
+                if (!table) return;
+
+                const checkboxes = table.querySelectorAll('.t3js-multi-record-selection-check');
+                checkboxes.forEach(cb => {
+                    cb.checked = toggle.checked;
+                    // Dispatch change event so TYPO3's module updates the action bar
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
+        });
+    }
+
 }
 
 // Auto-init

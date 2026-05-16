@@ -191,7 +191,7 @@ mod.web_list.viewMode {
     allowed = list,compact,addressbook
     types.addressbook {
         label = Address Book
-        icon = actions-address
+        icon = actions-user
         template = CompactView
         displayColumns = name,email,phone,company,city
         columnsFromTCA = 0

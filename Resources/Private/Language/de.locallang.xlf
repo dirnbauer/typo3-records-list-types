@@ -141,6 +141,24 @@
                 <source>Preview only — may not appear on the frontend for this record type.</source>
                 <target>Nur Vorschau — wird möglicherweise nicht im Frontend für diesen Datensatztyp angezeigt.</target>
             </trans-unit>
+            
+            <!-- Translations -->
+            <trans-unit id="translation.label" resname="translation.label">
+                <source>translation(s)</source>
+                <target>Übersetzung(en)</target>
+            </trans-unit>
+            <trans-unit id="translation.expand" resname="translation.expand">
+                <source>Show translations</source>
+                <target>Übersetzungen anzeigen</target>
+            </trans-unit>
+            <trans-unit id="translation.collapse" resname="translation.collapse">
+                <source>Hide translations</source>
+                <target>Übersetzungen ausblenden</target>
+            </trans-unit>
+            <trans-unit id="translation.free" resname="translation.free">
+                <source>FREE</source>
+                <target>FREI</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>
