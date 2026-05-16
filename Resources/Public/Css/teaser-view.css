@@ -423,3 +423,6 @@
     width: 1rem;
     height: 1rem;
 }
+
+/* Note: Pagination and recordlist heading base styles are in base.css
+   which is loaded automatically for all view modes. */

@@ -182,21 +182,66 @@ final class ViewTypeRegistryTest extends FunctionalTestCase
         self::assertSame('KanbanCard', $paths['partial']);
     }
 
-    #[Test]
-    public function getCssFilesReturnsFileForGridType(): void
-    {
-        $files = $this->subject->getCssFiles('grid', 1);
+    // ========================================================================
+    // CSS loading: base.css + view-specific pattern
+    // ========================================================================
 
-        self::assertNotEmpty($files);
-        self::assertStringContainsString('grid-view.css', $files[0]);
+    #[Test]
+    public function getCssFilesAlwaysIncludesBaseCssFirst(): void
+    {
+        foreach (['grid', 'compact', 'teaser'] as $type) {
+            $files = $this->subject->getCssFiles($type, 1);
+            self::assertStringContainsString('base.css', $files[0], "base.css missing for $type");
+        }
     }
 
     #[Test]
-    public function getCssFilesReturnsEmptyForUnknownType(): void
+    public function getCssFilesReturnsGridViewCssAfterBase(): void
+    {
+        $files = $this->subject->getCssFiles('grid', 1);
+
+        self::assertCount(2, $files);
+        self::assertStringContainsString('base.css', $files[0]);
+        self::assertStringContainsString('grid-view.css', $files[1]);
+    }
+
+    #[Test]
+    public function getCssFilesReturnsCompactViewCssAfterBase(): void
+    {
+        $files = $this->subject->getCssFiles('compact', 1);
+
+        self::assertCount(2, $files);
+        self::assertStringContainsString('base.css', $files[0]);
+        self::assertStringContainsString('compact-view.css', $files[1]);
+    }
+
+    #[Test]
+    public function getCssFilesReturnsTeaserViewCssAfterBase(): void
+    {
+        $files = $this->subject->getCssFiles('teaser', 1);
+
+        self::assertCount(2, $files);
+        self::assertStringContainsString('base.css', $files[0]);
+        self::assertStringContainsString('teaser-view.css', $files[1]);
+    }
+
+    #[Test]
+    public function getCssFilesReturnsOnlyBaseForListType(): void
+    {
+        // 'list' has no CSS (it delegates to core)
+        $files = $this->subject->getCssFiles('list', 1);
+
+        self::assertCount(1, $files);
+        self::assertStringContainsString('base.css', $files[0]);
+    }
+
+    #[Test]
+    public function getCssFilesReturnsOnlyBaseForUnknownType(): void
     {
         $files = $this->subject->getCssFiles('nonexistent', 1);
 
-        self::assertSame([], $files);
+        self::assertCount(1, $files);
+        self::assertStringContainsString('base.css', $files[0]);
     }
 
     #[Test]
@@ -205,14 +250,32 @@ final class ViewTypeRegistryTest extends FunctionalTestCase
         // Page 5 has kanban type with css = EXT:my_ext/Resources/Public/Css/kanban.css
         $files = $this->subject->getCssFiles('kanban', 5);
 
-        self::assertNotEmpty($files);
-        self::assertStringContainsString('kanban.css', $files[0]);
+        self::assertCount(2, $files);
+        self::assertStringContainsString('base.css', $files[0]);
+        self::assertStringContainsString('kanban.css', $files[1]);
     }
+
+    // ========================================================================
+    // JS module loading
+    // ========================================================================
 
     #[Test]
     public function getJsModulesAlwaysIncludesBaseModule(): void
     {
-        $modules = $this->subject->getJsModules('grid', 1);
+        foreach (['grid', 'compact', 'teaser'] as $type) {
+            $modules = $this->subject->getJsModules($type, 1);
+            self::assertContains(
+                '@webconsulting/records-list-types/GridViewActions.js',
+                $modules,
+                "Base JS module missing for $type",
+            );
+        }
+    }
+
+    #[Test]
+    public function getJsModulesReturnsBaseForUnknownType(): void
+    {
+        $modules = $this->subject->getJsModules('nonexistent', 1);
 
         self::assertContains('@webconsulting/records-list-types/GridViewActions.js', $modules);
     }

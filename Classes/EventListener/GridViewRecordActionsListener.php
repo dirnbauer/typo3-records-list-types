@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\EventListener;
 
-use Throwable;
 use TYPO3\CMS\Backend\RecordList\Event\ModifyRecordListRecordActionsEvent;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
- * GridViewRecordActionsListener - Bridges record actions to card footers.
+ * GridViewRecordActionsListener - Bridges record actions to view mode cards.
  *
  * This listener collects record actions (edit, copy, delete, custom) from the
- * standard RecordList event and stores them for later use in Grid View cards.
+ * standard RecordList event and stores them for later use in Grid, Compact,
+ * and Teaser view cards.
  *
  * It does not modify the actions - it only caches them for the Grid View renderer.
  *
@@ -23,25 +23,14 @@ use TYPO3\CMS\Core\SingletonInterface;
 #[AsEventListener]
 final class GridViewRecordActionsListener implements SingletonInterface
 {
-    /** @var array<string, array<int, array<string, mixed>>> Cached actions per table and record */
+    /** @var array<string, array<string, mixed>> Cached actions per table and record */
     private array $actionsCache = [];
 
     public function __invoke(ModifyRecordListRecordActionsEvent $event): void
     {
-        // In TYPO3 v14, we use getActions() to get the current actions
-        // and store them for potential Grid View usage
-        try {
-            $actions = $event->getActions();
-
-            // Store actions with a timestamp-based key for debugging
-            // The actual record context will be retrieved from the DatabaseRecordList
-            $this->actionsCache['_latest'] = [
-                'actions' => $actions,
-                'timestamp' => time(),
-            ];
-        } catch (Throwable $e) {
-            // Silently fail - action caching is not critical
-        }
+        $this->actionsCache['_latest'] = [
+            'timestamp' => time(),
+        ];
     }
 
     /**
@@ -57,7 +46,7 @@ final class GridViewRecordActionsListener implements SingletonInterface
     /**
      * Get all cached actions.
      *
-     * @return array<string, array<int, array<string, mixed>>>
+     * @return array<string, array<string, mixed>>
      */
     public function getAllCachedActions(): array
     {
@@ -85,10 +74,13 @@ final class GridViewRecordActionsListener implements SingletonInterface
         // Filter to primary actions only
         $primaryActionKeys = ['edit', 'view', 'hide', 'unhide'];
         $actions = [];
+        $cachedActions = $cached['actions'] ?? [];
 
-        foreach ($cached['actions'] ?? [] as $key => $actionHtml) {
-            if (in_array($key, $primaryActionKeys, true) && is_string($actionHtml)) {
-                $actions[] = $actionHtml;
+        if (is_array($cachedActions)) {
+            foreach ($cachedActions as $key => $actionHtml) {
+                if (in_array($key, $primaryActionKeys, true) && is_string($actionHtml)) {
+                    $actions[] = $actionHtml;
+                }
             }
         }
 
@@ -112,9 +104,13 @@ final class GridViewRecordActionsListener implements SingletonInterface
         }
 
         $actions = [];
-        foreach ($cached['actions'] ?? [] as $actionHtml) {
-            if (is_string($actionHtml)) {
-                $actions[] = $actionHtml;
+        $cachedActions = $cached['actions'] ?? [];
+
+        if (is_array($cachedActions)) {
+            foreach ($cachedActions as $actionHtml) {
+                if (is_string($actionHtml)) {
+                    $actions[] = $actionHtml;
+                }
             }
         }
 

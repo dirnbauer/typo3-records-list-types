@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Service;
 
 use Exception;
+use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\FileReference;
 use TYPO3\CMS\Core\Resource\FileRepository;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
-use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
  * ThumbnailService - Handles image thumbnail resolution and generation.
  *
  * Resolves FAL file references from records and prepares them for
- * display as thumbnails in the Grid View cards.
+ * display as thumbnails in Grid and Teaser view cards.
  */
 final class ThumbnailService implements SingletonInterface
 {
@@ -26,7 +26,6 @@ final class ThumbnailService implements SingletonInterface
 
     public function __construct(
         private readonly FileRepository $fileRepository,
-        private readonly ResourceFactory $resourceFactory,
     ) {}
 
     /**
@@ -46,7 +45,7 @@ final class ThumbnailService implements SingletonInterface
                 $uid,
             );
 
-            if (empty($fileReferences)) {
+            if ($fileReferences === []) {
                 return null;
             }
 
@@ -133,6 +132,9 @@ final class ThumbnailService implements SingletonInterface
                 'height' => $height . 'c',
             ];
 
+            if (!$file instanceof File) {
+                return null;
+            }
             $processedFile = $file->process(
                 ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
                 $processingInstructions,
@@ -190,7 +192,7 @@ final class ThumbnailService implements SingletonInterface
                 $uid,
             );
 
-            if (empty($fileReferences)) {
+            if ($fileReferences === []) {
                 return null;
             }
 

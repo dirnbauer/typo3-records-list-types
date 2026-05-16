@@ -6,9 +6,12 @@
 <f:comment>
     Grid View Card - Two-row header layout
     
-    Header structure:
-    - Row 1: Title (full width, with drag handle and icon)
-    - Row 2: Compact action toolbar
+    Card structure:
+    - Header Row 1: Title (full width, with drag handle and icon)
+    - Header Row 2: Compact action toolbar (visibility, edit, delete, more)
+    - Image: Optional FAL thumbnail (16:9 aspect ratio)
+    - Body: Type-aware field display (boolean badges, dates, relations, etc.)
+    - Footer: UID, PID, and language flag icon (bottom right)
     
     State indicators via header background color:
     - Normal: default gray
@@ -168,6 +171,10 @@
                      class="gridview-card__thumbnail" />
             </be:link.editRecord>
         </div>
+        <div class="gridview-card__image-hint">
+            <core:icon identifier="actions-info" size="small" />
+            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:image.previewOnly" default="Preview only — may not appear on the frontend for this record type." />
+        </div>
     </f:if>
 
     <f:comment>Card Body - Fields</f:comment>
@@ -269,14 +276,20 @@
         </f:if>
     </div>
 
-    <f:comment>Card Footer with UID and PID</f:comment>
+    <f:comment>Card Footer: Language Flag | ID | PID</f:comment>
     <div class="gridview-card__footer">
+        <f:if condition="{record.languageFlagIdentifier}">
+            <span class="gridview-card__footer-lang" title="{record.languageTitle}">
+                <core:icon identifier="{record.languageFlagIdentifier}" size="small" />
+            </span>
+            <span class="gridview-card__footer-separator"></span>
+        </f:if>
         <span class="gridview-card__footer-id">
             <span class="gridview-card__footer-label">ID</span>
             <span class="gridview-card__footer-uid">{record.uid}</span>
         </span>
         <f:if condition="{record.tableName} != 'pages'">
-            <span class="gridview-card__footer-separator">|</span>
+            <span class="gridview-card__footer-separator"></span>
             <span class="gridview-card__footer-pid">on page {record.pid}</span>
         </f:if>
     </div>

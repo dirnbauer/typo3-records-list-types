@@ -50,6 +50,88 @@ View mode settings
         # Force list view only (hides toggle)
         mod.web_list.viewMode.allowed = list
 
+.. _configuration-pagination:
+
+Pagination
+==========
+
+Pagination matches TYPO3 Core List View behavior:
+
+-   **Multi-table mode** (default page view): Shows a limited number
+    of records per table (default 20). If a table has more records, an
+    "Expand table" button links to single-table mode. No pagination
+    controls are shown.
+-   **Single-table mode** (after clicking a table name or "Expand
+    table"): Full pagination at top and bottom with record range
+    indicator, page input field, first/prev/next/last buttons, and
+    reload button.
+
+.. _configuration-pagination-limit-per-table:
+
+..  confval:: mod.web_list.viewMode.itemsLimitPerTable
+    :name: conf-viewmode-limitpertable
+    :type: int
+    :default: ``20``
+
+    Maximum records shown per table in multi-table mode. Falls back
+    to ``mod.web_list.itemsLimitPerTable`` (TYPO3 Core setting) if
+    not set.
+
+    ..  code-block:: typoscript
+        :caption: Page TSconfig
+
+        mod.web_list.viewMode.itemsLimitPerTable = 30
+
+.. _configuration-pagination-items-per-page:
+
+..  confval:: mod.web_list.viewMode.itemsPerPage
+    :name: conf-viewmode-itemsperpage
+    :type: int
+    :default: ``100``
+
+    Global default for the number of records displayed per page in all
+    alternative view modes. Set to ``0`` to disable pagination entirely
+    (show all records).
+
+    ..  code-block:: typoscript
+        :caption: Page TSconfig
+
+        # Show 50 records per page in all view modes
+        mod.web_list.viewMode.itemsPerPage = 50
+
+        # Disable pagination (show all records)
+        mod.web_list.viewMode.itemsPerPage = 0
+
+.. _configuration-pagination-per-type:
+
+..  confval:: mod.web_list.viewMode.types.<type>.itemsPerPage
+    :name: conf-viewmode-type-itemsperpage
+    :type: int
+    :default: ``100`` (``300`` for compact)
+
+    Override the items-per-page setting for a specific view type. The
+    built-in defaults are:
+
+    -  **grid**: ``100``
+    -  **compact**: ``300`` (compact rows are denser, so more records fit)
+    -  **teaser**: ``100``
+    -  Custom types: ``100``
+
+    ..  code-block:: typoscript
+        :caption: Page TSconfig
+
+        # Show 200 records per page in grid view
+        mod.web_list.viewMode.types.grid.itemsPerPage = 200
+
+        # Show 500 records per page in compact view
+        mod.web_list.viewMode.types.compact.itemsPerPage = 500
+
+        # Disable pagination for teaser view
+        mod.web_list.viewMode.types.teaser.itemsPerPage = 0
+
+        # Custom view type with 50 records per page
+        mod.web_list.viewMode.types.myview.itemsPerPage = 50
+
 .. _configuration-grid-cols:
 
 ..  confval:: mod.web_list.gridView.cols

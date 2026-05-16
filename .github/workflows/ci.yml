@@ -120,11 +120,20 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: intl, pdo_mysql, mysqli
-          coverage: none
+          coverage: xdebug
 
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist
 
       - name: Run Functional Tests
         run: |
-          vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml
+          mkdir -p var/log
+          vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml --coverage-clover var/log/functional-coverage.xml
+
+      - name: Upload functional coverage
+        if: matrix.php == '8.3' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: functional-coverage-report
+          path: var/log/functional-coverage.xml
+          if-no-files-found: ignore

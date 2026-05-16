@@ -15,16 +15,8 @@ use TYPO3\CMS\Core\SingletonInterface;
  */
 final class GridConfigurationService implements SingletonInterface
 {
-    /** @var array<string, array<string, mixed>> Runtime cache for table configurations */
+    /** @var array<string, array{titleField: ?string, descriptionField: ?string, imageField: ?string, preview: bool, hiddenField: string}> Runtime cache for table configurations */
     private array $tableConfigCache = [];
-
-    /** Default configuration applied when no TSconfig is specified. */
-    private const DEFAULT_CONFIG = [
-        'titleField' => null,      // Will fall back to TCA label
-        'descriptionField' => null,
-        'imageField' => null,
-        'preview' => true,
-    ];
 
     /** Default number of columns in the grid. */
     private const DEFAULT_COLS = 4;
@@ -48,14 +40,28 @@ final class GridConfigurationService implements SingletonInterface
         $tableConfig = $tsConfig['mod.']['web_list.']['gridView.']['table.'][$table . '.'] ?? [];
 
         // Get the hidden field from TCA
-        $tca = $GLOBALS['TCA'][$table] ?? [];
-        $hiddenField = $tca['ctrl']['enablecolumns']['disabled'] ?? 'hidden';
+        /** @var array<string, array<string, mixed>> $allTca */
+        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
+        /** @var array<string, mixed> $tca */
+        $tca = is_array($allTca[$table] ?? null) ? $allTca[$table] : [];
+        /** @var array<string, mixed> $tcaCtrl */
+        $tcaCtrl = $tca['ctrl'] ?? [];
+        /** @var array<string, string> $enableColumns */
+        $enableColumns = is_array($tcaCtrl['enablecolumns'] ?? null) ? $tcaCtrl['enablecolumns'] : [];
+        $hiddenField = $enableColumns['disabled'] ?? 'hidden';
+
+        $descriptionFieldRaw = $tableConfig['descriptionField'] ?? null;
+        $imageFieldRaw = $tableConfig['imageField'] ?? null;
+        $previewRaw = $tableConfig['preview'] ?? '1';
+        $preview = (is_string($previewRaw) || is_int($previewRaw) || is_bool($previewRaw))
+            ? $this->parseBoolean($previewRaw)
+            : true;
 
         $config = [
             'titleField' => $this->getTitleField($table, $tableConfig),
-            'descriptionField' => $tableConfig['descriptionField'] ?? null,
-            'imageField' => $tableConfig['imageField'] ?? null,
-            'preview' => $this->parseBoolean($tableConfig['preview'] ?? '1'),
+            'descriptionField' => is_string($descriptionFieldRaw) ? $descriptionFieldRaw : null,
+            'imageField' => is_string($imageFieldRaw) ? $imageFieldRaw : null,
+            'preview' => $preview,
             'hiddenField' => $hiddenField,
         ];
 
@@ -108,15 +114,20 @@ final class GridConfigurationService implements SingletonInterface
     private function getTitleField(string $table, array $tableConfig): string
     {
         // Use configured title field if available
-        if (!empty($tableConfig['titleField'])) {
-            return $tableConfig['titleField'];
+        $titleField = $tableConfig['titleField'] ?? '';
+        if (is_string($titleField) && $titleField !== '') {
+            return $titleField;
         }
 
         // Fall back to TCA label field
-        $tca = $GLOBALS['TCA'][$table] ?? null;
-        if ($tca !== null) {
-            $labelField = $tca['ctrl']['label'] ?? null;
-            if ($labelField !== null) {
+        /** @var array<string, array<string, mixed>> $allTcaLabel */
+        $allTcaLabel = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
+        $tca = is_array($allTcaLabel[$table] ?? null) ? $allTcaLabel[$table] : null;
+        if (is_array($tca)) {
+            /** @var array<string, mixed> $ctrl */
+            $ctrl = $tca['ctrl'] ?? [];
+            $labelField = $ctrl['label'] ?? null;
+            if (is_string($labelField)) {
                 return $labelField;
             }
         }
@@ -169,7 +180,7 @@ final class GridConfigurationService implements SingletonInterface
     public function hasImageField(string $table, int $pageId): bool
     {
         $config = $this->getTableConfig($table, $pageId);
-        return !empty($config['imageField']);
+        return $config['imageField'] !== null && $config['imageField'] !== '';
     }
 
     /**
@@ -209,8 +220,8 @@ final class GridConfigurationService implements SingletonInterface
         $tables = [];
         foreach (array_keys($tableConfigs) as $key) {
             // TSconfig array keys have trailing dots
-            $tableName = rtrim($key, '.');
-            if (!empty($tableName)) {
+            $tableName = rtrim((string) $key, '.');
+            if ($tableName !== '') {
                 $tables[] = $tableName;
             }
         }

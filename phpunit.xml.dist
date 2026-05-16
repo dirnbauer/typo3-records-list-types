@@ -30,6 +30,10 @@
         </include>
         <exclude>
             <directory>Classes/Domain/Model</directory>
+            <!-- XClass controller: 1155 statements, only testable via integration/E2E -->
+            <file>Classes/Controller/RecordListController.php</file>
+            <!-- ViewHelper extends AbstractViewHelper: needs Fluid bootstrap -->
+            <file>Classes/ViewHelpers/RecordActionsViewHelper.php</file>
         </exclude>
     </source>
 </phpunit>

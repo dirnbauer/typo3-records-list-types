@@ -40,12 +40,13 @@ final class ViewModeController
             $body = $request->getParsedBody();
 
             // Handle both JSON and form-encoded requests
-            if (empty($body)) {
+            if (!is_array($body) || $body === []) {
                 $content = $request->getBody()->getContents();
                 $body = json_decode($content, true) ?? [];
             }
 
-            $mode = $body['mode'] ?? null;
+            /** @var array<string, mixed> $body */
+            $mode = isset($body['mode']) && is_string($body['mode']) ? $body['mode'] : null;
 
             // Validate mode
             if ($mode === null || !$this->viewModeResolver->isValidMode($mode)) {

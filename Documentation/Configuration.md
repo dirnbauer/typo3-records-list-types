@@ -103,6 +103,63 @@ mod.web_list.gridView.table.tt_content {
 }
 ```
 
+## Pagination
+
+Pagination matches TYPO3 Core List View behavior:
+
+- **Multi-table mode** (default page view): Shows a limited number of records per table (default 20). If a table has more records, an "Expand table" button links to single-table mode. No pagination controls are shown.
+- **Single-table mode** (after clicking a table name or "Expand table"): Full pagination at top and bottom with record range indicator, page input field, first/prev/next/last buttons, and reload button.
+
+This is the same pattern used by TYPO3's built-in List View.
+
+### Items limit per table (multi-table mode)
+
+```typoscript
+mod.web_list.viewMode {
+    # Max records shown per table in multi-table mode (default: 20)
+    # Falls back to mod.web_list.itemsLimitPerTable if not set
+    itemsLimitPerTable = 20
+}
+```
+
+### Global Default
+
+```typoscript
+mod.web_list.viewMode {
+    # Default items per page for all view types (0 = no pagination)
+    itemsPerPage = 100
+}
+```
+
+### Per-Type Override
+
+Built-in defaults: Grid = 100, Compact = 300, Teaser = 100.
+
+```typoscript
+mod.web_list.viewMode.types {
+    # Grid view: 100 records per page (default)
+    grid.itemsPerPage = 100
+
+    # Compact view: 300 records per page (denser layout)
+    compact.itemsPerPage = 300
+
+    # Teaser view: 100 records per page (default)
+    teaser.itemsPerPage = 100
+
+    # Custom view type
+    myview.itemsPerPage = 50
+
+    # Disable pagination for a specific view
+    grid.itemsPerPage = 0
+}
+```
+
+### Resolution Order
+
+1. Per-type TSconfig: `mod.web_list.viewMode.types.<type>.itemsPerPage`
+2. Global TSconfig: `mod.web_list.viewMode.itemsPerPage`
+3. Built-in default: `100` (or `300` for compact)
+
 ## User TSconfig
 
 Control Grid View behavior per user or user group.

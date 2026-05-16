@@ -23,7 +23,8 @@ webconsulting-skills/
 vendor/
 var/
 public/typo3/
-public/typo3conf/ext/
+public/typo3conf/
+public/_assets/
 .Build/
 
 # PHP

@@ -24,8 +24,8 @@
                 <target>Ansichtsmodus wechseln</target>
             </trans-unit>
             <trans-unit id="button.viewMode" resname="button.viewMode">
-                <source>View</source>
-                <target>Ansicht</target>
+                <source>List Type</source>
+                <target>Listentyp</target>
             </trans-unit>
             <trans-unit id="noRecords" resname="noRecords">
                 <source>No records found on this page.</source>
@@ -128,6 +128,18 @@
             <trans-unit id="drag.endPosition" resname="drag.endPosition">
                 <source>End position (after last item)</source>
                 <target>Endposition (nach letztem Element)</target>
+            </trans-unit>
+            
+            <!-- Pagination -->
+            <trans-unit id="pagination.of" resname="pagination.of">
+                <source>of</source>
+                <target>von</target>
+            </trans-unit>
+            
+            <!-- Image hint -->
+            <trans-unit id="image.previewOnly" resname="image.previewOnly">
+                <source>Preview only — may not appear on the frontend for this record type.</source>
+                <target>Nur Vorschau — wird möglicherweise nicht im Frontend für diesen Datensatztyp angezeigt.</target>
             </trans-unit>
         </body>
     </file>

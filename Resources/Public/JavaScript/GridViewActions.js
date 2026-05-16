@@ -6,6 +6,9 @@
  * - WCAG 2.1 compliant keyboard navigation for drag and drop
  * - Screen reader support with ARIA live regions
  * - Record actions (hide/show, delete, clipboard, info, history)
+ * - Sorting controls (manual drag mode and field-based sorting)
+ * - Client-side search filtering
+ * - Scroll shadow detection for compact view
  */
 
 class GridViewActions {
@@ -75,6 +78,7 @@ class GridViewActions {
         this.initializeSorting();
         this.initializeSearch();
         this.initializeScrollShadows();
+        this.initializePaginationInputs();
     }
 
     // =========================================================================
@@ -851,24 +855,47 @@ class GridViewActions {
     }
     
     /**
-     * Execute the delete operation after confirmation
+     * Execute the delete operation after confirmation.
+     *
+     * Uses TYPO3's AjaxDataHandler.process() which handles notifications
+     * and events, then reloads the page to ensure consistent state
+     * (record counts, pagination, empty tables).
      */
     executeDelete(table, uid, card) {
+        // Animate out immediately for visual feedback
+        const wrapper = card?.closest('.gridview-card-wrapper') || card;
+        if (wrapper) {
+            wrapper.style.transition = 'all 0.2s';
+            wrapper.style.opacity = '0';
+            wrapper.style.transform = 'scale(0.9)';
+        }
+
+        const params = { cmd: { [table]: { [uid]: { delete: 1 } } } };
+
+        // Prefer TYPO3 AjaxDataHandler (handles notifications + events)
+        if (this.AjaxDataHandler) {
+            this.AjaxDataHandler.process(params).then(() => {
+                window.location.reload();
+            });
+            return;
+        }
+
+        // Fallback: raw fetch if AjaxDataHandler is not available
         const url = TYPO3?.settings?.ajaxUrls?.record_process;
         if (!url) {
             console.error('[GridView] No AJAX URL available');
             return;
         }
-        
+
         const fullUrl = new URL(url, window.location.origin);
         fullUrl.searchParams.set(`cmd[${table}][${uid}][delete]`, '1');
-        
-        fetch(fullUrl.toString(), { 
+
+        fetch(fullUrl.toString(), {
             method: 'GET',
             credentials: 'same-origin',
-            headers: { 
+            headers: {
                 'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest' 
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
             .then(r => r.json())
@@ -876,19 +903,23 @@ class GridViewActions {
                 if (data.hasErrors) {
                     const msg = data.messages?.[0]?.message || 'Unknown error';
                     this.showNotification('Delete failed', msg, 'error');
-                } else {
-                    const wrapper = card?.closest('.gridview-card-wrapper') || card;
+                    // Restore card visibility on error
                     if (wrapper) {
-                        wrapper.style.transition = 'all 0.2s';
-                        wrapper.style.opacity = '0';
-                        wrapper.style.transform = 'scale(0.9)';
-                        setTimeout(() => wrapper.remove(), 200);
+                        wrapper.style.opacity = '1';
+                        wrapper.style.transform = '';
                     }
+                } else {
+                    window.location.reload();
                 }
             })
             .catch(err => {
                 console.error('[GridView] Delete error:', err);
                 this.showNotification('Request failed', err.message, 'error');
+                // Restore card visibility on error
+                if (wrapper) {
+                    wrapper.style.opacity = '1';
+                    wrapper.style.transform = '';
+                }
             });
     }
 
@@ -1331,6 +1362,64 @@ class GridViewActions {
             // Also update on window resize
             window.addEventListener('resize', updateScrollState, { passive: true });
         });
+    }
+
+    // =========================================================================
+    // Pagination Page Input
+    // =========================================================================
+
+    /**
+     * Initialize pagination page number inputs.
+     * Navigates to the entered page on Enter or blur.
+     */
+    initializePaginationInputs() {
+        const inputs = document.querySelectorAll('[data-pagination-input]');
+
+        if (inputs.length === 0) {
+            return;
+        }
+
+        inputs.forEach(input => {
+            const originalValue = input.value;
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.navigateToPage(input);
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                if (input.value !== originalValue) {
+                    this.navigateToPage(input);
+                }
+            });
+        });
+    }
+
+    /**
+     * Navigate to the page number entered in the pagination input.
+     * @param {HTMLInputElement} input - The pagination input element
+     */
+    navigateToPage(input) {
+        const page = parseInt(input.value, 10);
+        const min = parseInt(input.min, 10) || 1;
+        const max = parseInt(input.max, 10) || 1;
+
+        if (isNaN(page) || page < min || page > max) {
+            // Reset to current value on invalid input
+            input.value = input.defaultValue;
+            return;
+        }
+
+        const baseUrl = input.dataset.paginationUrl;
+        const table = input.dataset.paginationTable;
+
+        if (!baseUrl || !table) {
+            return;
+        }
+
+        window.location.href = baseUrl + '&pointer[' + encodeURIComponent(table) + ']=' + page;
     }
 
     // =========================================================================

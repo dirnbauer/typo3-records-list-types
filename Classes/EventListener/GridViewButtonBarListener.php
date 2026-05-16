@@ -6,6 +6,8 @@ namespace Webconsulting\RecordsListTypes\EventListener;
 
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;
+use RuntimeException;
+use TYPO3\CMS\Backend\Module\ModuleInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\Components\Buttons\DropDownButton;
@@ -23,8 +25,9 @@ use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 /**
  * GridViewButtonBarListener - Injects view mode toggle buttons into the DocHeader.
  *
- * Adds a dropdown for switching between different view modes (list, grid, compact)
- * when multiple modes are available, or nothing if only one mode is allowed.
+ * Adds a dropdown for switching between view modes (list, grid, compact, teaser,
+ * and any custom types) when multiple modes are available, or nothing if only
+ * one mode is allowed.
  */
 #[AsEventListener(event: ModifyButtonBarEvent::class)]
 final class GridViewButtonBarListener
@@ -113,15 +116,22 @@ final class GridViewButtonBarListener
         $lang = $this->getLanguageService();
 
         // Get current mode config for the dropdown label
-        $currentModeConfig = $allowedModes[$currentMode] ?? reset($allowedModes);
+        $currentModeConfig = $allowedModes[$currentMode] ?? null;
+        if ($currentModeConfig === null) {
+            $currentModeConfig = reset($allowedModes);
+        }
+        if ($currentModeConfig === false) {
+            return GeneralUtility::makeInstance(ComponentFactory::class)->createDropDownButton();
+        }
 
         $componentFactory = $this->getComponentFactory();
 
-        // Create dropdown button
+        // Create dropdown button showing the active view mode label
         $dropdownButton = $componentFactory->createDropDownButton()
             ->setLabel($lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:button.viewMode'))
             ->setIcon($this->iconFactory->getIcon($currentModeConfig['icon'], IconSize::SMALL))
-            ->setShowLabelText(true);
+            ->setShowLabelText(true)
+            ->setShowActiveLabelText(true);
 
         // Add radio items for each view mode
         foreach ($allowedModes as $modeId => $modeConfig) {
@@ -163,7 +173,11 @@ final class GridViewButtonBarListener
      */
     private function getLanguageService(): LanguageService
     {
-        return $GLOBALS['LANG'];
+        $lang = $GLOBALS['LANG'] ?? null;
+        if (!$lang instanceof LanguageService) {
+            throw new RuntimeException('LanguageService not available', 1735600100);
+        }
+        return $lang;
     }
 
     /**
@@ -172,7 +186,7 @@ final class GridViewButtonBarListener
     private function isRecordsModule(ServerRequestInterface $request): bool
     {
         $route = $request->getAttribute('route');
-        if ($route !== null) {
+        if ($route instanceof \TYPO3\CMS\Backend\Routing\Route) {
             $routePath = $route->getPath();
             if (str_contains($routePath, '/module/content/records')
                 || str_contains($routePath, '/module/web/list')) {
@@ -180,11 +194,12 @@ final class GridViewButtonBarListener
             }
 
             $moduleName = $route->getOption('moduleName');
-            if ($moduleName !== null && in_array($moduleName, Constants::MODULE_IDENTIFIERS, true)) {
+            if (is_string($moduleName) && in_array($moduleName, Constants::MODULE_IDENTIFIERS, true)) {
                 return true;
             }
 
-            $routeIdentifier = $route->getOption('_identifier') ?? '';
+            $routeIdentifier = $route->getOption('_identifier');
+            $routeIdentifier = is_string($routeIdentifier) ? $routeIdentifier : '';
             foreach (Constants::MODULE_IDENTIFIERS as $identifier) {
                 if (str_starts_with($routeIdentifier, $identifier)) {
                     return true;
@@ -193,7 +208,7 @@ final class GridViewButtonBarListener
         }
 
         $module = $request->getAttribute('module');
-        if ($module !== null && method_exists($module, 'getIdentifier')) {
+        if ($module instanceof ModuleInterface) {
             $moduleIdentifier = $module->getIdentifier();
             if (in_array($moduleIdentifier, Constants::MODULE_IDENTIFIERS, true)) {
                 return true;
@@ -210,13 +225,15 @@ final class GridViewButtonBarListener
     {
         $queryParams = $request->getQueryParams();
 
-        if (isset($queryParams['id'])) {
-            return (int) $queryParams['id'];
+        $idParam = $queryParams['id'] ?? null;
+        if ($idParam !== null) {
+            return is_numeric($idParam) ? (int) $idParam : 0;
         }
 
         $routeParams = $request->getAttribute('routing');
         if (is_array($routeParams) && isset($routeParams['id'])) {
-            return (int) $routeParams['id'];
+            $idValue = $routeParams['id'];
+            return is_numeric($idValue) ? (int) $idValue : 0;
         }
 
         return 0;

@@ -18,9 +18,10 @@ use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
  *
  * Supports multiple view modes:
  * - list: Standard table view (TYPO3 default)
- * - grid: Card-based grid view
- * - compact: Single-line compact view
- * - Custom modes can be registered via RegisterViewModesEvent
+ * - grid: Card-based grid view with thumbnails, drag-and-drop, and language flags
+ * - compact: Dense single-line table view with fixed columns
+ * - teaser: News-style card view with title, date, and description
+ * - Custom modes registered via RegisterViewModesEvent or TSconfig
  *
  * Resolution precedence:
  * 1. Request parameter (?displayMode=grid) - Highest priority, also saves preference
@@ -115,7 +116,7 @@ final class ViewModeResolver implements SingletonInterface
      * Get all registered view modes.
      *
      * Modes are collected from:
-     * 1. Built-in modes (list, grid, compact)
+     * 1. Built-in modes (list, grid, compact, teaser)
      * 2. Custom modes registered via RegisterViewModesEvent
      * 3. Custom modes defined in TSconfig (mod.web_list.viewMode.types.{id})
      *
@@ -143,12 +144,15 @@ final class ViewModeResolver implements SingletonInterface
             $customModes = $tsConfig['mod.']['web_list.']['viewMode.']['types.'] ?? [];
 
             foreach ($customModes as $modeId => $config) {
-                $modeId = rtrim($modeId, '.');
+                $modeId = rtrim((string) $modeId, '.');
                 if (is_array($config) && !isset($modes[$modeId])) {
+                    $labelVal = $config['label'] ?? $modeId;
+                    $iconVal = $config['icon'] ?? 'actions-viewmode-list';
+                    $descVal = $config['description'] ?? '';
                     $modes[$modeId] = [
-                        'label' => $config['label'] ?? $modeId,
-                        'icon' => $config['icon'] ?? 'actions-viewmode-list',
-                        'description' => $config['description'] ?? '',
+                        'label' => is_string($labelVal) ? $labelVal : $modeId,
+                        'icon' => is_string($iconVal) ? $iconVal : 'actions-viewmode-list',
+                        'description' => is_string($descVal) ? $descVal : '',
                     ];
                 }
             }
@@ -319,10 +323,12 @@ final class ViewModeResolver implements SingletonInterface
         $allowedModes = $this->getAllowedModes($pageId);
         $result = [];
 
+        $languageService = $this->getLanguageService();
         foreach ($allModes as $mode => $config) {
             $label = $config['label'];
-            if (str_starts_with($label, 'LLL:')) {
-                $label = $GLOBALS['LANG']->sL($label) ?: $mode;
+            if ($languageService !== null && str_starts_with($label, 'LLL:')) {
+                $translated = $languageService->sL($label);
+                $label = $translated !== '' ? $translated : $mode;
             }
 
             $result[$mode] = [
@@ -342,6 +348,16 @@ final class ViewModeResolver implements SingletonInterface
      */
     private function getBackendUser(): ?BackendUserAuthentication
     {
-        return $GLOBALS['BE_USER'] ?? null;
+        $user = $GLOBALS['BE_USER'] ?? null;
+        return $user instanceof BackendUserAuthentication ? $user : null;
+    }
+
+    /**
+     * Get the language service.
+     */
+    private function getLanguageService(): ?\TYPO3\CMS\Core\Localization\LanguageService
+    {
+        $lang = $GLOBALS['LANG'] ?? null;
+        return $lang instanceof \TYPO3\CMS\Core\Localization\LanguageService ? $lang : null;
     }
 }
