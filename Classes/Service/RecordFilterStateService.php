@@ -7,6 +7,7 @@ namespace Webconsulting\RecordsListTypes\Service;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Module\ModuleData;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * Reads record-list filter state from query/body parameters and module data.
@@ -75,7 +76,7 @@ final readonly class RecordFilterStateService
         }
 
         $tableValues = $allValues[$table] ?? [];
-        return is_array($tableValues) ? $tableValues : [];
+        return is_array($tableValues) ? ArrayUtility::stringKeyArray($tableValues) : [];
     }
 
     public function hasActiveValuesForTable(ServerRequestInterface $request, string $table): bool
@@ -140,7 +141,7 @@ final readonly class RecordFilterStateService
         $normalized = [];
         foreach ($options as $option) {
             if (is_array($option)) {
-                $normalized[] = $option;
+                $normalized[] = ArrayUtility::stringKeyArray($option);
             }
         }
 
@@ -200,6 +201,6 @@ final readonly class RecordFilterStateService
         $parsedBody = $request->getParsedBody();
         $bodyParams = is_array($parsedBody) ? $parsedBody : [];
 
-        return array_replace_recursive($queryParams, $bodyParams);
+        return ArrayUtility::stringKeyArray(array_replace_recursive($queryParams, $bodyParams));
     }
 }

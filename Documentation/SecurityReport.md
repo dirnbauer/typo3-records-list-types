@@ -1,6 +1,6 @@
 # TYPO3 Security Hardening Report
 
-> Run date: 2026-04-18 (round 2)
+> Run date: 2026-05-16 (round 3)
 > Skill: typo3-security
 > Extension: records_list_types @ TYPO3 v14
 
@@ -57,5 +57,5 @@ behind Core's backend auth middleware.
 - Grep: `f:format.raw` — 0 hits.
 - Grep: `innerHTML\s*=` in `Resources/Public/JavaScript/` — 0 hits.
 - Grep: `data-toggle|data-dismiss|data-ride` — 0 hits.
-- `vendor/bin/phpstan analyse` — level 9 clean.
-- `vendor/bin/phpunit` — 90 unit + 72 functional tests pass.
+- `vendor/bin/phpstan analyse` — level max clean.
+- `vendor/bin/phpunit` — 118 unit + 72 functional tests pass.

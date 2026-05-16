@@ -13,6 +13,7 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * ViewModeResolver - Single source of truth for determining which view to render.
@@ -91,10 +92,11 @@ final class ViewModeResolver implements SingletonInterface
 
         // 1. Explicit request parameter (highest priority)
         $queryParams = $request->getQueryParams();
-        if (isset($queryParams['displayMode']) && in_array($queryParams['displayMode'], $allowedModes, true)) {
+        $displayMode = ArrayUtility::stringValue($queryParams['displayMode'] ?? null);
+        if ($displayMode !== '' && in_array($displayMode, $allowedModes, true)) {
             // Save preference when explicitly switching
-            $this->setUserPreference($queryParams['displayMode']);
-            return $queryParams['displayMode'];
+            $this->setUserPreference($displayMode);
+            return $displayMode;
         }
 
         // 2. User preference (stored in backend user configuration)
@@ -140,8 +142,10 @@ final class ViewModeResolver implements SingletonInterface
         $modes = $event->getViewModes();
 
         // Also check TSconfig for custom modes (including root page = 0)
-        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $customModes = $tsConfig['mod.']['web_list.']['viewMode.']['types.'] ?? [];
+        $customModes = ArrayUtility::arrayPath(
+            BackendUtility::getPagesTSconfig($pageId),
+            ['mod.', 'web_list.', 'viewMode.', 'types.'],
+        );
         if ($customModes !== []) {
 
             foreach ($customModes as $modeId => $config) {
@@ -174,11 +178,12 @@ final class ViewModeResolver implements SingletonInterface
         $allModes = $this->getViewModes($pageId);
 
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $allowedString = $tsConfig['mod.']['web_list.']['viewMode.']['allowed']
-            ?? $tsConfig['mod.']['web_list.']['allowedViews']
-            ?? implode(',', array_keys($allModes)); // Default: all registered modes
-
-        $configured = array_map(trim(...), explode(',', $allowedString));
+        $allowedValue = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'allowed'])
+            ?? ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'allowedViews']);
+        $configured = ArrayUtility::commaSeparatedList($allowedValue);
+        if ($configured === []) {
+            $configured = array_keys($allModes);
+        }
 
         // Filter to only valid modes
         return array_values(array_filter($configured, fn($mode): bool => isset($allModes[$mode])));
@@ -241,9 +246,11 @@ final class ViewModeResolver implements SingletonInterface
     private function getTsConfigDefault(int $pageId): ?string
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        return $tsConfig['mod.']['web_list.']['viewMode.']['default']
-            ?? $tsConfig['mod.']['web_list.']['gridView.']['default']
-            ?? null;
+        $default = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'default'])
+            ?? ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'gridView.', 'default']);
+        $default = ArrayUtility::stringValue($default);
+
+        return $default !== '' ? $default : null;
     }
 
     /**
@@ -271,10 +278,11 @@ final class ViewModeResolver implements SingletonInterface
         }
 
         // Check User TSconfig for forced view
-        $userTsConfig = $backendUser->getTSConfig();
-        $forcedView = $userTsConfig['options.']['layout.']['records.']['forceView'] ?? null;
+        $forcedView = ArrayUtility::stringValue(
+            ArrayUtility::valuePath($backendUser->getTSConfig(), ['options.', 'layout.', 'records.', 'forceView']),
+        );
 
-        if ($forcedView !== null && $this->isValidMode($forcedView)) {
+        if ($forcedView !== '' && $this->isValidMode($forcedView)) {
             return $forcedView;
         }
 

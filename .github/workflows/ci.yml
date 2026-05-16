@@ -26,7 +26,7 @@ jobs:
         run: composer audit --locked --abandoned=report
 
   phpstan:
-    name: PHPStan (Level 9 + PHPat)
+    name: PHPStan (Level max + PHPat)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

@@ -18,7 +18,7 @@ that work across all view modes.
 
 ## Requirements
 
-- TYPO3 v14.0+
+- TYPO3 v14.3 LTS+
 - PHP 8.3+
 
 ## Installation

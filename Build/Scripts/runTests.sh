@@ -29,7 +29,7 @@ Suites:
   unit           Unit test suite.
   functional     Functional test suite (needs a database via env vars).
   architecture   PHPat architecture rules.
-  phpstan        Static analysis at level 9.
+  phpstan        Static analysis at PHPStan level max.
   cgl            PHP-CS-Fixer dry run.
   composer       composer validate + composer audit.
   ci             Run everything except functional (which needs a DB).
