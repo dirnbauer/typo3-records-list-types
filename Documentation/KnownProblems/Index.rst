@@ -121,34 +121,28 @@ Workaround
    view types do not offer drag-and-drop reordering across pagination
    boundaries either, but their reordering is less prominent in the UI.
 
-.. _known-problems-workspace-support:
+.. _known-problems-workspace-files:
 
-Workspace support is experimental
-=================================
+Workspace file (FAL) limitation
+===============================
 
-While the extension includes visual indicators for workspace states
-(new, modified, moved, deleted records) and applies workspace overlays
-via :php:`BackendUtility::workspaceOL()`, **workspace integration has
-not been extensively tested** across all view modes and edge cases.
+TYPO3 does not version physical files. When a workspace draft references
+a file that has since been overwritten in :file:`fileadmin/`, the
+thumbnail in the Grid or Teaser view reflects the *live* binary, not the
+version the draft was built against. This is a platform-level limitation
+of TYPO3 FAL, not specific to this extension.
 
-Potential areas where issues may occur:
+Mitigations:
 
-- Drag-and-drop reordering of records within a workspace
-- Display of workspace-specific record states in Compact and Teaser views
-- Publishing or discarding changes made through alternative view modes
-- Records with complex versioning histories (multiple successive edits)
+-   Upload new files with unique names for every editorial change rather
+    than overwriting existing files.
+-   Prefer static :php:`sys_file_collection` entries (type ``static``) over
+    folder-based collections when workspace isolation matters.
+-   Store confidential documents outside the web root or behind
+    :t3-ext:`secure_downloads`.
 
-If you encounter unexpected behaviour when using this extension in a
-workspace environment, please report it as an issue on the
-`GitHub issue tracker <https://github.com/dirnbauer/typo3-records-list-types/issues>`__.
-
-Include the following information in your report:
-
-- TYPO3 version and PHP version
-- Active view mode (Grid, Compact, Teaser)
-- Steps to reproduce the issue
-- Expected vs. actual behaviour
-- Any error messages from the TYPO3 log or browser console
+See :ref:`workspaces` in the Developer guide for the workspace-aware
+parts of the extension's API.
 
 .. _known-problems-accessibility:
 

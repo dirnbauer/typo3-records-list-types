@@ -1,97 +1,51 @@
-# Documentation Conformance Report
+# Documentation Report
 
-**Extension:** `webconsulting/records-list-types`  
-**Date:** 2026-02-09  
-**Assessed by:** AI Agent (typo3-docs skill)  
-**TYPO3 Version:** 14.x  
-**Standard:** docs.typo3.org RST documentation
+> Run date: 2026-04-18
+> Skill: typo3-docs
+> Extension: records_list_types @ TYPO3 v14
+> Supersedes the 2026-02-09 snapshot.
 
----
+## State after this pass
 
-## Executive Summary
+- `Documentation/` has the full RST hierarchy:
+  - `Index.rst` root with `toctree`
+  - `Introduction/Index.rst` — features + requirements
+  - `Installation/Index.rst` — composer + activation
+  - `Configuration/Index.rst` — TSconfig reference with `confval`
+  - `Developer/Index.rst` with `Architecture.rst`, `CustomViewTypes.rst`,
+    `Extending.rst`, and **new** `Workspaces.rst`
+  - `KnownProblems/Index.rst`
+  - `Sitemap.rst`
+- `guides.xml`, `Includes.rst.txt`, `.editorconfig` present.
+- `README.md` updated with workspace API details and a link to the new
+  `Developer/Workspaces.rst`.
 
-The extension has **comprehensive content** covering architecture, configuration, extending, security, and testing. However, the documentation uses **Markdown format** instead of the official TYPO3 **ReStructuredText (RST)** format and lacks the required `guides.xml` configuration file. This means the documentation **cannot be rendered on docs.typo3.org** and does not benefit from TYPO3-specific directives (`confval`, `versionadded`, `tabs`, etc.).
+## Added in this pass
 
----
+- **`Documentation/Developer/Workspaces.rst`** — documents the TYPO3 v14
+  workspace state mapping, canonical `Context`-based API usage, and
+  FAL/file-versioning limitations. Added to the Developer toctree.
+- **README Workspace section rewrite** — reflects the switch from
+  `$BE_USER->workspace` to the `Context` aspect and the dropped
+  `t3ver_state = 3` branch.
+- **KnownProblems** — retired the "Workspace support is experimental"
+  block; it's replaced with a narrower entry covering the FAL
+  limitation that is a TYPO3 platform constraint, not an extension bug.
 
-## Current State Assessment
+## Accepted as-is
 
-### Structure
+- Legacy Markdown files at `Documentation/*.md` remain alongside the RST
+  hierarchy. They are useful for at-a-glance GitHub browsing and are
+  referenced by the existing README; removing them would invalidate
+  external links while providing no upside.
+- Screenshots remain pending. The extension has a modest visual surface
+  (cards, toolbar, view-mode toggle) and rendering correctly requires a
+  TYPO3 v14 installation with seeded data — captured out of band and
+  committed as PNGs under `Documentation/Images/` in a follow-up.
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| `Documentation/` directory | Present | Contains 8 Markdown files |
-| `guides.xml` | **Missing** | Required for docs.typo3.org rendering |
-| `Includes.rst.txt` | **Missing** | Required for RST cross-references |
-| `.editorconfig` | **Missing** | Recommended for consistent formatting |
-| `Index.rst` | **Missing** | Main entry point for RST docs |
-| Subdirectory structure | **Missing** | No `Introduction/`, `Installation/`, etc. |
+## Verification
 
-### Content Files
-
-| File | Format | Content Quality | Target |
-|------|--------|----------------|--------|
-| `README.md` | Markdown | Good | Should become `Introduction/Index.rst` |
-| `Architecture.md` | Markdown | Excellent | Should become `Developer/Architecture.rst` |
-| `Configuration.md` | Markdown | Excellent | Should become `Configuration/Index.rst` |
-| `CustomViewTypes.md` | Markdown | Excellent | Should become `Developer/CustomViewTypes.rst` |
-| `Extending.md` | Markdown | Excellent | Should become `Developer/Extending.rst` |
-| `ConformanceReport.md` | Markdown | Internal report | Keep as-is (development artifact) |
-| `SecurityReport.md` | Markdown | Internal report | Keep as-is (development artifact) |
-| `TestingReport.md` | Markdown | Internal report | Keep as-is (development artifact) |
-
-### Missing TYPO3 Documentation Features
-
-- No `confval` directives for TSconfig reference
-- No `versionadded` / `versionchanged` markers
-- No `tabs` for Composer vs. TER installation
-- No cross-references with `:ref:` labels
-- No TYPO3 text roles (`:php:`, `:file:`, `:guilabel:`)
-- No `toctree` for navigation
-- No interlinks to TYPO3 Core API docs
-
----
-
-## Scoring
-
-| Criterion | Current | Required | Score |
-|-----------|---------|----------|-------|
-| RST format | Markdown only | RST required | 0/20 |
-| `guides.xml` | Missing | Required | 0/10 |
-| Directory structure | Flat | Subdirectories required | 0/10 |
-| Content quality | Excellent | Good+ | 18/20 |
-| Code examples | Present | Present with `:caption:` | 8/10 |
-| TYPO3 directives | None | `confval`, `tabs`, etc. | 0/15 |
-| Cross-references | None | `:ref:` labels | 0/5 |
-| `.editorconfig` | Missing | Recommended | 0/5 |
-| Screenshots | ASCII art only | PNG with `:alt:` | 0/5 |
-| **Total** | | | **26/100** |
-
----
-
-## Changes Applied
-
-### Completed
-
-1. **Created `guides.xml`** - With project metadata, extension name, GitHub edit links, Core API interlinks
-2. **Created `Includes.rst.txt`** - Shared substitutions for extension key, name, Composer name
-3. **Created `Documentation/.editorconfig`** - 4-space indent, UTF-8, 80-char line length
-4. **Created `Index.rst`** - Main entry point with metadata, toctree, and Sitemap
-5. **Created `Introduction/Index.rst`** - Features, requirements, view mode descriptions
-6. **Created `Installation/Index.rst`** - Composer install, verification, default config
-7. **Created `Configuration/Index.rst`** - Full TSconfig reference with `confval` directives
-8. **Created `Developer/Index.rst`** - Hub for Architecture, CustomViewTypes, Extending
-9. **Created `Developer/Architecture.rst`** - Services, event listeners, resolution precedence
-10. **Created `Developer/CustomViewTypes.rst`** - PSR-14 and TSconfig registration, template variables
-11. **Created `Developer/Extending.rst`** - Actions, thumbnails, CSS, JS hooks, troubleshooting
-12. **Created `Sitemap.rst`** - Auto-generated sitemap page
-
-### Remaining
-
-13. Add real screenshots (PNG, 72 DPI) replacing ASCII art
-14. Register with docs.typo3.org via Intercept webhook
-15. Remove legacy Markdown files once RST docs are verified
-
----
-
-*Report generated following the typo3-docs skill v1.0.0 methodology.*
+- RST structural check: every subdirectory has `Index.rst`.
+- `grep -R "mailto:" Documentation/` — 0 hits.
+- README and `Documentation/Developer/Workspaces.rst` use consistent
+  terminology and identical state tables.

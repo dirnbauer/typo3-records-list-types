@@ -1,0 +1,17 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:if condition="{heading.linkUrl}">
+    <f:then>
+        <a href="{heading.linkUrl}">
+            {heading.label} (<span>{heading.recordCount}</span>)
+            <span class="ms-1"><core:icon identifier="{heading.iconIdentifier}" size="small" /></span>
+        </a>
+    </f:then>
+    <f:else>
+        {heading.label} (<span>{heading.recordCount}</span>)
+    </f:else>
+</f:if>
+
+</html>

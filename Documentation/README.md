@@ -94,7 +94,8 @@ See [Architecture.md](Architecture.md) for technical details on how the extensio
 
 ## Custom View Modes
 
-The extension supports registering custom view modes beyond the built-in `list`, `grid`, and `compact` views.
+The extension supports registering custom view modes beyond the built-in
+`list`, `grid`, `compact`, and `teaser` views.
 
 ### Method 1: PSR-14 Event (Recommended)
 

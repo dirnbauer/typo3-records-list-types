@@ -12,6 +12,9 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects'][\TYPO3\CMS\Backend\Controller\Reco
     'className' => \Webconsulting\RecordsListTypes\Controller\RecordListController::class,
 ];
 
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['htmlSanitizer']['recordsListTypesBackend']
+    = \Webconsulting\RecordsListTypes\Html\BackendFragmentSanitizerBuilder::class;
+
 // =============================================================================
 // AJAX routes are registered in Configuration/Backend/AjaxRoutes.php
 // =============================================================================

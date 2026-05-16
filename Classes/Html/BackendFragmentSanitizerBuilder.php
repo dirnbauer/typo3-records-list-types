@@ -23,33 +23,84 @@ final class BackendFragmentSanitizerBuilder extends DefaultSanitizerBuilder
     {
         $behavior = parent::createBehavior();
 
-        $globalAttrs = [
+        $commonBackendAttrs = [
             ...$this->globalAttrs,
-            new Attr('aria-', Attr::NAME_PREFIX),
-            new Attr('data-', Attr::NAME_PREFIX),
-            new Attr('popovertarget'),
             new Attr('popover'),
+            new Attr('popovertarget'),
+            new Attr('disabled'),
+            new Attr('hidden'),
+        ];
+
+        $buttonAttrs = [
+            ...$commonBackendAttrs,
             new Attr('type'),
             new Attr('name'),
             new Attr('value'),
-            new Attr('disabled'),
-            new Attr('checked'),
-            new Attr('selected'),
-            new Attr('hidden'),
-            new Attr('configuration'),
-            new Attr('subject'),
-            new Attr('ok'),
-            new Attr('close'),
-            new Attr('url'),
-            new Attr('return-url'),
-            new Attr('edit-url'),
         ];
 
+        $anchorAttrs = [
+            ...$commonBackendAttrs,
+            $this->hrefAttr,
+            ...$this->createAttrs('download', 'hreflang', 'ping', 'rel', 'referrerpolicy', 'target', 'type'),
+        ];
+
+        $inputAttrs = array_merge(
+            $commonBackendAttrs,
+            [
+                new Attr('type'),
+                new Attr('name'),
+                new Attr('value'),
+                new Attr('checked'),
+            ],
+        );
+        $contextualTriggerAttrs = array_merge(
+            $commonBackendAttrs,
+            [
+                new Attr('url'),
+                new Attr('edit-url'),
+            ],
+        );
+        $downloadButtonAttrs = array_merge(
+            $commonBackendAttrs,
+            [
+                new Attr('url'),
+                new Attr('subject'),
+                new Attr('ok'),
+                new Attr('close'),
+            ],
+        );
+        $newPageWizardAttrs = array_merge(
+            $commonBackendAttrs,
+            [
+                new Attr('configuration'),
+            ],
+        );
+        $columnSelectorAttrs = array_merge(
+            $commonBackendAttrs,
+            [
+                new Attr('url'),
+                new Attr('table'),
+                new Attr('identifier'),
+                new Attr('preset'),
+                new Attr('return-url'),
+            ],
+        );
+        $clipboardPanelAttrs = array_merge(
+            $commonBackendAttrs,
+            [
+                new Attr('return-url'),
+            ],
+        );
+
         return $behavior->withTags(
-            (new Tag('typo3-backend-contextual-record-edit-trigger', Tag::ALLOW_CHILDREN))->addAttrs(...$globalAttrs),
-            (new Tag('typo3-recordlist-record-download-button'))->addAttrs(...$globalAttrs),
-            (new Tag('typo3-backend-new-page-wizard-button'))->addAttrs(...$globalAttrs),
-            (new Tag('typo3-backend-clipboard-panel'))->addAttrs(...$globalAttrs)
+            (new Tag('button', Tag::ALLOW_CHILDREN))->addAttrs(...$buttonAttrs),
+            (new Tag('input'))->addAttrs(...$inputAttrs),
+            (new Tag('a', Tag::ALLOW_CHILDREN))->addAttrs(...$anchorAttrs),
+            (new Tag('typo3-backend-contextual-record-edit-trigger', Tag::ALLOW_CHILDREN))->addAttrs(...$contextualTriggerAttrs),
+            (new Tag('typo3-recordlist-record-download-button'))->addAttrs(...$downloadButtonAttrs),
+            (new Tag('typo3-backend-new-page-wizard-button'))->addAttrs(...$newPageWizardAttrs),
+            (new Tag('typo3-backend-column-selector-button'))->addAttrs(...$columnSelectorAttrs),
+            (new Tag('typo3-backend-clipboard-panel'))->addAttrs(...$clipboardPanelAttrs),
         );
     }
 }

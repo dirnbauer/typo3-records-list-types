@@ -1,0 +1,54 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:if condition="{header.hasSortUrls}">
+    <f:then>
+        <div class="dropdown dropdown-static">
+            <button
+                class="dropdown-toggle dropdown-toggle-link"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                {header.label}
+                <div class="{f:if(condition: header.isActiveField, then: 'text-primary')}">
+                    <core:icon identifier="{header.iconIdentifier}" size="small" />
+                </div>
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" href="{header.ascUrl}" title="{header.ascLabel}">
+                        <span class="dropdown-item-columns">
+                            <span class="dropdown-item-column dropdown-item-column-icon text-primary">
+                                <f:if condition="{header.isAscActive}">
+                                    <core:icon identifier="actions-dot" size="small" />
+                                </f:if>
+                            </span>
+                            <span class="dropdown-item-column dropdown-item-column-title">
+                                {header.ascLabel}
+                            </span>
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{header.descUrl}" title="{header.descLabel}">
+                        <span class="dropdown-item-columns">
+                            <span class="dropdown-item-column dropdown-item-column-icon text-primary">
+                                <f:if condition="{header.isDescActive}">
+                                    <core:icon identifier="actions-dot" size="small" />
+                                </f:if>
+                            </span>
+                            <span class="dropdown-item-column dropdown-item-column-title">
+                                {header.descLabel}
+                            </span>
+                        </span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </f:then>
+    <f:else>{header.label}</f:else>
+</f:if>
+
+</html>

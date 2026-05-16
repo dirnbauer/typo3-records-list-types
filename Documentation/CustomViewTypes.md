@@ -53,6 +53,27 @@ This matches TYPO3 core behavior: if the user has contextual editing
 enabled, the record opens in the native sheet editor; otherwise TYPO3
 falls back to the regular content-frame FormEngine.
 
+For TYPO3/core-generated backend fragments such as heading action buttons,
+download buttons, or multi-record selection actions, use TYPO3 core's
+sanitizer in your template instead of raw output:
+
+```html
+<f:sanitize.html build="records-list-types-backend-fragments">
+    {table.actionButtons.newRecordButton}
+</f:sanitize.html>
+```
+
+For extension-generated heading and sorting UI, prefer the structured data
+that the built-in templates now use:
+
+- `table.tableHeading`
+- `table.sortingDropdown`
+- `table.sortingModeToggle`
+- `table.sortableColumnHeaders`
+
+These are rendered through shared partials such as `TableHeading`,
+`SortingDropdown`, `SortingModeToggle`, and `SortableColumnHeader`.
+
 ```html
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
@@ -71,7 +92,7 @@ falls back to the regular content-frame FormEngine.
                     </div>
                     <div class="recordlist-heading-actions">
                         <f:if condition="{table.actionButtons.newRecordButton}">
-                            <f:format.raw>{table.actionButtons.newRecordButton}</f:format.raw>
+                            <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
                         </f:if>
                     </div>
                 </div>
@@ -421,10 +442,11 @@ Each item in `tableData`:
 | `tableIcon` | TYPO3 icon identifier |
 | `records` | Array of enriched records |
 | `recordCount` | Total number of records |
-| `actionButtons` | Rendered action button HTML |
-| `sortingDropdownHtml` | Sorting dropdown HTML |
-| `sortingModeToggleHtml` | Manual/field sorting toggle HTML |
-| `sortableColumnHeaders` | Sortable column header HTML (for table views) |
+| `actionButtons` | TYPO3/core-generated table action button fragments |
+| `tableHeading` | Structured heading data (`label`, `recordCount`, `iconIdentifier`, `linkUrl`) |
+| `sortingDropdown` | Structured field-sorting dropdown data |
+| `sortingModeToggle` | Structured manual/field sorting toggle data |
+| `sortableColumnHeaders` | Structured sortable column header data (for table views) |
 | `singleTableUrl` | URL to filter by this table |
 | `clearTableUrl` | URL to show all tables |
 | `displayColumns` | Columns to display |
@@ -434,6 +456,23 @@ Each item in `tableData`:
 | `paginator` | `DatabasePaginator` (TYPO3 Core PaginatorInterface) |
 | `pagination` | `SlidingWindowPagination` (TYPO3 Core PaginationInterface) |
 | `paginationUrl` | Base URL for pagination links |
+
+### Notes about the examples repository
+
+The companion repository
+[`typo3-records-list-examples`](https://github.com/dirnbauer/typo3-records-list-examples)
+focuses on lightweight TSconfig + template examples. Some of those example
+templates intentionally keep their own local heading markup to stay simple
+and extension-free.
+
+This extension's built-in templates are the more systematic reference for:
+
+- structured heading and sorting data
+- shared Fluid partials
+- TYPO3 core `f:sanitize.html` usage for backend fragments
+
+When building new reusable templates, prefer the built-in template
+systematic from `records_list_types`.
 
 Each record in `records`:
 

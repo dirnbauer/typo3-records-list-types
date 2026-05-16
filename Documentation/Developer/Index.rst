@@ -16,3 +16,4 @@ and how to create custom view types.
     Architecture
     CustomViewTypes
     Extending
+    Workspaces

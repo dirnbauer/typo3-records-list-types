@@ -14,16 +14,18 @@
         <testsuite name="Functional">
             <directory>Tests/Functional</directory>
         </testsuite>
-        <testsuite name="Architecture">
-            <directory>Tests/Architecture</directory>
-        </testsuite>
+        <!--
+            Tests/Architecture/ contains phpat Rule classes that are evaluated
+            by PHPStan (see vendor/phpat/phpat/extension.neon in phpstan.neon).
+            They are not PHPUnit tests and must not be registered as such.
+        -->
     </testsuites>
-    <coverage>
-        <report>
-            <clover outputFile="var/log/coverage.xml"/>
-            <html outputDirectory="var/log/coverage"/>
-        </report>
-    </coverage>
+    <!--
+        Coverage reports are generated via coverage-* CLI flags in CI (see
+        .github/workflows/ci.yml). Defining <coverage><report> here causes
+        "No code coverage driver available" warnings when running locally
+        without xdebug/pcov, so we keep it command-line only.
+    -->
     <source>
         <include>
             <directory>Classes</directory>

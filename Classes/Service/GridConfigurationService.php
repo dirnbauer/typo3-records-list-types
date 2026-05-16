@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Service;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Schema\TcaSchemaCapability;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
 
@@ -116,14 +115,12 @@ final class GridConfigurationService implements SingletonInterface
             return $titleField;
         }
 
-        // Fall back to TCA label field
+        // Fall back to the schema's configured label field
         if ($this->tcaSchemaFactory->has($table)) {
-            $schema = $this->tcaSchemaFactory->get($table);
-            if ($schema->hasCapability(TcaSchemaCapability::Label)) {
-                $labelField = $schema->getCapability(TcaSchemaCapability::Label)->getPrimaryFieldName();
-                if (is_string($labelField) && $labelField !== '') {
-                    return $labelField;
-                }
+            $schemaConfig = $this->tcaSchemaFactory->get($table)->getRawConfiguration();
+            $labelField = $schemaConfig['label'] ?? null;
+            if (is_string($labelField) && $labelField !== '') {
+                return $labelField;
             }
         }
 
@@ -207,9 +204,11 @@ final class GridConfigurationService implements SingletonInterface
             return 'hidden';
         }
 
-        $schema = $this->tcaSchemaFactory->get($table);
-        if ($schema->hasCapability(TcaSchemaCapability::RestrictionDisabledField)) {
-            return $schema->getCapability(TcaSchemaCapability::RestrictionDisabledField)->getFieldName();
+        $schemaConfig = $this->tcaSchemaFactory->get($table)->getRawConfiguration();
+        $enableColumns = is_array($schemaConfig['enablecolumns'] ?? null) ? $schemaConfig['enablecolumns'] : [];
+        $disabledField = $enableColumns['disabled'] ?? null;
+        if (is_string($disabledField) && $disabledField !== '') {
+            return $disabledField;
         }
 
         return 'hidden';

@@ -8,6 +8,7 @@ use Doctrine\DBAL\ParameterType;
 use RuntimeException;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
@@ -35,6 +36,7 @@ final class RecordGridDataProvider implements SingletonInterface
         private readonly GridConfigurationService $configurationService,
         private readonly ThumbnailService $thumbnailService,
         private readonly TcaSchemaFactory $tcaSchemaFactory,
+        private readonly Context $context,
     ) {}
 
     /**
@@ -122,7 +124,7 @@ final class RecordGridDataProvider implements SingletonInterface
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
-            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $backendUser->workspace));
+            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $this->getCurrentWorkspaceId()));
 
         $queryBuilder
             ->count('uid')
@@ -141,6 +143,8 @@ final class RecordGridDataProvider implements SingletonInterface
     /**
      * Get the current backend user authentication.
      *
+     * Retained for workspaceOL() calls that still need the user object.
+     *
      * @throws RuntimeException If no backend user is available
      */
     private function getBackendUserAuthentication(): BackendUserAuthentication
@@ -153,6 +157,16 @@ final class RecordGridDataProvider implements SingletonInterface
             );
         }
         return $backendUser;
+    }
+
+    /**
+     * Resolve the current workspace id via the Context aspect — the canonical
+     * TYPO3 v14 API. Falls back to 0 (LIVE) when the aspect is missing.
+     */
+    private function getCurrentWorkspaceId(): int
+    {
+        $workspaceId = $this->context->getPropertyFromAspect('workspace', 'id', 0);
+        return is_numeric($workspaceId) ? (int) $workspaceId : 0;
     }
 
     /**
@@ -209,7 +223,7 @@ final class RecordGridDataProvider implements SingletonInterface
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
-            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $backendUser->workspace));
+            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $this->getCurrentWorkspaceId()));
 
         $queryBuilder
             ->select('*')
@@ -618,20 +632,19 @@ final class RecordGridDataProvider implements SingletonInterface
      */
     private function getWorkspaceState(array $row): ?string
     {
-        // Check if we're in a workspace context
-        $backendUser = $GLOBALS['BE_USER'] ?? null;
-        if (!$backendUser instanceof BackendUserAuthentication || $backendUser->workspace === 0) {
-            return null; // Live workspace, no special state
+        if ($this->getCurrentWorkspaceId() === 0) {
+            return null;
         }
 
-        // Check t3ver_state field
+        // TYPO3 v14 only maps 1, 2 and 4. The legacy t3ver_state = 3
+        // ("move placeholder") was removed in v11.
         $t3verStateRaw = $row['t3ver_state'] ?? 0;
         $t3verState = is_numeric($t3verStateRaw) ? (int) $t3verStateRaw : 0;
 
         return match ($t3verState) {
             1 => 'new',
             2 => 'deleted',
-            3, 4 => 'move',
+            4 => 'move',
             default => $this->isChangedInWorkspace($row) ? 'changed' : null,
         };
     }
@@ -681,7 +694,7 @@ final class RecordGridDataProvider implements SingletonInterface
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
-            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $backendUser->workspace));
+            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $this->getCurrentWorkspaceId()));
 
         $queryBuilder
             ->select('*')

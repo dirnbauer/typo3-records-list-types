@@ -194,16 +194,26 @@ The extension is built with **WCAG 2.1** compliance throughout:
 
 ## Workspace Support
 
-When working in a TYPO3 workspace, records display color-coded visual indicators:
+The extension is fully workspace-aware on TYPO3 v14:
 
-| State | Color | Header Style |
-|-------|-------|--------------|
-| New | Blue | Blue background + left border |
-| Modified | Purple | Purple background + left border |
-| Moved | Cyan | Cyan background + left border |
-| Deleted | Red | Red background + strikethrough title |
+- Queries use `WorkspaceRestriction` keyed to the workspace reported by
+  the `Context` aspect (`getPropertyFromAspect('workspace', 'id')`), not
+  the legacy `$BE_USER->workspace` property.
+- Every fetched row is overlaid with `BackendUtility::workspaceOL()`
+  before enrichment, so the view always reflects the workspace version
+  of a record.
+- `t3ver_state` is mapped to colour-coded visual indicators. The legacy
+  `t3ver_state = 3` branch was removed in TYPO3 v11 and is not handled.
 
-Workspace overlays are properly applied to all records via `BackendUtility::workspaceOL()`.
+| State | `t3ver_state` | Color | Header Style |
+|-------|---------------|-------|--------------|
+| New | 1 | Blue | Blue background + left border |
+| Modified | 0 + `t3ver_oid > 0` | Purple | Purple background + left border |
+| Moved | 4 | Cyan | Cyan background + left border |
+| Deleted | 2 | Red | Red background + strikethrough title |
+
+See [Documentation/Developer/Workspaces.rst](Documentation/Developer/Workspaces.rst)
+for the full API reference and known FAL limitations.
 
 ## Dark Mode
 
@@ -259,13 +269,32 @@ base.css            ← Loaded for ALL view modes (always first)
 | `RegisterViewModesEvent` | Register, remove, or modify custom view types |
 | `GridViewButtonBarListener` | Injects view mode toggle buttons into the DocHeader |
 | `GridViewQueryListener` | Modifies database queries for grid view |
-| `GridViewRecordActionsListener` | Collects and caches record action buttons |
+| `GridViewRecordActionsListener` | Collects and caches record action fragments from TYPO3 record-list events |
 
-### ViewHelpers
+### Sanitization
 
-| ViewHelper | Purpose |
-|------------|---------|
-| `RecordActionsViewHelper` | Renders cached record actions in templates (`<gridview:recordActions>`) |
+| Item | Purpose |
+|------|---------|
+| `BackendFragmentSanitizerBuilder` | TYPO3 core htmlSanitizer preset for backend button/component fragments |
+| `f:sanitize.html(build: 'records-list-types-backend-fragments')` | Sanitizes TYPO3/core-generated backend fragments before rendering in Fluid |
+
+### Template systematic
+
+Built-in templates follow a consistent rendering split:
+
+- **Structured data rendered directly in Fluid** for extension-owned UI such as:
+  - `table.tableHeading`
+  - `table.sortingDropdown`
+  - `table.sortingModeToggle`
+  - `table.sortableColumnHeaders`
+- **TYPO3/core-generated backend fragments sanitized before output** for:
+  - `table.actionButtons.*`
+  - `table.multiRecordSelectionActionsHtml`
+  - event-driven record action fragments
+
+This keeps custom markup out of PHP string assembly wherever practical and
+reserves sanitization for backend fragments that still originate from TYPO3
+component APIs.
 
 ### JavaScript Modules
 
@@ -289,7 +318,7 @@ The extension follows TYPO3 security best practices:
 - **CSRF Protection**: AJAX endpoints use TYPO3's built-in token handling
 - **Access Control**: Full integration with TYPO3's backend user permissions and workspace restrictions
 - **Input Validation**: View mode, table names, UIDs, and sort parameters are validated and sanitized
-- **XSS Prevention**: Fluid templates with proper escaping; no raw HTML output of user data
+- **XSS Prevention**: Fluid templates auto-escape by default; TYPO3 core `f:sanitize.html` is used for trusted backend-generated fragments
 
 ## Testing
 
@@ -336,8 +365,10 @@ records_list_types/
 │   │   ├── ThumbnailService.php               # FAL image processing
 │   │   ├── ViewModeResolver.php               # View mode determination
 │   │   └── ViewTypeRegistry.php               # View type management
+│   ├── Html/
+│   │   └── BackendFragmentSanitizerBuilder.php # TYPO3 htmlSanitizer preset for backend fragments
 │   └── ViewHelpers/
-│       └── RecordActionsViewHelper.php        # Record actions rendering
+│       └── RecordActionsViewHelper.php        # Access to cached record action fragments
 ├── Configuration/
 │   ├── Backend/AjaxRoutes.php                 # AJAX route definitions
 │   ├── Icons.php                              # Icon registration
@@ -353,8 +384,11 @@ records_list_types/
 │   │   │   ├── Card.html                      # Grid view card partial
 │   │   │   ├── CompactRow.html                # Compact view row partial
 │   │   │   ├── Pagination.html                # Pagination navigation (Core list view style)
-│   │   │   ├── RecordActions.html             # Record action buttons
-│   │   │   ├── SortingDropdown.html           # Field sorting dropdown
+│   │   │   ├── RecordActions.html             # Sanitized record action fragments
+│   │   │   ├── SortableColumnHeader.html      # Structured sortable table header
+│   │   │   ├── SortingDropdown.html           # Structured field sorting dropdown
+│   │   │   ├── SortingModeToggle.html         # Structured manual/field sorting toggle
+│   │   │   ├── TableHeading.html              # Structured table heading
 │   │   │   ├── TeaserCard.html                # Teaser view card partial
 │   │   │   └── ViewSwitcher.html              # View mode toggle buttons
 │   │   └── Templates/
@@ -378,13 +412,12 @@ records_list_types/
 │   ├── Functional/                            # Functional tests with fixtures
 │   └── Architecture/                          # PHPat architecture tests
 ├── composer.json
-├── ext_emconf.php
 └── ext_localconf.php
 ```
 
 ## Known Limitations
 
-- **Workspace support is experimental.** Visual indicators for workspace states are implemented, but workspace integration has not been extensively tested across all view modes and edge cases (e.g., drag-and-drop reordering within workspaces, publishing changes). If you encounter issues in a workspace environment, please [report them on GitHub](https://github.com/dirnbauer/typo3-records-list-types/issues).
+- **Workspace FAL limitation.** TYPO3 does not version physical files. Thumbnails rendered in the Grid and Teaser views always reflect the live binary, regardless of the active workspace. When preparing workspace content that changes imagery, upload new files with unique names instead of overwriting existing ones. See [Documentation/Developer/Workspaces.rst](Documentation/Developer/Workspaces.rst) for the full rationale.
 
 - **Drag-and-drop accessibility has limited assistive technology coverage.** Keyboard-based drag-and-drop is implemented with ARIA attributes and live region announcements, but has primarily been tested with keyboard navigation in modern browsers. Testing with dedicated screen readers (NVDA, JAWS, VoiceOver) has been limited. If drag-and-drop reordering is critical for users relying on assistive technology, the standard List View provides a more thoroughly tested fallback. Please [report accessibility barriers on GitHub](https://github.com/dirnbauer/typo3-records-list-types/issues).
 
