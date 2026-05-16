@@ -17,6 +17,8 @@
     --cv-bg-hidden: var(--typo3-surface-container-lowest, #f5f5f5);
     --cv-border: #e4e4e7;
     --cv-border-muted: #f0f0f2;
+    --cv-tree-line: color-mix(in srgb, var(--typo3-component-border-color, var(--cv-border)) 72%, transparent);
+    --cv-tree-line-width: 1px;
     --cv-text: var(--typo3-text-color-base, #18181b);
     --cv-text-muted: var(--typo3-component-color, #52525b);
     --cv-text-subtle: var(--typo3-text-color-variant, #a1a1aa);
@@ -51,7 +53,7 @@
     
     /* Fixed column widths */
     --cv-col-checkbox: 36px;
-    --cv-col-icon: 26px;
+    --cv-col-icon: 34px;
     --cv-col-uid: 60px;
     --cv-col-title: 200px;
     --cv-col-status: 28px;
@@ -415,14 +417,20 @@
     border-bottom-right-radius: var(--cv-radius-sm);
 }
 
-/* Zebra striping - ensure fixed columns match row background (opaque for masking) */
-.compactview-row:nth-child(even) .compactview-td {
-    background-color: var(--cv-bg-muted);
+/* Zebra striping runs per GROUP — a parent and all of its translations
+   share the same background, so the tree connector reads as one unit.
+   The parity class is pre-computed in PHP per enriched record.
+
+   Concrete hex values (not CSS variables) so the contrast is guaranteed
+   visible in every install regardless of which TYPO3 surface tokens a
+   project overrides. light-dark() keeps both themes consistent. */
+.compactview-row--group-even .compactview-td {
+    background-color: light-dark(#ececef, #2a2a2e);
 }
 
-.compactview-row:nth-child(even) .compactview-td--fixed-left,
-.compactview-row:nth-child(even) .compactview-td--fixed-right {
-    background-color: var(--cv-bg-muted) !important;
+.compactview-row--group-even .compactview-td--fixed-left,
+.compactview-row--group-even .compactview-td--fixed-right {
+    background-color: light-dark(#ececef, #2a2a2e) !important;
 }
 
 /* Hover state - all cells use the same opaque accent background.
@@ -483,8 +491,27 @@
     width: var(--cv-col-icon);
     min-width: var(--cv-col-icon);
     max-width: var(--cv-col-icon);
-    text-align: center;
-    padding: 0.1875rem 0.125rem;
+    /* Parent icon sits flush-left so the translation tree connector can
+       continue naturally from the icon's horizontal center.
+       Position is inherited from .compactview-td--fixed-left (sticky) —
+       DO NOT override here, or the cell drops out of the sticky layout. */
+    text-align: left;
+    padding: 0.1875rem 0;
+}
+
+/* When a parent row is followed by a translation row, draw the bottom
+   half of the vertical tree line from the icon's center (y=50%) to the
+   bottom of this cell. sticky already creates a positioning context, so
+   the absolutely-positioned ::after pins inside the td correctly. */
+.compactview-row:not(.compactview-row--translation):has(+ .compactview-row--translation) .compactview-td--icon::after {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    bottom: 0;
+    width: var(--cv-tree-line-width);
+    background: var(--cv-tree-line);
+    pointer-events: none;
 }
 
 .compactview-td--uid {
@@ -499,7 +526,7 @@
     width: var(--cv-col-title);
     min-width: 150px;
     color: var(--cv-text);
-    font-weight: 500;
+    /* Normal weight — hierarchy is conveyed by indent + tree connector, not bold */
 }
 
 /* Spacer column - no width constraints, absorbs all remaining space
@@ -538,6 +565,10 @@
     align-items: center;
     justify-content: center;
     color: var(--cv-text-subtle);
+    /* Sit above the tree connector pseudo so the line doesn't bleed
+       through the icon artwork. */
+    position: relative;
+    z-index: 2;
 }
 
 .compactview-row__icon .icon {
@@ -837,24 +868,159 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
    ============================================================================= */
 
 .compactview-row--translation .compactview-td {
-    background-color: var(--cv-bg-subtle);
-    font-size: 0.75rem;
-    padding-top: 0.125rem;
-    padding-bottom: 0.125rem;
+    /* Same font size as parent rows — hierarchy is conveyed by the tree
+       connector + indent, not by a smaller type scale. Background comes
+       from the group-parity zebra so parent + translations share one
+       stripe. */
+    padding-top: 0.1875rem;
+    padding-bottom: 0.1875rem;
 }
 
-.compactview-row--translation .compactview-td--fixed-left,
-.compactview-row--translation .compactview-td--fixed-right {
-    background-color: var(--cv-bg-subtle) !important;
+/* Translation-row icon cell: indent the record icon so the cell reads
+   like a tree branch, and draw a clear ├ / └ connector that starts at
+   the horizontal center of the parent icon. Position stays sticky — we
+   inherit it from the fixed-left base rule.
+
+   Parent icon is 16px wide, flush-left (padding-left:0) → center at x=8.
+   The tree connector is centred on that column so the branch reads clean.
+   Background intentionally NOT overridden here — we inherit whatever the
+   group-parity zebra set, so the whole group reads as one stripe. */
+.compactview-row--translation .compactview-td--icon {
+    padding-left: 1.125rem; /* 18px — leaves the translation icon clear of the tick */
 }
 
-.compactview-row--translation .compactview-td--title {
-    padding-left: 1.25rem;
+/* Vertical line from top to the middle of the row (last-child shape └). */
+.compactview-row--translation .compactview-td--icon::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 50%;
+    width: var(--cv-tree-line-width);
+    background: var(--cv-tree-line);
+}
+
+/* Middle row in a group (followed by another translation) extends the
+   vertical line through the full row — reads as ├. */
+.compactview-row--translation:has(+ .compactview-row--translation) .compactview-td--icon::before {
+    bottom: 0;
+}
+
+/* Horizontal tick from the vertical line to the translation icon. */
+.compactview-row--translation .compactview-td--icon::after {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    width: 10px;
+    height: var(--cv-tree-line-width);
+    background: var(--cv-tree-line);
+}
+
+.compactview-row--translation .compactview-row__icon {
+    opacity: 0.55;
+    position: relative;
+    z-index: 1; /* sit above the branch connector */
+}
+
+.compactview-row--translation-untranslated .compactview-row__icon {
+    opacity: 0.3;
+}
+
+/* Inline flag icon sitting in front of a title (used by both parent
+   and translation rows — translations emphasise the target language,
+   parents show the record's own language). */
+.compactview-row__lang-flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 0.375rem;
+    vertical-align: -3px;
+}
+
+.compactview-row__lang-flag .icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Keep flag + title on a single line. The base title-link is
+   `display: block`, so we opt out for any title cell that carries a
+   flag (parent or translation). inline-block keeps ellipsis truncation. */
+.compactview-td--title:has(.compactview-row__lang-flag) .compactview-row__title-link,
+.compactview-row--translation .compactview-row__title-link,
+.compactview-row--translation .compactview-row__title-placeholder {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 1.75rem);
+    vertical-align: middle;
+}
+
+.compactview-row--translation-untranslated .compactview-row__lang-flag {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+}
+
+/* FREE · {lang} chip for non-connected translation rows */
+.compactview-row__lang-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.375rem;
+    margin-right: 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cv-text-muted);
+    background: color-mix(in srgb, var(--cv-text-muted) 10%, transparent);
+    border-radius: 999px;
+    vertical-align: middle;
+}
+
+.compactview-row__lang-chip--free {
+    color: var(--cv-accent);
+    background: color-mix(in srgb, var(--cv-accent) 14%, transparent);
+}
+
+.compactview-row__lang-chip--free > span {
+    opacity: 0.55;
 }
 
 .compactview-row--translation .compactview-row__title-link {
-    color: var(--cv-text-muted);
+    color: var(--cv-text);
     font-weight: 400;
+}
+
+.compactview-row--translation-untranslated .compactview-row__title-placeholder {
+    color: var(--cv-text-muted);
+    font-style: italic;
+}
+
+.compactview-row--translation-untranslated .compactview-row__flag {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+}
+
+.compactview-row__uid--muted {
+    color: var(--cv-text-muted);
+    opacity: 0.5;
+}
+
+/* Localize-to button styling (mirrors other compact actions) */
+.cv-action--create {
+    color: var(--cv-accent);
+    border-color: color-mix(in srgb, var(--cv-accent) 30%, transparent);
+    background: color-mix(in srgb, var(--cv-accent) 10%, transparent);
+}
+
+.cv-action--create:hover {
+    color: var(--cv-accent);
+    border-color: var(--cv-accent);
+    background: color-mix(in srgb, var(--cv-accent) 18%, transparent);
 }
 
 /* Workspace state indicators on translation rows */
@@ -877,12 +1043,9 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     border-left: 3px dashed var(--cv-accent);
 }
 
-/* Dark mode workspace state backgrounds for translation rows */
-[data-color-scheme="dark"] .compactview-row--translation .compactview-td,
-[data-color-scheme="dark"] .compactview-row--translation .compactview-td--fixed-left,
-[data-color-scheme="dark"] .compactview-row--translation .compactview-td--fixed-right {
-    background-color: var(--cv-bg-subtle) !important;
-}
+/* Dark-mode background override removed intentionally — translations
+   inherit the parent group's zebra stripe so the whole group reads as
+   one unit. */
 
 /* Note: Sorting toggle, pagination, and recordlist heading base styles
    are in base.css which is loaded automatically for all view modes. */

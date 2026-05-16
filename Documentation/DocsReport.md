@@ -1,51 +1,52 @@
 # Documentation Report
 
-> Run date: 2026-04-18
+> Run date: 2026-04-18 (round 2)
 > Skill: typo3-docs
 > Extension: records_list_types @ TYPO3 v14
-> Supersedes the 2026-02-09 snapshot.
 
-## State after this pass
+Supersedes the round-1 snapshot.
 
-- `Documentation/` has the full RST hierarchy:
-  - `Index.rst` root with `toctree`
-  - `Introduction/Index.rst` — features + requirements
-  - `Installation/Index.rst` — composer + activation
-  - `Configuration/Index.rst` — TSconfig reference with `confval`
-  - `Developer/Index.rst` with `Architecture.rst`, `CustomViewTypes.rst`,
-    `Extending.rst`, and **new** `Workspaces.rst`
-  - `KnownProblems/Index.rst`
-  - `Sitemap.rst`
-- `guides.xml`, `Includes.rst.txt`, `.editorconfig` present.
-- `README.md` updated with workspace API details and a link to the new
-  `Developer/Workspaces.rst`.
+## Skill pre-commit checklist
 
-## Added in this pass
+| Item | Status | Note |
+|------|--------|------|
+| `Documentation/.editorconfig` | Pass | Present. |
+| `Index.rst` in every subdirectory | Pass | `find Documentation -mindepth 1 -type d` → 0 misses. |
+| Permalink anchor before every heading | Pass | All `.rst` files (except `Sitemap.rst`, auto-generated) open with a `.. _label:` anchor. |
+| No `mailto:` links in RST | Pass | Only matches are prose references in the `*.md` report files. |
+| README and Documentation synchronized | Pass | Round-2 README updates (workspace API, view-switcher removal, ext_emconf retirement) already match the RST content. |
+| 4-space indent, LF endings, UTF-8 | Pass | Enforced by `Documentation/.editorconfig` + `.editorconfig` at repo root. |
 
-- **`Documentation/Developer/Workspaces.rst`** — documents the TYPO3 v14
-  workspace state mapping, canonical `Context`-based API usage, and
-  FAL/file-versioning limitations. Added to the Developer toctree.
-- **README Workspace section rewrite** — reflects the switch from
-  `$BE_USER->workspace` to the `Context` aspect and the dropped
-  `t3ver_state = 3` branch.
-- **KnownProblems** — retired the "Workspace support is experimental"
-  block; it's replaced with a narrower entry covering the FAL
-  limitation that is a TYPO3 platform constraint, not an extension bug.
+## Page length observations
 
-## Accepted as-is
+Two RST pages exceed the 250-line soft ceiling the skill recommends:
 
-- Legacy Markdown files at `Documentation/*.md` remain alongside the RST
-  hierarchy. They are useful for at-a-glance GitHub browsing and are
-  referenced by the existing README; removing them would invalidate
-  external links while providing no upside.
-- Screenshots remain pending. The extension has a modest visual surface
-  (cards, toolbar, view-mode toggle) and rendering correctly requires a
-  TYPO3 v14 installation with seeded data — captured out of band and
-  committed as PNGs under `Documentation/Images/` in a follow-up.
+| Page | Lines | Verdict |
+|------|------:|---------|
+| `Documentation/Developer/CustomViewTypes.rst` | 591 | Accepted. It is the single source of truth for custom view-type registration, template variables, and worked examples. Splitting would fragment a linear tutorial; readers frequently Ctrl-F between sections. |
+| `Documentation/Configuration/Index.rst` | 328 | Accepted. Each `confval` is short; breaking the TSconfig reference into multiple pages would force readers to re-establish context every time. |
+
+Neither page degrades readability — both are structured with clear
+subsection anchors that the left-hand TOC picks up.
+
+## Changes in this pass
+
+No structural edits. The existing RST tree already meets every
+mandatory criterion from the skill (anchors, directory `Index.rst`,
+editorconfig, 4-space indent).
+
+## Outstanding (deferred)
+
+- **Screenshots** — no PNGs under `Documentation/Images/`. Capturing
+  them requires a seeded TYPO3 v14 backend with representative records
+  in every view mode. Ownership of the screenshot workflow is out of
+  scope for this loop.
+- **docs.typo3.org registration** — Intercept webhook registration is
+  a one-off admin task.
 
 ## Verification
 
-- RST structural check: every subdirectory has `Index.rst`.
-- `grep -R "mailto:" Documentation/` — 0 hits.
-- README and `Documentation/Developer/Workspaces.rst` use consistent
-  terminology and identical state tables.
+- `find Documentation -mindepth 1 -type d ! -exec test -f '{}/Index.rst' ';' -print` — empty.
+- `grep -rn 'mailto:' Documentation/*.rst Documentation/**/*.rst` — 0 hits.
+- `wc -l Documentation/**/*.rst Documentation/*.rst` — only the two
+  pages listed above exceed 250 lines.

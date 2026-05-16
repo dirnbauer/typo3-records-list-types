@@ -4,18 +4,28 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Controller;
 
+use Doctrine\DBAL\ParameterType;
 use Exception;
+use JsonException;
+use Override;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use ReflectionException;
 use ReflectionMethod;
 use RuntimeException;
+use TYPO3\CMS\Backend\Context\PageContext;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
+use TYPO3\CMS\Backend\Module\ModuleData;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
+use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
+use TYPO3\CMS\Core\Context\Context;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
@@ -53,13 +63,19 @@ final class RecordListController extends CoreRecordListController
     private bool $clipboardEnabled = false;
 
     /**
+     * Active request captured during mainAction() so that
+     * parent-overridden hooks (renderPageTranslations) can access it.
+     */
+    private ?ServerRequestInterface $currentRequest = null;
+
+    /**
      * Get the ViewTypeRegistry from the DI container.
      * XClasses can't use constructor injection for additional dependencies,
      * so we fetch it from the container on demand.
      */
-    protected function getViewTypeRegistry(): ViewTypeRegistry
+    private function getViewTypeRegistry(): ViewTypeRegistry
     {
-        if ($this->viewTypeRegistry === null) {
+        if (!$this->viewTypeRegistry instanceof ViewTypeRegistry) {
             $registry = GeneralUtility::getContainer()->get(ViewTypeRegistry::class);
             if (!$registry instanceof ViewTypeRegistry) {
                 throw new RuntimeException('ViewTypeRegistry not available from container', 1735600200);
@@ -81,8 +97,10 @@ final class RecordListController extends CoreRecordListController
      *
      * We replicate the parent's initialization to ensure buttons and context are set up.
      */
+    #[Override]
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
+        $this->currentRequest = $request;
         // Get view mode resolver
         $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
 
@@ -108,8 +126,8 @@ final class RecordListController extends CoreRecordListController
         // Initialize from parent's flow - type-narrow attributes for PHPStan
         $pageContextAttr = $request->getAttribute('pageContext');
         $moduleDataAttr = $request->getAttribute('moduleData');
-        if (!$pageContextAttr instanceof \TYPO3\CMS\Backend\Context\PageContext
-            || !$moduleDataAttr instanceof \TYPO3\CMS\Backend\Module\ModuleData) {
+        if (!$pageContextAttr instanceof PageContext
+            || !$moduleDataAttr instanceof ModuleData) {
             return parent::mainAction($request);
         }
         $this->pageContext = $pageContextAttr;
@@ -252,13 +270,13 @@ final class RecordListController extends CoreRecordListController
 
         // Search box - use full searchLevels (grid/compact now support search properly)
         $searchBoxHtml = '';
-        if ($this->allowSearch && $this->moduleData !== null && (bool) $this->moduleData->get('searchBox')) {
+        if ($this->allowSearch && $this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('searchBox')) {
             $searchBoxHtml = $this->renderSearchBox($request, $dbList, $this->searchTerm, $searchLevels);
         }
 
         // Clipboard
         $clipboardHtml = '';
-        if ($this->moduleData !== null && (bool) $this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
+        if ($this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
             $clipboardHtml = '<hr class="spacer"><typo3-backend-clipboard-panel return-url="' . htmlspecialchars((string) $dbList->listURL()) . '"></typo3-backend-clipboard-panel>';
         }
 
@@ -299,6 +317,7 @@ final class RecordListController extends CoreRecordListController
      * This ensures the view mode is preserved when submitting a search and that
      * the search actually goes to the grid view controller, not the core list view.
      */
+    #[Override]
     protected function renderSearchBox(
         ServerRequestInterface $request,
         DatabaseRecordList $dbList,
@@ -325,7 +344,7 @@ final class RecordListController extends CoreRecordListController
 
         try {
             $baseUrl = (string) $uriBuilder->buildUriFromRoute('records', $searchParams);
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Fallback to dbList URL if route building fails
             $baseUrl = (string) $dbList->listURL('', '-1', 'pointer,searchTerm,displayMode');
             $separator = str_contains($baseUrl, '?') ? '&' : '?';
@@ -338,13 +357,11 @@ final class RecordListController extends CoreRecordListController
             $searchLevelItems = $searchLevelCfg['items'];
         }
 
-        $searchBox = GeneralUtility::makeInstance(RecordSearchBoxComponent::class)
+        return GeneralUtility::makeInstance(RecordSearchBoxComponent::class)
             ->setAllowedSearchLevels($searchLevelItems)
             ->setSearchWord($searchWord)
             ->setSearchLevel($searchLevels)
             ->render($request, $baseUrl);
-
-        return $searchBox;
     }
 
     /**
@@ -357,7 +374,7 @@ final class RecordListController extends CoreRecordListController
      * toggle, column headers, language flags, middleware warning) for every
      * view -- templates simply ignore what they don't need.
      */
-    protected function renderViewContent(
+    private function renderViewContent(
         ServerRequestInterface $request,
         DatabaseRecordList $dbList,
         int $pageId,
@@ -579,7 +596,7 @@ final class RecordListController extends CoreRecordListController
                     }
                 }
                 $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
-            } catch (Exception $e) {
+            } catch (Exception) {
             }
 
             // Display columns (from ViewTypeRegistry config)
@@ -595,9 +612,34 @@ final class RecordListController extends CoreRecordListController
             // Enrich records
             $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
             $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
+            $enrichedRecords = $this->enrichRecordsWithPermissions($enrichedRecords, $tableName);
 
             // Separate connected translations from default-language / free-mode records
             $enrichedRecords = $this->groupTranslationsOnRecords($enrichedRecords, $tableName, $pageId, $recordGridDataProvider);
+
+            // Assign a per-GROUP zebra class here so every row a template
+            // renders (parent + all its translation slots) ends up with the
+            // same `groupClass`. Doing it in PHP removes Fluid's inline
+            // expression / boolean edge cases that were silently dropping
+            // the class client-side.
+            $groupIndex = 0;
+            foreach ($enrichedRecords as &$recordRef) {
+                $groupIndex++;
+                $groupClass = ($groupIndex % 2 === 0)
+                    ? 'compactview-row--group-even'
+                    : 'compactview-row--group-odd';
+                $recordRef['groupClass'] = $groupClass;
+                if (is_array($recordRef['translations'] ?? null)) {
+                    /** @var array<int, array<string, mixed>> $translations */
+                    $translations = $recordRef['translations'];
+                    foreach ($translations as &$translationRef) {
+                        $translationRef['groupClass'] = $groupClass;
+                    }
+                    unset($translationRef);
+                    $recordRef['translations'] = $translations;
+                }
+            }
+            unset($recordRef);
 
             // Sorting dropdown / toggle data
             $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
@@ -624,7 +666,9 @@ final class RecordListController extends CoreRecordListController
                 );
             }
 
-            // Sortable column headers (used by CompactView template)
+            // Sortable column headers (used by CompactView template). In
+            // single-table mode we also enable native "Edit this column"
+            // multi-edit entries inside each header dropdown.
             $sortableColumnHeaders = $this->getSortableColumnHeaders(
                 $tableName,
                 $displayColumns,
@@ -633,6 +677,15 @@ final class RecordListController extends CoreRecordListController
                 $pageId,
                 $viewMode,
                 $request,
+                $isSingleTableMode,
+            );
+            $bulkEditHeader = $this->buildBulkEditHeader(
+                $tableName,
+                $displayColumns,
+                $pageId,
+                $viewMode,
+                $request,
+                $isSingleTableMode,
             );
 
             // Last record UID for drag-drop end dropzone (used by GridView template)
@@ -672,11 +725,13 @@ final class RecordListController extends CoreRecordListController
                 'records' => $enrichedRecords,
                 'recordCount' => $recordCount,
                 'hasMore' => $hasMore,
+                'multiSelectEnabled' => true,
                 'lastRecordUid' => $lastRecordUid,
                 'actionButtons' => $actionButtons,
                 'sortingDropdown' => $sortingDropdown,
                 'sortingModeToggle' => $sortingModeToggle,
                 'sortableColumnHeaders' => $sortableColumnHeaders,
+                'bulkEditHeader' => $bulkEditHeader,
                 'singleTableUrl' => $singleTableUrl,
                 'clearTableUrl' => $clearTableUrl,
                 'formActionUrl' => $singleTableUrl,
@@ -745,7 +800,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<int, string> $fieldNames Array of field names to include
      * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
      */
-    protected function getSpecificDisplayColumns(string $tableName, array $fieldNames): array
+    private function getSpecificDisplayColumns(string $tableName, array $fieldNames): array
     {
         $columns = [];
         $tcaForTable = $this->getTcaForTable($tableName);
@@ -806,7 +861,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $tableName The table name
      * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
      */
-    protected function getTeaserDisplayColumns(string $tableName): array
+    private function getTeaserDisplayColumns(string $tableName): array
     {
         $columns = [];
         $tcaForTable = $this->getTcaForTable($tableName);
@@ -879,7 +934,7 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return array<int, string> List of table names
      */
-    protected function getSearchableTables(
+    private function getSearchableTables(
         int $pageId,
         string $specificTable,
         string $searchTerm,
@@ -899,7 +954,10 @@ final class RecordListController extends CoreRecordListController
 
         $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
         foreach ($allTca as $tableName => $tca) {
-            if (!is_string($tableName) || !is_array($tca)) {
+            if (!is_string($tableName)) {
+                continue;
+            }
+            if (!is_array($tca)) {
                 continue;
             }
             // Skip hidden tables
@@ -932,7 +990,7 @@ final class RecordListController extends CoreRecordListController
                     if ($hasRecords) {
                         $tables[] = $tableName;
                     }
-                } catch (Exception $e) {
+                } catch (Exception) {
                     // Table might not be accessible, skip it
                     continue;
                 }
@@ -961,7 +1019,7 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return DatabaseRecordList The initialized DatabaseRecordList
      */
-    protected function createDatabaseRecordListForTable(
+    private function createDatabaseRecordListForTable(
         string $tableName,
         int $pageId,
         string $searchTerm,
@@ -971,10 +1029,10 @@ final class RecordListController extends CoreRecordListController
         $backendUser = $this->getBackendUserAuthentication();
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
         $dbList->setRequest($request);
-        if (!isset($this->moduleData)) {
+        if (!$this->moduleData instanceof ModuleData) {
             $this->moduleData = null;
         }
-        if ($this->moduleData !== null) {
+        if ($this->moduleData instanceof ModuleData) {
             $dbList->setModuleData($this->moduleData);
         }
         $dbList->calcPerms = $this->pageContext->pagePermissions;
@@ -1001,7 +1059,7 @@ final class RecordListController extends CoreRecordListController
         if (is_array($tableDisplayOrder)) {
             $dbList->setTableDisplayOrder($tableDisplayOrder);
         }
-        $clipboardEnabled = $this->moduleData !== null && (bool) $this->moduleData->get('clipBoard');
+        $clipboardEnabled = $this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('clipBoard');
         $dbList->clipObj = $this->initializeClipboard($request, $clipboardEnabled);
         $dbList->start($pageId, $tableName, 0, $searchTerm, $searchLevels);
         return $dbList;
@@ -1022,7 +1080,7 @@ final class RecordListController extends CoreRecordListController
      * @param int $offset Number of records to skip (for pagination)
      * @return array<int, array<string, mixed>> Array of enriched record data
      */
-    protected function getRecordsUsingDbList(
+    private function getRecordsUsingDbList(
         ServerRequestInterface $request,
         string $tableName,
         int $pageId,
@@ -1037,8 +1095,8 @@ final class RecordListController extends CoreRecordListController
     ): array {
         $records = [];
         $recordsByIdentity = [];
-        $backendUser = $this->getBackendUserAuthentication();
-        $useWorkspaceReduction = $backendUser->workspace > 0;
+        $workspaceId = $this->getCurrentWorkspaceId();
+        $useWorkspaceReduction = $workspaceId > 0;
         $recordGridDataProvider ??= GeneralUtility::makeInstance(RecordGridDataProvider::class);
 
         try {
@@ -1053,9 +1111,10 @@ final class RecordListController extends CoreRecordListController
             $result = $queryBuilder->executeQuery();
 
             while ($row = $result->fetchAssociative()) {
-                // Apply workspace overlay to get the correct version for the current workspace
-                $backendUser = $this->getBackendUserAuthentication();
-                BackendUtility::workspaceOL($tableName, $row, $backendUser->workspace, true);
+                // Apply workspace overlay to get the correct version for the
+                // current workspace. The -99 placeholder tells workspaceOL()
+                // to read the active workspace id itself.
+                BackendUtility::workspaceOL($tableName, $row, -99, true);
 
                 // workspaceOL returns false/null if record is deleted in workspace or should not be shown
                 if (!is_array($row)) {
@@ -1076,13 +1135,13 @@ final class RecordListController extends CoreRecordListController
                     $records[] = $recordData;
                 }
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Log error but don't fail - return empty results
             // This can happen if the table doesn't exist or user lacks permissions
         }
 
         if ($useWorkspaceReduction) {
-            $records = array_values($recordsByIdentity);
+            return array_values($recordsByIdentity);
         }
 
         return $records;
@@ -1096,11 +1155,22 @@ final class RecordListController extends CoreRecordListController
      *
      * @param array<string, mixed> $row
      */
-    protected function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
+    private function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
     {
         $liveUidRaw = $row['t3ver_oid'] ?? 0;
         $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
         return (string) ($liveUid > 0 ? $liveUid : $fallbackUid);
+    }
+
+    /**
+     * Resolve the current workspace id via the Context aspect — the canonical
+     * TYPO3 v14 API. Falls back to 0 (LIVE) when the aspect is missing.
+     */
+    private function getCurrentWorkspaceId(): int
+    {
+        $workspaceId = GeneralUtility::makeInstance(Context::class)
+            ->getPropertyFromAspect('workspace', 'id', 0);
+        return is_numeric($workspaceId) ? (int) $workspaceId : 0;
     }
 
     /**
@@ -1116,7 +1186,7 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return int Total number of matching records
      */
-    protected function getSearchRecordCount(
+    private function getSearchRecordCount(
         string $tableName,
         int $pageId,
         string $searchTerm,
@@ -1126,7 +1196,7 @@ final class RecordListController extends CoreRecordListController
         return $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request);
     }
 
-    protected function getRecordCountUsingDbList(
+    private function getRecordCountUsingDbList(
         string $tableName,
         int $pageId,
         string $searchTerm,
@@ -1138,7 +1208,7 @@ final class RecordListController extends CoreRecordListController
             $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
             $count = $qb->count('*')->executeQuery()->fetchOne();
             return is_numeric($count) ? (int) $count : 0;
-        } catch (Exception $e) {
+        } catch (Exception) {
             return 0;
         }
     }
@@ -1160,7 +1230,7 @@ final class RecordListController extends CoreRecordListController
      * @param list<int> $currentRecordUids UIDs of currently rendered records
      * @param list<string> $displayColumnFields Field names of the currently displayed columns
      */
-    protected function renderMultiRecordSelectionActions(
+    private function renderMultiRecordSelectionActions(
         string $tableName,
         int $pageId,
         string $viewMode,
@@ -1188,7 +1258,7 @@ final class RecordListController extends CoreRecordListController
                 'id' => $pageId,
                 'displayMode' => $viewMode,
             ]);
-        } catch (Exception $e) {
+        } catch (Exception) {
             $returnUrl = (string) $request->getUri();
         }
 
@@ -1218,7 +1288,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array{label: string, recordCount: int, linkUrl: string, iconIdentifier: string}
      */
-    protected function buildTableHeading(
+    private function buildTableHeading(
         string $tableName,
         int $recordCount,
         bool $isSingleTableMode,
@@ -1263,7 +1333,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<int, array{field: string, label: string}> $sortableFields
      * @return array<string, mixed>|null
      */
-    protected function buildSortingDropdown(
+    private function buildSortingDropdown(
         string $tableName,
         array $sortableFields,
         string $currentSortField,
@@ -1279,11 +1349,11 @@ final class RecordListController extends CoreRecordListController
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
-        $fieldModeLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
+        $fieldModeLabelTranslated = $lang->sL('records_list_types.messages:sortingMode.field');
         $fieldModeLabel = $fieldModeLabelTranslated !== '' ? $fieldModeLabelTranslated : 'By Column';
-        $ascLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
+        $ascLabelTranslated = $lang->sL('records_list_types.messages:sort.ascending');
         $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
-        $descLabelTranslated = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
+        $descLabelTranslated = $lang->sL('records_list_types.messages:sort.descending');
         $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
 
         $currentFieldLabel = $fieldModeLabel;
@@ -1358,7 +1428,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array<string, mixed>|null
      */
-    protected function buildSortingModeToggle(
+    private function buildSortingModeToggle(
         string $tableName,
         string $currentMode,
         string $currentDirection,
@@ -1369,19 +1439,19 @@ final class RecordListController extends CoreRecordListController
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
-        $manualLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.manual');
+        $manualLabelT = $lang->sL('records_list_types.messages:sortingMode.manual');
         $manualLabel = $manualLabelT !== '' ? $manualLabelT : 'Manual Sorting';
-        $fieldLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field');
+        $fieldLabelT = $lang->sL('records_list_types.messages:sortingMode.field');
         $fieldLabel = $fieldLabelT !== '' ? $fieldLabelT : 'Field Sorting';
-        $manualTitleT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.manual.title');
+        $manualTitleT = $lang->sL('records_list_types.messages:sortingMode.manual.title');
         $manualTitle = $manualTitleT !== '' ? $manualTitleT : 'Enable drag-and-drop reordering';
-        $fieldTitleT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.field.title');
+        $fieldTitleT = $lang->sL('records_list_types.messages:sortingMode.field.title');
         $fieldTitle = $fieldTitleT !== '' ? $fieldTitleT : 'Sort by selected field';
-        $ascLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.ascending');
+        $ascLabelT = $lang->sL('records_list_types.messages:sort.ascending');
         $ascLabel = $ascLabelT !== '' ? $ascLabelT : 'Ascending';
-        $descLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sort.descending');
+        $descLabelT = $lang->sL('records_list_types.messages:sort.descending');
         $descLabel = $descLabelT !== '' ? $descLabelT : 'Descending';
-        $headingLabelT = $lang->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:sortingMode.label');
+        $headingLabelT = $lang->sL('records_list_types.messages:sortingMode.label');
         $headingLabel = $headingLabelT !== '' ? $headingLabelT : 'Order';
 
         $queryParams = $request->getQueryParams();
@@ -1441,7 +1511,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array<string, mixed>
      */
-    protected function buildSortableColumnHeader(
+    private function buildSortableColumnHeader(
         string $tableName,
         string $field,
         string $label,
@@ -1450,6 +1520,7 @@ final class RecordListController extends CoreRecordListController
         int $pageId,
         string $viewMode,
         ServerRequestInterface $request,
+        bool $isSingleTableMode = false,
     ): array {
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
@@ -1466,10 +1537,35 @@ final class RecordListController extends CoreRecordListController
         $isActiveField = ($currentSortField === $field);
         $isAscActive = $isActiveField && $currentSortDirection !== 'desc';
         $isDescActive = $isActiveField && $currentSortDirection === 'desc';
-        $ascLabelTranslated = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.sorting.asc');
+        $ascLabelTranslated = $lang->sL('core.core:labels.sorting.asc');
         $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
-        $descLabelTranslated = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.sorting.desc');
+        $descLabelTranslated = $lang->sL('core.core:labels.sorting.desc');
         $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
+
+        // Native multi-edit for this column: offered only in single-table mode
+        // (mirrors core DatabaseRecordList::renderListTableFieldHeader) when
+        // the field is editable for the current user. Uses TYPO3's own JS
+        // hook — `.t3js-record-edit-multiple` — which walks to the enclosing
+        // `[data-table]` element and opens FormEngine for the selected UIDs.
+        $canMultiEdit = $isSingleTableMode
+            && $field !== 'uid'
+            && $this->isTableEditableForUser($tableName)
+            && $this->isFieldEditableForUser($tableName, $field);
+        $multiEditLabel = '';
+        $multiEditColumnsOnly = '';
+        $multiEditReturnUrl = '';
+        if ($canMultiEdit) {
+            $rawLabel = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editThisColumn');
+            $multiEditLabel = $rawLabel !== ''
+                ? sprintf($rawLabel, $label)
+                : sprintf('Edit "%s"', $label);
+            $multiEditColumnsOnly = json_encode([$field], JSON_THROW_ON_ERROR);
+            try {
+                $multiEditReturnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
+            } catch (Exception) {
+                $multiEditReturnUrl = '';
+            }
+        }
 
         try {
             $ascParams = $baseParams;
@@ -1493,6 +1589,10 @@ final class RecordListController extends CoreRecordListController
                 'descLabel' => $descLabel,
                 'isAscActive' => $isAscActive,
                 'isDescActive' => $isDescActive,
+                'canMultiEdit' => $canMultiEdit,
+                'multiEditLabel' => $multiEditLabel,
+                'multiEditColumnsOnly' => $multiEditColumnsOnly,
+                'multiEditReturnUrl' => $multiEditReturnUrl,
             ];
         } catch (Exception) {
             return [
@@ -1506,8 +1606,126 @@ final class RecordListController extends CoreRecordListController
                 'descLabel' => $descLabel,
                 'isAscActive' => false,
                 'isDescActive' => false,
+                'canMultiEdit' => $canMultiEdit,
+                'multiEditLabel' => $multiEditLabel,
+                'multiEditColumnsOnly' => $multiEditColumnsOnly,
+                'multiEditReturnUrl' => $multiEditReturnUrl,
             ];
         }
+    }
+
+    /**
+     * Build the data payload for the native "Edit shown columns" bulk-edit
+     * button in the compact view thead. Returns null when not applicable
+     * (multi-table mode, read-only, missing permissions). When shown, the
+     * button uses TYPO3's `t3js-record-edit-multiple` JS hook — same code
+     * path the standard list view uses.
+     *
+     * @param array<int, array{field:string,label:string,type:string,isLabelField:bool}> $displayColumns
+     * @return array{label:string,columnsOnly:string,returnUrl:string}|null
+     */
+    private function buildBulkEditHeader(
+        string $tableName,
+        array $displayColumns,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+        bool $isSingleTableMode,
+    ): ?array {
+        if (!$isSingleTableMode) {
+            return null;
+        }
+        if (!$this->isTableEditableForUser($tableName)) {
+            return null;
+        }
+
+        $editableFields = [];
+        foreach ($displayColumns as $column) {
+            $field = $column['field'] ?? '';
+            if ($field === '' || $field === 'uid') {
+                continue;
+            }
+            if (!$this->isFieldEditableForUser($tableName, $field)) {
+                continue;
+            }
+            $editableFields[] = $field;
+        }
+        if ($editableFields === []) {
+            return null;
+        }
+
+        $lang = $this->getLanguageService();
+        $label = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editShownColumns');
+        if ($label === '') {
+            $label = 'Edit shown columns';
+        }
+
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $queryParams = $request->getQueryParams();
+        $preserveParams = ['table', 'searchTerm', 'search_levels', 'pointer'];
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        foreach ($preserveParams as $param) {
+            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
+                $baseParams[$param] = $queryParams[$param];
+            }
+        }
+
+        try {
+            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
+        } catch (Exception) {
+            $returnUrl = '';
+        }
+
+        try {
+            $columnsOnly = json_encode($editableFields, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
+
+        return [
+            'label' => $label,
+            'columnsOnly' => $columnsOnly,
+            'returnUrl' => $returnUrl,
+        ];
+    }
+
+    /**
+     * Table-level editability (tables_modify + schema not readOnly + workspace
+     * write allowed). Mirrors DatabaseRecordList::isEditable at table level.
+     */
+    private function isTableEditableForUser(string $tableName): bool
+    {
+        $be = $this->getBackendUserAuthentication();
+        if ($be->isAdmin()) {
+            return true;
+        }
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+        if (!$schemaFactory->has($tableName)) {
+            return false;
+        }
+        $schema = $schemaFactory->get($tableName);
+        if ($schema->hasCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::AccessReadOnly)) {
+            return false;
+        }
+        if (!$be->check('tables_modify', $tableName)) {
+            return false;
+        }
+        if (!$schema->isWorkspaceAware() && !$be->workspaceAllowsLiveEditingInTable($tableName)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Field-level editability — no `readOnly` on the column configuration.
+     */
+    private function isFieldEditableForUser(string $tableName, string $field): bool
+    {
+        $tcaForTable = $this->getTcaForTable($tableName);
+        $columns = $tcaForTable['columns'];
+        $columnConfig = is_array($columns[$field] ?? null) ? $columns[$field] : [];
+        $config = is_array($columnConfig['config'] ?? null) ? $columnConfig['config'] : [];
+        return !(bool) ($config['readOnly'] ?? false);
     }
 
     /**
@@ -1524,7 +1742,7 @@ final class RecordListController extends CoreRecordListController
      * @param bool $isSingleTableMode Whether we're in single table view mode
      * @return array<string, string> Array of rendered button HTML
      */
-    protected function createTableActionButtons(
+    private function createTableActionButtons(
         DatabaseRecordList $dbList,
         string $tableName,
         int $recordCount,
@@ -1538,7 +1756,7 @@ final class RecordListController extends CoreRecordListController
         ];
 
         $newRecordButton = $dbList->createActionButtonNewRecord($tableName);
-        if ($newRecordButton !== null) {
+        if ($newRecordButton instanceof ButtonInterface) {
             $buttons['newRecordButton'] = $newRecordButton->render();
         }
 
@@ -1572,7 +1790,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @param list<mixed> $arguments
      */
-    protected function renderDatabaseRecordListButton(
+    private function renderDatabaseRecordListButton(
         DatabaseRecordList $dbList,
         string $methodName,
         array $arguments,
@@ -1584,7 +1802,7 @@ final class RecordListController extends CoreRecordListController
                 return $result->render();
             }
             return is_string($result) ? $result : '';
-        } catch (ReflectionException|Exception $e) {
+        } catch (ReflectionException|Exception) {
             return '';
         }
     }
@@ -1606,7 +1824,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
      * @return array<int, array<string, mixed>>
      */
-    protected function getSortableColumnHeaders(
+    private function getSortableColumnHeaders(
         string $tableName,
         array $displayColumns,
         string $currentSortField,
@@ -1614,6 +1832,7 @@ final class RecordListController extends CoreRecordListController
         int $pageId,
         string $viewMode,
         ServerRequestInterface $request,
+        bool $isSingleTableMode = false,
     ): array {
         $headers = [];
         $tcaForTable = $this->getTcaForTable($tableName);
@@ -1635,6 +1854,7 @@ final class RecordListController extends CoreRecordListController
                 $pageId,
                 $viewMode,
                 $request,
+                $isSingleTableMode,
             ),
             'isFixed' => true,
             'type' => 'uid',
@@ -1654,6 +1874,7 @@ final class RecordListController extends CoreRecordListController
                 $pageId,
                 $viewMode,
                 $request,
+                $isSingleTableMode,
             ),
             'isFixed' => true,
             'type' => 'title',
@@ -1684,6 +1905,7 @@ final class RecordListController extends CoreRecordListController
                     $pageId,
                     $viewMode,
                     $request,
+                    $isSingleTableMode,
                 ),
                 'isFixed' => false,
                 'type' => $column['type'] ?? 'text',
@@ -1696,7 +1918,7 @@ final class RecordListController extends CoreRecordListController
     /**
      * Get a human-readable label for a table.
      */
-    protected function getTableLabel(string $tableName): string
+    private function getTableLabel(string $tableName): string
     {
         $tcaForTable = $this->getTcaForTable($tableName);
         $labelTitleVal = $tcaForTable['ctrl']['title'] ?? $tableName;
@@ -1714,7 +1936,7 @@ final class RecordListController extends CoreRecordListController
     /**
      * Get the icon identifier for a table.
      */
-    protected function getTableIcon(string $tableName): string
+    private function getTableIcon(string $tableName): string
     {
         $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $icon = $this->mapRecordTypeToIconIdentifier($iconFactory, $tableName, []);
@@ -1727,7 +1949,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @param array<string, mixed> $row
      */
-    protected function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
+    private function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
     {
         $method = new ReflectionMethod($iconFactory, 'mapRecordTypeToIconIdentifier');
 
@@ -1755,7 +1977,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
      */
-    protected function getDisplayColumns(string $tableName): array
+    private function getDisplayColumns(string $tableName): array
     {
         $columns = [];
         $tcaForTable = $this->getTcaForTable($tableName);
@@ -1864,7 +2086,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<string, mixed> $tcaColumns
      * @param array<string, mixed> $ctrl
      */
-    protected function getFieldLabel(string $field, array $tcaColumns, array $ctrl): string
+    private function getFieldLabel(string $field, array $tcaColumns, array $ctrl): string
     {
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
         if (isset($fieldDef['label'])) {
@@ -1887,15 +2109,15 @@ final class RecordListController extends CoreRecordListController
 
         // Check if field matches ctrl fields
         if ($field === ($ctrl['crdate'] ?? null) || $field === 'crdate') {
-            $translated = $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.creationDate');
+            $translated = $langService->sL('core.general:LGL.creationDate');
             return $translated !== '' ? $translated : 'Created';
         }
         if ($field === ($ctrl['tstamp'] ?? null) || $field === 'tstamp') {
-            $translated = $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.timestamp');
+            $translated = $langService->sL('core.general:LGL.timestamp');
             return $translated !== '' ? $translated : 'Modified';
         }
         if ($field === ($ctrl['sortby'] ?? null)) {
-            $translated = $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.sorting');
+            $translated = $langService->sL('core.general:LGL.sorting');
             return $translated !== '' ? $translated : 'Sorting';
         }
 
@@ -1903,7 +2125,7 @@ final class RecordListController extends CoreRecordListController
         $enableCols = is_array($ctrl['enablecolumns'] ?? null) ? $ctrl['enablecolumns'] : [];
         $disabledField = $enableCols['disabled'] ?? null;
         if ($field === $disabledField) {
-            $translated = $langService->sL('LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.hidden');
+            $translated = $langService->sL('core.general:LGL.hidden');
             return $translated !== '' ? $translated : 'Hidden';
         }
 
@@ -1920,7 +2142,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $fallback Fallback value if translation fails
      * @return string The translated label
      */
-    protected function translateTcaLabel(string $label, string $fallback = ''): string
+    private function translateTcaLabel(string $label, string $fallback = ''): string
     {
         // Empty label - return fallback
         if ($label === '') {
@@ -1948,7 +2170,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<string, mixed> $tcaColumns
      * @param array<string, mixed> $ctrl
      */
-    protected function getFieldType(string $field, array $tcaColumns, array $ctrl): string
+    private function getFieldType(string $field, array $tcaColumns, array $ctrl): string
     {
         // System date fields
         if (in_array($field, ['crdate', 'tstamp'], true)) {
@@ -1993,7 +2215,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
      * @return array<int, array<string, mixed>>
      */
-    protected function enrichRecordsWithDisplayValues(array $records, array $displayColumns, string $tableName): array
+    private function enrichRecordsWithDisplayValues(array $records, array $displayColumns, string $tableName): array
     {
         $tcaForTable = $this->getTcaForTable($tableName);
         $tcaColumns = $tcaForTable['columns'];
@@ -2021,8 +2243,8 @@ final class RecordListController extends CoreRecordListController
                     'type' => $type,
                     'isLabelField' => $column['isLabelField'] ?? false,
                     'raw' => $displayRaw,
-                    'formatted' => $this->formatFieldValue($displayRaw, $type, $field, $tcaColumns, $tableName),
-                    'isEmpty' => $rawValue === null || $rawValue === '' || $rawValue === 0 || $rawValue === '0',
+                    'formatted' => $this->formatFieldValue($displayRaw, $type, $field, $tcaColumns),
+                    'isEmpty' => in_array($rawValue, [null, '', 0, '0'], true),
                 ];
             }
 
@@ -2043,7 +2265,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $tableName The table name
      * @return array<int, array<string, mixed>> Records with language info added
      */
-    protected function enrichRecordsWithLanguageInfo(array $records, string $tableName): array
+    private function enrichRecordsWithLanguageInfo(array $records, string $tableName): array
     {
         $tcaForTable = $this->getTcaForTable($tableName);
         $languageField = $tcaForTable['ctrl']['languageField'] ?? null;
@@ -2081,12 +2303,236 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * Enrich records with permission flags derived from TYPO3's backend user
+     * API (be_groups, tables_modify, page permissions, record edit access,
+     * editlock, language access). Templates then gate action buttons on
+     * `record.permissions.*` so users never see actions they can't perform.
+     *
+     * @param array<int, array<string, mixed>> $records
+     * @return array<int, array<string, mixed>>
+     */
+    private function enrichRecordsWithPermissions(array $records, string $tableName): array
+    {
+        foreach ($records as &$record) {
+            /** @var array<string, mixed> $raw */
+            $raw = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
+            $record['permissions'] = $this->computeRecordPermissions($tableName, $raw);
+        }
+        unset($record);
+        return $records;
+    }
+
+    /**
+     * Compute the action-permission set for a single record. Mirrors the
+     * combination of checks used by TYPO3's DatabaseRecordList when it
+     * decides whether to render the edit / delete / visibility buttons.
+     *
+     * @param array<string, mixed> $row Raw database row
+     * @return array{canEdit:bool,canDelete:bool,canToggleVisibility:bool,canLocalize:bool,canCopy:bool,canHistory:bool,canShowInfo:bool}
+     */
+    private function computeRecordPermissions(string $tableName, array $row): array
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+
+        $defaults = [
+            'canEdit' => false,
+            'canDelete' => false,
+            'canToggleVisibility' => false,
+            'canLocalize' => false,
+            'canCopy' => false,
+            'canHistory' => false,
+            'canShowInfo' => true,
+        ];
+
+        if (!$schemaFactory->has($tableName)) {
+            return $defaults;
+        }
+        $schema = $schemaFactory->get($tableName);
+        $tcaCtrl = $this->getTcaForTable($tableName)['ctrl'];
+        $hiddenField = '';
+        $enableColumns = is_array($tcaCtrl['enablecolumns'] ?? null) ? $tcaCtrl['enablecolumns'] : [];
+        if (is_string($enableColumns['disabled'] ?? null)) {
+            $hiddenField = $enableColumns['disabled'];
+        }
+        $hasHiddenField = $hiddenField !== '';
+
+        $isDeletePlaceholder = $this->isDeletePlaceholder($row);
+        $languageAware = $schema->isLanguageAware();
+        $languageId = 0;
+        $parentPointer = 0;
+        if ($languageAware) {
+            $languageField = $schema->getCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::Language)
+                ->getLanguageField()->getName();
+            $transOrigField = $schema->getCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::Language)
+                ->getTranslationOriginPointerField()->getName();
+            $languageId = is_numeric($row[$languageField] ?? null) ? (int) $row[$languageField] : 0;
+            $parentPointer = is_numeric($row[$transOrigField] ?? null) ? (int) $row[$transOrigField] : 0;
+        }
+
+        if ($backendUser->isAdmin()) {
+            return [
+                'canEdit' => !$isDeletePlaceholder,
+                'canDelete' => !$isDeletePlaceholder,
+                'canToggleVisibility' => $hasHiddenField && !$isDeletePlaceholder,
+                'canLocalize' => $languageAware && $languageId === 0 && $parentPointer === 0 && !$isDeletePlaceholder,
+                'canCopy' => !$isDeletePlaceholder,
+                'canHistory' => !$isDeletePlaceholder,
+                'canShowInfo' => !$isDeletePlaceholder,
+            ];
+        }
+
+        $schemaReadOnly = $schema->hasCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::AccessReadOnly);
+        $tableModify = !$schemaReadOnly && $backendUser->check('tables_modify', $tableName);
+
+        // Page-level permissions. For content records we use the containing
+        // page's calcPerms; for page records we compute perms against the
+        // page record itself.
+        $pagePerms = $this->resolvePagePermission($tableName, $row);
+        $pageEdit = $tableName === 'pages'
+            ? $pagePerms->editPagePermissionIsGranted()
+            : $pagePerms->editContentPermissionIsGranted();
+        $pageDelete = $tableName === 'pages'
+            ? $pagePerms->deletePagePermissionIsGranted()
+            : $pagePerms->editContentPermissionIsGranted();
+
+        $recordAccess = $backendUser->checkRecordEditAccess($tableName, $row)->isAllowed;
+
+        // editlock transitive check: respects page editlock for content and
+        // page's own editlock for pages.
+        $editLockOk = $this->checkEditLock($tableName, $row, $pageEdit);
+
+        $canEdit = $tableModify && $pageEdit && $recordAccess && $editLockOk && !$isDeletePlaceholder;
+
+        $userTsConfig = $backendUser->getTSConfig();
+        $disableDelete = (bool) trim(
+            (string) ($userTsConfig['options.']['disableDelete.'][$tableName]
+                ?? $userTsConfig['options.']['disableDelete']
+                ?? ''),
+        );
+
+        $canDelete = $canEdit && !$disableDelete && $pageDelete && !$this->isCurrentBackendUser($tableName, $row);
+
+        return [
+            'canEdit' => $canEdit,
+            'canDelete' => $canDelete,
+            'canToggleVisibility' => $canEdit && $hasHiddenField && !$this->isCurrentBackendUser($tableName, $row),
+            'canLocalize' => $canEdit && $languageAware && $languageId === 0 && $parentPointer === 0,
+            'canCopy' => $tableModify && !$isDeletePlaceholder,
+            'canHistory' => !$isDeletePlaceholder,
+            'canShowInfo' => !$isDeletePlaceholder,
+        ];
+    }
+
+    /**
+     * Resolve the page-level permission bitmask for a record. For records
+     * on `pages`, we compute against the record itself; for others, we
+     * compute against the containing page.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function resolvePagePermission(string $tableName, array $row): \TYPO3\CMS\Core\Type\Bitmask\Permission
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+
+        if ($tableName === 'pages') {
+            return new \TYPO3\CMS\Core\Type\Bitmask\Permission($backendUser->calcPerms($row));
+        }
+
+        $pidRaw = $row['pid'] ?? 0;
+        $pid = is_numeric($pidRaw) ? (int) $pidRaw : 0;
+
+        // Fast path: the current page's permissions are already loaded.
+        if ($pid === $this->pageContext->pageId) {
+            return $this->pageContext->pagePermissions;
+        }
+
+        $pageRow = BackendUtility::getRecord('pages', $pid);
+        if (!is_array($pageRow)) {
+            return new \TYPO3\CMS\Core\Type\Bitmask\Permission(0);
+        }
+        return new \TYPO3\CMS\Core\Type\Bitmask\Permission($backendUser->calcPerms($pageRow));
+    }
+
+    /**
+     * Whether editing is locked on this row (mirrors DatabaseRecordList's
+     * overlayEditLockPermissions for single records). Admins bypass this
+     * via the caller; here we only evaluate when $permissionEdit is true.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function checkEditLock(string $tableName, array $row, bool $permissionEdit): bool
+    {
+        if (!$permissionEdit) {
+            return false;
+        }
+        $backendUser = $this->getBackendUserAuthentication();
+        if ($backendUser->isAdmin()) {
+            return true;
+        }
+        $pagesCtrl = $this->getTcaForTable('pages')['ctrl'];
+        $pageEditLockField = is_string($pagesCtrl['editlock'] ?? null) ? $pagesCtrl['editlock'] : '';
+        $pageHasEditLock = false;
+        if ($pageEditLockField !== '') {
+            $pageRecord = $this->pageContext->pageRecord ?? [];
+            $pageHasEditLock = (bool) ($pageRecord[$pageEditLockField] ?? false);
+        }
+
+        if ($tableName === 'pages') {
+            // pages are only blocked by their own editlock, not by the ancestor's
+            $ownEditLockField = $pageEditLockField;
+            if ($ownEditLockField !== '' && (bool) ($row[$ownEditLockField] ?? false)) {
+                return false;
+            }
+            return true;
+        }
+
+        // Non-pages rows inherit editlock from the containing page, plus
+        // honour their own table-level editlock field.
+        if ($pageHasEditLock) {
+            return false;
+        }
+        $tableCtrl = $this->getTcaForTable($tableName)['ctrl'];
+        $tableEditLockField = is_string($tableCtrl['editlock'] ?? null) ? $tableCtrl['editlock'] : '';
+        if ($tableEditLockField !== '' && (bool) ($row[$tableEditLockField] ?? false)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Forbid delete on the currently logged-in user's own be_users record.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function isCurrentBackendUser(string $tableName, array $row): bool
+    {
+        if ($tableName !== 'be_users') {
+            return false;
+        }
+        $backendUser = $this->getBackendUserAuthentication();
+        $uidRaw = $row['uid'] ?? 0;
+        $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+        $currentId = is_numeric($backendUser->user['uid'] ?? null) ? (int) $backendUser->user['uid'] : 0;
+        return $uid > 0 && $uid === $currentId;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function isDeletePlaceholder(array $row): bool
+    {
+        $stateRaw = $row['t3ver_state'] ?? 0;
+        return (is_numeric($stateRaw) ? (int) $stateRaw : 0) === 2;
+    }
+
+    /**
      * Add TYPO3 14 native edit URLs for contextual and full FormEngine editing.
      *
      * @param array<string, mixed> $record
      * @return array<string, mixed>
      */
-    protected function enrichRecordWithEditUrls(array $record): array
+    private function enrichRecordWithEditUrls(array $record): array
     {
         $uidRaw = $record['uid'] ?? null;
         $tableNameRaw = $record['tableName'] ?? null;
@@ -2135,7 +2581,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @param array<string, mixed> $record
      */
-    protected function buildContextualEditReturnUrl(array $record): string
+    private function buildContextualEditReturnUrl(array $record): string
     {
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
 
@@ -2156,23 +2602,28 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Separate connected translations from the flat record list and attach them
-     * to their parent (default-language) records. Free translations are kept as
-     * standalone cards with an `isFreeTranslation` flag.
+     * Separate connected translations from the flat record list and attach
+     * unified translation slots to every default-language record.
      *
-     * Connected translations are fetched via RecordGridDataProvider and enriched
-     * with language info + workspace overlays, then stored under the parent's
-     * `translations` key. Only default-language records and free translations
-     * remain in the returned array -- connected translations are removed from
-     * the top-level list so they don't appear as separate grid cards.
+     * For each default-language record the returned array exposes a
+     * `translations` list with one entry per non-default site language, each
+     * tagged as either `translated` (existing connected translation record) or
+     * `untranslated` (placeholder that renders a localize-to button). The set
+     * of slots is derived from the current page's `$siteLanguages`, so views
+     * render the same "connected" information the TYPO3 core list view shows.
      *
-     * @param array<int, array<string, mixed>> $records Enriched records (may include translations)
-     * @param string $tableName The table name
-     * @param int $pageId The current page ID
-     * @param RecordGridDataProvider $dataProvider The data provider for fetching translations
-     * @return array<int, array<string, mixed>> Records with translations grouped
+     * Free translations (records with `sys_language_uid > 0` but no parent
+     * pointer) stay in the top-level list and are tagged `isFreeTranslation`.
+     * Connected translations are dropped from the top-level list so they do
+     * not render as independent cards/rows.
+     *
+     * @param array<int, array<string, mixed>> $records Enriched records
+     * @param string                            $tableName Table name
+     * @param int                               $pageId    Current page ID
+     * @param RecordGridDataProvider            $dataProvider Data provider
+     * @return array<int, array<string, mixed>> Records with slotted translations
      */
-    protected function groupTranslationsOnRecords(
+    private function groupTranslationsOnRecords(
         array $records,
         string $tableName,
         int $pageId,
@@ -2190,7 +2641,6 @@ final class RecordListController extends CoreRecordListController
             return $records;
         }
 
-        // Split records into default-language, connected translations, and free translations
         $defaultRecords = [];
         $freeTranslations = [];
 
@@ -2210,11 +2660,8 @@ final class RecordListController extends CoreRecordListController
                 $record['translations'] = [];
                 $freeTranslations[] = $record;
             }
-            // Connected translations (parentPointer > 0) are excluded from the
-            // top-level list; they will be fetched separately below.
         }
 
-        // Fetch connected translations for all default-language parent UIDs
         $parentUids = array_map(
             static function (array $r): int {
                 $uidRaw = $r['uid'] ?? 0;
@@ -2222,44 +2669,57 @@ final class RecordListController extends CoreRecordListController
             },
             $defaultRecords,
         );
-        $parentUids = array_filter($parentUids, static fn(int $uid): bool => $uid > 0);
+        $parentUids = array_values(array_filter($parentUids, static fn(int $uid): bool => $uid > 0));
 
+        $translatedByParent = [];
         if ($parentUids !== []) {
             $translationsGrouped = $dataProvider->getTranslationsForRecords($tableName, $pageId, $parentUids);
-            $translationsGrouped = $this->enrichTranslationGroups($translationsGrouped, $tableName);
-
-            foreach ($defaultRecords as &$record) {
-                $uidRaw = $record['uid'] ?? 0;
-                $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
-                $record['translations'] = $translationsGrouped[$uid] ?? [];
-            }
-            unset($record);
+            $translatedByParent = $this->enrichTranslationsWithLanguage($translationsGrouped, $tableName, $languageField);
         }
 
-        // Append free translations after all default-language records
+        $translationLanguages = $this->getTranslationLanguages($tableName);
+
+        foreach ($defaultRecords as &$record) {
+            $uidRaw = $record['uid'] ?? 0;
+            $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+            $translated = $translatedByParent[$uid] ?? [];
+            $record['translations'] = $this->buildTranslationSlots(
+                $tableName,
+                $uid,
+                $translated,
+                $translationLanguages,
+            );
+            $record['translatedCount'] = count(array_filter(
+                $record['translations'],
+                static fn(array $slot): bool => ($slot['state'] ?? '') === 'translated',
+            ));
+            $record['untranslatedCount'] = count($record['translations']) - $record['translatedCount'];
+        }
+        unset($record);
+
         return array_merge($defaultRecords, $freeTranslations);
     }
 
     /**
-     * Enrich grouped translation records with language flag info.
+     * Enrich the grouped translation records with per-language metadata
+     * (flag identifier, language title, edit URLs, permissions) and index
+     * them by language ID within each parent bucket.
      *
-     * @param array<int, array<int, array<string, mixed>>> $translationsGrouped Parent UID => translations
-     * @param string $tableName The table name
-     * @return array<int, array<int, array<string, mixed>>> Enriched translations
+     * @param array<int, array<int, array<string, mixed>>> $translationsGrouped
+     * @return array<int, array<int, array<string, mixed>>> Parent UID => language UID => translation
      */
-    private function enrichTranslationGroups(array $translationsGrouped, string $tableName): array
-    {
+    private function enrichTranslationsWithLanguage(
+        array $translationsGrouped,
+        string $tableName,
+        string $languageField,
+    ): array {
         $backendUser = $this->getBackendUserAuthentication();
         $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
-        $tcaForTable = $this->getTcaForTable($tableName);
-        $languageField = $tcaForTable['ctrl']['languageField'] ?? null;
+        $enriched = [];
 
-        if (!is_string($languageField) || $languageField === '') {
-            return $translationsGrouped;
-        }
-
-        foreach ($translationsGrouped as &$translations) {
-            foreach ($translations as &$translation) {
+        foreach ($translationsGrouped as $parentUid => $translations) {
+            $perLang = [];
+            foreach ($translations as $translation) {
                 $rawRecord = is_array($translation['rawRecord'] ?? null) ? $translation['rawRecord'] : [];
                 $langUidRaw = $rawRecord[$languageField] ?? 0;
                 $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
@@ -2277,12 +2737,111 @@ final class RecordListController extends CoreRecordListController
                 }
 
                 $translation = $this->enrichRecordWithEditUrls($translation);
+                $translation['permissions'] = $this->computeRecordPermissions($tableName, $rawRecord);
+                $perLang[$langUid] = $translation;
             }
-            unset($translation);
+            $enriched[(int) $parentUid] = $perLang;
         }
-        unset($translations);
 
-        return $translationsGrouped;
+        return $enriched;
+    }
+
+    /**
+     * Return the non-default site languages that translations can target for
+     * the given table, ordered by language ID. Filtered by the docheader
+     * language selector (`PageContext::selectedLanguageIds`) so unchecking a
+     * language hides both its existing translation rows and its
+     * "translate to" placeholder — matching the classic list view.
+     *
+     * @return array<int, array{id:int, title:string, flagIdentifier:string}>
+     */
+    private function getTranslationLanguages(string $tableName): array
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+        $siteLanguages = $this->pageContext->site->getAvailableLanguages(
+            $backendUser,
+            false,
+            $this->pageContext->pageId,
+        );
+        $selectedLanguageIds = $this->pageContext->selectedLanguageIds;
+
+        $languages = [];
+        foreach ($siteLanguages as $siteLanguage) {
+            $languageId = $siteLanguage->getLanguageId();
+            if ($languageId <= 0) {
+                continue;
+            }
+            if (!$backendUser->checkLanguageAccess($languageId)) {
+                continue;
+            }
+            if ($selectedLanguageIds !== [] && !in_array($languageId, $selectedLanguageIds, true)) {
+                continue;
+            }
+            $languages[$languageId] = [
+                'id' => $languageId,
+                'title' => $siteLanguage->getTitle(),
+                'flagIdentifier' => $siteLanguage->getFlagIdentifier(),
+            ];
+        }
+
+        ksort($languages);
+        return $languages;
+    }
+
+    /**
+     * Build the ordered translation-slot list for a single default-language
+     * record. Each slot is either a real translation record or an
+     * `untranslated` placeholder that the templates render as a localize-to
+     * button (matching TYPO3 core's DatabaseRecordList behavior).
+     *
+     * @param array<int, array<string, mixed>> $translationsByLanguage
+     *        Existing translations indexed by their `sys_language_uid`.
+     * @param array<int, array{id:int, title:string, flagIdentifier:string}> $languages
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildTranslationSlots(
+        string $tableName,
+        int $parentUid,
+        array $translationsByLanguage,
+        array $languages,
+    ): array {
+        $slots = [];
+        foreach ($languages as $language) {
+            $languageId = $language['id'];
+            if (isset($translationsByLanguage[$languageId])) {
+                $translation = $translationsByLanguage[$languageId];
+                $translation['state'] = 'translated';
+                $translation['languageId'] = $languageId;
+                // Keep the pre-existing flag/title fields but fall back to
+                // the resolved language metadata when they were empty.
+                if (($translation['languageFlagIdentifier'] ?? '') === '') {
+                    $translation['languageFlagIdentifier'] = $language['flagIdentifier'];
+                }
+                if (($translation['languageTitle'] ?? '') === '') {
+                    $translation['languageTitle'] = $language['title'];
+                }
+                $slots[] = $translation;
+                continue;
+            }
+
+            $slots[] = [
+                'state' => 'untranslated',
+                'languageId' => $languageId,
+                'languageTitle' => $language['title'],
+                'languageFlagIdentifier' => $language['flagIdentifier'],
+                'parentTable' => $tableName,
+                'parentUid' => $parentUid,
+                'permissions' => [
+                    'canEdit' => false,
+                    'canDelete' => false,
+                    'canToggleVisibility' => false,
+                    'canLocalize' => $this->getBackendUserAuthentication()->checkLanguageAccess($languageId)
+                        && $this->getBackendUserAuthentication()->check('tables_modify', $tableName),
+                ],
+            ];
+        }
+
+        return $slots;
     }
 
     /**
@@ -2292,13 +2851,12 @@ final class RecordListController extends CoreRecordListController
      * @param string $type The field type
      * @param string $field The field name
      * @param array $tcaColumns TCA columns configuration
-     * @param string $tableName The table name
      * @return string Formatted value for display
      */
     /**
      * @param array<string, mixed> $tcaColumns
      */
-    protected function formatFieldValue(mixed $value, string $type, string $field, array $tcaColumns, string $tableName): string
+    private function formatFieldValue(mixed $value, string $type, string $field, array $tcaColumns): string
     {
         if ($value === null || $value === '') {
             return '';
@@ -2355,8 +2913,7 @@ final class RecordListController extends CoreRecordListController
                 $textInput = is_scalar($value) ? (string) $value : '';
                 $text = strip_tags(html_entity_decode($textInput));
                 $text = preg_replace('/\s+/', ' ', $text) ?? $text;
-                $text = trim($text);
-                return $text;
+                return trim($text);
         }
     }
 
@@ -2371,7 +2928,7 @@ final class RecordListController extends CoreRecordListController
      * @param array<string, mixed> $tcaColumns TCA columns configuration
      * @return bool True if the display value should be inverted
      */
-    protected function shouldInvertBooleanDisplay(string $field, array $tcaColumns): bool
+    private function shouldInvertBooleanDisplay(string $field, array $tcaColumns): bool
     {
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
         $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
@@ -2404,7 +2961,7 @@ final class RecordListController extends CoreRecordListController
      * @param int $pageId The page ID for TSconfig resolution
      * @return int Number of items per page (0 = no pagination)
      */
-    protected function getItemsPerPage(string $viewMode, int $pageId): int
+    private function getItemsPerPage(string $viewMode, int $pageId): int
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
 
@@ -2437,7 +2994,7 @@ final class RecordListController extends CoreRecordListController
      * @param int $pageId The page ID for TSconfig resolution
      * @return int Number of records to show per table (default: 20)
      */
-    protected function getItemsLimitPerTable(int $pageId): int
+    private function getItemsLimitPerTable(int $pageId): int
     {
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
 
@@ -2476,7 +3033,7 @@ final class RecordListController extends CoreRecordListController
      * @param ServerRequestInterface $request The current request
      * @return array{paginator: DatabasePaginator, pagination: SlidingWindowPagination, currentUrl: string}
      */
-    protected function buildPagination(
+    private function buildPagination(
         array $records,
         int $totalRecords,
         int $currentPage,
@@ -2514,7 +3071,7 @@ final class RecordListController extends CoreRecordListController
         $currentUrl = '';
         try {
             $currentUrl = (string) $uriBuilder->buildUriFromRoute('records', $urlParams);
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Ignore
         }
 
@@ -2535,7 +3092,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $tableName The table name
      * @return int The current page number (1-based)
      */
-    protected function getCurrentPointer(ServerRequestInterface $request, string $tableName): int
+    private function getCurrentPointer(ServerRequestInterface $request, string $tableName): int
     {
         $queryParams = $request->getQueryParams();
         $parsedBody = $request->getParsedBody();
@@ -2578,5 +3135,246 @@ final class RecordListController extends CoreRecordListController
     {
         $translated = $languageService->sL($key);
         return $translated !== '' ? $translated : $fallback;
+    }
+
+    /**
+     * Render the page-translations sub-list using the active view mode
+     * whenever the user selected grid/compact/teaser/custom. List mode
+     * continues to use the parent's classic renderer so nothing changes
+     * for editors who prefer the standard experience.
+     *
+     * @param array<int|string, mixed> $siteLanguages Site languages (same shape as parent)
+     */
+    #[Override]
+    protected function renderPageTranslations(DatabaseRecordList $dbList, array $siteLanguages): string
+    {
+        $request = $this->currentRequest;
+        if (!$request instanceof ServerRequestInterface) {
+            return parent::renderPageTranslations($dbList, $siteLanguages);
+        }
+
+        $resolver = GeneralUtility::makeInstance(ViewModeResolver::class);
+        $pageId = $this->pageContext->pageId;
+        $viewMode = $resolver->getActiveViewMode($request, $pageId);
+
+        if ($viewMode === 'list' || !$resolver->isModeAllowed($viewMode, $pageId)) {
+            return parent::renderPageTranslations($dbList, $siteLanguages);
+        }
+
+        try {
+            $custom = $this->renderPageTranslationsInViewMode($request, $pageId, $viewMode);
+            if ($custom !== '') {
+                return $custom;
+            }
+        } catch (Exception) {
+            // fall through to parent renderer
+        }
+
+        return parent::renderPageTranslations($dbList, $siteLanguages);
+    }
+
+    /**
+     * Render the page-translations list using the active alternative view
+     * mode. Reuses the same `tableData` shape as the main list rendering
+     * so every template (built-in and custom) renders it correctly.
+     */
+    private function renderPageTranslationsInViewMode(
+        ServerRequestInterface $request,
+        int $pageId,
+        string $viewMode,
+    ): string {
+        $tableName = 'pages';
+        $registry = $this->getViewTypeRegistry();
+        $viewConfig = $registry->getViewType($viewMode, $pageId);
+        if ($viewConfig === null) {
+            return '';
+        }
+
+        $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
+        $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
+        $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
+
+        $records = $this->fetchPageTranslationRecords($pageId, $recordGridDataProvider);
+        if ($records === []) {
+            return '';
+        }
+
+        $columnsConfig = $registry->getDisplayColumnsConfig($viewMode, $pageId);
+        $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
+        if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
+            $displayColumns = $this->getDisplayColumns($tableName);
+        } elseif ($columnsArray !== []) {
+            $displayColumns = $this->getSpecificDisplayColumns($tableName, $columnsArray);
+        } else {
+            $displayColumns = $this->getTeaserDisplayColumns($tableName);
+        }
+
+        $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
+        $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
+        $enrichedRecords = $this->enrichRecordsWithPermissions($enrichedRecords, $tableName);
+
+        // Translated pages are themselves translation records; they don't
+        // carry further translation slots, so mark every row as a regular
+        // translation row in a single-table section.
+        foreach ($enrichedRecords as &$record) {
+            $record['translations'] = [];
+            $record['translatedCount'] = 0;
+            $record['untranslatedCount'] = 0;
+            $record['isFreeTranslation'] = false;
+        }
+        unset($record);
+
+        $recordCount = count($enrichedRecords);
+        $headingLabel = $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:pageTranslation');
+        if ($headingLabel === '') {
+            $headingLabel = 'Page Translations';
+        }
+
+        $tableData = [[
+            'tableName' => $tableName,
+            'tableIdentifier' => 'pages_translated',
+            'tableHeading' => [
+                'label' => $headingLabel,
+                'recordCount' => $recordCount,
+                'linkUrl' => '',
+                'iconIdentifier' => '',
+            ],
+            'tableLabel' => $headingLabel,
+            'tableIcon' => $this->getTableIcon($tableName),
+            'tableConfig' => $tableConfig,
+            'records' => $enrichedRecords,
+            'recordCount' => $recordCount,
+            'hasMore' => false,
+            'multiSelectEnabled' => false,
+            'lastRecordUid' => '',
+            'actionButtons' => [],
+            'sortingDropdown' => null,
+            'sortingModeToggle' => null,
+            'sortableColumnHeaders' => [],
+            'bulkEditHeader' => null,
+            'singleTableUrl' => '',
+            'clearTableUrl' => '',
+            'formActionUrl' => '',
+            'displayColumns' => $displayColumns,
+            'isFiltered' => false,
+            'canReorder' => false,
+            'sortField' => '',
+            'sortDirection' => 'asc',
+            'hasSortbyField' => false,
+            'sortingMode' => 'field',
+            'sortbyFieldName' => '',
+            'paginator' => null,
+            'pagination' => null,
+            'paginationUrl' => '',
+            'multiRecordSelectionActionsHtml' => '',
+        ]];
+
+        $templatePaths = $registry->getTemplatePaths($viewMode, $pageId);
+        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
+        $view = $viewFactory->create(new ViewFactoryData(
+            templateRootPaths: $templatePaths['templateRootPaths'],
+            partialRootPaths: $templatePaths['partialRootPaths'],
+            layoutRootPaths: $templatePaths['layoutRootPaths'],
+            request: $request,
+        ));
+        $view->assignMultiple([
+            'pageId' => $pageId,
+            'tableData' => $tableData,
+            'currentTable' => $tableName,
+            'searchTerm' => '',
+            'viewMode' => $viewMode,
+            'viewConfig' => $viewConfig,
+            'middlewareWarning' => null,
+            'forceListViewUrl' => null,
+            'clipboardEnabled' => false,
+            'isPageTranslationsList' => true,
+        ]);
+
+        $html = $view->render($templatePaths['template']);
+
+        // Make DOM ids and selection identifiers unique so the main `pages`
+        // list (when present) and the translated-pages list can coexist on
+        // the same screen without duplicate ids.
+        $html = str_replace(
+            ['id="t3-table-pages"', 'id="recordlist-pages"', 't3-table-pages'],
+            ['id="t3-table-pages-translated"', 'id="recordlist-pages-translated"', 't3-table-pages-translated'],
+            $html,
+        );
+
+        return '<div class="records-list-types-page-translations">' . $html . '</div>';
+    }
+
+    /**
+     * Fetch translated page records on the current page and enrich them
+     * via the data provider so they share the same shape as main-list
+     * records.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchPageTranslationRecords(int $pageId, RecordGridDataProvider $dataProvider): array
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+        $workspaceId = $this->getCurrentWorkspaceId();
+        $selectedLanguageIds = $this->pageContext->selectedLanguageIds;
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
+            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $workspaceId));
+
+        $rows = $queryBuilder
+            ->select('*')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'l10n_parent',
+                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER),
+                ),
+                $queryBuilder->expr()->gt(
+                    'sys_language_uid',
+                    $queryBuilder->createNamedParameter(0, ParameterType::INTEGER),
+                ),
+            )
+            ->orderBy('sys_language_uid', 'ASC')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $records = [];
+        // In workspaces the query can return both the live row and its
+        // versioned/moved counterpart for the same effective record. Key
+        // the intermediate result by live identity so the overlay collapses
+        // to a single row per record, mirroring the native list behavior.
+        $recordsByIdentity = [];
+        $useWorkspaceReduction = $workspaceId > 0;
+
+        foreach ($rows as $row) {
+            BackendUtility::workspaceOL('pages', $row, -99, true);
+            if (!is_array($row)) {
+                continue;
+            }
+            $languageIdRaw = $row['sys_language_uid'] ?? 0;
+            $languageId = is_numeric($languageIdRaw) ? (int) $languageIdRaw : 0;
+            if (!$backendUser->checkLanguageAccess($languageId)) {
+                continue;
+            }
+            // Honour the docheader language selector.
+            if ($selectedLanguageIds !== [] && !in_array($languageId, $selectedLanguageIds, true)) {
+                continue;
+            }
+
+            $recordData = $dataProvider->buildRecordDataFromRow('pages', $row, $pageId);
+
+            if ($useWorkspaceReduction) {
+                $uidRaw = $row['uid'] ?? 0;
+                $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+                $identity = $this->getWorkspaceRecordIdentity($row, $uid);
+                $recordsByIdentity[$identity] = $recordData;
+            } else {
+                $records[] = $recordData;
+            }
+        }
+
+        return $useWorkspaceReduction ? array_values($recordsByIdentity) : $records;
     }
 }

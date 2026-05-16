@@ -34,7 +34,7 @@ use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
 final class ViewTypeRegistry implements SingletonInterface
 {
     /** Built-in view types with their default configuration. */
-    private const BUILTIN_TYPES = [
+    private const array BUILTIN_TYPES = [
         'list' => [
             'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.list',
             'icon' => 'actions-viewmode-list',
@@ -169,11 +169,11 @@ final class ViewTypeRegistry implements SingletonInterface
             ?? $tsConfig['mod.']['web_list.']['allowedViews']
             ?? implode(',', array_keys($allTypes));
 
-        $allowedIds = array_map('trim', explode(',', $allowedString));
+        $allowedIds = array_map(trim(...), explode(',', $allowedString));
 
         return array_filter(
             $allTypes,
-            fn(string $typeId) => in_array($typeId, $allowedIds, true),
+            fn(string $typeId): bool => in_array($typeId, $allowedIds, true),
             ARRAY_FILTER_USE_KEY,
         );
     }
@@ -244,7 +244,7 @@ final class ViewTypeRegistry implements SingletonInterface
     }
 
     /** Shared base CSS loaded for all view types. */
-    private const BASE_CSS = 'EXT:records_list_types/Resources/Public/Css/base.css';
+    private const string BASE_CSS = 'EXT:records_list_types/Resources/Public/Css/base.css';
 
     /**
      * Get CSS files for a view type.
@@ -278,7 +278,7 @@ final class ViewTypeRegistry implements SingletonInterface
 
         $modules = ['@webconsulting/records-list-types/GridViewActions.js']; // Always include base
         $js = $config['js'] ?? null;
-        if ($js !== null && $js !== '' && $js !== []) {
+        if (!in_array($js, [null, '', []], true)) {
             $custom = is_array($js)
                 ? array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $js)
                 : (is_scalar($js) ? [(string) $js] : []);
@@ -303,7 +303,7 @@ final class ViewTypeRegistry implements SingletonInterface
 
         $columns = [];
         $displayColumns = $config['displayColumns'] ?? null;
-        if ($displayColumns !== null && $displayColumns !== '' && $displayColumns !== []) {
+        if (!in_array($displayColumns, [null, '', []], true)) {
             if (is_array($displayColumns)) {
                 $columns = array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $displayColumns);
             } else {
@@ -312,7 +312,7 @@ final class ViewTypeRegistry implements SingletonInterface
         }
 
         $fromTCARaw = $config['columnsFromTCA'] ?? true;
-        $fromTCA = $fromTCARaw === true || $fromTCARaw === 1 || $fromTCARaw === '1';
+        $fromTCA = in_array($fromTCARaw, [true, 1, '1'], true);
 
         return [
             'columns' => $columns,
@@ -358,7 +358,7 @@ final class ViewTypeRegistry implements SingletonInterface
             'layoutRootPath' => $config['layoutRootPath'] ?? null,
             'displayColumns' => $config['displayColumns'] ?? null,
             'columnsFromTCA' => isset($config['columnsFromTCA'])
-                ? ($config['columnsFromTCA'] === true || $config['columnsFromTCA'] === 1 || $config['columnsFromTCA'] === '1')
+                ? (in_array($config['columnsFromTCA'], [true, 1, '1'], true))
                 : true,
             'builtin' => false,
         ];
@@ -371,7 +371,7 @@ final class ViewTypeRegistry implements SingletonInterface
     {
         // Convert type-id to TypeIdView format
         $parts = explode('_', str_replace('-', '_', $typeId));
-        $name = implode('', array_map('ucfirst', $parts));
+        $name = implode('', array_map(ucfirst(...), $parts));
         return $name . 'View';
     }
 

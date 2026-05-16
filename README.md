@@ -300,8 +300,7 @@ component APIs.
 
 | Module | Purpose |
 |--------|---------|
-| `GridViewActions.js` | Drag-and-drop, record actions, sorting, search, pagination input, scroll shadows, ARIA announcements |
-| `view-switcher.js` | View mode switching with AJAX persistence and custom event dispatch |
+| `GridViewActions.js` | Drag-and-drop, record actions, sorting, search, pagination input, scroll shadows, ARIA announcements, view-mode switching + AJAX persistence |
 
 ### AJAX Routes
 
@@ -405,8 +404,7 @@ records_list_types/
 │       │   └── view-mode-toggle.css           # Toggle button styles
 │       ├── Icons/
 │       └── JavaScript/
-│           ├── GridViewActions.js             # Drag-drop, actions, sorting, search
-│           └── view-switcher.js               # View mode AJAX switcher
+│           └── GridViewActions.js             # Drag-drop, actions, sorting, search, view switching
 ├── Tests/
 │   ├── Unit/                                  # Unit tests
 │   ├── Functional/                            # Functional tests with fixtures

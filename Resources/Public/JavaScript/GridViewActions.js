@@ -762,12 +762,26 @@ class GridViewActions {
                 this.showNotification('Move failed', data.messages?.[0]?.message || 'Unknown error', 'error');
                 if (card) card.style.opacity = '';
             } else {
+                this.refreshPageTreeIfNeeded(table);
                 window.location.reload();
             }
         } catch (err) {
             console.error('[GridView] Network error:', err);
             if (card) card.style.opacity = '';
         }
+    }
+
+    /**
+     * Notify the backend page tree that a pages-table record changed.
+     * Mirrors TYPO3 core's context-menu-actions.js — dispatches on top.document
+     * so the event survives the iframe reload that follows.
+     */
+    refreshPageTreeIfNeeded(table) {
+        if (table !== 'pages') {
+            return;
+        }
+        const topDocument = (typeof top !== 'undefined' && top && top.document) ? top.document : document;
+        topDocument.dispatchEvent(new CustomEvent('typo3:pagetree:refresh'));
     }
 
     // =========================================================================
@@ -836,6 +850,7 @@ class GridViewActions {
                     const msg = data.messages?.[0]?.message || 'Unknown error';
                     this.showNotification('Update failed', msg, 'error');
                 } else {
+                    this.refreshPageTreeIfNeeded(table);
                     window.location.reload();
                 }
             })
@@ -920,6 +935,7 @@ class GridViewActions {
         // Prefer TYPO3 AjaxDataHandler (handles notifications + events)
         if (this.AjaxDataHandler) {
             this.AjaxDataHandler.process(params).then(() => {
+                this.refreshPageTreeIfNeeded(table);
                 window.location.reload();
             });
             return;
@@ -954,6 +970,7 @@ class GridViewActions {
                         wrapper.style.transform = '';
                     }
                 } else {
+                    this.refreshPageTreeIfNeeded(table);
                     window.location.reload();
                 }
             })

@@ -9,6 +9,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
@@ -45,7 +46,7 @@ final class ViewModeResolver implements SingletonInterface
      * - actions-menu (hamburger menu)
      * - content-news (news icon)
      */
-    private const DEFAULT_VIEW_MODES = [
+    private const array DEFAULT_VIEW_MODES = [
         'list' => [
             'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.list',
             'icon' => 'actions-viewmode-list',
@@ -68,8 +69,8 @@ final class ViewModeResolver implements SingletonInterface
         ],
     ];
 
-    private const USER_CONFIG_KEY = 'records_view_mode';
-    private const DEFAULT_MODE = 'list';
+    private const string USER_CONFIG_KEY = 'records_view_mode';
+    private const string DEFAULT_MODE = 'list';
 
     /**
      * Cached view modes (includes custom modes from event + TSconfig)
@@ -177,10 +178,10 @@ final class ViewModeResolver implements SingletonInterface
             ?? $tsConfig['mod.']['web_list.']['allowedViews']
             ?? implode(',', array_keys($allModes)); // Default: all registered modes
 
-        $configured = array_map('trim', explode(',', $allowedString));
+        $configured = array_map(trim(...), explode(',', $allowedString));
 
         // Filter to only valid modes
-        return array_values(array_filter($configured, fn($mode) => isset($allModes[$mode])));
+        return array_values(array_filter($configured, fn($mode): bool => isset($allModes[$mode])));
     }
 
     /**
@@ -201,7 +202,7 @@ final class ViewModeResolver implements SingletonInterface
     public function getUserPreference(): ?string
     {
         $backendUser = $this->getBackendUser();
-        if ($backendUser === null) {
+        if (!$backendUser instanceof BackendUserAuthentication) {
             return null;
         }
 
@@ -226,7 +227,7 @@ final class ViewModeResolver implements SingletonInterface
         }
 
         $backendUser = $this->getBackendUser();
-        if ($backendUser === null) {
+        if (!$backendUser instanceof BackendUserAuthentication) {
             return; // Silently fail if no user
         }
 
@@ -265,7 +266,7 @@ final class ViewModeResolver implements SingletonInterface
     public function getForcedViewMode(): ?string
     {
         $backendUser = $this->getBackendUser();
-        if ($backendUser === null) {
+        if (!$backendUser instanceof BackendUserAuthentication) {
             return null;
         }
 
@@ -293,13 +294,8 @@ final class ViewModeResolver implements SingletonInterface
         if (count($allowedModes) < 2) {
             return false;
         }
-
         // Don't show toggle if a view is forced via User TSconfig
-        if ($this->getForcedViewMode() !== null) {
-            return false;
-        }
-
-        return true;
+        return $this->getForcedViewMode() === null;
     }
 
     /**
@@ -317,7 +313,7 @@ final class ViewModeResolver implements SingletonInterface
         $languageService = $this->getLanguageService();
         foreach ($allModes as $mode => $config) {
             $label = $config['label'];
-            if ($languageService !== null && str_starts_with($label, 'LLL:')) {
+            if ($languageService instanceof LanguageService && str_starts_with($label, 'LLL:')) {
                 $translated = $languageService->sL($label);
                 $label = $translated !== '' ? $translated : $mode;
             }
@@ -346,9 +342,9 @@ final class ViewModeResolver implements SingletonInterface
     /**
      * Get the language service.
      */
-    private function getLanguageService(): ?\TYPO3\CMS\Core\Localization\LanguageService
+    private function getLanguageService(): ?LanguageService
     {
         $lang = $GLOBALS['LANG'] ?? null;
-        return $lang instanceof \TYPO3\CMS\Core\Localization\LanguageService ? $lang : null;
+        return $lang instanceof LanguageService ? $lang : null;
     }
 }

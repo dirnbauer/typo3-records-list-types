@@ -6,6 +6,7 @@ namespace Webconsulting\RecordsListTypes\EventListener;
 
 use TYPO3\CMS\Backend\View\Event\ModifyDatabaseQueryForRecordListingEvent;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
+use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 /**
  * GridViewQueryListener - Ensures alternative view modes respect query modifications.
@@ -20,11 +21,11 @@ use TYPO3\CMS\Core\Attribute\AsEventListener;
 #[AsEventListener]
 final class GridViewQueryListener
 {
-    /** @var array<string, \TYPO3\CMS\Core\Database\Query\QueryBuilder> Cache of modified query builders */
+    /** @var array<string, QueryBuilder> Cache of modified query builders */
     private static array $queryCache = [];
 
     /** Maximum number of cached query builders to prevent unbounded memory growth. */
-    private const MAX_CACHE_SIZE = 100;
+    private const int MAX_CACHE_SIZE = 100;
 
     public function __invoke(ModifyDatabaseQueryForRecordListingEvent $event): void
     {
@@ -48,7 +49,7 @@ final class GridViewQueryListener
      * @param string $table The table name
      * @param int $pageId The page ID
      */
-    public static function getCachedQueryBuilder(string $table, int $pageId): ?\TYPO3\CMS\Core\Database\Query\QueryBuilder
+    public static function getCachedQueryBuilder(string $table, int $pageId): ?QueryBuilder
     {
         $cacheKey = $table . '_' . $pageId;
         return self::$queryCache[$cacheKey] ?? null;

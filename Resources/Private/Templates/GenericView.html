@@ -137,7 +137,7 @@
                                                 url="{record.contextualEditUrl}">
                                                 <core:icon identifier="actions-open" size="small" />
                                             </typo3-backend-contextual-record-edit-trigger>
-                                            <button type="button" 
+                                            <button type="button"
                                                     class="btn btn-outline-danger btn-sm"
                                                     title="Delete"
                                                     data-gridview-action="delete"
@@ -147,6 +147,9 @@
                                             </button>
                                         </div>
                                     </div>
+                                    <f:if condition="{record.translations}">
+                                        <f:render partial="TranslationStrip" arguments="{record: record}" />
+                                    </f:if>
                                 </div>
                             </f:for>
                         </div>

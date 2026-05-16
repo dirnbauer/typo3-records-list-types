@@ -34,12 +34,12 @@
         <f:then>
             <f:for each="{tableData}" as="table">
                 <div class="recordlist" id="t3-table-{table.tableName}"
-                     data-multi-record-selection-identifier="t3-table-{table.tableName}">
+                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
                     <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
                     <input type="hidden" name="cmd_table" value="{table.tableName}" />
                     <input type="hidden" name="cmd" />
                     <f:comment>Table header - matches native List View styling exactly</f:comment>
-                    <div class="recordlist-heading multi-record-selection-panel">
+                    <div class="recordlist-heading{f:if(condition: table.multiSelectEnabled, then: ' multi-record-selection-panel')}">
                         <div class="recordlist-heading-row">
                             <f:comment>Title section with structured heading data</f:comment>
                             <div class="recordlist-heading-title">
@@ -76,7 +76,7 @@
                         </div>
 
                         <f:comment>Multi Record Selection action bar (hidden, shown by JS when records selected)</f:comment>
-                        <f:if condition="{table.multiRecordSelectionActionsHtml}">
+                        <f:if condition="{table.multiSelectEnabled} && {table.multiRecordSelectionActionsHtml}">
                             <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
                                 <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
                                     <span class="t3js-multi-record-selection-table-title">
@@ -104,14 +104,14 @@
                              data-page-id="{pageId}"
                              data-last-uid="{table.lastRecordUid}"
                              data-sort-direction="{table.sortDirection}"
-                             data-multi-record-selection-row-selection="true"
+                             {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-row-selection=\"true\"')}
                              {f:if(condition: table.canReorder, then: 'role="listbox" aria-label="{table.tableLabel} - reorderable list" aria-describedby="gridview-drag-instructions"')}>
                             <f:for each="{table.records}" as="record" iteration="iterator">
                                 <div class="gridview-card-wrapper"
                                      data-index="{iterator.index}"
-                                     data-multi-record-selection-element="true"
+                                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}
                                      data-uid="{record.uid}">
-                                    <f:render partial="Card" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, canReorder: table.canReorder}" />
+                                    <f:render partial="Card" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, canReorder: table.canReorder, multiSelectEnabled: table.multiSelectEnabled}" />
                                 </div>
                             </f:for>
                             <f:comment>End dropzone - visible during drag to allow dropping after last item</f:comment>

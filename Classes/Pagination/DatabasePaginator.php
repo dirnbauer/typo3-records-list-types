@@ -24,12 +24,7 @@ use TYPO3\CMS\Core\Pagination\AbstractPaginator;
 final class DatabasePaginator extends AbstractPaginator
 {
     /** @var array<int, array<string, mixed>> */
-    private array $items;
-
-    /** @var array<int, array<string, mixed>> */
     private array $paginatedItems = [];
-
-    private int $totalItemCount;
 
     /**
      * @param array<int, array<string, mixed>> $items The already-paginated records (current page only)
@@ -38,13 +33,11 @@ final class DatabasePaginator extends AbstractPaginator
      * @param int $itemsPerPage Number of items per page
      */
     public function __construct(
-        array $items,
-        int $totalItemCount,
+        private readonly array $items,
+        private readonly int $totalItemCount,
         int $currentPageNumber = 1,
         int $itemsPerPage = 10,
     ) {
-        $this->items = $items;
-        $this->totalItemCount = $totalItemCount;
         $this->setCurrentPageNumber($currentPageNumber);
         $this->setItemsPerPage($itemsPerPage);
 
