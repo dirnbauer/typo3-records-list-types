@@ -975,7 +975,8 @@ class GridViewActions {
     }
     
     /**
-     * Replace a TYPO3 icon element with a new icon
+     * Replace a TYPO3 icon element with a new icon.
+     * Uses DOMParser instead of innerHTML for safer HTML parsing.
      */
     replaceIcon(iconEl, newIdentifier) {
         // For typo3-backend-icon web component
@@ -985,31 +986,32 @@ class GridViewActions {
         }
         
         // For traditional span.icon elements, use pre-loaded Icons module
-        if (this.Icons) {
-            this.Icons.getIcon(newIdentifier, 'small').then(iconMarkup => {
-                const temp = document.createElement('div');
-                temp.innerHTML = iconMarkup;
-                const newIcon = temp.firstElementChild;
-                if (newIcon && iconEl.parentNode) {
-                    iconEl.parentNode.replaceChild(newIcon, iconEl);
-                }
-            }).catch(() => {
-                // Fallback: just update data attribute
-                iconEl.dataset.identifier = newIdentifier;
-            });
+        const iconsModule = this.Icons;
+        const parseAndReplace = (iconMarkup) => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(iconMarkup, 'text/html');
+            const newIcon = doc.body.firstElementChild;
+            if (newIcon && iconEl.parentNode) {
+                iconEl.parentNode.replaceChild(
+                    document.adoptNode(newIcon),
+                    iconEl
+                );
+            }
+        };
+
+        if (iconsModule) {
+            iconsModule.getIcon(newIdentifier, 'small')
+                .then(parseAndReplace)
+                .catch(() => {
+                    // Fallback: just update data attribute
+                    iconEl.dataset.identifier = newIdentifier;
+                });
         } else {
             // Icons module not loaded, try dynamic import as fallback
             import('@typo3/backend/icons.js')
                 .then(module => {
                     const Icons = module.default;
-                    Icons.getIcon(newIdentifier, 'small').then(iconMarkup => {
-                        const temp = document.createElement('div');
-                        temp.innerHTML = iconMarkup;
-                        const newIcon = temp.firstElementChild;
-                        if (newIcon && iconEl.parentNode) {
-                            iconEl.parentNode.replaceChild(newIcon, iconEl);
-                        }
-                    });
+                    Icons.getIcon(newIdentifier, 'small').then(parseAndReplace);
                 })
                 .catch(() => {
                     // Fallback: just update data attribute if possible
@@ -1032,29 +1034,34 @@ class GridViewActions {
      * Show info popup for a record using TYPO3's InfoWindow
      */
     /**
-     * Show info for a record in the content frame (like History)
+     * Show info for a record in the content frame (like History).
+     * Uses URL/URLSearchParams for safe URL construction.
      */
     showInfo(table, uid) {
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        const returnUrl = window.location.pathname + window.location.search;
         
         // Get the ShowItem module URL from TYPO3 settings
         const moduleUrl = top?.TYPO3?.settings?.ShowItem?.moduleUrl;
         
         if (moduleUrl) {
-            const infoUrl = moduleUrl + '&table=' + table + '&uid=' + uid + '&returnUrl=' + returnUrl;
+            const infoUrl = new URL(moduleUrl, window.location.origin);
+            infoUrl.searchParams.set('table', table);
+            infoUrl.searchParams.set('uid', String(uid));
+            infoUrl.searchParams.set('returnUrl', returnUrl);
+            const infoUrlStr = infoUrl.toString();
             
             // Use Viewport.ContentContainer.setUrl() like History does
             import('@typo3/backend/viewport.js')
                 .then(module => {
                     const Viewport = module.default || module;
                     if (Viewport?.ContentContainer?.setUrl) {
-                        Viewport.ContentContainer.setUrl(infoUrl);
+                        Viewport.ContentContainer.setUrl(infoUrlStr);
                     } else {
-                        window.location.href = infoUrl;
+                        window.location.href = infoUrlStr;
                     }
                 })
                 .catch(() => {
-                    window.location.href = infoUrl;
+                    window.location.href = infoUrlStr;
                 });
         } else {
             // Fallback to InfoWindow popup if settings not available
@@ -1065,32 +1072,36 @@ class GridViewActions {
     }
     
     /**
-     * Show history for a record
-     * Uses TYPO3's Viewport.ContentContainer.setUrl() - same as core context menu
+     * Show history for a record.
+     * Uses URL/URLSearchParams for safe URL construction.
+     * Uses TYPO3's Viewport.ContentContainer.setUrl() - same as core context menu.
      */
     showHistory(table, uid) {
         const element = `${table}:${uid}`;
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        const returnUrl = window.location.pathname + window.location.search;
         
         // Get the history module URL from TYPO3 settings
         const moduleUrl = top?.TYPO3?.settings?.RecordHistory?.moduleUrl;
         
         if (moduleUrl) {
-            const historyUrl = moduleUrl + '&element=' + element + '&returnUrl=' + returnUrl;
+            const historyUrl = new URL(moduleUrl, window.location.origin);
+            historyUrl.searchParams.set('element', element);
+            historyUrl.searchParams.set('returnUrl', returnUrl);
+            const historyUrlStr = historyUrl.toString();
             
             // Use Viewport.ContentContainer.setUrl() like TYPO3 core does
             import('@typo3/backend/viewport.js')
                 .then(module => {
                     const Viewport = module.default || module;
                     if (Viewport?.ContentContainer?.setUrl) {
-                        Viewport.ContentContainer.setUrl(historyUrl);
+                        Viewport.ContentContainer.setUrl(historyUrlStr);
                     } else {
                         // Fallback
-                        window.location.href = historyUrl;
+                        window.location.href = historyUrlStr;
                     }
                 })
                 .catch(() => {
-                    window.location.href = historyUrl;
+                    window.location.href = historyUrlStr;
                 });
         } else {
             // Fallback if settings not available

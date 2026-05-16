@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
+use Exception;
 use Psr\Http\Message\ServerRequestInterface;
-use TYPO3\CMS\Core\Http\MiddlewareStackResolver;
 use TYPO3\CMS\Core\Package\PackageManager;
 use TYPO3\CMS\Core\Service\DependencyOrderingService;
 use TYPO3\CMS\Core\SingletonInterface;
@@ -22,17 +22,13 @@ use TYPO3\CMS\Core\SingletonInterface;
  */
 final class MiddlewareDiagnosticService implements SingletonInterface
 {
-    /**
-     * Required request attributes for proper Grid View functioning.
-     */
+    /** Required request attributes for proper Grid View functioning. */
     private const REQUIRED_ATTRIBUTES = [
         'normalizedParams',
         'applicationType',
     ];
 
-    /**
-     * Core middleware packages that are known to be safe.
-     */
+    /** Core middleware packages that are known to be safe. */
     private const CORE_PACKAGES = [
         'typo3/cms-core',
         'typo3/cms-backend',
@@ -40,9 +36,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         'typo3/cms-install',
     ];
 
-    /**
-     * @var array<string, bool> Cache for diagnostic results
-     */
+    /** @var array<string, string[]> Cache for diagnostic results */
     private array $diagnosticCache = [];
 
     public function __construct(
@@ -65,7 +59,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         if (!empty($missingAttributes)) {
             $warnings[] = sprintf(
                 'Missing required request attributes: %s. This may indicate middleware interference.',
-                implode(', ', $missingAttributes)
+                implode(', ', $missingAttributes),
             );
         }
 
@@ -76,7 +70,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             if (count($nonCoreMiddlewares) > 5) {
                 $warnings[] = sprintf(
                     'Detected %d custom middleware(s) which may affect rendering.',
-                    count($nonCoreMiddlewares)
+                    count($nonCoreMiddlewares),
                 );
             }
         }
@@ -89,7 +83,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         return [
             'hasRisk' => !empty($warnings),
             'warnings' => $warnings,
-            'forceListViewUrl' => (string)$uri,
+            'forceListViewUrl' => (string) $uri,
         ];
     }
 
@@ -140,8 +134,14 @@ final class MiddlewareDiagnosticService implements SingletonInterface
 
                 // Check if package has backend middlewares
                 $middlewareFile = $package->getPackagePath() . 'Configuration/RequestMiddlewares.php';
-                if (file_exists($middlewareFile)) {
-                    $middlewares = include $middlewareFile;
+                // Validate the file path is within the package directory (defense-in-depth)
+                $realMiddlewarePath = realpath($middlewareFile);
+                $realPackagePath = realpath($package->getPackagePath());
+                if ($realMiddlewarePath !== false
+                    && $realPackagePath !== false
+                    && str_starts_with($realMiddlewarePath, $realPackagePath)
+                ) {
+                    $middlewares = include $realMiddlewarePath;
                     if (isset($middlewares['backend']) && is_array($middlewares['backend'])) {
                         foreach (array_keys($middlewares['backend']) as $middlewareName) {
                             $nonCore[] = $packageKey . '/' . $middlewareName;
@@ -149,7 +149,7 @@ final class MiddlewareDiagnosticService implements SingletonInterface
                     }
                 }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Silently fail - diagnostic is not critical
         }
 
@@ -188,11 +188,11 @@ final class MiddlewareDiagnosticService implements SingletonInterface
     public function shouldForceListView(ServerRequestInterface $request): bool
     {
         $missingAttributes = $this->checkRequiredAttributes($request);
-        
+
         // Force list view if critical attributes are missing
         $criticalMissing = array_intersect(
             $missingAttributes,
-            ['normalizedParams', 'applicationType']
+            ['normalizedParams', 'applicationType'],
         );
 
         return !empty($criticalMissing);
@@ -222,4 +222,3 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         $this->diagnosticCache = [];
     }
 }
-

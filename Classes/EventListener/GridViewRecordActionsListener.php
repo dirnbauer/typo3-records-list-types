@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\EventListener;
 
+use Throwable;
 use TYPO3\CMS\Backend\RecordList\Event\ModifyRecordListRecordActionsEvent;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\SingletonInterface;
@@ -22,9 +23,7 @@ use TYPO3\CMS\Core\SingletonInterface;
 #[AsEventListener]
 final class GridViewRecordActionsListener implements SingletonInterface
 {
-    /**
-     * @var array<string, array<int, array<string, mixed>>> Cached actions per table and record
-     */
+    /** @var array<string, array<int, array<string, mixed>>> Cached actions per table and record */
     private array $actionsCache = [];
 
     public function __invoke(ModifyRecordListRecordActionsEvent $event): void
@@ -33,14 +32,14 @@ final class GridViewRecordActionsListener implements SingletonInterface
         // and store them for potential Grid View usage
         try {
             $actions = $event->getActions();
-            
+
             // Store actions with a timestamp-based key for debugging
             // The actual record context will be retrieved from the DatabaseRecordList
             $this->actionsCache['_latest'] = [
                 'actions' => $actions,
                 'timestamp' => time(),
             ];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Silently fail - action caching is not critical
         }
     }

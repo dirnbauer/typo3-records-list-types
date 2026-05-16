@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Service;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
@@ -16,14 +15,10 @@ use TYPO3\CMS\Core\SingletonInterface;
  */
 final class GridConfigurationService implements SingletonInterface
 {
-    /**
-     * @var array<string, array<string, mixed>> Runtime cache for table configurations
-     */
+    /** @var array<string, array<string, mixed>> Runtime cache for table configurations */
     private array $tableConfigCache = [];
 
-    /**
-     * Default configuration applied when no TSconfig is specified.
-     */
+    /** Default configuration applied when no TSconfig is specified. */
     private const DEFAULT_CONFIG = [
         'titleField' => null,      // Will fall back to TCA label
         'descriptionField' => null,
@@ -31,9 +26,7 @@ final class GridConfigurationService implements SingletonInterface
         'preview' => true,
     ];
 
-    /**
-     * Default number of columns in the grid.
-     */
+    /** Default number of columns in the grid. */
     private const DEFAULT_COLS = 4;
 
     /**
@@ -86,7 +79,7 @@ final class GridConfigurationService implements SingletonInterface
         $allowedViews = array_map('trim', explode(',', $allowedViewsString));
 
         return [
-            'cols' => $this->validateCols((int)($gridViewConfig['cols'] ?? self::DEFAULT_COLS)),
+            'cols' => $this->validateCols((int) ($gridViewConfig['cols'] ?? self::DEFAULT_COLS)),
             'default' => $gridViewConfig['default'] ?? 'list',
             'allowedViews' => $allowedViews,
         ];
@@ -225,4 +218,3 @@ final class GridConfigurationService implements SingletonInterface
         return $tables;
     }
 }
-

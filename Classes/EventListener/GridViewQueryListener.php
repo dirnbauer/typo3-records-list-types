@@ -20,10 +20,11 @@ use TYPO3\CMS\Core\Attribute\AsEventListener;
 #[AsEventListener]
 final class GridViewQueryListener
 {
-    /**
-     * @var array<string, \TYPO3\CMS\Core\Database\Query\QueryBuilder> Cache of modified query builders
-     */
+    /** @var array<string, \TYPO3\CMS\Core\Database\Query\QueryBuilder> Cache of modified query builders */
     private static array $queryCache = [];
+
+    /** Maximum number of cached query builders to prevent unbounded memory growth. */
+    private const MAX_CACHE_SIZE = 100;
 
     public function __invoke(ModifyDatabaseQueryForRecordListingEvent $event): void
     {
@@ -33,6 +34,11 @@ final class GridViewQueryListener
         $pageId = $event->getPageId();
         $cacheKey = $table . '_' . $pageId;
 
+        // Evict oldest entries if cache exceeds maximum size (defense-in-depth for long-lived processes)
+        if (count(self::$queryCache) >= self::MAX_CACHE_SIZE && !isset(self::$queryCache[$cacheKey])) {
+            array_shift(self::$queryCache);
+        }
+
         self::$queryCache[$cacheKey] = clone $event->getQueryBuilder();
     }
 
@@ -41,7 +47,6 @@ final class GridViewQueryListener
      *
      * @param string $table The table name
      * @param int $pageId The page ID
-     * @return \TYPO3\CMS\Core\Database\Query\QueryBuilder|null
      */
     public static function getCachedQueryBuilder(string $table, int $pageId): ?\TYPO3\CMS\Core\Database\Query\QueryBuilder
     {
@@ -57,4 +62,3 @@ final class GridViewQueryListener
         self::$queryCache = [];
     }
 }
-
