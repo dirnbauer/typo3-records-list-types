@@ -1,8 +1,8 @@
 # =============================================================================
-# Records Grid View - Default Page TSconfig
+# Records List Types - Default Page TSconfig
 # =============================================================================
 #
-# This file provides the default configuration for the Grid View extension.
+# This file provides the default configuration for the Records List Types extension.
 # You can override these settings in your site's Page TSconfig.
 #
 # Documentation: EXT:records_list_types/Documentation/Configuration.md
@@ -102,6 +102,103 @@ mod.web_list {
 
     # Legacy configuration (use viewMode instead)
     allowedViews = list,grid,compact,teaser
+
+    # =================================================================
+    # Record Filters
+    # =================================================================
+    # Configurable filters are rendered in the Records module and applied
+    # to the TYPO3 record-list query via the model/query layer.
+    filters {
+        enabled = 1
+
+        # Used when a table has no explicit fields list.
+        # Filters whose backing TCA fields do not exist are skipped automatically.
+        # Built-in aliases: title/label, hidden, date/dateRange, category/categories.
+        autoDefaults = title,dateRange,hidden,categories
+
+        presets {
+            title {
+                type = text
+                fields = label,title,header,name,username,email,teaser,description,bodytext,abstract,subheader,subtitle,nav_title,file_name,alternative
+            }
+            hidden {
+                type = boolean
+                field = hidden
+            }
+            dateRange {
+                type = dateRange
+                field = date
+            }
+            category {
+                type = category
+                field = category
+            }
+            categories {
+                type = category
+                field = categories
+            }
+        }
+
+        table {
+            pages {
+                fields = title,dateRange,hidden,categories
+
+                title {
+                    fields = title,nav_title,subtitle,abstract,description
+                }
+            }
+            tt_content {
+                fields = title,dateRange,hidden,categories
+
+                title {
+                    fields = header,subheader,bodytext
+                }
+            }
+            sys_category {
+                fields = title,dateRange
+            }
+            sys_file_metadata {
+                fields = title,dateRange,categories
+
+                title {
+                    fields = title,alternative,description
+                }
+            }
+            fe_users {
+                fields = title,dateRange,hidden,categories
+
+                title {
+                    fields = name,username,email,company
+                }
+            }
+            tx_news_domain_model_news {
+                fields = title,dateRange,categories,topNews,hidden
+
+                title {
+                    fields = title,teaser
+                }
+                dateRange {
+                    field = datetime
+                }
+                topNews {
+                    type = boolean
+                    field = istopnews
+                    label = Top News
+                    falseLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.no
+                    trueLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.yes
+                }
+            }
+            tx_news_domain_model_category {
+                fields = title,dateRange,hidden
+            }
+            tx_news_domain_model_tag {
+                fields = title,dateRange
+            }
+            tx_news_domain_model_author {
+                fields = title,dateRange,hidden
+            }
+        }
+    }
 
     # =================================================================
     # Grid View Table Configuration

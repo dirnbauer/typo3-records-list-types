@@ -7,9 +7,10 @@
  *
  * Contents:
  *   1. Recordlist Heading     - Table header bar (title, actions)
- *   2. Pagination             - Core list view navigation (Records X-Y, Page input)
- *   3. Sorting Mode Toggle    - Segmented control (Drag & Drop / By Column)
- *   4. Sorting Dropdown       - Field sorting dropdown and disabled state
+ *   2. Record Filters         - TSconfig-driven filter panel
+ *   3. Pagination             - Core list view navigation (Records X-Y, Page input)
+ *   4. Sorting Mode Toggle    - Segmented control (Drag & Drop / By Column)
+ *   5. Sorting Dropdown       - Field sorting dropdown and disabled state
  */
 
 /* =============================================================================
@@ -50,7 +51,172 @@
 }
 
 /* =============================================================================
-   2. Pagination - TYPO3 Core list view navigation style
+   2. Record Filters - configurable filter panel
+   ============================================================================= */
+
+.recordlist-filters-block {
+    margin: 1rem 0 1.25rem;
+    padding: 0.875rem;
+    border: 1px solid var(--typo3-component-border-color, #d4d4d8);
+    border-radius: 6px;
+    background: var(--typo3-component-bg, #fff);
+}
+
+.recordlist-filters-block__header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.625rem;
+    border-bottom: 1px solid var(--typo3-component-border-color, #d4d4d8);
+}
+
+.recordlist-filters-block__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    color: var(--typo3-text-color-base, #18181b);
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.recordlist-filters {
+    margin: 0;
+}
+
+.recordlist-filters__warnings {
+    margin-bottom: 0.75rem;
+}
+
+.recordlist-filters__warning {
+    margin-bottom: 0.5rem;
+}
+
+.recordlist-filters__warning:last-child {
+    margin-bottom: 0;
+}
+
+.recordlist-filters__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.75rem;
+    align-items: end;
+}
+
+.recordlist-filters__field {
+    min-width: 0;
+}
+
+.recordlist-filters__label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--typo3-text-color-variant, #52525b);
+}
+
+.recordlist-filters__range {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.recordlist-category-filter {
+    position: relative;
+}
+
+.recordlist-category-filter__toggle {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
+    text-align: start;
+}
+
+.recordlist-category-filter__text,
+.recordlist-category-filter__option {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    gap: 0.25rem;
+}
+
+.recordlist-category-filter__text {
+    width: 100%;
+    padding-inline-end: 1.25rem;
+}
+
+.recordlist-category-filter__primary {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recordlist-category-filter__translations {
+    flex: 1 1 auto;
+    min-width: 2rem;
+    overflow: hidden;
+    color: var(--typo3-text-color-variant, #6b7280);
+    font-size: 0.8125em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recordlist-category-filter__menu {
+    position: absolute;
+    z-index: 1050;
+    top: calc(100% + 0.125rem);
+    left: 0;
+    width: min(34rem, calc(100vw - 2rem));
+    min-width: 100%;
+    max-height: 16rem;
+    overflow: auto;
+    padding: 0.25rem;
+    border: 1px solid var(--typo3-component-border-color, #d4d4d8);
+    border-radius: 6px;
+    background: var(--typo3-component-bg, #fff);
+    box-shadow: var(--typo3-component-box-shadow, 0 0.25rem 0.75rem rgba(0, 0, 0, 0.12));
+}
+
+.recordlist-category-filter__option {
+    width: 100%;
+    margin: 0;
+    padding: 0.375rem 0.5rem;
+    border-radius: 4px;
+    color: inherit;
+    cursor: pointer;
+}
+
+.recordlist-category-filter__option:hover,
+.recordlist-category-filter__option:focus-within {
+    background: var(--typo3-component-hover-bg, #f3f4f6);
+    color: var(--typo3-component-hover-color, inherit);
+}
+
+.recordlist-category-filter__option:has(input:checked) {
+    background: var(--typo3-component-active-bg, #e9ecef);
+    color: var(--typo3-component-active-color, inherit);
+}
+
+.recordlist-filters__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+.recordlist-filters__actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+/* =============================================================================
+   3. Pagination - TYPO3 Core list view navigation style
    ============================================================================= */
 
 .recordlist-pagination {
@@ -94,7 +260,7 @@
 }
 
 /* =============================================================================
-   3. Sorting Mode Toggle - Segmented control (TYPO3 Styleguide)
+   4. Sorting Mode Toggle - Segmented control (TYPO3 Styleguide)
    ============================================================================= */
 
 .gridview-sorting-wrapper {
@@ -434,7 +600,7 @@
 }
 
 /* =============================================================================
-   4. Sorting Dropdown - Field sorting and disabled state
+   5. Sorting Dropdown - Field sorting and disabled state
    ============================================================================= */
 
 .gridview-sorting-dropdown {
@@ -453,7 +619,7 @@
 }
 
 /* =============================================================================
-   5. typo3-backend-contextual-record-edit-trigger — softer default
+   6. typo3-backend-contextual-record-edit-trigger — softer default
    =============================================================================
    The Core web component inherits `appearance: button` from PseudoButtonLit,
    which makes some browsers paint a harsh native-button background/border.
@@ -483,4 +649,3 @@ typo3-backend-contextual-record-edit-trigger:hover {
     background: color-mix(in srgb, currentColor 6%, transparent);
     color: inherit;
 }
-

@@ -1,27 +1,18 @@
-# Extending the Grid View
+# Extending Records List Types
 
-This document explains how developers can customize and extend the Records Grid View.
+This document explains how developers can customize and extend Records List Types.
 
 ## Custom Card Templates
 
-### Override Templates via TypoScript
+### Override Templates via Page TSconfig
 
-You can override the Fluid templates using standard TYPO3 template paths:
+You can override template paths per view type:
 
 ```typoscript
-# In your extension's TypoScript setup
-module.tx_recordsgridview {
-    view {
-        templateRootPaths {
-            100 = EXT:your_extension/Resources/Private/Templates/RecordsListTypes/
-        }
-        partialRootPaths {
-            100 = EXT:your_extension/Resources/Private/Partials/RecordsListTypes/
-        }
-        layoutRootPaths {
-            100 = EXT:your_extension/Resources/Private/Layouts/RecordsListTypes/
-        }
-    }
+mod.web_list.viewMode.types.grid {
+    templateRootPath = EXT:your_extension/Resources/Private/Templates/RecordsListTypes/
+    partialRootPath = EXT:your_extension/Resources/Private/Partials/RecordsListTypes/
+    layoutRootPath = EXT:your_extension/Resources/Private/Layouts/RecordsListTypes/
 }
 ```
 
@@ -52,7 +43,7 @@ Create your own `Card.html` partial:
 
 ## Custom Actions
 
-The Grid View automatically displays all actions registered via `ModifyRecordListRecordActionsEvent`. To add custom actions:
+Alternative views automatically display all actions registered via `ModifyRecordListRecordActionsEvent`. To add custom actions:
 
 ```php
 <?php
@@ -145,7 +136,7 @@ mod.web_list.gridView.table.sys_file_metadata.preview = 0
 
 # Or hide the entire Grid View option for certain pages
 [page["uid"] == 123]
-    mod.web_list.allowedViews = list
+    mod.web_list.viewMode.allowed = list
 [end]
 ```
 
@@ -218,19 +209,16 @@ class EnhancedRecordGridDataProvider extends RecordGridDataProvider
 }
 ```
 
-## JavaScript Hooks
+## JavaScript
 
-The view switcher JavaScript exposes events you can listen to:
+The shared action module is a Lit custom element. Custom templates that need
+drag-and-drop, record actions, sorting, pagination input handling, compact-view
+scroll shadows, or client-side search must wrap their rendered content:
 
-```javascript
-document.addEventListener('recordsGridview:viewModeChanged', (event) => {
-    console.log('View mode changed to:', event.detail.mode);
-    
-    // Your custom logic
-    if (event.detail.mode === 'grid') {
-        // Initialize lazy loading, etc.
-    }
-});
+```html
+<records-list-types-actions>
+    <!-- custom view markup -->
+</records-list-types-actions>
 ```
 
 ## CSS Customization
@@ -332,4 +320,3 @@ class CustomRecordActionListenerTest extends FunctionalTestCase
     }
 }
 ```
-

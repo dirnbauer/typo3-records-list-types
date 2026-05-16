@@ -33,8 +33,8 @@ Records List Types
 
 Multiple view modes (Grid, Compact, Teaser, Generic) for the TYPO3 v14 Records
 module. Provides visual alternatives to the traditional table-based
-List View with thumbnails, per-table TSconfig configuration, and
-PSR-14 extensibility.
+List View with thumbnails, configurable record filters, per-table TSconfig
+configuration, and PSR-14 extensibility.
 
 ----
 

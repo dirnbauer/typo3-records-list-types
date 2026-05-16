@@ -1,9 +1,19 @@
-# macOS
+# Operating system files
 .DS_Store
+._*
+.AppleDouble
+.LSOverride
+Icon?
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # IDE / Editor settings
 .idea/
 .vscode/
+*.swp
+*.swo
 
 # Cursor AI skills and rules (local configuration)
 .cursor/
@@ -22,9 +32,17 @@ webconsulting-skills/
 # TYPO3 / Composer
 vendor/
 var/
+typo3temp/
 public/typo3/
 public/typo3conf/
 public/_assets/
+public/fileadmin/
+public/uploads/
+public/typo3temp/
+public/typo3conf/LocalConfiguration.php
+public/typo3conf/AdditionalConfiguration.php
+public/typo3conf/PackageStates.php
+public/typo3conf/l10n/
 .Build/
 
 # PHP
@@ -32,3 +50,10 @@ public/_assets/
 .php-cs-fixer.cache
 .phpunit.result.cache
 .phpunit.cache/
+
+# Local development
+.ddev/.global_commands/
+.ddev/.homeadditions/
+.env
+.env.local
+.env.*.local

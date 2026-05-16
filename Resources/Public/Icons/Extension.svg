@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <title>Records Grid View</title>
+  <title>Records List Types</title>
   
   <!-- Background -->
   <rect x="4" y="4" width="56" height="56" rx="6" ry="6" fill="#4a90d9"/>
@@ -35,4 +35,3 @@
   <rect x="28" y="19.5" width="6" height="1" rx="0.5" ry="0.5" fill="#cbd5e1"/>
   <rect x="44" y="19.5" width="6" height="1" rx="0.5" ry="0.5" fill="#cbd5e1"/>
 </svg>
-

@@ -35,6 +35,7 @@
             <f:for each="{tableData}" as="table">
                 <div class="recordlist" id="t3-table-{table.tableName}"
                      {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
+                    <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
                     <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
                     <input type="hidden" name="cmd_table" value="{table.tableName}" />
                     <input type="hidden" name="cmd" />
@@ -115,7 +116,7 @@
                                 </div>
                             </f:for>
                             <f:comment>End dropzone - visible during drag to allow dropping after last item</f:comment>
-                            <f:if condition="{table.canReorder}">
+                            <f:if condition="{table.canReorder} && {table.records}">
                                 <div class="gridview-end-dropzone"
                                      data-table="{table.tableName}"
                                      data-last-uid="{table.lastRecordUid}"
@@ -126,6 +127,9 @@
                                 </div>
                             </f:if>
                         </div>
+                        <f:if condition="!{table.records}">
+                            <f:render partial="EmptyRecordsNotice" arguments="{table: table, searchTerm: searchTerm}" />
+                        </f:if>
 
                         <f:comment>Expand table button - multi-table mode with more records</f:comment>
                         <f:if condition="!{currentTable} && {table.hasMore}">
@@ -150,7 +154,9 @@
             <div class="callout callout-info">
                 <div class="callout-body">
                     <core:icon identifier="actions-info" size="small" />
-                    <span class="ms-2">No records found on this page.</span>
+                    <span class="ms-2">
+                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." />
+                    </span>
                 </div>
             </div>
         </f:else>

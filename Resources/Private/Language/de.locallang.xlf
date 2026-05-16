@@ -183,7 +183,42 @@
                 <source>All elements translated</source>
                 <target>Alle Elemente übersetzt</target>
             </trans-unit>
+            <trans-unit id="filter.show" resname="filter.show">
+                <source>Show filters</source>
+                <target>Filter anzeigen</target>
+            </trans-unit>
+            <trans-unit id="filter.title" resname="filter.title">
+                <source>Filter</source>
+                <target>Filter</target>
+            </trans-unit>
+            <trans-unit id="filter.apply" resname="filter.apply">
+                <source>Apply filters</source>
+                <target>Filter anwenden</target>
+            </trans-unit>
+            <trans-unit id="filter.reset" resname="filter.reset">
+                <source>Reset</source>
+                <target>Zurücksetzen</target>
+            </trans-unit>
+            <trans-unit id="filter.option.any" resname="filter.option.any">
+                <source>Any</source>
+                <target>Alle</target>
+            </trans-unit>
+            <trans-unit id="filter.option.visible" resname="filter.option.visible">
+                <source>Visible</source>
+                <target>Sichtbar</target>
+            </trans-unit>
+            <trans-unit id="filter.option.hidden" resname="filter.option.hidden">
+                <source>Hidden</source>
+                <target>Verborgen</target>
+            </trans-unit>
+            <trans-unit id="filter.option.yes" resname="filter.option.yes">
+                <source>Yes</source>
+                <target>Ja</target>
+            </trans-unit>
+            <trans-unit id="filter.option.no" resname="filter.option.no">
+                <source>No</source>
+                <target>Nein</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>
-

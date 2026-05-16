@@ -1,6 +1,6 @@
 # Configuration Reference
 
-This document provides a complete reference for configuring the Records Grid View extension via TSconfig.
+This document provides a complete reference for configuring the Records List Types extension via TSconfig.
 
 ## Page TSconfig
 
@@ -10,14 +10,15 @@ All configuration is done under `mod.web_list`.
 
 ```typoscript
 mod.web_list {
-    # Which views are available? Comma-separated: list, grid
-    # Setting only "list" hides the Grid View toggle entirely
-    # Default: list,grid
-    allowedViews = list,grid
+    # Which views are available?
+    # Setting only "list" hides the view-mode dropdown entirely.
+    # Default: list,grid,compact,teaser
+    viewMode.allowed = list,grid,compact,teaser
 
     gridView {
         # Default view when no user preference exists
-        # Options: list, grid
+        # Prefer mod.web_list.viewMode.default for new configuration.
+        # Options: list, grid, compact, teaser, or a custom view type
         # Default: list
         default = list
 
@@ -56,6 +57,60 @@ mod.web_list.gridView.table {
     }
 }
 ```
+
+### Record Filters
+
+Filters are configured in Page TSconfig and applied in the query layer before
+records are fetched. The classic List View and all alternative view modes
+therefore use the same filtered result set.
+
+The filter panel is table-scoped. Editors enable it with **View > Show
+filters** after a specific table has been selected. The visibility setting is
+stored in the user's Records module settings, like the core search and
+clipboard toggles. If filters or search return no records, the selected table
+section and filter panel stay visible with an empty-result notice.
+
+```typoscript
+mod.web_list.filters {
+    enabled = 1
+    autoDefaults = title,dateRange,hidden,categories
+
+    table.tx_news_domain_model_news {
+        fields = title,dateRange,categories,topNews,hidden
+
+        title {
+            type = text
+            fields = title,teaser
+        }
+
+        topNews {
+            type = boolean
+            field = istopnews
+            label = Top News
+            falseLabel = No
+            trueLabel = Yes
+        }
+    }
+}
+```
+
+Built-in aliases:
+
+- `title` / `label`: text filter for the TCA label field
+- `hidden`: visibility filter from TCA enable columns
+- `dateRange`: date range filter from common date fields or `ctrl.crdate`
+- `category` / `categories`: TYPO3 many-to-many TCA category filter. Category
+  options are grouped by default-language category and show translations in
+  brackets; selecting an option matches the default category UID and its
+  translation UIDs.
+
+The default `autoDefaults` are intentionally generic. When a new table is
+added later, filters whose backing TCA fields do not exist are skipped
+automatically, so most tables get a useful filter set without extra
+TSconfig. Use `mod.web_list.filters.table.<table>` only to refine important
+tables or table-specific fields.
+
+Full RST documentation: [Record filters](Configuration/Filters.rst).
 
 ## Common Configurations
 
@@ -181,7 +236,7 @@ options.layout.records {
 
 ```typoscript
 # In User TSconfig for the group
-mod.web_list.allowedViews = list
+mod.web_list.viewMode.allowed = list
 ```
 
 ## Advanced Configuration
@@ -191,7 +246,7 @@ mod.web_list.allowedViews = list
 ```typoscript
 # In Page TSconfig for a specific page tree
 [page["uid"] == 123 || page["pid"] == 123]
-    mod.web_list.allowedViews = list
+    mod.web_list.viewMode.allowed = list
 [end]
 ```
 
@@ -227,11 +282,10 @@ The active view mode is determined in this order:
 
 1. **Request Parameter** (`?displayMode=grid`) - Highest priority
 2. **User Preference** (stored in backend user settings)
-3. **Page TSconfig** (`mod.web_list.gridView.default`)
+3. **Page TSconfig** (`mod.web_list.viewMode.default`)
 4. **Fallback**: `list`
 
 This means:
 - URL parameters always win (useful for sharing links)
 - User preferences are remembered across sessions
 - TSconfig defines the default for new users
-

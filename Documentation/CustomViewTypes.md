@@ -74,52 +74,59 @@ that the built-in templates now use:
 These are rendered through shared partials such as `TableHeading`,
 `SortingDropdown`, `SortingModeToggle`, and `SortableColumnHeader`.
 
+Wrap custom templates in `<records-list-types-actions>` when they need the
+extension's shared interactions. The base `GridViewActions.js` module registers
+that Lit custom element and initializes drag-and-drop, record actions, sorting,
+pagination input handling, scroll shadows, and client-side search inside it.
+
 ```html
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
-<div class="timeline-container">
-    <f:for each="{tableData}" as="table">
-        <div class="recordlist" id="t3-table-{table.tableName}">
-            <div class="recordlist-heading">
-                <div class="recordlist-heading-row">
-                    <div class="recordlist-heading-title">
-                        <a href="{table.singleTableUrl}">
-                            <span class="fw-bold">{table.tableLabel}</span>
-                            <span>({table.recordCount})</span>
-                        </a>
-                    </div>
-                    <div class="recordlist-heading-actions">
-                        <f:if condition="{table.actionButtons.newRecordButton}">
-                            <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
-                        </f:if>
-                    </div>
-                </div>
-            </div>
-
-            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
-
-            <div class="timeline-list">
-                <f:for each="{table.records}" as="record">
-                    <div class="timeline-item">
-                        <div class="timeline-marker"></div>
-                        <div class="timeline-content">
-                            <strong>{record.title}</strong>
-                            <f:for each="{record.displayValues}" as="field">
-                                <f:if condition="{field.type} == 'datetime'">
-                                    <span class="text-muted small ms-2">{field.formatted}</span>
-                                </f:if>
-                            </f:for>
+<records-list-types-actions>
+    <div class="timeline-container">
+        <f:for each="{tableData}" as="table">
+            <div class="recordlist" id="t3-table-{table.tableName}">
+                <div class="recordlist-heading">
+                    <div class="recordlist-heading-row">
+                        <div class="recordlist-heading-title">
+                            <a href="{table.singleTableUrl}">
+                                <span class="fw-bold">{table.tableLabel}</span>
+                                <span>({table.recordCount})</span>
+                            </a>
+                        </div>
+                        <div class="recordlist-heading-actions">
+                            <f:if condition="{table.actionButtons.newRecordButton}">
+                                <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
+                            </f:if>
                         </div>
                     </div>
-                </f:for>
-            </div>
+                </div>
 
-            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
-        </div>
-    </f:for>
-</div>
+                <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+
+                <div class="timeline-list">
+                    <f:for each="{table.records}" as="record">
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>{record.title}</strong>
+                                <f:for each="{record.displayValues}" as="field">
+                                    <f:if condition="{field.type} == 'datetime'">
+                                        <span class="text-muted small ms-2">{field.formatted}</span>
+                                    </f:if>
+                                </f:for>
+                            </div>
+                        </div>
+                    </f:for>
+                </div>
+
+                <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
+            </div>
+        </f:for>
+    </div>
+</records-list-types-actions>
 
 </html>
 ```
@@ -507,7 +514,7 @@ Every view type automatically receives:
 | Asset | Source | Purpose |
 |-------|--------|---------|
 | `base.css` | Extension | Shared heading, pagination, sorting styles |
-| `GridViewActions.js` | Extension | Drag-drop, record actions, pagination input, sorting, search |
+| `GridViewActions.js` | Extension | Lit custom element for drag-drop, record actions, pagination input, sorting, scroll shadows, search |
 | `column-selector-button.js` | TYPO3 Core | Column selector web component |
 
 You only need to add your own assets for view-specific styling or behavior.
@@ -534,7 +541,9 @@ Your CSS file can reference TYPO3 CSS variables for automatic dark mode support:
 
 ### JavaScript
 
-Add custom JavaScript modules via the `js` option. Your module is loaded alongside the base `GridViewActions.js`:
+Add custom JavaScript modules via the `js` option. Your module is loaded alongside the base `GridViewActions.js`.
+If your template needs the extension's shared interactions, keep the
+`<records-list-types-actions>` wrapper in the rendered markup:
 
 ```tsconfig
 mod.web_list.viewMode.types.kanban {
@@ -631,7 +640,7 @@ my_sitepackage/
 ```
 1. base.css                          ← Always (shared heading, pagination, sorting)
 2. your-view.css                     ← Your css option
-3. GridViewActions.js                ← Always (drag-drop, actions, pagination input)
+3. GridViewActions.js                ← Always (Lit actions component)
 4. column-selector-button.js         ← Always (TYPO3 column selector)
 5. your-module.js                    ← Your js option
 ```
