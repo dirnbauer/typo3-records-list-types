@@ -34,11 +34,13 @@
     - viewConfig: View type configuration from registry
 </f:comment>
 
+<records-list-types-actions>
 <div class="recordlist-genericview-container">
 
     <f:if condition="{tableData}">
         <f:then>
             <f:for each="{tableData}" as="table">
+                <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
                 <div class="recordlist" id="t3-table-{table.tableName}">
                     <f:comment>Table header</f:comment>
                     <div class="recordlist-heading">
@@ -84,8 +86,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
 
                     <f:comment>Records list - customize this section for your view type</f:comment>
                     <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
@@ -190,5 +190,6 @@
     </f:if>
 
 </div>
+</records-list-types-actions>
 
 </html>
