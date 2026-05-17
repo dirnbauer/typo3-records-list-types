@@ -1148,6 +1148,8 @@ final class RecordListController extends CoreRecordListController
         $workspaceId = $this->getCurrentWorkspaceId();
         $useWorkspaceReduction = $workspaceId > 0;
         $recordGridDataProvider ??= GeneralUtility::makeInstance(RecordGridDataProvider::class);
+        $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
+        $deferWorkspaceFilters = $recordFilterQueryService->hasDeferredWorkspaceFilters($tableName, $pageId, $request);
 
         try {
             // Create a properly initialized DatabaseRecordList for this table
@@ -1157,9 +1159,14 @@ final class RecordListController extends CoreRecordListController
 
             // Use DatabaseRecordList's query builder which handles search properly
             // This is the same API the core list view uses
-            $queryBuilder = $dbList->getQueryBuilder($tableName, ['*'], true, $offset, $limit);
-            $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
-            $recordFilterQueryService->applyActiveFilters($queryBuilder, $tableName, $pageId, $request);
+            $queryBuilder = $dbList->getQueryBuilder(
+                $tableName,
+                ['*'],
+                true,
+                $deferWorkspaceFilters ? 0 : $offset,
+                $deferWorkspaceFilters ? 0 : $limit,
+            );
+            $recordFilterQueryService->applyActiveFilters($queryBuilder, $tableName, $pageId, $request, $deferWorkspaceFilters);
             $result = $queryBuilder->executeQuery();
 
             while ($row = $result->fetchAssociative()) {
@@ -1174,6 +1181,10 @@ final class RecordListController extends CoreRecordListController
                 }
 
                 $typedRow = ArrayUtility::stringKeyArray($row);
+                if ($deferWorkspaceFilters && !$recordFilterQueryService->matchesDeferredWorkspaceFilters($tableName, $pageId, $request, $typedRow)) {
+                    continue;
+                }
+
                 $uid = ArrayUtility::intValue($typedRow['uid'] ?? null);
                 $recordData = $recordGridDataProvider->buildRecordDataFromRow($tableName, $typedRow, $pageId);
 
@@ -1197,6 +1208,9 @@ final class RecordListController extends CoreRecordListController
             $records = array_values($recordsByIdentity);
             if ($sortField !== '') {
                 $this->sortRecordsByRawField($records, $sortField, $sortDirection);
+            }
+            if ($deferWorkspaceFilters && $limit > 0) {
+                $records = array_slice($records, $offset, $limit);
             }
             return $records;
         }
@@ -1337,9 +1351,25 @@ final class RecordListController extends CoreRecordListController
         ?RecordFilterQueryService $recordFilterQueryService = null,
     ): int {
         try {
+            $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
+            if ($recordFilterQueryService->hasDeferredWorkspaceFilters($tableName, $pageId, $request)) {
+                return count($this->getRecordsUsingDbList(
+                    $request,
+                    $tableName,
+                    $pageId,
+                    $searchTerm,
+                    $searchLevels,
+                    0,
+                    0,
+                    '',
+                    'asc',
+                    GeneralUtility::makeInstance(RecordGridDataProvider::class),
+                    $recordFilterQueryService,
+                ));
+            }
+
             $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
             $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
-            $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
             $recordFilterQueryService->applyActiveFilters($qb, $tableName, $pageId, $request);
             $count = $qb->count('*')->executeQuery()->fetchOne();
             return is_numeric($count) ? (int) $count : 0;
