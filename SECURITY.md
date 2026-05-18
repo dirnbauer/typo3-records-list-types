@@ -35,3 +35,6 @@ itself. Vulnerabilities in TYPO3 Core should be reported to the
 - Backend AJAX endpoints are CSRF-protected by Core's router.
 - All input (view mode, sort field, direction, page id) validated against
   allow-lists before use.
+- Workspace-aware search and configured filters overlay candidate records
+  before matching draft values; SQL candidate lookup remains parameterized and
+  the classic TYPO3 list view remains Core-controlled.

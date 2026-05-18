@@ -15,7 +15,7 @@ landed since.
 | Architecture | 18 | 20 | Services.yaml with autowire+autoconfigure, PSR-14 events via `#[AsEventListener]`, PHPat architecture rules enforced. The XClass controller must use `GeneralUtility::makeInstance()` because it inherits the Core constructor signature. |
 | Coding guidelines | 20 | 20 | `declare(strict_types=1)` in every `Classes/**/*.php`. PHP 8.3 typed constants (`private const string`) everywhere Rector reached. PSR-12 via PHP-CS-Fixer PER-CS 2.0. |
 | PHP quality | 20 | 20 | PHPStan level max + strict rules + PHPat + `saschaegerer/phpstan-typo3:^3.0`. No `@phpstan-ignore` markers or baseline. |
-| Testing | 17 | 20 | 190 tests (118 unit + 72 functional). `RecordGridDataProvider`, `RecordListController` and ViewHelpers still uncovered. |
+| Testing | 17 | 20 | 192 tests (120 unit + 72 functional). `RecordGridDataProvider`, `RecordListController` and ViewHelpers still uncovered. |
 | Practices | 18 | 20 | GitHub Actions CI (PHP 8.3 + 8.4, MySQL 8), PHP-CS-Fixer auto-fix, PHPStan, dedicated `composer audit` job. Rector config committed. |
 | **Subtotal** | **93** | 100 | |
 | Excellence bonus | +4 | up to 22 | `#[\ReadOnly]` on services where Rector could prove it safe; `#[\Override]` on inherited methods; PHPat layer rules; TrustedHtml/sanitizer pattern for XSS hardening. |

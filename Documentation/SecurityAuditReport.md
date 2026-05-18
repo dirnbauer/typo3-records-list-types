@@ -9,8 +9,8 @@
 
 Second independent sweep in the OWASP/CWE frame. Baseline is the round-1
 report plus the round-1 remediation (composer audit CI job, Dependabot,
-LICENSE/SECURITY.md). No new findings; the Rector modernization did not
-introduce any regressions.
+LICENSE/SECURITY.md). No new findings; the Rector modernization and the
+workspace-aware search/filter fixes did not introduce any regressions.
 
 ## OWASP Top 10 (2021) checklist
 
@@ -67,10 +67,15 @@ Grepped `Classes/` for the high-risk sinks:
 None. The round-1 observations (#1 add `composer audit`, #2 Dependabot)
 remain resolved in the committed CI config.
 
+The workspace-aware search/filter path keeps the SQL query parameterized for
+candidate lookup, then evaluates text, select, and category filters against
+TYPO3-overlaid row data in alternative view modes. This does not add a public
+endpoint or bypass TYPO3 backend permissions.
+
 ## Verification
 
 - CWE sink grep sweep — 0 hits.
 - `composer audit --locked` — 0 advisories.
 - `composer validate --strict` — valid.
 - `vendor/bin/phpstan analyse` — level max, 0 errors.
-- `vendor/bin/phpunit` — 118 unit + 72 functional tests pass.
+- `vendor/bin/phpunit` — 120 unit + 72 functional tests pass.
