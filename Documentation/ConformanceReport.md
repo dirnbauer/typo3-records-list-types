@@ -61,7 +61,7 @@ Delta since round 2: **95 → 97**.
 
 - `vendor/bin/phpstan analyse` — level max, 0 errors.
 - `vendor/bin/php-cs-fixer fix --dry-run --diff` — 0 diff.
-- `vendor/bin/phpunit --testsuite Unit` — 118 tests / 214 assertions.
+- `vendor/bin/phpunit --testsuite Unit` — 120 tests / 326 assertions.
 - `typo3DatabaseDriver=pdo_sqlite vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml`
   — 72 tests / 155 assertions.
 - `composer validate --strict` + `composer audit --locked` — both clean.

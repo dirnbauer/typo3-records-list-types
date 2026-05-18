@@ -72,5 +72,5 @@ their boundaries. No baseline or inline ignores are used.
 - `vendor/bin/rector process` — applied.
 - `vendor/bin/phpstan analyse` — 0 errors at level max.
 - `vendor/bin/php-cs-fixer fix` — expected 0 diff after rector.
-- `vendor/bin/phpunit --testsuite Unit` — 118 tests green.
+- `vendor/bin/phpunit --testsuite Unit` — 120 tests green.
 - Functional (pdo_sqlite) — 72 tests green.

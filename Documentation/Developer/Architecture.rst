@@ -39,7 +39,8 @@ Services
         -   Reads filter visibility and selected values from request/module data
 
     *   -   :php:`RecordFilterQueryService`
-        -   Applies active filters to TYPO3 record-list query builders
+        -   Applies active filters to TYPO3 record-list query builders and,
+            in workspace-aware alternative views, to overlaid effective rows
 
     *   -   :php:`RecordFilterViewDataFactory`
         -   Builds Fluid-ready filter panel data
@@ -96,7 +97,8 @@ Event listeners
 
     *   -   :php:`RecordFilterQueryListener`
         -   ``ModifyDatabaseQueryForRecordListingEvent``
-        -   Applies configured filters to the classic List View query
+        -   Applies configured filters to TYPO3 record-list queries, deferring
+            workspace-sensitive evaluation for alternative view modes
 
 .. _architecture-resolution:
 

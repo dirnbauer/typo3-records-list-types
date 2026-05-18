@@ -23,6 +23,10 @@ aspect that was standardised in the previous round.
 - Every `QueryBuilder` obtained inside `RecordGridDataProvider` applies
   both `DeletedRestriction` and `WorkspaceRestriction` with the workspace
   id resolved via `Context::getPropertyFromAspect('workspace', 'id')`.
+- Alternative view modes defer search and configured filter evaluation in
+  workspaces until after `BackendUtility::workspaceOL()` has produced the
+  effective row. This covers text search, arbitrary field filters, and
+  category MM relations against draft records.
 - `getWorkspaceState()` only maps the TYPO3 v14 values (1 = new,
   2 = deleted, 4 = move). Legacy `t3ver_state = 3` is absent.
 - No TCA ships with this extension, so there is nothing to mark
@@ -43,5 +47,5 @@ and `Documentation/Developer/Workspaces.rst`.
 ## Verification after fixes
 
 - `vendor/bin/phpstan analyse` — expected 0 errors.
-- `vendor/bin/phpunit --testsuite Unit` — 90 green.
+- `vendor/bin/phpunit --testsuite Unit` — 120 tests / 326 assertions.
 - `typo3DatabaseDriver=pdo_sqlite vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml` — 72 green.

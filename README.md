@@ -19,7 +19,7 @@ A TYPO3 extension that transforms the backend **Records** module with multiple v
 - **Pagination** -- Matches TYPO3 Core: multi-table mode shows limited records with "Expand table" button, single-table mode shows full pagination (record range, page input, first/prev/next/last)
 - **Image Preview Hint** -- Subtle notice below thumbnails reminding editors that the image may not appear on the frontend for certain record types
 - **Zero-PHP Extensibility** -- Add new view types with just TSconfig + Fluid template + CSS, no PHP classes needed
-- **Search** -- Client-side search filtering across all view modes
+- **Search** -- TYPO3 record-list search with workspace-aware post-overlay matching in alternative views
 - **Accessibility** -- WCAG 2.1 compliant keyboard navigation, ARIA labels, and screen reader support
 
 ## Use Cases
@@ -167,9 +167,13 @@ mod.web_list.gridView.table.tx_news_domain_model_news {
 
 ### Record Filters
 
-Filters are configured in Page TSconfig and applied in the query layer before
-records are fetched. The classic List View and all alternative view modes
-therefore use the same filtered result set.
+Filters are configured in Page TSconfig and share TYPO3's record-list query
+setup. In LIVE and in the classic List View they are applied directly in the
+query layer. In workspace mode, Grid, Compact, Teaser, and custom view modes
+first fetch candidate rows, apply `BackendUtility::workspaceOL()`, and then
+evaluate the active search term and filters against the effective workspace
+row. Workspace-only text changes, visibility changes, dates, select values,
+and category assignments are therefore searchable before they are published.
 
 The filter toggle appears in **View > Show filters** after a table has been
 selected. The visibility setting is stored in the user's Records module
@@ -219,7 +223,8 @@ Built-in aliases:
 
 Category options show the default-language category once and append available
 translations in brackets. Selecting a category matches the default category UID
-and all translated category UIDs.
+and all translated category UIDs. In workspaces, category matching also checks
+the workspace version UID used by TYPO3's MM relations.
 
 See [Record filters](Documentation/Configuration/Filters.rst) for the full
 configuration reference.
@@ -267,6 +272,9 @@ The extension is fully workspace-aware on TYPO3 v14:
 - Every fetched row is overlaid with `BackendUtility::workspaceOL()`
   before enrichment, so the view always reflects the workspace version
   of a record.
+- Search and configured filters in alternative view modes are evaluated after
+  the workspace overlay when a workspace is active. This avoids filtering out
+  live rows before TYPO3 can replace them with draft rows.
 - `t3ver_state` is mapped to colour-coded visual indicators. The legacy
   `t3ver_state = 3` branch was removed in TYPO3 v11 and is not handled.
 
@@ -323,7 +331,7 @@ base.css            ← Loaded for ALL view modes (always first)
 | `RecordGridDataProvider` | Enriches records with thumbnails, icons, workspace state, and language info |
 | `GridConfigurationService` | Parses TSconfig for per-table field configuration |
 | `RecordFilterConfigurationService` | Resolves TSconfig/TCA filter definitions |
-| `RecordFilterQueryService` | Applies active filters to record-list queries |
+| `RecordFilterQueryService` | Applies active filters to record-list queries and post-overlay workspace rows |
 | `RecordFilterViewDataFactory` | Builds Fluid-ready filter panel data |
 | `ThumbnailService` | Resolves FAL references and generates thumbnail URLs |
 | `ViewModeResolver` | Determines active view mode from request, user preference, or TSconfig |

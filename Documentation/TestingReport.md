@@ -10,7 +10,7 @@ checks green.
 
 ## Current state
 
-- **Unit**: 118 tests / 214 assertions.
+- **Unit**: 120 tests / 326 assertions.
 - **Functional**: 72 tests / 155 assertions (pdo_sqlite driver).
 - **Architecture**: phpat rules evaluated under PHPStan
   (`vendor/phpat/phpat/extension.neon` included in `phpstan.neon`).
@@ -49,11 +49,14 @@ checks green.
   validate the v14 workspace-aware code without a baseline.
 - Added TYPO3 14.3 `ext_emconf.php` compatibility metadata to
   `composer.json`, removing the functional-suite deprecation.
+- Verified the workspace-aware search/filter path after active filters and
+  module search terms were moved behind `BackendUtility::workspaceOL()` for
+  alternative view modes.
 
 ## Verification
 
 ```bash
-Build/Scripts/runTests.sh -s unit          # 118 tests, 214 assertions
+Build/Scripts/runTests.sh -s unit          # 120 tests, 326 assertions
 Build/Scripts/runTests.sh -s phpstan       # 0 errors (includes phpat rules)
 Build/Scripts/runTests.sh -s cgl           # 0 diff
 Build/Scripts/runTests.sh -s composer      # validate + audit clean

@@ -14,7 +14,7 @@ Supersedes the round-1 snapshot.
 | `Index.rst` in every subdirectory | Pass | `find Documentation -mindepth 1 -type d` → 0 misses. |
 | Permalink anchor before every heading | Pass | All `.rst` files (except `Sitemap.rst`, auto-generated) open with a `.. _label:` anchor. |
 | No `mailto:` links in RST | Pass | Only matches are prose references in the `*.md` report files. |
-| README and Documentation synchronized | Pass | README and RST now describe TYPO3 14.3 LTS, PHPStan level max, and the retained `ext_emconf.php` metadata. |
+| README and Documentation synchronized | Pass | README and RST now describe TYPO3 14.3 LTS, PHPStan level max, retained `ext_emconf.php` metadata, and workspace-aware search/filter evaluation. |
 | 4-space indent, LF endings, UTF-8 | Pass | Enforced by `Documentation/.editorconfig` + `.editorconfig` at repo root. |
 
 ## Page length observations
@@ -31,9 +31,13 @@ subsection anchors that the left-hand TOC picks up.
 
 ## Changes in this pass
 
-No structural edits. The existing RST tree already meets every
-mandatory criterion from the skill (anchors, directory `Index.rst`,
-editorconfig, 4-space indent).
+Updated the README, filter chapter, usage guide, architecture guide, and
+workspace guide to document that alternative view modes defer search and
+configured filters until after `BackendUtility::workspaceOL()` when a
+workspace is active.
+
+The existing RST tree still meets every mandatory criterion from the skill
+(anchors, directory `Index.rst`, editorconfig, 4-space indent).
 
 ## Outstanding (deferred)
 

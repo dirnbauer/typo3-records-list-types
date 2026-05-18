@@ -11,6 +11,18 @@ view modes is filtered through a :php:`WorkspaceRestriction` and overlaid
 with :php:`BackendUtility::workspaceOL()` before the template renders it.
 Workspace state is propagated to the grid as a colour hint on each card.
 
+Search and filters follow the same rule in alternative view modes. If an
+active workspace is selected, the controller fetches candidate rows without
+applying search or configured filters to workspace-sensitive fields too early,
+overlays each row, reduces duplicate live/version rows by workspace identity,
+and then evaluates the search term and active filters against the effective
+row.
+
+This protects the common TYPO3 overlay sequence: a live row must be selected
+first so :php:`BackendUtility::workspaceOL()` can swap in the draft row. SQL
+conditions against changed draft fields would otherwise remove the live row
+before the overlay step.
+
 .. _workspaces-state-mapping:
 
 State mapping
@@ -69,6 +81,27 @@ The same workspace id is used for the restriction:
         ->removeAll()
         ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
         ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $workspaceId));
+
+.. _workspaces-search-filter:
+
+Search and filter evaluation
+============================
+
+In LIVE and in the classic List View, record filters use TYPO3 Core's normal
+query event. In workspace-aware alternative view modes, the extension defers
+evaluation of the module search term and active configured filters until after
+workspace overlay.
+
+The deferred path supports:
+
+*   text search using the table's TCA ``ctrl.searchFields`` and label field;
+*   boolean, select, and date filters on arbitrary TCA fields;
+*   category filters through ``sys_category_record_mm``;
+*   custom filter definitions that expose a ``field`` or ``fields`` setting.
+
+Category filtering checks both the live UID and the workspace version UID
+(``_ORIG_uid``) because TYPO3 may store draft MM relations against the version
+record.
 
 .. _workspaces-known-limitations:
 

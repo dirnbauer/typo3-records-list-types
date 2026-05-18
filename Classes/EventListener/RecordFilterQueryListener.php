@@ -25,7 +25,12 @@ final readonly class RecordFilterQueryListener
 
         $displayMode = $this->getDisplayMode($request);
         $deferWorkspaceFilters = $displayMode !== '' && $displayMode !== 'list'
-            && $this->queryService->hasDeferredWorkspaceFilters($event->getTable(), $event->getPageId(), $request);
+            && $this->queryService->shouldDeferWorkspaceEvaluation(
+                $event->getTable(),
+                $event->getPageId(),
+                $request,
+                $this->getSearchTerm($request),
+            );
 
         $this->queryService->applyActiveFilters(
             $event->getQueryBuilder(),
@@ -43,5 +48,14 @@ final readonly class RecordFilterQueryListener
         $bodyParams = is_array($parsedBody) ? $parsedBody : [];
         $displayMode = $queryParams['displayMode'] ?? $bodyParams['displayMode'] ?? '';
         return is_scalar($displayMode) ? trim((string) $displayMode) : '';
+    }
+
+    private function getSearchTerm(ServerRequestInterface $request): string
+    {
+        $queryParams = $request->getQueryParams();
+        $parsedBody = $request->getParsedBody();
+        $bodyParams = is_array($parsedBody) ? $parsedBody : [];
+        $searchTerm = $queryParams['searchTerm'] ?? $bodyParams['searchTerm'] ?? '';
+        return is_scalar($searchTerm) ? trim((string) $searchTerm) : '';
     }
 }

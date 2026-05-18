@@ -72,6 +72,15 @@ final readonly class RecordFilterQueryService implements SingletonInterface
         }
     }
 
+    public function shouldDeferWorkspaceEvaluation(string $table, int $pageId, ServerRequestInterface $request, string $searchTerm = ''): bool
+    {
+        if ($this->getCurrentWorkspaceId() === 0 || !$this->isWorkspaceAwareTable($table)) {
+            return false;
+        }
+
+        return trim($searchTerm) !== '' || $this->hasDeferredWorkspaceFilters($table, $pageId, $request);
+    }
+
     public function hasDeferredWorkspaceFilters(string $table, int $pageId, ServerRequestInterface $request): bool
     {
         if ($this->getCurrentWorkspaceId() === 0 || !$this->isWorkspaceAwareTable($table)) {
@@ -98,8 +107,14 @@ final readonly class RecordFilterQueryService implements SingletonInterface
     /**
      * @param array<string, mixed> $row Already overlaid with BackendUtility::workspaceOL().
      */
-    public function matchesDeferredWorkspaceFilters(string $table, int $pageId, ServerRequestInterface $request, array $row): bool
+    public function matchesDeferredWorkspaceEvaluation(string $table, int $pageId, ServerRequestInterface $request, array $row, string $searchTerm = ''): bool
     {
+        if (!$this->shouldDeferWorkspaceEvaluation($table, $pageId, $request, $searchTerm)) {
+            return true;
+        }
+        if (!$this->rowMatchesSearchTerm($table, $searchTerm, $row)) {
+            return false;
+        }
         if (!$this->hasDeferredWorkspaceFilters($table, $pageId, $request)) {
             return true;
         }
@@ -147,6 +162,39 @@ final readonly class RecordFilterQueryService implements SingletonInterface
             'category' => $this->rowMatchesCategoryFilter($table, $filter, $value, $row),
             default => $this->rowMatchesGenericFilter($table, $filter, $value, $row),
         };
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function rowMatchesSearchTerm(string $table, string $searchTerm, array $row): bool
+    {
+        $searchTerm = trim($searchTerm);
+        if ($searchTerm === '') {
+            return true;
+        }
+        if (is_numeric($searchTerm) && isset($row['uid']) && is_numeric($row['uid']) && (int) $row['uid'] === (int) $searchTerm) {
+            return true;
+        }
+
+        $search = mb_strtolower($searchTerm);
+        foreach ($this->getSearchFields($table, $row) as $field) {
+            $fieldValue = $row[$field] ?? null;
+            if (is_array($fieldValue)) {
+                $fieldValue = reset($fieldValue);
+            }
+            if (!is_scalar($fieldValue)) {
+                continue;
+            }
+            if (is_numeric($searchTerm) && is_numeric($fieldValue) && (int) $fieldValue === (int) $searchTerm) {
+                return true;
+            }
+            if (str_contains(mb_strtolower((string) $fieldValue), $search)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -473,6 +521,45 @@ final readonly class RecordFilterQueryService implements SingletonInterface
         $config = is_array($fieldConfig['config'] ?? null) ? $fieldConfig['config'] : [];
         $dbType = is_string($config['dbType'] ?? null) ? strtolower($config['dbType']) : '';
         return str_contains($dbType, 'date') ? ParameterType::STRING : ParameterType::INTEGER;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return list<string>
+     */
+    private function getSearchFields(string $table, array $row): array
+    {
+        $tca = $this->configurationService->getTca($table);
+        $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
+        $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
+
+        $configured = is_string($ctrl['searchFields'] ?? null) ? $ctrl['searchFields'] : '';
+        $fields = [];
+        if ($configured !== '') {
+            foreach (array_map(trim(...), explode(',', $configured)) as $field) {
+                if ($field !== '') {
+                    $fields[] = $field;
+                }
+            }
+        }
+
+        $labelField = is_string($ctrl['label'] ?? null) ? $ctrl['label'] : '';
+        if ($labelField !== '') {
+            $fields[] = $labelField;
+        }
+
+        if ($fields === []) {
+            foreach (array_keys($columns) as $field) {
+                if (is_string($field)) {
+                    $fields[] = $field;
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter(
+            $fields,
+            static fn(string $field): bool => $field === 'uid' || array_key_exists($field, $row),
+        )));
     }
 
     private function isActiveFilterValue(mixed $value): bool

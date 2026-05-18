@@ -26,9 +26,11 @@ Filter records
 ==============
 
 Select a table and enable :guilabel:`View > Show filters` to display the
-configured filter panel. Filters are applied in the same query layer as
-the classic List View, so all available view modes render the same
-filtered result set.
+configured filter panel. In LIVE, filters use TYPO3's normal record-list
+query path. In workspaces, alternative view modes evaluate the module search
+term and active filters after :php:`BackendUtility::workspaceOL()` so draft
+text, visibility, date, select, and category changes can be found before
+publishing.
 
 .. _usage-sort-records:
 
@@ -48,6 +50,11 @@ The alternative views respect TYPO3 workspace restrictions and overlay
 records with :php:`BackendUtility::workspaceOL()` before rendering.
 Workspace changes are displayed with state colors for new, modified,
 moved, and deleted records.
+
+Search and configured filters in alternative views also run after this
+overlay when a workspace is active. A word added only in a draft record, for
+example, is searchable in the workspace even though the live row does not
+contain it yet.
 
 Physical files remain a TYPO3 platform limitation: FAL binaries are not
 workspace-versioned. Upload new files with unique names when preparing

@@ -1031,15 +1031,7 @@ final class RecordListController extends CoreRecordListController
             // When searching, check if this table has matching records
             if ($searchTerm !== '') {
                 try {
-                    // Create a properly initialized DatabaseRecordList for this table
-                    $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
-
-                    // Use the initialized dbList to check if table has matching records
-                    // This uses the same search configuration as the core list view
-                    $queryBuilder = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 1);
-                    $hasRecords = $queryBuilder->executeQuery()->fetchOne() !== false;
-
-                    if ($hasRecords) {
+                    if ($this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request) > 0) {
                         $tables[] = $tableName;
                     }
                 } catch (Exception) {
@@ -1149,11 +1141,12 @@ final class RecordListController extends CoreRecordListController
         $useWorkspaceReduction = $workspaceId > 0;
         $recordGridDataProvider ??= GeneralUtility::makeInstance(RecordGridDataProvider::class);
         $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
-        $deferWorkspaceFilters = $recordFilterQueryService->hasDeferredWorkspaceFilters($tableName, $pageId, $request);
+        $deferWorkspaceEvaluation = $recordFilterQueryService->shouldDeferWorkspaceEvaluation($tableName, $pageId, $request, $searchTerm);
+        $querySearchTerm = $deferWorkspaceEvaluation ? '' : $searchTerm;
 
         try {
             // Create a properly initialized DatabaseRecordList for this table
-            $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
+            $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $querySearchTerm, $searchLevels, $request);
             $dbList->sortField = $sortField;
             $dbList->sortRev = strtolower($sortDirection) === 'desc';
 
@@ -1163,10 +1156,10 @@ final class RecordListController extends CoreRecordListController
                 $tableName,
                 ['*'],
                 true,
-                $deferWorkspaceFilters ? 0 : $offset,
-                $deferWorkspaceFilters ? 0 : $limit,
+                $deferWorkspaceEvaluation ? 0 : $offset,
+                $deferWorkspaceEvaluation ? 0 : $limit,
             );
-            $recordFilterQueryService->applyActiveFilters($queryBuilder, $tableName, $pageId, $request, $deferWorkspaceFilters);
+            $recordFilterQueryService->applyActiveFilters($queryBuilder, $tableName, $pageId, $request, $deferWorkspaceEvaluation);
             $result = $queryBuilder->executeQuery();
 
             while ($row = $result->fetchAssociative()) {
@@ -1181,7 +1174,7 @@ final class RecordListController extends CoreRecordListController
                 }
 
                 $typedRow = ArrayUtility::stringKeyArray($row);
-                if ($deferWorkspaceFilters && !$recordFilterQueryService->matchesDeferredWorkspaceFilters($tableName, $pageId, $request, $typedRow)) {
+                if ($deferWorkspaceEvaluation && !$recordFilterQueryService->matchesDeferredWorkspaceEvaluation($tableName, $pageId, $request, $typedRow, $searchTerm)) {
                     continue;
                 }
 
@@ -1209,7 +1202,7 @@ final class RecordListController extends CoreRecordListController
             if ($sortField !== '') {
                 $this->sortRecordsByRawField($records, $sortField, $sortDirection);
             }
-            if ($deferWorkspaceFilters && $limit > 0) {
+            if ($deferWorkspaceEvaluation && $limit > 0) {
                 $records = array_slice($records, $offset, $limit);
             }
             return $records;
@@ -1352,7 +1345,7 @@ final class RecordListController extends CoreRecordListController
     ): int {
         try {
             $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
-            if ($recordFilterQueryService->hasDeferredWorkspaceFilters($tableName, $pageId, $request)) {
+            if ($recordFilterQueryService->shouldDeferWorkspaceEvaluation($tableName, $pageId, $request, $searchTerm)) {
                 return count($this->getRecordsUsingDbList(
                     $request,
                     $tableName,

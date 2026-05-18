@@ -15,9 +15,12 @@ stored in the user's Records module settings, like search and clipboard.
 
 Filters are configured with Page TSconfig and use TCA as metadata for labels,
 field aliases, and field availability. The submitted UI state is applied in
-the query layer before records are fetched. This means the same filtered result
-set is used by the classic List View and by Grid, Compact, Teaser, and custom
-view types.
+the same record-list pipeline as TYPO3's search. In LIVE and in the classic
+List View, filters are applied directly in the query layer. In an active
+workspace, Grid, Compact, Teaser, and custom view modes first fetch candidate
+rows, apply :php:`BackendUtility::workspaceOL()`, and then evaluate the search
+term and active filters against the effective workspace row. This keeps
+workspace-only changes searchable before they are published.
 
 If filters or search return no records, the selected table section and filter
 panel remain visible with an empty-result notice.
@@ -187,3 +190,27 @@ translations are appended in brackets. Selecting one option searches for the
 default category UID and all translated category UIDs belonging to that
 category. Long translated labels are shortened visually, but the full label is
 available through the option title.
+
+When an alternative view mode is used in a workspace, category filters are
+evaluated after the workspace overlay. The check uses both the live UID and the
+workspace version UID so TYPO3 MM relations written for draft records are
+included.
+
+.. _configuration-filters-workspaces:
+
+Workspace behavior
+==================
+
+Workspace evaluation is deliberately generic. If a workspace-aware table has an
+active search term or active configured filter, alternative view modes defer
+that evaluation until after :php:`BackendUtility::workspaceOL()` has replaced
+the live row with the draft row.
+
+This applies to:
+
+*   the module search box (:html:`searchTerm`);
+*   built-in ``text``, ``boolean``, ``dateRange``, ``select``, and
+    ``category`` filters;
+*   custom filter definitions that expose a ``field`` or ``fields`` setting.
+
+The classic List View keeps TYPO3 Core's normal SQL-filtered behavior.

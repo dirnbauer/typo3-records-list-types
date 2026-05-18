@@ -58,4 +58,4 @@ behind Core's backend auth middleware.
 - Grep: `innerHTML\s*=` in `Resources/Public/JavaScript/` — 0 hits.
 - Grep: `data-toggle|data-dismiss|data-ride` — 0 hits.
 - `vendor/bin/phpstan analyse` — level max clean.
-- `vendor/bin/phpunit` — 118 unit + 72 functional tests pass.
+- `vendor/bin/phpunit` — 120 unit + 72 functional tests pass.
