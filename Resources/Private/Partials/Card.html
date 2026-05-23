@@ -202,6 +202,22 @@
                     </f:if>
                 </ul>
             </div>
+
+            <f:if condition="{workspace.label}">
+                <div class="gridview-card__workspace-badges">
+                    <span class="gridview-workspace-badge gridview-workspace-badge--workspace{f:if(condition: workspace.isLive, then: ' gridview-workspace-badge--live')}"
+                          title="{workspace.title}">
+                        <core:icon identifier="actions-workspace" size="small" />
+                        <span class="gridview-workspace-badge__text">{workspace.label}</span>
+                    </span>
+                    <f:if condition="{record.workspaceStateLabel}">
+                        <span class="gridview-workspace-badge gridview-workspace-badge--state gridview-workspace-badge--state-{record.workspaceStateBadge.key}"
+                              title="{record.workspaceStateTitle}">
+                            <span class="gridview-workspace-badge__text">{record.workspaceStateLabel}</span>
+                        </span>
+                    </f:if>
+                </div>
+            </f:if>
         </div>
     </div>
 

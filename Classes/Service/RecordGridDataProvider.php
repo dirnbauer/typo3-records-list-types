@@ -582,6 +582,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
 
         // Detect workspace state for visual indicators
         $workspaceState = $this->getWorkspaceState($row);
+        $workspaceStateBadge = $this->getWorkspaceStateBadge($workspaceState);
 
         return [
             'uid' => $uid,
@@ -596,6 +597,9 @@ final readonly class RecordGridDataProvider implements SingletonInterface
             'iconIdentifier' => $iconIdentifier,
             'hidden' => $hidden,
             'workspaceState' => $workspaceState,
+            'workspaceStateBadge' => $workspaceStateBadge,
+            'workspaceStateLabel' => $workspaceStateBadge['label'],
+            'workspaceStateTitle' => $workspaceStateBadge['title'],
             'rawRecord' => $row,
             'actions' => [], // Reserved for custom templates that pass additional action fragments.
         ];
@@ -671,6 +675,47 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         $t3verOidRaw = $row['t3ver_oid'] ?? 0;
         $t3verOid = is_numeric($t3verOidRaw) ? (int) $t3verOidRaw : 0;
         return $t3verOid > 0;
+    }
+
+    /**
+     * @return array{key: string, label: string, title: string}
+     */
+    private function getWorkspaceStateBadge(?string $workspaceState): array
+    {
+        if ($this->getCurrentWorkspaceId() === 0) {
+            return [
+                'key' => '',
+                'label' => '',
+                'title' => '',
+            ];
+        }
+
+        $stateKey = $workspaceState ?? 'unchanged';
+        $label = match ($stateKey) {
+            'new' => $this->translateExtensionLabel('workspace.state.new', 'New'),
+            'changed' => $this->translateExtensionLabel('workspace.state.changed', 'Changed'),
+            'move' => $this->translateExtensionLabel('workspace.state.move', 'Moved'),
+            'deleted' => $this->translateExtensionLabel('workspace.state.deleted', 'Deleted'),
+            default => $this->translateExtensionLabel('workspace.state.unchanged', 'Unchanged'),
+        };
+        $titlePrefix = $this->translateExtensionLabel('workspace.state.title', 'Workspace state');
+
+        return [
+            'key' => $stateKey,
+            'label' => $label,
+            'title' => $titlePrefix . ': ' . $label,
+        ];
+    }
+
+    private function translateExtensionLabel(string $key, string $fallback): string
+    {
+        $langService = $this->getLanguageService();
+        if (!$langService instanceof LanguageService) {
+            return $fallback;
+        }
+
+        $translated = $langService->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:' . $key);
+        return $translated !== '' ? $translated : $fallback;
     }
 
     /**

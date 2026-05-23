@@ -179,6 +179,9 @@
     position: relative;
     color: var(--gv-text);
     font-family: var(--gv-font-sans);
+    --gv-card-state-color: var(--gv-text-muted);
+    --gv-card-state-bg: var(--gv-bg);
+    --gv-card-state-border: var(--gv-border);
 }
 
 /* Apply border-radius to first/last children since card overflow is visible */
@@ -205,9 +208,15 @@
    ============================================================================= */
 
 /* Hidden state - amber header background */
+.gridview-card--hidden {
+    --gv-card-state-color: var(--gv-warning);
+    --gv-card-state-bg: var(--gv-warning-bg);
+    --gv-card-state-border: var(--gv-warning);
+}
+
 .gridview-card--hidden .gridview-card__header {
-    background: var(--gv-warning-bg);
-    border-left: 3px solid var(--gv-warning);
+    background: var(--gv-card-state-bg);
+    border-left: 3px solid var(--gv-card-state-border);
 }
 
 .gridview-card--hidden .gridview-card__header-title {
@@ -215,31 +224,51 @@
 }
 
 /* Workspace: New record - blue */
+.gridview-card--ws-new {
+    --gv-card-state-color: var(--gv-accent);
+    --gv-card-state-bg: var(--gv-accent-bg);
+    --gv-card-state-border: var(--gv-accent);
+}
+
 .gridview-card--ws-new .gridview-card__header {
-    background: var(--gv-accent-bg);
-    border-left: 3px solid var(--gv-accent);
+    background: var(--gv-card-state-bg);
+    border-left: 3px solid var(--gv-card-state-border);
 }
 
 /* Workspace: Modified record - purple */
+.gridview-card--ws-changed {
+    --gv-card-state-color: #a855f7;
+    --gv-card-state-bg: #faf5ff;
+    --gv-card-state-border: #a855f7;
+}
+
 .gridview-card--ws-changed .gridview-card__header {
-    --gv-ws-purple: #a855f7;
-    --gv-ws-purple-bg: #faf5ff;
-    background: var(--gv-ws-purple-bg);
-    border-left: 3px solid var(--gv-ws-purple);
+    background: var(--gv-card-state-bg);
+    border-left: 3px solid var(--gv-card-state-border);
 }
 
 /* Workspace: Moved record - cyan */
+.gridview-card--ws-move {
+    --gv-card-state-color: #06b6d4;
+    --gv-card-state-bg: #ecfeff;
+    --gv-card-state-border: #06b6d4;
+}
+
 .gridview-card--ws-move .gridview-card__header {
-    --gv-ws-cyan: #06b6d4;
-    --gv-ws-cyan-bg: #ecfeff;
-    background: var(--gv-ws-cyan-bg);
-    border-left: 3px solid var(--gv-ws-cyan);
+    background: var(--gv-card-state-bg);
+    border-left: 3px solid var(--gv-card-state-border);
 }
 
 /* Workspace: Deleted placeholder - red with strikethrough */
+.gridview-card--ws-deleted {
+    --gv-card-state-color: var(--gv-danger-text);
+    --gv-card-state-bg: var(--gv-danger-bg);
+    --gv-card-state-border: var(--gv-danger);
+}
+
 .gridview-card--ws-deleted .gridview-card__header {
-    background: var(--gv-danger-bg);
-    border-left: 3px solid var(--gv-danger);
+    background: var(--gv-card-state-bg);
+    border-left: 3px solid var(--gv-card-state-border);
 }
 
 .gridview-card--ws-deleted .gridview-card__title a,
@@ -249,20 +278,20 @@
 }
 
 /* Dark mode workspace colors */
-[data-color-scheme="dark"] .gridview-card--ws-changed .gridview-card__header {
-    --gv-ws-purple-bg: rgba(168, 85, 247, 0.15);
+[data-color-scheme="dark"] .gridview-card--ws-changed {
+    --gv-card-state-bg: rgba(168, 85, 247, 0.15);
 }
 
-[data-color-scheme="dark"] .gridview-card--ws-move .gridview-card__header {
-    --gv-ws-cyan-bg: rgba(6, 182, 212, 0.15);
+[data-color-scheme="dark"] .gridview-card--ws-move {
+    --gv-card-state-bg: rgba(6, 182, 212, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
-    html:not([data-color-scheme="light"]) .gridview-card--ws-changed .gridview-card__header {
-        --gv-ws-purple-bg: rgba(168, 85, 247, 0.15);
+    html:not([data-color-scheme="light"]) .gridview-card--ws-changed {
+        --gv-card-state-bg: rgba(168, 85, 247, 0.15);
     }
-    html:not([data-color-scheme="light"]) .gridview-card--ws-move .gridview-card__header {
-        --gv-ws-cyan-bg: rgba(6, 182, 212, 0.15);
+    html:not([data-color-scheme="light"]) .gridview-card--ws-move {
+        --gv-card-state-bg: rgba(6, 182, 212, 0.15);
     }
 }
 
@@ -455,6 +484,64 @@ typo3-backend-contextual-record-edit-trigger.gridview-action-sm {
     height: 1rem;
     background: var(--gv-border);
     margin: 0 var(--gv-space-1);
+}
+
+/* Workspace badges in the action toolbar */
+.gridview-card__workspace-badges {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--gv-space-1);
+    min-width: 0;
+    margin-left: auto;
+}
+
+.gridview-workspace-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: 8.5rem;
+    height: 1.375rem;
+    padding: 0 0.4375rem;
+    border: 1px solid var(--gv-border);
+    border-radius: 999px;
+    background: var(--gv-bg);
+    color: var(--gv-text-muted);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.gridview-workspace-badge .icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.gridview-workspace-badge__text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gridview-workspace-badge--workspace {
+    color: var(--gv-card-state-color);
+    background: color-mix(in srgb, var(--gv-card-state-color) 10%, var(--gv-bg));
+    border-color: color-mix(in srgb, var(--gv-card-state-border) 55%, var(--gv-border));
+}
+
+.gridview-workspace-badge--live {
+    color: var(--gv-text-muted);
+    background: var(--gv-bg);
+    border-color: var(--gv-border);
+}
+
+.gridview-workspace-badge--state {
+    color: var(--gv-card-state-color);
+    background: var(--gv-card-state-bg);
+    border-color: var(--gv-card-state-border);
+    box-shadow: inset 2px 0 0 var(--gv-card-state-border);
 }
 
 /* =============================================================================

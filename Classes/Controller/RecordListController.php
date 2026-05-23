@@ -492,6 +492,7 @@ final class RecordListController extends CoreRecordListController
         $requestParams = ArrayUtility::mergedRequestParameters($request);
         $sortParams = (array) ($requestParams['sort'] ?? []);
         $sortingModeParams = (array) ($requestParams['sortingMode'] ?? []);
+        $workspaceBadge = $this->buildWorkspaceBadgeData();
 
         // Middleware diagnostics (only GridView template shows this)
         $middlewareWarning = null;
@@ -802,6 +803,7 @@ final class RecordListController extends CoreRecordListController
                 'tableLabel' => $this->getTableLabel($tableName),
                 'tableIcon' => $this->getTableIcon($tableName),
                 'tableConfig' => $tableConfig,
+                'workspace' => $workspaceBadge,
                 'filters' => $filterViewData,
                 'records' => $enrichedRecords,
                 'recordCount' => $recordCount,
@@ -1250,6 +1252,79 @@ final class RecordListController extends CoreRecordListController
         $workspaceId = GeneralUtility::makeInstance(Context::class)
             ->getPropertyFromAspect('workspace', 'id', 0);
         return is_numeric($workspaceId) ? (int) $workspaceId : 0;
+    }
+
+    /**
+     * @return array{id: int, label: string, title: string, description: string, isLive: bool}
+     */
+    private function buildWorkspaceBadgeData(): array
+    {
+        $workspaceId = $this->getCurrentWorkspaceId();
+        $isLive = $workspaceId === 0;
+        $label = $isLive
+            ? $this->translate(
+                $this->getLanguageService(),
+                'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:workspace.live',
+                'Live',
+            )
+            : sprintf(
+                $this->translate(
+                    $this->getLanguageService(),
+                    'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:workspace.fallback',
+                    'Workspace %d',
+                ),
+                $workspaceId,
+            );
+        $description = '';
+
+        if (!$isLive) {
+            $workspaceRow = $this->getWorkspaceRow($workspaceId);
+            $title = trim(ArrayUtility::stringValue($workspaceRow['title'] ?? null));
+            if ($title !== '') {
+                $label = $title;
+            }
+            $description = trim(ArrayUtility::stringValue($workspaceRow['description'] ?? null));
+        }
+
+        $titlePrefix = $this->translate(
+            $this->getLanguageService(),
+            'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:workspace.badgeTitle',
+            'Workspace',
+        );
+
+        return [
+            'id' => $workspaceId,
+            'label' => $label,
+            'title' => $description !== '' ? $description : $titlePrefix . ': ' . $label,
+            'description' => $description,
+            'isLive' => $isLive,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getWorkspaceRow(int $workspaceId): array
+    {
+        try {
+            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+                ->getQueryBuilderForTable('sys_workspace');
+            $row = $queryBuilder
+                ->select('*')
+                ->from('sys_workspace')
+                ->where(
+                    $queryBuilder->expr()->eq(
+                        'uid',
+                        $queryBuilder->createNamedParameter($workspaceId, ParameterType::INTEGER),
+                    ),
+                )
+                ->executeQuery()
+                ->fetchAssociative();
+        } catch (Exception) {
+            return [];
+        }
+
+        return is_array($row) ? ArrayUtility::stringKeyArray($row) : [];
     }
 
     /**
@@ -3188,6 +3263,7 @@ final class RecordListController extends CoreRecordListController
             'tableLabel' => $headingLabel,
             'tableIcon' => $this->getTableIcon($tableName),
             'tableConfig' => $tableConfig,
+            'workspace' => $this->buildWorkspaceBadgeData(),
             'filters' => [
                 'visible' => false,
                 'items' => [],

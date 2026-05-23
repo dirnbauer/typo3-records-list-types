@@ -183,6 +183,54 @@
                 <source>All elements translated</source>
                 <target>Alle Elemente übersetzt</target>
             </trans-unit>
+            <trans-unit id="workspace.live" resname="workspace.live">
+                <source>Live</source>
+                <target>Live</target>
+            </trans-unit>
+            <trans-unit id="workspace.fallback" resname="workspace.fallback">
+                <source>Workspace %d</source>
+                <target>Arbeitsumgebung %d</target>
+            </trans-unit>
+            <trans-unit id="workspace.badgeTitle" resname="workspace.badgeTitle">
+                <source>Workspace</source>
+                <target>Arbeitsumgebung</target>
+            </trans-unit>
+            <trans-unit id="workspace.state.title" resname="workspace.state.title">
+                <source>Workspace state</source>
+                <target>Workspace-Status</target>
+            </trans-unit>
+            <trans-unit id="workspace.state.unchanged" resname="workspace.state.unchanged">
+                <source>Unchanged</source>
+                <target>Unverändert</target>
+            </trans-unit>
+            <trans-unit id="workspace.state.new" resname="workspace.state.new">
+                <source>New</source>
+                <target>Neu</target>
+            </trans-unit>
+            <trans-unit id="workspace.state.changed" resname="workspace.state.changed">
+                <source>Changed</source>
+                <target>Geändert</target>
+            </trans-unit>
+            <trans-unit id="workspace.state.move" resname="workspace.state.move">
+                <source>Moved</source>
+                <target>Verschoben</target>
+            </trans-unit>
+            <trans-unit id="workspace.state.deleted" resname="workspace.state.deleted">
+                <source>Deleted</source>
+                <target>Gelöscht</target>
+            </trans-unit>
+            <trans-unit id="historyOverlay.elementTab" resname="historyOverlay.elementTab">
+                <source>Element history</source>
+                <target>Element-Verlauf</target>
+            </trans-unit>
+            <trans-unit id="historyOverlay.pageTab" resname="historyOverlay.pageTab">
+                <source>Page and content history</source>
+                <target>Seite und Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="historyOverlay.pageFrameTitle" resname="historyOverlay.pageFrameTitle">
+                <source>Page and content history</source>
+                <target>Seite und Inhaltselemente</target>
+            </trans-unit>
             <trans-unit id="filter.show" resname="filter.show">
                 <source>Show filters</source>
                 <target>Filter anzeigen</target>

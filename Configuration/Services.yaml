@@ -78,6 +78,11 @@ services:
     public: true
     tags: ['backend.controller']
 
+  # Extended ElementHistoryController for the tabbed history overlay (XClass)
+  Webconsulting\RecordsListTypes\Controller\ContentElement\ElementHistoryController:
+    public: true
+    tags: ['backend.controller']
+
   # AJAX Controller for view mode persistence
   Webconsulting\RecordsListTypes\Controller\Ajax\ViewModeController:
     public: true

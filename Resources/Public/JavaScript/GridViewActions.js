@@ -1150,7 +1150,7 @@ class GridViewActions extends LitElement {
                     this.showInfo(table, uid);
                     break;
                 case 'history':
-                    this.showHistory(table, uid);
+                    this.showHistory(table, uid, btn);
                     break;
             }
         });
@@ -1189,12 +1189,90 @@ class GridViewActions extends LitElement {
             }
 
             this.refreshPageTreeIfNeeded(table);
-            window.location.reload();
+            await this.updateVisibilityState(btn, action === 'hide');
         } catch (err) {
             await this.showAjaxError('Update failed', err);
         } finally {
             btn.disabled = false;
         }
+    }
+
+    async updateVisibilityState(btn, hidden) {
+        const container = btn.closest(
+            '.gridview-card, .compactview-row, .teaserview-card, .teaserview-translation-row'
+        );
+
+        if (!container) {
+            return;
+        }
+
+        container.dataset.hidden = hidden ? '1' : '0';
+        container.classList.toggle('gridview-card--hidden', hidden);
+        container.classList.toggle('compactview-row--hidden', hidden);
+        container.classList.toggle('teaserview-card--hidden', hidden);
+        container.classList.toggle('teaserview-translation-row--hidden', hidden);
+
+        this.updateVisibilityButton(btn, hidden);
+        await this.updateTeaserHiddenBadge(container, hidden);
+
+        const title = container.dataset.recordTitle
+            || container.querySelector('.gridview-card__title, .compactview-row__title-link, .teaserview-card__title, .teaserview-translation-row__title')?.textContent?.trim()
+            || 'Record';
+        this.announce(`${title} ${hidden ? 'hidden' : 'visible'}`);
+    }
+
+    updateVisibilityButton(btn, hidden) {
+        btn.dataset.gridviewAction = hidden ? 'show' : 'hide';
+        btn.setAttribute('title', hidden ? 'Show record (currently hidden)' : 'Hide record (currently visible)');
+        btn.setAttribute('aria-label', hidden ? 'Show record' : 'Hide record');
+
+        btn.classList.toggle('gridview-action-sm--warning', hidden);
+        btn.classList.toggle('gridview-action-sm--success', !hidden);
+        btn.classList.toggle('teaserview-action--warning', hidden);
+        btn.classList.toggle('teaserview-action--success', !hidden);
+        btn.classList.toggle('cv-toggle--hidden', hidden);
+        btn.classList.toggle('cv-toggle--visible', !hidden);
+
+        const iconEl = btn.querySelector('.icon, typo3-backend-icon');
+        if (iconEl) {
+            this.replaceIcon(iconEl, hidden ? 'actions-toggle-off' : 'actions-toggle-on');
+        }
+    }
+
+    async updateTeaserHiddenBadge(container, hidden) {
+        if (!container.classList.contains('teaserview-card')) {
+            return;
+        }
+
+        const titleRow = container.querySelector('.teaserview-card__title-row');
+        if (!titleRow) {
+            return;
+        }
+
+        const existingBadge = titleRow.querySelector('.teaserview-badge--hidden');
+        if (!hidden) {
+            existingBadge?.remove();
+            return;
+        }
+
+        if (existingBadge) {
+            return;
+        }
+
+        const badge = document.createElement('span');
+        badge.className = 'teaserview-badge teaserview-badge--hidden';
+        const icon = await this.createIconElement('actions-toggle-off');
+        if (icon) {
+            badge.appendChild(icon);
+        }
+        badge.appendChild(document.createTextNode('Hidden'));
+
+        const uidBadge = titleRow.querySelector('.teaserview-badge--uid');
+        if (uidBadge?.nextSibling) {
+            uidBadge.parentNode.insertBefore(badge, uidBadge.nextSibling);
+            return;
+        }
+        titleRow.appendChild(badge);
     }
     
     /**
@@ -1406,6 +1484,22 @@ class GridViewActions extends LitElement {
                 iconEl.dataset.identifier = newIdentifier;
             });
     }
+
+    async createIconElement(identifier) {
+        try {
+            const Icons = await this.getDefaultModule('@typo3/backend/icons.js');
+            const iconMarkup = await Icons.getIcon(identifier, 'small');
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(iconMarkup, 'text/html');
+            const icon = doc.body.firstElementChild;
+            return icon ? document.adoptNode(icon) : null;
+        } catch {
+            const icon = document.createElement('typo3-backend-icon');
+            icon.setAttribute('identifier', identifier);
+            icon.setAttribute('size', 'small');
+            return icon;
+        }
+    }
     
     /**
      * Fallback for clipboard when AJAX URL is not available
@@ -1445,7 +1539,7 @@ class GridViewActions extends LitElement {
      * Uses URL/URLSearchParams for safe URL construction.
      * Uses TYPO3's Viewport.ContentContainer.setUrl() - same as core context menu.
      */
-    showHistory(table, uid) {
+    showHistory(table, uid, trigger = null) {
         const element = `${table}:${uid}`;
         const returnUrl = window.location.pathname + window.location.search;
         const moduleUrl = this.getTopTypo3Setting('RecordHistory', 'moduleUrl');
@@ -1454,11 +1548,26 @@ class GridViewActions extends LitElement {
             const historyUrl = new URL(moduleUrl, window.location.origin);
             historyUrl.searchParams.set('element', element);
             historyUrl.searchParams.set('returnUrl', returnUrl);
-            this.navigateInContentFrame(historyUrl);
+            this.openHistoryModal(historyUrl, trigger?.title || trigger?.getAttribute('aria-label') || 'History');
             return;
         }
 
         console.warn('[GridView] RecordHistory.moduleUrl not found in TYPO3.settings');
+    }
+
+    openHistoryModal(url, title) {
+        this.getDefaultModule('@typo3/backend/modal.js')
+            .then(Modal => {
+                Modal.advanced({
+                    content: url.toString(),
+                    title,
+                    size: Modal.sizes.full,
+                    type: Modal.types.iframe,
+                });
+            })
+            .catch(() => {
+                this.navigateInContentFrame(url);
+            });
     }
 
     getTopTypo3Setting(section, key) {

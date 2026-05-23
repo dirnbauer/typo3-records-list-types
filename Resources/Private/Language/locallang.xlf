@@ -149,6 +149,42 @@
             <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
                 <source>All elements translated</source>
             </trans-unit>
+            <trans-unit id="workspace.live" resname="workspace.live">
+                <source>Live</source>
+            </trans-unit>
+            <trans-unit id="workspace.fallback" resname="workspace.fallback">
+                <source>Workspace %d</source>
+            </trans-unit>
+            <trans-unit id="workspace.badgeTitle" resname="workspace.badgeTitle">
+                <source>Workspace</source>
+            </trans-unit>
+            <trans-unit id="workspace.state.title" resname="workspace.state.title">
+                <source>Workspace state</source>
+            </trans-unit>
+            <trans-unit id="workspace.state.unchanged" resname="workspace.state.unchanged">
+                <source>Unchanged</source>
+            </trans-unit>
+            <trans-unit id="workspace.state.new" resname="workspace.state.new">
+                <source>New</source>
+            </trans-unit>
+            <trans-unit id="workspace.state.changed" resname="workspace.state.changed">
+                <source>Changed</source>
+            </trans-unit>
+            <trans-unit id="workspace.state.move" resname="workspace.state.move">
+                <source>Moved</source>
+            </trans-unit>
+            <trans-unit id="workspace.state.deleted" resname="workspace.state.deleted">
+                <source>Deleted</source>
+            </trans-unit>
+            <trans-unit id="historyOverlay.elementTab" resname="historyOverlay.elementTab">
+                <source>Element history</source>
+            </trans-unit>
+            <trans-unit id="historyOverlay.pageTab" resname="historyOverlay.pageTab">
+                <source>Page and content history</source>
+            </trans-unit>
+            <trans-unit id="historyOverlay.pageFrameTitle" resname="historyOverlay.pageFrameTitle">
+                <source>Page and content history</source>
+            </trans-unit>
             <trans-unit id="filter.show" resname="filter.show">
                 <source>Show filters</source>
             </trans-unit>
