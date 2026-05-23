@@ -20,6 +20,8 @@ jobs:
           coverage: none
 
       - name: Install dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
 
       - name: composer audit
@@ -39,6 +41,8 @@ jobs:
           coverage: none
 
       - name: Install dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
 
       - name: Run PHPStan
@@ -61,6 +65,8 @@ jobs:
           coverage: none
 
       - name: Install dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
 
       - name: Run PHP-CS-Fixer
@@ -90,6 +96,8 @@ jobs:
           coverage: xdebug
 
       - name: Install dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
 
       - name: Run Unit Tests
@@ -141,6 +149,8 @@ jobs:
           coverage: xdebug
 
       - name: Install dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
 
       - name: Run Functional Tests
