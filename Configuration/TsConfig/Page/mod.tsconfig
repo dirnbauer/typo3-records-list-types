@@ -14,6 +14,15 @@ mod.web_list {
     allowedViews = list,grid,compact,teaser
 
     viewMode {
+        # Optional default view modes for single-table views.
+        # Explicit displayMode parameters and table-specific user
+        # preferences still take precedence.
+        # table {
+        #     pages = grid
+        #     tx_news_domain_model_news = teaser
+        #     tt_content = compact
+        # }
+
         # =================================================================
         # Pagination
         # =================================================================

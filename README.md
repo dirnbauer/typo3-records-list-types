@@ -42,14 +42,19 @@ All views work with any table -- `tx_news`, `tt_content`, `fe_users`, `pages`, o
 
 ## Installation
 
+The package is installed from GitHub when it is not available via Packagist.
+Add the VCS repository in your TYPO3 project's root `composer.json` first:
+
 ```bash
-composer require webconsulting/records-list-types
+composer config repositories.records-list-types vcs https://github.com/dirnbauer/typo3-records-list-types.git
+composer require webconsulting/records-list-types:dev-main
 ```
 
-Activate the extension:
+Set up the extension and clear TYPO3 caches:
 
 ```bash
-./vendor/bin/typo3 extension:activate records_list_types
+./vendor/bin/typo3 extension:setup -e records_list_types
+./vendor/bin/typo3 cache:flush
 ```
 
 After installation, navigate to **Content > Records** in the TYPO3 backend. View mode toggle buttons appear in the module header -- click to switch between List, Grid, Compact, and Teaser views.
@@ -237,6 +242,13 @@ mod.web_list.viewMode.default = grid
 
 # Restrict available view modes
 mod.web_list.viewMode.allowed = list,grid,compact
+
+# Set default modes for single-table views
+mod.web_list.viewMode.table {
+    pages = grid
+    tx_news_domain_model_news = teaser
+    tt_content = compact
+}
 
 # Configure grid column count (2-6)
 mod.web_list.gridView.cols = 4

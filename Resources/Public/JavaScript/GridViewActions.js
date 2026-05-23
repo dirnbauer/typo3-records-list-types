@@ -157,6 +157,13 @@ class GridViewActions extends LitElement {
             card.addEventListener('dragleave', this.onDragLeave.bind(this));
             card.addEventListener('drop', this.onDrop.bind(this));
         });
+
+        const grids = document.querySelectorAll('.gridview-card-grid[data-can-reorder="1"]');
+        grids.forEach((grid) => {
+            grid.addEventListener('dragover', this.onGridDragOver.bind(this));
+            grid.addEventListener('dragleave', this.onGridDragLeave.bind(this));
+            grid.addEventListener('drop', this.onGridDrop.bind(this));
+        });
         
         // Add event handlers for end dropzones (drop after last item)
         const endDropzones = document.querySelectorAll('.gridview-end-dropzone');
@@ -278,6 +285,92 @@ class GridViewActions extends LitElement {
 
         this.executeMove(this.draggedTable, this.draggedUid, moveTarget);
     }
+
+    /**
+     * Handle dragover on the grid itself so gaps and row ends are valid targets.
+     */
+    onGridDragOver(e) {
+        if (!this.draggedCard) {
+            return;
+        }
+
+        const grid = e.target.closest('.gridview-card-grid');
+        if (!grid || grid.dataset.table !== this.draggedTable) {
+            this.clearCurrentDropTarget();
+            return;
+        }
+
+        if (e.target.closest('.gridview-end-dropzone')) {
+            return;
+        }
+
+        const target = this.resolveGridDropTarget(grid, e.clientX, e.clientY);
+        if (!target) {
+            this.clearCurrentDropTarget();
+            return;
+        }
+
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.applyDropTarget(target.card, target.wrapper, target.position);
+    }
+
+    /**
+     * Clear the synthetic row-end target when the pointer leaves the grid.
+     */
+    onGridDragLeave(e) {
+        const grid = e.target.closest('.gridview-card-grid');
+        if (!grid) {
+            return;
+        }
+
+        const related = e.relatedTarget;
+        if (related && grid.contains(related)) {
+            return;
+        }
+
+        this.clearCurrentDropTarget();
+    }
+
+    /**
+     * Handle drops in grid gaps, including the empty space after the last card in a row.
+     */
+    onGridDrop(e) {
+        if (!this.draggedCard) {
+            return;
+        }
+
+        const grid = e.target.closest('.gridview-card-grid');
+        if (!grid || grid.dataset.table !== this.draggedTable) {
+            return;
+        }
+
+        if (e.target.closest('.gridview-end-dropzone')) {
+            return;
+        }
+
+        const target = this.resolveGridDropTarget(grid, e.clientX, e.clientY);
+        if (!target) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetCard = target.card;
+        if (!targetCard || targetCard === this.draggedCard) {
+            return;
+        }
+
+        const moveTarget = this.calculateMoveTarget(
+            targetCard,
+            target.position,
+            targetCard.dataset.uid,
+            targetCard.dataset.pid
+        );
+
+        this.executeMove(this.draggedTable, this.draggedUid, moveTarget);
+    }
     
     onDragOver(e) {
         e.preventDefault();
@@ -294,34 +387,13 @@ class GridViewActions extends LitElement {
         }
 
         const wrapper = card.closest('.gridview-card-wrapper');
-        
+
         e.dataTransfer.dropEffect = 'move';
-        
-        // Calculate position based on cursor relative to card
-        // For the last visible card in the grid, use a more generous "after" zone (top 25% = before, rest = after)
-        // so it's easier to drop after the last element without needing to reach the bottom half
-        const rect = card.getBoundingClientRect();
-        const y = e.clientY - rect.top;
-        const grid = card.closest('.gridview-card-grid');
-        const allWrappers = grid ? this.getCompatibleReorderWrappers(grid) : [];
-        // Filter out the dragged card's wrapper to find the real last visible card
-        const visibleWrappers = allWrappers.filter(w => w !== this.draggedWrapper);
-        const isLastCard = visibleWrappers.length > 0 && visibleWrappers[visibleWrappers.length - 1] === wrapper;
-        const threshold = isLastCard ? rect.height * 0.25 : rect.height / 2;
-        const position = y < threshold ? 'before' : 'after';
-        
-        // Only update if changed
-        if (this.currentTargetWrapper !== wrapper || this.dropPosition !== position) {
-            this.clearDropIndicators();
-            
-            // Set new - apply classes to wrapper, not card
-            this.currentTarget = card;
-            this.currentTargetWrapper = wrapper;
-            this.dropPosition = position;
-            wrapper.classList.add(`gridview-drop-${position}`);
-        }
+
+        const position = this.resolveCardDropPosition(card, e.clientX, e.clientY);
+        this.applyDropTarget(card, wrapper, position);
     }
-    
+
     onDragLeave(e) {
         const card = e.target.closest('.gridview-card');
         if (!card) return;
@@ -363,7 +435,7 @@ class GridViewActions extends LitElement {
         const targetPid = targetCard.dataset.pid;
         
         // Default to 'after' if position wasn't determined
-        const position = this.dropPosition || 'after';
+        const position = this.resolveCardDropPosition(targetCard, e.clientX, e.clientY) || this.dropPosition || 'after';
         
         // Calculate TYPO3 move target
         const moveTarget = this.calculateMoveTarget(targetCard, position, targetUid, targetPid);
@@ -657,6 +729,22 @@ class GridViewActions extends LitElement {
     // Shared Move Logic
     // =========================================================================
 
+    applyDropTarget(card, wrapper, position) {
+        if (!card || !wrapper || !position) {
+            return;
+        }
+
+        if (this.currentTargetWrapper === wrapper && this.dropPosition === position) {
+            return;
+        }
+
+        this.clearDropIndicators();
+        this.currentTarget = card;
+        this.currentTargetWrapper = wrapper;
+        this.dropPosition = position;
+        wrapper.classList.add(`gridview-drop-${position}`);
+    }
+
     getGridElement(element) {
         if (!element || typeof element.closest !== 'function') {
             return null;
@@ -697,6 +785,140 @@ class GridViewActions extends LitElement {
             const card = wrapper.querySelector('.gridview-card');
             return card === draggedCard || this.isCompatibleReorderTarget(card);
         });
+    }
+
+    getCompatibleReorderEntries(grid, includeDragged = false) {
+        return this.getCompatibleReorderWrappers(grid)
+            .filter(wrapper => includeDragged || wrapper !== this.draggedWrapper)
+            .map(wrapper => {
+                const card = wrapper.querySelector('.gridview-card');
+                return {
+                    wrapper,
+                    card,
+                    rect: wrapper.getBoundingClientRect()
+                };
+            })
+            .filter(entry => entry.card && entry.rect.width > 0 && entry.rect.height > 0);
+    }
+
+    isGridMultiColumn(grid) {
+        const columns = window.getComputedStyle(grid).gridTemplateColumns
+            .split(' ')
+            .filter(column => column && column !== 'none');
+
+        return columns.length > 1;
+    }
+
+    isRtlGrid(grid) {
+        return window.getComputedStyle(grid).direction === 'rtl';
+    }
+
+    getGridRows(entries) {
+        const rowTolerance = 8;
+        const rows = [];
+        const sortedEntries = entries.slice().sort((a, b) => a.rect.top - b.rect.top || a.rect.left - b.rect.left);
+
+        sortedEntries.forEach((entry) => {
+            const row = rows.find(candidate => Math.abs(candidate.top - entry.rect.top) <= rowTolerance);
+            if (row) {
+                row.entries.push(entry);
+                row.top = Math.min(row.top, entry.rect.top);
+                row.bottom = Math.max(row.bottom, entry.rect.bottom);
+                return;
+            }
+
+            rows.push({
+                top: entry.rect.top,
+                bottom: entry.rect.bottom,
+                entries: [entry]
+            });
+        });
+
+        return rows.sort((a, b) => a.top - b.top);
+    }
+
+    getClosestGridRow(rows, clientY) {
+        let closestRow = null;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        rows.forEach((row) => {
+            let distance = 0;
+            if (clientY < row.top) {
+                distance = row.top - clientY;
+            } else if (clientY > row.bottom) {
+                distance = clientY - row.bottom;
+            }
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestRow = row;
+            }
+        });
+
+        return closestRow;
+    }
+
+    resolveRowDropTarget(row, clientX, isRtl = false) {
+        if (!row || row.entries.length === 0) {
+            return null;
+        }
+
+        const entries = row.entries.slice().sort((a, b) => {
+            return isRtl ? b.rect.left - a.rect.left : a.rect.left - b.rect.left;
+        });
+
+        for (const entry of entries) {
+            const midpoint = entry.rect.left + entry.rect.width / 2;
+            const isBeforeEntry = isRtl ? clientX > midpoint : clientX < midpoint;
+
+            if (isBeforeEntry) {
+                return {
+                    wrapper: entry.wrapper,
+                    card: entry.card,
+                    position: 'before'
+                };
+            }
+        }
+
+        const lastEntry = entries[entries.length - 1];
+        return {
+            wrapper: lastEntry.wrapper,
+            card: lastEntry.card,
+            position: 'after'
+        };
+    }
+
+    resolveGridDropTarget(grid, clientX, clientY) {
+        const entries = this.getCompatibleReorderEntries(grid);
+        if (entries.length === 0) {
+            return null;
+        }
+
+        const rows = this.getGridRows(entries);
+        const row = this.getClosestGridRow(rows, clientY);
+
+        return this.resolveRowDropTarget(row, clientX, this.isRtlGrid(grid));
+    }
+
+    resolveCardDropPosition(card, clientX, clientY) {
+        const rect = card.getBoundingClientRect();
+        const grid = card.closest('.gridview-card-grid');
+
+        if (grid && this.isGridMultiColumn(grid)) {
+            const midpoint = rect.left + rect.width / 2;
+            return this.isRtlGrid(grid)
+                ? (clientX > midpoint ? 'before' : 'after')
+                : (clientX < midpoint ? 'before' : 'after');
+        }
+
+        const y = clientY - rect.top;
+        const wrapper = card.closest('.gridview-card-wrapper');
+        const allWrappers = grid ? this.getCompatibleReorderWrappers(grid) : [];
+        const visibleWrappers = allWrappers.filter(w => w !== this.draggedWrapper);
+        const isLastCard = visibleWrappers.length > 0 && visibleWrappers[visibleWrappers.length - 1] === wrapper;
+        const threshold = isLastCard ? rect.height * 0.25 : rect.height / 2;
+
+        return y < threshold ? 'before' : 'after';
     }
 
     getCompatibleReorderCards(grid, includeDragged = false) {
@@ -899,7 +1121,7 @@ class GridViewActions extends LitElement {
             switch (action) {
                 case 'hide':
                 case 'show':
-                    this.toggleHidden(table, uid, action, btn.dataset.hiddenField || 'hidden');
+                    this.toggleHidden(table, uid, action, btn);
                     break;
                 case 'delete':
                     this.deleteRecord(table, uid, btn);
@@ -920,38 +1142,45 @@ class GridViewActions extends LitElement {
         });
     }
     
-    toggleHidden(table, uid, action, field) {
-        const url = TYPO3?.settings?.ajaxUrls?.record_process;
+    async toggleHidden(table, uid, action, btn) {
+        const url = TYPO3?.settings?.ajaxUrls?.record_toggle_visibility;
         if (!url) {
-            console.error('[GridView] No AJAX URL available');
+            this.showNotification('Update failed', 'TYPO3 visibility endpoint is not available.', 'error');
             return;
         }
-        
-        const fullUrl = new URL(url, window.location.origin);
-        fullUrl.searchParams.set(`data[${table}][${uid}][${field}]`, action === 'hide' ? '1' : '0');
-        
-        fetch(fullUrl.toString(), { 
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: { 
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest' 
+
+        if (!table || !uid || !['hide', 'show'].includes(action)) {
+            return;
+        }
+
+        btn.disabled = true;
+
+        try {
+            const [{default: AjaxRequest}, {sudoModeInterceptor}] = await Promise.all([
+                import('@typo3/core/ajax/ajax-request.js'),
+                import('@typo3/backend/security/sudo-mode-interceptor.js')
+            ]);
+            const response = await new AjaxRequest(url)
+                .addMiddleware(sudoModeInterceptor)
+                .post({
+                    table,
+                    uid: Number.parseInt(uid, 10),
+                    action
+                });
+            const data = await response.resolve();
+
+            if (data.hasErrors) {
+                this.showAjaxMessages('Update failed', data.messages);
+                return;
             }
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.hasErrors) {
-                    const msg = data.messages?.[0]?.message || 'Unknown error';
-                    this.showNotification('Update failed', msg, 'error');
-                } else {
-                    this.refreshPageTreeIfNeeded(table);
-                    window.location.reload();
-                }
-            })
-            .catch(err => {
-                console.error('[GridView] Toggle error:', err);
-                this.showNotification('Request failed', err.message, 'error');
-            });
+
+            this.refreshPageTreeIfNeeded(table);
+            window.location.reload();
+        } catch (err) {
+            await this.showAjaxError('Update failed', err);
+        } finally {
+            btn.disabled = false;
+        }
     }
     
     /**
@@ -1656,7 +1885,33 @@ class GridViewActions extends LitElement {
                     cb.dispatchEvent(new Event('change', { bubbles: true }));
                 });
             });
+            });
+    }
+
+    showAjaxMessages(title, messages) {
+        if (!Array.isArray(messages) || messages.length === 0) {
+            this.showNotification(title, 'Unknown error', 'error');
+            return;
+        }
+
+        messages.forEach((message) => {
+            this.showNotification(message.title || title, message.message || 'Unknown error', 'error');
         });
+    }
+
+    async showAjaxError(title, error) {
+        if (error && typeof error.resolve === 'function') {
+            try {
+                const data = await error.resolve();
+                this.showAjaxMessages(title, data.messages);
+                return;
+            } catch (resolveError) {
+                this.showNotification(title, resolveError.message || 'Request failed', 'error');
+                return;
+            }
+        }
+
+        this.showNotification(title, error?.message || 'Request failed', 'error');
     }
 
 }

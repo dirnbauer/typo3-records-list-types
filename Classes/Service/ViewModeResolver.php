@@ -27,9 +27,11 @@ use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
  *
  * Resolution precedence:
  * 1. Request parameter (?displayMode=grid) - Highest priority, also saves preference
- * 2. User preference ($BE_USER->uc['records_view_mode'])
- * 3. Page TSconfig (mod.web_list.viewMode.default)
- * 4. Fallback: "list"
+ * 2. Table user preference ($BE_USER->uc['records_view_mode_table'][<table>])
+ * 3. Table Page TSconfig default (mod.web_list.viewMode.table.<table>)
+ * 4. User preference ($BE_USER->uc['records_view_mode'])
+ * 5. Page TSconfig default (mod.web_list.viewMode.default)
+ * 6. Fallback: "list"
  *
  * @see RegisterViewModesEvent for adding custom view modes
  */
@@ -71,6 +73,7 @@ final class ViewModeResolver implements SingletonInterface
     ];
 
     private const string USER_CONFIG_KEY = 'records_view_mode';
+    private const string TABLE_USER_CONFIG_KEY = 'records_view_mode_table';
     private const string DEFAULT_MODE = 'list';
 
     /**
@@ -84,10 +87,12 @@ final class ViewModeResolver implements SingletonInterface
      *
      * @param ServerRequestInterface $request The current backend request
      * @param int $pageId The current page ID for TSconfig resolution
+     * @param string $tableName Optional table name for per-table defaults
      * @return string The view mode identifier
      */
-    public function getActiveViewMode(ServerRequestInterface $request, int $pageId): string
+    public function getActiveViewMode(ServerRequestInterface $request, int $pageId, string $tableName = ''): string
     {
+        $tableName = $this->normalizeTableName($tableName);
         $allowedModes = $this->getAllowedModes($pageId);
 
         // 1. Explicit request parameter (highest priority)
@@ -95,23 +100,35 @@ final class ViewModeResolver implements SingletonInterface
         $displayMode = ArrayUtility::stringValue($queryParams['displayMode'] ?? null);
         if ($displayMode !== '' && in_array($displayMode, $allowedModes, true)) {
             // Save preference when explicitly switching
-            $this->setUserPreference($displayMode);
+            $this->setUserPreference($displayMode, $pageId, $tableName);
             return $displayMode;
         }
 
-        // 2. User preference (stored in backend user configuration)
+        // 2. Table-specific user preference
+        $tablePreference = $this->getTableUserPreference($tableName);
+        if ($tablePreference !== null && in_array($tablePreference, $allowedModes, true)) {
+            return $tablePreference;
+        }
+
+        // 3. Table-specific Page TSconfig default
+        $tableDefault = $this->getTsConfigTableDefault($pageId, $tableName);
+        if ($tableDefault !== null && in_array($tableDefault, $allowedModes, true)) {
+            return $tableDefault;
+        }
+
+        // 4. User preference (stored in backend user configuration)
         $userPreference = $this->getUserPreference();
         if ($userPreference !== null && in_array($userPreference, $allowedModes, true)) {
             return $userPreference;
         }
 
-        // 3. Page TSconfig default
+        // 5. Page TSconfig default
         $tsConfigDefault = $this->getTsConfigDefault($pageId);
         if ($tsConfigDefault !== null && in_array($tsConfigDefault, $allowedModes, true)) {
             return $tsConfigDefault;
         }
 
-        // 4. Fallback to first allowed mode or default
+        // 6. Fallback to first allowed mode or default
         return $allowedModes[0] ?? self::DEFAULT_MODE;
     }
 
@@ -204,8 +221,16 @@ final class ViewModeResolver implements SingletonInterface
     /**
      * Get the user's stored view mode preference.
      */
-    public function getUserPreference(): ?string
+    public function getUserPreference(string $tableName = ''): ?string
     {
+        $tableName = $this->normalizeTableName($tableName);
+        if ($tableName !== '') {
+            $tablePreference = $this->getTableUserPreference($tableName);
+            if ($tablePreference !== null) {
+                return $tablePreference;
+            }
+        }
+
         $backendUser = $this->getBackendUser();
         if (!$backendUser instanceof BackendUserAuthentication) {
             return null;
@@ -220,8 +245,9 @@ final class ViewModeResolver implements SingletonInterface
      *
      * @param string $mode The mode identifier to store
      * @param int $pageId Optional page ID for validation against TSconfig modes
+     * @param string $tableName Optional table name for table-specific preferences
      */
-    public function setUserPreference(string $mode, int $pageId = 0): void
+    public function setUserPreference(string $mode, int $pageId = 0, string $tableName = ''): void
     {
         if (!$this->isValidMode($mode, $pageId)) {
             $modes = $this->getViewModes($pageId);
@@ -236,7 +262,17 @@ final class ViewModeResolver implements SingletonInterface
             return; // Silently fail if no user
         }
 
-        $backendUser->uc[self::USER_CONFIG_KEY] = $mode;
+        $tableName = $this->normalizeTableName($tableName);
+        if ($tableName !== '') {
+            $tablePreferences = $backendUser->uc[self::TABLE_USER_CONFIG_KEY] ?? [];
+            if (!is_array($tablePreferences)) {
+                $tablePreferences = [];
+            }
+            $tablePreferences[$tableName] = $mode;
+            $backendUser->uc[self::TABLE_USER_CONFIG_KEY] = $tablePreferences;
+        } else {
+            $backendUser->uc[self::USER_CONFIG_KEY] = $mode;
+        }
         $backendUser->writeUC();
     }
 
@@ -251,6 +287,50 @@ final class ViewModeResolver implements SingletonInterface
         $default = ArrayUtility::stringValue($default);
 
         return $default !== '' ? $default : null;
+    }
+
+    private function getTsConfigTableDefault(int $pageId, string $tableName): ?string
+    {
+        if ($tableName === '') {
+            return null;
+        }
+
+        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
+        $default = ArrayUtility::stringValue(
+            ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'table.', $tableName]),
+        );
+
+        return $default !== '' ? $default : null;
+    }
+
+    private function getTableUserPreference(string $tableName): ?string
+    {
+        if ($tableName === '') {
+            return null;
+        }
+
+        $backendUser = $this->getBackendUser();
+        if (!$backendUser instanceof BackendUserAuthentication) {
+            return null;
+        }
+
+        $tablePreferences = $backendUser->uc[self::TABLE_USER_CONFIG_KEY] ?? null;
+        if (!is_array($tablePreferences)) {
+            return null;
+        }
+
+        $preference = $tablePreferences[$tableName] ?? null;
+        return is_string($preference) ? $preference : null;
+    }
+
+    private function normalizeTableName(string $tableName): string
+    {
+        $tableName = trim($tableName);
+        if ($tableName === '') {
+            return '';
+        }
+
+        return preg_match('/^[a-zA-Z0-9_]+$/', $tableName) === 1 ? $tableName : '';
     }
 
     /**

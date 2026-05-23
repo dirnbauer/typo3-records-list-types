@@ -21,6 +21,15 @@ mod.web_list {
         # Allowed view modes (comma-separated)
         # Setting only "list" hides the view toggle entirely
         allowed = list,grid,compact,teaser
+
+        # Optional default view modes for single-table views.
+        # Explicit displayMode parameters and table-specific user
+        # preferences still take precedence.
+        # table {
+        #     pages = grid
+        #     tx_news_domain_model_news = teaser
+        #     tt_content = compact
+        # }
         
         # =================================================================
         # Built-in View Types

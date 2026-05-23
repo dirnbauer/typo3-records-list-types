@@ -50,6 +50,27 @@ View mode settings
         # Force list view only (hides toggle)
         mod.web_list.viewMode.allowed = list
 
+.. _configuration-view-mode-table:
+
+..  confval:: mod.web_list.viewMode.table.<table>
+    :name: conf-viewmode-table
+    :type: string
+    :default: *(empty)*
+
+    Default view mode for a specific table in single-table mode. This is
+    used when no explicit ``displayMode`` parameter and no table-specific
+    user preference exists. The configured mode must also be allowed by
+    :typoscript:`mod.web_list.viewMode.allowed`.
+
+    ..  code-block:: typoscript
+        :caption: Page TSconfig
+
+        mod.web_list.viewMode.table {
+            pages = grid
+            tx_news_domain_model_news = teaser
+            tt_content = compact
+        }
+
 .. _configuration-pagination:
 
 Pagination

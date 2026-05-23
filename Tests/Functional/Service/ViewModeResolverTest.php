@@ -117,6 +117,65 @@ final class ViewModeResolverTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function getActiveViewModeRespectsTableDefault(): void
+    {
+        $request = new ServerRequest('https://example.com/typo3/module/records?table=pages');
+        $request = $request->withQueryParams(['table' => 'pages']);
+
+        $mode = $this->subject->getActiveViewMode($request, 7, 'pages');
+
+        self::assertSame('grid', $mode);
+    }
+
+    #[Test]
+    public function getActiveViewModeRespectsDifferentTableDefaults(): void
+    {
+        $request = new ServerRequest('https://example.com/typo3/module/records?table=tt_content');
+        $request = $request->withQueryParams(['table' => 'tt_content']);
+
+        $mode = $this->subject->getActiveViewMode($request, 7, 'tt_content');
+
+        self::assertSame('compact', $mode);
+    }
+
+    #[Test]
+    public function getActiveViewModeIgnoresDisallowedTableDefault(): void
+    {
+        $request = new ServerRequest('https://example.com/typo3/module/records?table=pages');
+        $request = $request->withQueryParams(['table' => 'pages']);
+
+        $mode = $this->subject->getActiveViewMode($request, 8, 'pages');
+
+        self::assertSame('list', $mode);
+    }
+
+    #[Test]
+    public function getActiveViewModeUsesTableDefaultBeforeGlobalPreference(): void
+    {
+        $this->subject->setUserPreference('compact', 7);
+
+        $request = new ServerRequest('https://example.com/typo3/module/records?table=pages');
+        $request = $request->withQueryParams(['table' => 'pages']);
+
+        self::assertSame('grid', $this->subject->getActiveViewMode($request, 7, 'pages'));
+    }
+
+    #[Test]
+    public function getActiveViewModeUsesTablePreferenceBeforeTableDefault(): void
+    {
+        if (!isset($GLOBALS['BE_USER'])) {
+            self::markTestSkipped('Requires a backend user to persist table preferences.');
+        }
+
+        $this->subject->setUserPreference('compact', 7, 'pages');
+
+        $request = new ServerRequest('https://example.com/typo3/module/records?table=pages');
+        $request = $request->withQueryParams(['table' => 'pages']);
+
+        self::assertSame('compact', $this->subject->getActiveViewMode($request, 7, 'pages'));
+    }
+
+    #[Test]
     public function getActiveViewModeIgnoresInvalidRequestParameter(): void
     {
         $request = new ServerRequest('https://example.com/typo3/module/records');

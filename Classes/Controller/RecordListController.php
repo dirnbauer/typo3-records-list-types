@@ -155,9 +155,10 @@ final class RecordListController extends CoreRecordListController
         $parsedBody = $request->getParsedBody();
         $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
         $pageId = ArrayUtility::intValue($queryParams['id'] ?? $parsedBodyArray['id'] ?? null);
+        $requestedTable = ArrayUtility::stringValue($parsedBodyArray['table'] ?? $queryParams['table'] ?? null);
 
         // Get the active view mode
-        $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId);
+        $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId, $requestedTable);
 
         // Only handle non-list views
         if ($viewMode === 'list' || !$viewModeResolver->isModeAllowed($viewMode, $pageId)) {
@@ -290,7 +291,7 @@ final class RecordListController extends CoreRecordListController
         // =========================================================================
 
         $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
-        $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId);
+        $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId, $this->table);
 
         // Initialize dbList for URL building, clipboard functionality, and search queries
         $dbList->start($this->pageContext->pageId, $this->table, $pointer, $this->searchTerm, $searchLevels);
@@ -372,7 +373,7 @@ final class RecordListController extends CoreRecordListController
     ): string {
         // Get the current view mode
         $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
-        $viewMode = $viewModeResolver->getActiveViewMode($request, $this->pageContext->pageId);
+        $viewMode = $viewModeResolver->getActiveViewMode($request, $this->pageContext->pageId, $this->table);
 
         // Build the search URL using the 'records' route (not web_list)
         // This is critical - dbList->listURL() returns a web_list URL which bypasses our controller
@@ -3352,7 +3353,7 @@ final class RecordListController extends CoreRecordListController
 
         $resolver = GeneralUtility::makeInstance(ViewModeResolver::class);
         $pageId = $this->pageContext->pageId;
-        $viewMode = $resolver->getActiveViewMode($request, $pageId);
+        $viewMode = $resolver->getActiveViewMode($request, $pageId, $this->table);
 
         if ($viewMode === 'list' || !$resolver->isModeAllowed($viewMode, $pageId)) {
             return parent::renderPageTranslations($dbList, $siteLanguages);

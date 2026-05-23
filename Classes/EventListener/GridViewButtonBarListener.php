@@ -58,6 +58,7 @@ final readonly class GridViewButtonBarListener
         }
 
         $pageId = $this->getPageIdFromRequest($request);
+        $tableName = $this->getTableNameFromRequest($request);
 
         // Always load CSS for button styling
         $this->pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/view-mode-toggle.css');
@@ -68,7 +69,7 @@ final readonly class GridViewButtonBarListener
         }
 
         // Get current and allowed modes
-        $currentMode = $this->viewModeResolver->getActiveViewMode($request, $pageId);
+        $currentMode = $this->viewModeResolver->getActiveViewMode($request, $pageId, $tableName);
         $viewModes = $this->viewModeResolver->getViewModesForDisplay($pageId);
 
         // Filter to only allowed modes
@@ -238,5 +239,13 @@ final readonly class GridViewButtonBarListener
         }
 
         return 0;
+    }
+
+    private function getTableNameFromRequest(ServerRequestInterface $request): string
+    {
+        $queryParams = $request->getQueryParams();
+        $table = $queryParams['table'] ?? null;
+
+        return is_string($table) ? $table : '';
     }
 }

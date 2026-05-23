@@ -36,7 +36,7 @@ final readonly class RecordFilterAdditionalContentListener
             return;
         }
 
-        $viewMode = $this->viewModeResolver->getActiveViewMode($request, $pageId);
+        $viewMode = $this->viewModeResolver->getActiveViewMode($request, $pageId, $table);
         if ($viewMode !== 'list') {
             return;
         }

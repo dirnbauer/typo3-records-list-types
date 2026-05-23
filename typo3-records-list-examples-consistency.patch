@@ -68,11 +68,11 @@ index 2991a70..f8718b1 100644
  All views follow TYPO3 Core pagination behavior: multi-table mode shows a preview with "Expand table" button, single-table mode shows full pagination.
  
 @@ -37,7 +37,7 @@ Activate the extension:
- ./vendor/bin/typo3 extension:activate records_list_examples
+./vendor/bin/typo3 extension:setup -e records_list_examples
  ```
  
 -After activation, the 6 new view types appear in the view mode switcher in **Content > Records**.
-+After activation, the 6 new custom view types appear in the view switcher in **Content > Records**.
++After setup, the 6 new custom view types appear in the view switcher in **Content > Records**.
  
  ## Customization
  
@@ -222,4 +222,3 @@ index 13bccde..3ce910e 100644
                          </f:if>
 -- 
 2.43.0
-

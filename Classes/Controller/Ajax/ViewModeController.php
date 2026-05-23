@@ -30,7 +30,9 @@ final readonly class ViewModeController
      *
      * Expected POST body:
      * {
-     *     "mode": "grid" | "list"
+     *     "mode": "grid" | "list",
+     *     "pageId": 123,
+     *     "table": "tt_content"
      * }
      *
      */
@@ -48,10 +50,12 @@ final readonly class ViewModeController
 
             /** @var array<string, mixed> $body */
             $mode = isset($body['mode']) && is_string($body['mode']) ? $body['mode'] : null;
+            $pageId = ArrayUtility::intValue($body['pageId'] ?? null);
+            $tableName = isset($body['table']) && is_string($body['table']) ? $body['table'] : '';
 
             // Validate mode
-            if ($mode === null || !$this->viewModeResolver->isValidMode($mode)) {
-                $validModes = array_keys($this->viewModeResolver->getViewModes());
+            if ($mode === null || !$this->viewModeResolver->isValidMode($mode, $pageId)) {
+                $validModes = array_keys($this->viewModeResolver->getViewModes($pageId));
                 return new JsonResponse([
                     'success' => false,
                     'error' => 'Invalid mode. Must be one of: ' . implode(', ', $validModes),
@@ -59,11 +63,12 @@ final readonly class ViewModeController
             }
 
             // Store the preference
-            $this->viewModeResolver->setUserPreference($mode);
+            $this->viewModeResolver->setUserPreference($mode, $pageId, $tableName);
 
             return new JsonResponse([
                 'success' => true,
                 'mode' => $mode,
+                'table' => $tableName,
                 'message' => 'View mode preference saved.',
             ]);
         } catch (Exception $e) {
@@ -87,15 +92,17 @@ final readonly class ViewModeController
         try {
             $queryParams = $request->getQueryParams();
             $pageId = ArrayUtility::intValue($queryParams['pageId'] ?? null);
+            $tableName = isset($queryParams['table']) && is_string($queryParams['table']) ? $queryParams['table'] : '';
 
-            $currentMode = $this->viewModeResolver->getActiveViewMode($request, $pageId);
-            $userPreference = $this->viewModeResolver->getUserPreference();
+            $currentMode = $this->viewModeResolver->getActiveViewMode($request, $pageId, $tableName);
+            $userPreference = $this->viewModeResolver->getUserPreference($tableName);
             $forcedMode = $this->viewModeResolver->getForcedViewMode();
 
             return new JsonResponse([
                 'success' => true,
                 'currentMode' => $currentMode,
                 'userPreference' => $userPreference,
+                'table' => $tableName,
                 'forcedMode' => $forcedMode,
                 'isForced' => $forcedMode !== null,
             ]);

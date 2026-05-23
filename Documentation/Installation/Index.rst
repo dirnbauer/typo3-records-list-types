@@ -6,30 +6,34 @@
 Installation
 ============
 
-The extension is installed via Composer.
+The extension is installed via Composer. If Composer cannot find the
+package on Packagist, add the GitHub repository as a VCS repository in
+your TYPO3 project's root :file:`composer.json`.
 
 .. _installation-composer:
 
 Installation via Composer
 =========================
 
-Run the following command in your TYPO3 project root:
+Run the following commands in your TYPO3 project root:
 
 ..  code-block:: bash
 
-    composer require webconsulting/records-list-types
+    composer config repositories.records-list-types vcs https://github.com/dirnbauer/typo3-records-list-types.git
+    composer require webconsulting/records-list-types:dev-main
 
-Then activate the extension:
+Then set up the extension and clear caches:
 
 ..  code-block:: bash
 
-    vendor/bin/typo3 extension:activate records_list_types
+    vendor/bin/typo3 extension:setup -e records_list_types
+    vendor/bin/typo3 cache:flush
 
 ..  tip::
 
     In TYPO3 v14 with Composer mode, extensions installed via Composer
-    are activated automatically. The activation step is only needed in
-    non-Composer (classic) installations.
+    are activated automatically. The ``extension:setup`` command
+    performs extension setup such as database migrations.
 
 .. _installation-verification:
 
