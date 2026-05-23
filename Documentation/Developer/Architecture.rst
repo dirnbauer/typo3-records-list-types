@@ -213,6 +213,32 @@ Additional modal-style actions use TYPO3-native backend controls as well:
 -   standard TYPO3 dispatch actions for info/history/window-manager
     interactions
 
+Visibility toggles
+------------------
+
+Inline hide/show buttons do not submit handcrafted DataHandler
+``data[table][uid][hidden]`` payloads. They call TYPO3's core
+``record_toggle_visibility`` AJAX endpoint through
+``@typo3/core/ajax/ajax-request.js``.
+
+Before the POST request is sent, the shared action component adds TYPO3's
+``sudoModeInterceptor`` from
+``@typo3/backend/security/sudo-mode-interceptor.js``. This keeps the
+alternative views aligned with Core record-list behavior for protected
+tables or fields. Sensitive records such as backend users and backend user
+groups can therefore trigger TYPO3's password/sudo confirmation before the
+visibility toggle is executed.
+
+The request body contains only the Core endpoint's expected values:
+
+-   ``table`` -- the table name
+-   ``uid`` -- the record UID
+-   ``action`` -- either ``hide`` or ``show``
+
+On success the module reloads. For ``pages`` records the shared action
+component also dispatches the page-tree refresh event before the reload, so
+the backend navigation reflects the changed visibility state.
+
 The action dropdown positioning logic is shared across compact, grid, and
 teaser. All variants use the same dropdown hook plus the same
 teleport-to-``<body>`` mechanism so TYPO3/Bootstrap menus behave

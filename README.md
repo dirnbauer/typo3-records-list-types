@@ -75,6 +75,7 @@ A card-based layout designed for visual browsing of records.
 - **Two-column field layout**: Small fields display side-by-side; text/richtext fields span full width
 - **Drag-and-drop reordering**: Both mouse and keyboard (Space to grab, arrows to move, Space to drop, Escape to cancel)
 - **Record actions**: Inline visibility toggle, TYPO3 14 native contextual edit trigger, delete, plus dropdown for info, history, copy, and cut
+- **Core visibility flow**: Hide/show actions use TYPO3's `record_toggle_visibility` endpoint with the backend `sudoModeInterceptor`, so protected records can trigger TYPO3's password/sudo confirmation instead of bypassing it
 - **State indicators**: Hidden records get amber headers; workspace records show blue (new), purple (changed), cyan (moved), or red (deleted) headers
 - **Language flags**: Each card shows the record's language flag icon in the bottom-right corner
 - **Responsive grid**: Auto-fills columns from 320px minimum, scales from 1 column on mobile to multiple on wide screens
@@ -407,6 +408,7 @@ The extension follows TYPO3 security best practices:
 - **SQL Injection Prevention**: All queries use TYPO3's QueryBuilder with parameterized named parameters and type casting
 - **CSRF Protection**: AJAX endpoints use TYPO3's built-in token handling
 - **Access Control**: Full integration with TYPO3's backend user permissions and workspace restrictions
+- **Protected visibility actions**: Hide/show uses TYPO3's core `record_toggle_visibility` AJAX endpoint and the `@typo3/backend/security/sudo-mode-interceptor.js` middleware. For sensitive tables such as backend users or backend user groups, TYPO3 can require the same password/sudo confirmation that Core record-list actions require.
 - **Input Validation**: View mode, table names, UIDs, and sort parameters are validated and sanitized
 - **XSS Prevention**: Fluid templates auto-escape by default; TYPO3 core `f:sanitize.html` is used for trusted backend-generated fragments
 

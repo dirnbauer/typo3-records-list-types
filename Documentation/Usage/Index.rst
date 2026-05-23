@@ -32,6 +32,25 @@ term and active filters after :php:`BackendUtility::workspaceOL()` so draft
 text, visibility, date, select, and category changes can be found before
 publishing.
 
+.. _usage-toggle-visibility:
+
+Toggle visibility
+=================
+
+Grid, Compact, and Teaser views provide inline hide/show actions for
+records that have a TCA disabled field. These actions use TYPO3's core
+``record_toggle_visibility`` AJAX endpoint.
+
+The JavaScript request is sent through TYPO3's backend
+``sudoModeInterceptor`` middleware. If TYPO3 protects the affected table or
+field with a password/sudo confirmation, for example for backend users or
+backend user groups, the Core confirmation flow is shown before the
+visibility change continues.
+
+After a successful toggle, the Records module reloads so the card, compact
+row, workspace markers, and page tree state reflect the persisted record
+state.
+
 .. _usage-sort-records:
 
 Sort and reorder records
