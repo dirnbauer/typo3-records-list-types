@@ -145,6 +145,10 @@
     padding: var(--gv-space-4);
 }
 
+.gridview-card-grid--with-images {
+    grid-auto-rows: 1fr;
+}
+
 @media (max-width: 400px) {
     .gridview-card-grid {
         grid-template-columns: 1fr;

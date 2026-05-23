@@ -100,7 +100,7 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
-                        <div class="gridview-card-grid"
+                        <div class="gridview-card-grid{f:if(condition: table.hasThumbnails, then: ' gridview-card-grid--with-images')}"
                              data-table="{table.tableName}"
                              data-can-reorder="{f:if(condition: table.canReorder, then: '1', else: '0')}"
                              data-page-id="{pageId}"

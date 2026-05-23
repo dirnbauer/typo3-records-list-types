@@ -806,6 +806,7 @@ final class RecordListController extends CoreRecordListController
                 'workspace' => $workspaceBadge,
                 'filters' => $filterViewData,
                 'records' => $enrichedRecords,
+                'hasThumbnails' => $this->recordsContainThumbnails($enrichedRecords),
                 'recordCount' => $recordCount,
                 'hasMore' => $hasMore,
                 'hasActiveFilters' => $hasActiveFilters,
@@ -2409,6 +2410,21 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * @param array<int, array<string, mixed>> $records
+     */
+    private function recordsContainThumbnails(array $records): bool
+    {
+        foreach ($records as $record) {
+            $thumbnailUrl = $record['thumbnailUrl'] ?? null;
+            if (is_string($thumbnailUrl) && $thumbnailUrl !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Enrich records with language information (flag identifier, language title).
      *
      * Resolves the sys_language_uid from each record's raw data to the corresponding
@@ -3269,6 +3285,7 @@ final class RecordListController extends CoreRecordListController
                 'items' => [],
             ],
             'records' => $enrichedRecords,
+            'hasThumbnails' => $this->recordsContainThumbnails($enrichedRecords),
             'recordCount' => $recordCount,
             'hasMore' => false,
             'hasActiveFilters' => false,
