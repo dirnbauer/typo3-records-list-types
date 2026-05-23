@@ -39,22 +39,13 @@ final readonly class ViewModeController
     public function setViewModeAction(ServerRequestInterface $request): ResponseInterface
     {
         try {
-            // Parse request body
-            $body = $request->getParsedBody();
-
-            // Handle both JSON and form-encoded requests
-            if (!is_array($body) || $body === []) {
-                $content = $request->getBody()->getContents();
-                $body = json_decode($content, true) ?? [];
-            }
-
-            /** @var array<string, mixed> $body */
-            $mode = isset($body['mode']) && is_string($body['mode']) ? $body['mode'] : null;
+            $body = $this->getBodyParameters($request);
+            $mode = ArrayUtility::stringValue($body['mode'] ?? null);
             $pageId = ArrayUtility::intValue($body['pageId'] ?? null);
-            $tableName = isset($body['table']) && is_string($body['table']) ? $body['table'] : '';
+            $tableName = ArrayUtility::stringValue($body['table'] ?? null);
 
             // Validate mode
-            if ($mode === null || !$this->viewModeResolver->isValidMode($mode, $pageId)) {
+            if ($mode === '' || !$this->viewModeResolver->isValidMode($mode, $pageId)) {
                 $validModes = array_keys($this->viewModeResolver->getViewModes($pageId));
                 return new JsonResponse([
                     'success' => false,
@@ -92,7 +83,7 @@ final readonly class ViewModeController
         try {
             $queryParams = $request->getQueryParams();
             $pageId = ArrayUtility::intValue($queryParams['pageId'] ?? null);
-            $tableName = isset($queryParams['table']) && is_string($queryParams['table']) ? $queryParams['table'] : '';
+            $tableName = ArrayUtility::stringValue($queryParams['table'] ?? null);
 
             $currentMode = $this->viewModeResolver->getActiveViewMode($request, $pageId, $tableName);
             $userPreference = $this->viewModeResolver->getUserPreference($tableName);
@@ -116,5 +107,19 @@ final readonly class ViewModeController
                 'error' => 'Failed to retrieve preference. Please try again.',
             ], 500);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getBodyParameters(ServerRequestInterface $request): array
+    {
+        $body = $request->getParsedBody();
+        if (is_array($body) && $body !== []) {
+            return ArrayUtility::stringKeyArray($body);
+        }
+
+        $decodedBody = json_decode($request->getBody()->getContents(), true);
+        return is_array($decodedBody) ? ArrayUtility::stringKeyArray($decodedBody) : [];
     }
 }

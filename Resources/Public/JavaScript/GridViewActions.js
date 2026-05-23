@@ -8,8 +8,8 @@ import {LitElement, html} from 'lit-element';
  * - WCAG 2.1 compliant keyboard navigation for drag and drop
  * - Screen reader support with ARIA live regions
  * - Record actions (hide/show, delete, clipboard, info, history)
- * - Sorting controls (manual drag mode and field-based sorting)
- * - Client-side search filtering
+ * - DataHandler-backed move/delete actions with raw endpoint fallback
+ * - Pagination input handling
  * - Scroll shadow detection for compact view
  */
 
@@ -37,14 +37,8 @@ class GridViewActions extends LitElement {
         
         // Live region for screen reader announcements
         this.liveRegion = null;
-        
-        // TYPO3 handlers and modules
-        this.AjaxDataHandler = null;
-        this.Modal = null;
-        this.Icons = null;
-        
-        // Pre-load TYPO3 modules
-        this.loadTYPO3Modules();
+
+        this.modulePromises = new Map();
     }
 
     render() {
@@ -53,35 +47,6 @@ class GridViewActions extends LitElement {
 
     firstUpdated() {
         this.init();
-    }
-    
-    /**
-     * Pre-load TYPO3 backend modules for better performance
-     */
-    async loadTYPO3Modules() {
-        // Load AjaxDataHandler
-        try {
-            const ajaxModule = await import('@typo3/backend/ajax-data-handler.js');
-            this.AjaxDataHandler = ajaxModule.default;
-        } catch (e) {
-            // AjaxDataHandler not available, using fetch fallback
-        }
-        
-        // Load Modal for delete confirmations
-        try {
-            const modalModule = await import('@typo3/backend/modal.js');
-            this.Modal = modalModule.default;
-        } catch (e) {
-            // Modal not available, will use native confirm() fallback
-        }
-        
-        // Load Icons for icon replacement
-        try {
-            const iconsModule = await import('@typo3/backend/icons.js');
-            this.Icons = iconsModule.default;
-        } catch (e) {
-            // Icons module not available
-        }
     }
     
     init() {
@@ -94,11 +59,22 @@ class GridViewActions extends LitElement {
         this.initializeRecordActions();
         this.initializeDragAndDrop();
         this.initializeKeyboardDragDrop();
-        this.initializeSorting();
-        this.initializeSearch();
         this.initializeScrollShadows();
         this.initializePaginationInputs();
         this.initializeCheckAllToggle();
+    }
+
+    loadModule(moduleName) {
+        if (!this.modulePromises.has(moduleName)) {
+            this.modulePromises.set(moduleName, import(moduleName));
+        }
+
+        return this.modulePromises.get(moduleName);
+    }
+
+    async getDefaultModule(moduleName) {
+        const module = await this.loadModule(moduleName);
+        return module.default || module;
     }
 
     // =========================================================================
@@ -1027,64 +1003,102 @@ class GridViewActions extends LitElement {
     }
     
     async executeMove(table, uid, target) {
-        // Visual feedback
         const card = this.draggedCard || this.keyboardDragCard;
         if (card) {
             card.style.opacity = '0.3';
         }
         
-        // Validate inputs
         if (!table || !uid || target === undefined || target === null) {
             console.error('[GridView] Invalid move parameters');
             if (card) card.style.opacity = '';
             return;
         }
-        
-        // Ensure target is a string
-        const targetStr = String(target);
-        
-        // Get the AJAX URL
-        const url = TYPO3?.settings?.ajaxUrls?.record_process;
-        if (!url) {
-            console.error('[GridView] No AJAX URL available');
-            if (card) card.style.opacity = '';
-            return;
-        }
-        
-        // Build URL with proper parameters
-        const fullUrl = new URL(url, window.location.origin);
-        fullUrl.searchParams.set(`cmd[${table}][${uid}][move]`, targetStr);
-        
+
+        let restoreCard = true;
         try {
-            const response = await fetch(fullUrl.toString(), { 
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
+            const data = await this.processDataHandlerCommand({
+                cmd: {
+                    [table]: {
+                        [uid]: {
+                            move: String(target)
+                        }
+                    }
                 }
             });
-            
-            if (!response.ok) {
-                console.error('[GridView] HTTP Error:', response.status);
-                if (card) card.style.opacity = '';
-                return;
-            }
-            
-            const data = await response.json();
-            
-            if (data.hasErrors) {
+
+            if (data?.hasErrors) {
                 console.error('[GridView] DataHandler errors:', data.messages);
                 this.showNotification('Move failed', data.messages?.[0]?.message || 'Unknown error', 'error');
-                if (card) card.style.opacity = '';
-            } else {
-                this.refreshPageTreeIfNeeded(table);
-                window.location.reload();
+                return;
             }
+
+            restoreCard = false;
+            this.refreshPageTreeIfNeeded(table);
+            window.location.reload();
         } catch (err) {
             console.error('[GridView] Network error:', err);
-            if (card) card.style.opacity = '';
+            this.showNotification('Move failed', err.message || 'Request failed', 'error');
+        } finally {
+            if (restoreCard && card) {
+                card.style.opacity = '';
+            }
         }
+    }
+
+    async processDataHandlerCommand(params) {
+        let AjaxDataHandler = null;
+        try {
+            AjaxDataHandler = await this.getDefaultModule('@typo3/backend/ajax-data-handler.js');
+        } catch {
+            AjaxDataHandler = null;
+        }
+
+        if (AjaxDataHandler?.process) {
+            return await AjaxDataHandler.process(params);
+        }
+
+        const url = TYPO3?.settings?.ajaxUrls?.record_process;
+        if (!url) {
+            throw new Error('TYPO3 record_process endpoint is not available.');
+        }
+
+        const fullUrl = new URL(url, window.location.origin);
+        this.appendNestedSearchParams(fullUrl.searchParams, params);
+
+        return this.fetchJson(fullUrl);
+    }
+
+    appendNestedSearchParams(searchParams, value, prefix = '') {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            Object.entries(value).forEach(([key, nestedValue]) => {
+                const parameterName = prefix ? `${prefix}[${key}]` : key;
+                this.appendNestedSearchParams(searchParams, nestedValue, parameterName);
+            });
+            return;
+        }
+
+        if (prefix) {
+            searchParams.set(prefix, String(value));
+        }
+    }
+
+    async fetchJson(url, options = {}) {
+        const response = await fetch(url.toString(), {
+            ...options,
+            method: options.method || 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(options.headers || {})
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        return response.json();
     }
 
     /**
@@ -1190,11 +1204,10 @@ class GridViewActions extends LitElement {
         const card = btn.closest('.gridview-card');
         const title = card?.querySelector('.gridview-card__title')?.textContent?.trim() || uid;
         
-        // Use TYPO3 Modal if available, otherwise fall back to native confirm
         const confirmed = await this.confirmDelete(title);
         if (!confirmed) return;
         
-        this.executeDelete(table, uid, card);
+        await this.executeDelete(table, uid, card);
     }
     
     /**
@@ -1203,13 +1216,13 @@ class GridViewActions extends LitElement {
      * @returns {Promise<boolean>} True if confirmed, false if cancelled
      */
     async confirmDelete(title) {
-        // Try TYPO3 Modal first
-        if (this.Modal) {
+        try {
+            const Modal = await this.getDefaultModule('@typo3/backend/modal.js');
             return new Promise((resolve) => {
-                this.Modal.confirm(
+                Modal.confirm(
                     'Delete Record',
                     `Are you sure you want to delete "${title}"?`,
-                    this.Modal.sizes.small,
+                    Modal.sizes.small,
                     [
                         {
                             text: 'Cancel',
@@ -1231,10 +1244,9 @@ class GridViewActions extends LitElement {
                     ]
                 );
             });
+        } catch {
+            return confirm(`Delete "${title}"?`);
         }
-        
-        // Fallback to native confirm
-        return confirm(`Delete "${title}"?`);
     }
     
     /**
@@ -1244,8 +1256,11 @@ class GridViewActions extends LitElement {
      * and events, then reloads the page to ensure consistent state
      * (record counts, pagination, empty tables).
      */
-    executeDelete(table, uid, card) {
-        // Animate out immediately for visual feedback
+    async executeDelete(table, uid, card) {
+        if (!table || !uid) {
+            return;
+        }
+
         const wrapper = card?.closest('.gridview-card-wrapper') || card;
         if (wrapper) {
             wrapper.style.transition = 'all 0.2s';
@@ -1253,59 +1268,39 @@ class GridViewActions extends LitElement {
             wrapper.style.transform = 'scale(0.9)';
         }
 
-        const params = { cmd: { [table]: { [uid]: { delete: 1 } } } };
-
-        // Prefer TYPO3 AjaxDataHandler (handles notifications + events)
-        if (this.AjaxDataHandler) {
-            this.AjaxDataHandler.process(params).then(() => {
-                this.refreshPageTreeIfNeeded(table);
-                window.location.reload();
-            });
-            return;
-        }
-
-        // Fallback: raw fetch if AjaxDataHandler is not available
-        const url = TYPO3?.settings?.ajaxUrls?.record_process;
-        if (!url) {
-            console.error('[GridView] No AJAX URL available');
-            return;
-        }
-
-        const fullUrl = new URL(url, window.location.origin);
-        fullUrl.searchParams.set(`cmd[${table}][${uid}][delete]`, '1');
-
-        fetch(fullUrl.toString(), {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.hasErrors) {
-                    const msg = data.messages?.[0]?.message || 'Unknown error';
-                    this.showNotification('Delete failed', msg, 'error');
-                    // Restore card visibility on error
-                    if (wrapper) {
-                        wrapper.style.opacity = '1';
-                        wrapper.style.transform = '';
+        try {
+            const data = await this.processDataHandlerCommand({
+                cmd: {
+                    [table]: {
+                        [uid]: {
+                            delete: 1
+                        }
                     }
-                } else {
-                    this.refreshPageTreeIfNeeded(table);
-                    window.location.reload();
-                }
-            })
-            .catch(err => {
-                console.error('[GridView] Delete error:', err);
-                this.showNotification('Request failed', err.message, 'error');
-                // Restore card visibility on error
-                if (wrapper) {
-                    wrapper.style.opacity = '1';
-                    wrapper.style.transform = '';
                 }
             });
+
+            if (data?.hasErrors) {
+                this.restoreActionWrapper(wrapper);
+                this.showAjaxMessages('Delete failed', data.messages);
+                return;
+            }
+
+            this.refreshPageTreeIfNeeded(table);
+            window.location.reload();
+        } catch (err) {
+            console.error('[GridView] Delete error:', err);
+            this.restoreActionWrapper(wrapper);
+            this.showNotification('Request failed', err.message || 'Request failed', 'error');
+        }
+    }
+
+    restoreActionWrapper(wrapper) {
+        if (!wrapper) {
+            return;
+        }
+
+        wrapper.style.opacity = '1';
+        wrapper.style.transform = '';
     }
 
     /**
@@ -1313,49 +1308,41 @@ class GridViewActions extends LitElement {
      */
     async clipboardAction(table, uid, mode) {
         const url = TYPO3?.settings?.ajaxUrls?.clipboard_process;
+        if (!table || !uid || !['copy', 'cut'].includes(mode)) {
+            return;
+        }
+
         if (!url) {
-            // Fallback: try alternative approach
             this.clipboardFallback(table, uid, mode);
             return;
         }
         
         const fullUrl = new URL(url, window.location.origin);
-        
-        // Set clipboard parameters
         fullUrl.searchParams.set(`CB[el][${table}|${uid}]`, '1');
         fullUrl.searchParams.set('CB[setCopyMode]', mode === 'copy' ? '1' : '0');
         
         try {
-            const response = await fetch(fullUrl.toString(), {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            
-            await response.json();
-            
-            // Show notification
+            const data = await this.fetchJson(fullUrl);
+            if (data?.hasErrors) {
+                this.showAjaxMessages('Clipboard action failed', data.messages);
+                return;
+            }
+
             this.showNotification(
                 mode === 'copy' ? 'Copied to clipboard' : 'Cut to clipboard',
                 `Record ${uid} from ${table}`,
                 'success'
             );
-            
-            // Update the copy/cut icons in all cards to reflect clipboard state
+
             this.updateClipboardIcons(table, uid, mode);
-            
-            // Update clipboard panel if visible
+
             const clipboardPanel = document.querySelector('typo3-backend-clipboard-panel');
             if (clipboardPanel) {
                 clipboardPanel.dispatchEvent(new Event('typo3:clipboard:update'));
             }
-            
         } catch (err) {
             console.error('[GridView] Clipboard error:', err);
-            this.showNotification('Clipboard action failed', err.message, 'error');
+            this.showNotification('Clipboard action failed', err.message || 'Request failed', 'error');
         }
     }
     
@@ -1364,25 +1351,22 @@ class GridViewActions extends LitElement {
      * Changes icon to "release" variant and updates other cards
      */
     updateClipboardIcons(table, uid, mode) {
-        // First, reset all copy/cut icons to default state
         document.querySelectorAll('[data-gridview-action="copy"], [data-gridview-action="cut"]').forEach(el => {
             const action = el.dataset.gridviewAction;
             const iconEl = el.querySelector('.icon, typo3-backend-icon');
             if (iconEl) {
-                // Reset to default icons
                 const defaultIcon = action === 'copy' ? 'actions-edit-copy' : 'actions-edit-cut';
                 this.replaceIcon(iconEl, defaultIcon);
             }
-            // Remove active class
             el.classList.remove('is-clipboard-active');
         });
         
-        // Now set the active state for the copied/cut element
-        const activeSelector = `[data-gridview-action="${mode}"][data-table="${table}"][data-uid="${uid}"]`;
-        document.querySelectorAll(activeSelector).forEach(el => {
+        document.querySelectorAll(`[data-gridview-action="${mode}"]`).forEach(el => {
+            if (el.dataset.table !== table || el.dataset.uid !== String(uid)) {
+                return;
+            }
             const iconEl = el.querySelector('.icon, typo3-backend-icon');
             if (iconEl) {
-                // Use release icon to indicate element is on clipboard
                 const releaseIcon = mode === 'copy' ? 'actions-edit-copy-release' : 'actions-edit-cut-release';
                 this.replaceIcon(iconEl, releaseIcon);
             }
@@ -1401,8 +1385,6 @@ class GridViewActions extends LitElement {
             return;
         }
         
-        // For traditional span.icon elements, use pre-loaded Icons module
-        const iconsModule = this.Icons;
         const parseAndReplace = (iconMarkup) => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(iconMarkup, 'text/html');
@@ -1415,25 +1397,14 @@ class GridViewActions extends LitElement {
             }
         };
 
-        if (iconsModule) {
-            iconsModule.getIcon(newIdentifier, 'small')
-                .then(parseAndReplace)
-                .catch(() => {
-                    // Fallback: just update data attribute
-                    iconEl.dataset.identifier = newIdentifier;
-                });
-        } else {
-            // Icons module not loaded, try dynamic import as fallback
-            import('@typo3/backend/icons.js')
-                .then(module => {
-                    const Icons = module.default;
-                    Icons.getIcon(newIdentifier, 'small').then(parseAndReplace);
-                })
-                .catch(() => {
-                    // Fallback: just update data attribute if possible
-                    iconEl.dataset.identifier = newIdentifier;
-                });
-        }
+        this.getDefaultModule('@typo3/backend/icons.js')
+            .then(Icons => {
+                return Icons.getIcon(newIdentifier, 'small');
+            })
+            .then(parseAndReplace)
+            .catch(() => {
+                iconEl.dataset.identifier = newIdentifier;
+            });
     }
     
     /**
@@ -1447,43 +1418,25 @@ class GridViewActions extends LitElement {
     }
     
     /**
-     * Show info popup for a record using TYPO3's InfoWindow
-     */
-    /**
      * Show info for a record in the content frame (like History).
      * Uses URL/URLSearchParams for safe URL construction.
      */
     showInfo(table, uid) {
         const returnUrl = window.location.pathname + window.location.search;
-        
-        // Get the ShowItem module URL from TYPO3 settings
-        const moduleUrl = top?.TYPO3?.settings?.ShowItem?.moduleUrl;
-        
+        const moduleUrl = this.getTopTypo3Setting('ShowItem', 'moduleUrl');
+
         if (moduleUrl) {
             const infoUrl = new URL(moduleUrl, window.location.origin);
             infoUrl.searchParams.set('table', table);
             infoUrl.searchParams.set('uid', String(uid));
             infoUrl.searchParams.set('returnUrl', returnUrl);
-            const infoUrlStr = infoUrl.toString();
-            
-            // Use Viewport.ContentContainer.setUrl() like History does
-            import('@typo3/backend/viewport.js')
-                .then(module => {
-                    const Viewport = module.default || module;
-                    if (Viewport?.ContentContainer?.setUrl) {
-                        Viewport.ContentContainer.setUrl(infoUrlStr);
-                    } else {
-                        window.location.href = infoUrlStr;
-                    }
-                })
-                .catch(() => {
-                    window.location.href = infoUrlStr;
-                });
-        } else {
-            // Fallback to InfoWindow popup if settings not available
-            if (typeof top?.TYPO3?.InfoWindow?.showItem === 'function') {
-                top.TYPO3.InfoWindow.showItem(table, uid);
-            }
+            this.navigateInContentFrame(infoUrl);
+            return;
+        }
+
+        const infoWindow = this.getTopTypo3Property('InfoWindow', 'showItem');
+        if (typeof infoWindow === 'function') {
+            infoWindow(table, uid);
         }
     }
     
@@ -1495,43 +1448,56 @@ class GridViewActions extends LitElement {
     showHistory(table, uid) {
         const element = `${table}:${uid}`;
         const returnUrl = window.location.pathname + window.location.search;
-        
-        // Get the history module URL from TYPO3 settings
-        const moduleUrl = top?.TYPO3?.settings?.RecordHistory?.moduleUrl;
-        
+        const moduleUrl = this.getTopTypo3Setting('RecordHistory', 'moduleUrl');
+
         if (moduleUrl) {
             const historyUrl = new URL(moduleUrl, window.location.origin);
             historyUrl.searchParams.set('element', element);
             historyUrl.searchParams.set('returnUrl', returnUrl);
-            const historyUrlStr = historyUrl.toString();
-            
-            // Use Viewport.ContentContainer.setUrl() like TYPO3 core does
-            import('@typo3/backend/viewport.js')
-                .then(module => {
-                    const Viewport = module.default || module;
-                    if (Viewport?.ContentContainer?.setUrl) {
-                        Viewport.ContentContainer.setUrl(historyUrlStr);
-                    } else {
-                        // Fallback
-                        window.location.href = historyUrlStr;
-                    }
-                })
-                .catch(() => {
-                    window.location.href = historyUrlStr;
-                });
-        } else {
-            // Fallback if settings not available
-            console.warn('[GridView] RecordHistory.moduleUrl not found in TYPO3.settings');
+            this.navigateInContentFrame(historyUrl);
+            return;
         }
+
+        console.warn('[GridView] RecordHistory.moduleUrl not found in TYPO3.settings');
+    }
+
+    getTopTypo3Setting(section, key) {
+        try {
+            return top?.TYPO3?.settings?.[section]?.[key];
+        } catch {
+            return null;
+        }
+    }
+
+    getTopTypo3Property(section, key) {
+        try {
+            return top?.TYPO3?.[section]?.[key];
+        } catch {
+            return null;
+        }
+    }
+
+    navigateInContentFrame(url) {
+        const urlString = url.toString();
+        this.getDefaultModule('@typo3/backend/viewport.js')
+            .then(Viewport => {
+                if (Viewport?.ContentContainer?.setUrl) {
+                    Viewport.ContentContainer.setUrl(urlString);
+                    return;
+                }
+                window.location.href = urlString;
+            })
+            .catch(() => {
+                window.location.href = urlString;
+            });
     }
     
     /**
      * Show notification using TYPO3's notification system
      */
     showNotification(title, message, severity = 'info') {
-        import('@typo3/backend/notification.js')
-            .then(module => {
-                const Notification = module.default;
+        this.getDefaultModule('@typo3/backend/notification.js')
+            .then(Notification => {
                 switch (severity) {
                     case 'success':
                         Notification.success(title, message, 3);
@@ -1550,156 +1516,6 @@ class GridViewActions extends LitElement {
                 // Fallback: console log
                 console.log(`[GridView] ${severity.toUpperCase()}: ${title} - ${message}`);
             });
-    }
-
-    // =========================================================================
-    // Sorting Controls
-    // =========================================================================
-
-    /**
-     * Sorting controls - dropdown, direction toggle, and table header clicks
-     */
-    initializeSorting() {
-        // Handle sort field dropdown changes (legacy partial support)
-        document.querySelectorAll('[data-gridview-sort-field]').forEach(select => {
-            select.addEventListener('change', () => {
-                this.updateSorting(select);
-            });
-        });
-
-        // Handle sort direction toggle button clicks (legacy partial support)
-        // Note: New PHP-generated dropdowns use anchor links and don't need JavaScript
-        document.querySelectorAll('[data-gridview-sort-toggle]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const currentDirection = btn.dataset.currentDirection;
-                const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-                const tableName = btn.dataset.table;
-                
-                // Try to find select element in container
-                const container = btn.closest('.gridview-sorting');
-                const select = container?.querySelector('[data-gridview-sort-field]');
-                
-                if (select) {
-                    // Legacy mode: use select element
-                    this.updateSorting(select, newDirection);
-                } else if (tableName) {
-                    // New mode: build URL directly from button data
-                    this.updateSortDirection(tableName, newDirection);
-                }
-            });
-        });
-
-        // Handle table header click-to-sort (compact view)
-        document.querySelectorAll('.compactview-th--sortable[data-sort-field]').forEach(th => {
-            const sortField = th.dataset.sortField;
-            const currentSortField = th.dataset.currentSortField || '';
-            
-            if (sortField && sortField === currentSortField) {
-                th.classList.add('is-active');
-            }
-            
-            th.addEventListener('click', (e) => {
-                e.preventDefault();
-                
-                const tableName = th.dataset.table;
-                const currentDirection = th.dataset.sortDirection || 'asc';
-                
-                if (!sortField || !tableName) return;
-                
-                const isThisColumnSorted = currentSortField === sortField;
-                let newDirection = 'asc';
-                if (isThisColumnSorted) {
-                    newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-                }
-                
-                const url = new URL(window.location.href);
-                url.searchParams.set(`sort[${tableName}][field]`, sortField);
-                url.searchParams.set(`sort[${tableName}][direction]`, newDirection);
-                
-                window.location.href = url.toString();
-            });
-        });
-
-        // Initialize scroll shadows for compact view tables
-        this.initScrollShadows();
-    }
-
-    /**
-     * Initialize scroll shadow indicators for compact view tables
-     */
-    initScrollShadows() {
-        document.querySelectorAll('.compactview-table-wrapper').forEach(wrapper => {
-            const updateShadows = () => {
-                const scrollLeft = wrapper.scrollLeft;
-                const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
-                
-                wrapper.classList.toggle('is-scrolled-left', scrollLeft > 5);
-                wrapper.classList.toggle('is-scrolled-right', scrollLeft < maxScroll - 5);
-            };
-            
-            wrapper.addEventListener('scroll', updateShadows, { passive: true });
-            window.addEventListener('resize', updateShadows, { passive: true });
-            updateShadows();
-        });
-    }
-
-    /**
-     * Build URL and navigate with per-table sorting parameters
-     */
-    updateSorting(selectElement, forcedDirection = null) {
-        if (!selectElement) return;
-
-        const tableName = selectElement.dataset.table;
-        const sortField = selectElement.value;
-        
-        if (!tableName) {
-            console.error('[GridView] No table name for sorting');
-            return;
-        }
-        
-        let sortDirection = forcedDirection;
-        if (!sortDirection) {
-            const container = selectElement.closest('.gridview-sorting');
-            const toggleBtn = container?.querySelector('[data-gridview-sort-toggle]');
-            sortDirection = toggleBtn?.dataset.currentDirection || 'asc';
-        }
-
-        const url = new URL(window.location.href);
-        
-        // Clear any old global sorting params
-        url.searchParams.delete('sortField');
-        url.searchParams.delete('sortDirection');
-        
-        // Update this table's sorting params
-        if (sortField) {
-            url.searchParams.set(`sort[${tableName}][field]`, sortField);
-            url.searchParams.set(`sort[${tableName}][direction]`, sortDirection);
-        } else {
-            url.searchParams.delete(`sort[${tableName}][field]`);
-            url.searchParams.delete(`sort[${tableName}][direction]`);
-        }
-
-        window.location.href = url.toString();
-    }
-
-    /**
-     * Update only the sort direction for a table (used when no select element exists)
-     * @param {string} tableName - The table name
-     * @param {string} newDirection - The new sort direction ('asc' or 'desc')
-     */
-    updateSortDirection(tableName, newDirection) {
-        if (!tableName) {
-            console.error('[GridView] No table name for direction update');
-            return;
-        }
-
-        const url = new URL(window.location.href);
-        
-        // Update only the direction, preserve existing field if any
-        url.searchParams.set(`sort[${tableName}][direction]`, newDirection);
-
-        window.location.href = url.toString();
     }
 
     /**
@@ -1804,66 +1620,8 @@ class GridViewActions extends LitElement {
             return;
         }
 
-        window.location.href = baseUrl + '&pointer[' + encodeURIComponent(table) + ']=' + page;
-    }
-
-    // =========================================================================
-    // Search
-    // =========================================================================
-
-    /**
-     * Initialize search input handlers
-     */
-    initializeSearch() {
-        const searchInputs = document.querySelectorAll('[data-gridview-search]');
-        
-        if (searchInputs.length === 0) {
-            return;
-        }
-        
-        searchInputs.forEach(input => {
-            // Submit on Enter key
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.submitSearch(input);
-                }
-            });
-            
-            // Also submit on blur if value changed
-            let originalValue = input.value;
-            input.addEventListener('blur', () => {
-                if (input.value !== originalValue) {
-                    setTimeout(() => {
-                        if (document.activeElement !== input) {
-                            this.submitSearch(input);
-                        }
-                    }, 100);
-                }
-            });
-            
-            // Submit when clicking native clear button
-            input.addEventListener('search', () => {
-                if (input.value === '') {
-                    this.submitSearch(input);
-                }
-            });
-        });
-    }
-    
-    /**
-     * Submit search - navigate to URL with searchTerm parameter
-     */
-    submitSearch(input) {
-        const searchTerm = input.value.trim();
-        const url = new URL(window.location.href);
-        
-        if (searchTerm) {
-            url.searchParams.set('searchTerm', searchTerm);
-        } else {
-            url.searchParams.delete('searchTerm');
-        }
-        
+        const url = new URL(baseUrl, window.location.origin);
+        url.searchParams.set(`pointer[${table}]`, String(page));
         window.location.href = url.toString();
     }
 
@@ -1885,7 +1643,7 @@ class GridViewActions extends LitElement {
                     cb.dispatchEvent(new Event('change', { bubbles: true }));
                 });
             });
-            });
+        });
     }
 
     showAjaxMessages(title, messages) {

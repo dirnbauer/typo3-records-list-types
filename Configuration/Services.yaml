@@ -29,6 +29,18 @@ services:
   Webconsulting\RecordsListTypes\Service\RecordGridDataProvider:
     public: true
 
+  # Record Sorting Service - Workspace-aware sorting helpers for custom views
+  Webconsulting\RecordsListTypes\Service\RecordSortingService:
+    public: true
+
+  # Record List Request Parameter Service - Preserves list state and sort parameters
+  Webconsulting\RecordsListTypes\Service\RecordListRequestParameterService:
+    public: true
+
+  # Record Display Value Formatter - Formats raw TCA values for Fluid view data
+  Webconsulting\RecordsListTypes\Service\RecordDisplayValueFormatter:
+    public: true
+
   # Thumbnail Service - Handles image thumbnail generation
   Webconsulting\RecordsListTypes\Service\ThumbnailService:
     public: true

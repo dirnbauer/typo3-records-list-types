@@ -16,7 +16,7 @@ aspect that was standardised in the previous round.
 | 1 | `Classes/Controller/RecordListController.php:1041` | `$useWorkspaceReduction = $backendUser->workspace > 0;` | Read the workspace id from the Context aspect via a local helper. |
 | 2 | `Classes/Controller/RecordListController.php:1058` | `BackendUtility::workspaceOL($tableName, $row, $backendUser->workspace, true);` | Drop the explicit workspace id — the two-arg form of `workspaceOL()` reads the current workspace itself. |
 | 3 | `Classes/Service/RecordGridDataProvider.php:80` | `BackendUtility::workspaceOL($table, $row, $backendUser->workspace, true);` | Same: let `workspaceOL()` pick up the workspace id, remove the orphaned `$backendUser` local. |
-| 4 | `Classes/Service/RecordGridDataProvider.php:724` | Ditto, inside `getRecordsWithActions()` | Same fix. |
+| 4 | `Classes/Service/RecordGridDataProvider.php` | Obsolete duplicate action assembly helper | Removed with the unused helper. |
 
 ## Confirmed green (no change required)
 

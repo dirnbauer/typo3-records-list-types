@@ -780,36 +780,4 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         ];
     }
 
-    /**
-     * Get records with their actions (for use after actions have been collected).
-     *
-     * @param string $table The database table name
-     * @param int $pageId The page ID
-     * @param array<int, string[]> $actionsMap Map of UID => actions array
-     * @param int $limit Maximum number of records
-     * @param int $offset Starting offset
-     * @param string $searchTerm Search term to filter records
-     * @param string $sortField Field to sort by
-     * @param string $sortDirection Sort direction
-     * @return array<int, array<string, mixed>> Array of record data with actions
-     */
-    public function getRecordsWithActions(
-        string $table,
-        int $pageId,
-        array $actionsMap,
-        int $limit = 0,
-        int $offset = 0,
-        string $searchTerm = '',
-        string $sortField = '',
-        string $sortDirection = 'asc',
-    ): array {
-        $records = $this->getRecordsForTable($table, $pageId, $limit, $offset, $searchTerm, $sortField, $sortDirection);
-
-        foreach ($records as &$record) {
-            $uid = isset($record['uid']) && is_numeric($record['uid']) ? (int) $record['uid'] : 0;
-            $record['actions'] = $actionsMap[$uid] ?? [];
-        }
-
-        return $records;
-    }
 }

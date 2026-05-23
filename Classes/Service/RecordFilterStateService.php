@@ -197,10 +197,6 @@ final readonly class RecordFilterStateService
      */
     public function getMergedParameters(ServerRequestInterface $request): array
     {
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $bodyParams = is_array($parsedBody) ? $parsedBody : [];
-
-        return ArrayUtility::stringKeyArray(array_replace_recursive($queryParams, $bodyParams));
+        return ArrayUtility::mergedRequestParameters($request);
     }
 }

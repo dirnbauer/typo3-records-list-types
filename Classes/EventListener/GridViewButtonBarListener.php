@@ -22,6 +22,7 @@ use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Constants;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
  * GridViewButtonBarListener - Injects view mode toggle buttons into the DocHeader.
@@ -225,9 +226,7 @@ final readonly class GridViewButtonBarListener
      */
     private function getPageIdFromRequest(ServerRequestInterface $request): int
     {
-        $queryParams = $request->getQueryParams();
-
-        $idParam = $queryParams['id'] ?? null;
+        $idParam = ArrayUtility::mergedRequestParameters($request)['id'] ?? null;
         if ($idParam !== null) {
             return is_numeric($idParam) ? (int) $idParam : 0;
         }
@@ -243,8 +242,7 @@ final readonly class GridViewButtonBarListener
 
     private function getTableNameFromRequest(ServerRequestInterface $request): string
     {
-        $queryParams = $request->getQueryParams();
-        $table = $queryParams['table'] ?? null;
+        $table = ArrayUtility::mergedRequestParameters($request)['table'] ?? null;
 
         return is_string($table) ? $table : '';
     }

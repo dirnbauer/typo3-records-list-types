@@ -12,6 +12,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use Webconsulting\RecordsListTypes\Constants;
 use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
@@ -72,9 +73,7 @@ final class ViewModeResolver implements SingletonInterface
         ],
     ];
 
-    private const string USER_CONFIG_KEY = 'records_view_mode';
     private const string TABLE_USER_CONFIG_KEY = 'records_view_mode_table';
-    private const string DEFAULT_MODE = 'list';
 
     /**
      * Cached view modes (includes custom modes from event + TSconfig)
@@ -129,7 +128,7 @@ final class ViewModeResolver implements SingletonInterface
         }
 
         // 6. Fallback to first allowed mode or default
-        return $allowedModes[0] ?? self::DEFAULT_MODE;
+        return $allowedModes[0] ?? Constants::DEFAULT_VIEW_MODE;
     }
 
     /**
@@ -236,7 +235,7 @@ final class ViewModeResolver implements SingletonInterface
             return null;
         }
 
-        $preference = $backendUser->uc[self::USER_CONFIG_KEY] ?? null;
+        $preference = $backendUser->uc[Constants::USER_CONFIG_KEY] ?? null;
         return is_string($preference) ? $preference : null;
     }
 
@@ -271,7 +270,7 @@ final class ViewModeResolver implements SingletonInterface
             $tablePreferences[$tableName] = $mode;
             $backendUser->uc[self::TABLE_USER_CONFIG_KEY] = $tablePreferences;
         } else {
-            $backendUser->uc[self::USER_CONFIG_KEY] = $mode;
+            $backendUser->uc[Constants::USER_CONFIG_KEY] = $mode;
         }
         $backendUser->writeUC();
     }

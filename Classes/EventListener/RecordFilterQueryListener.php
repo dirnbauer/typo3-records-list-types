@@ -8,6 +8,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\View\Event\ModifyDatabaseQueryForRecordListingEvent;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use Webconsulting\RecordsListTypes\Service\RecordFilterQueryService;
+use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 #[AsEventListener(event: ModifyDatabaseQueryForRecordListingEvent::class)]
 final readonly class RecordFilterQueryListener
@@ -23,13 +24,14 @@ final readonly class RecordFilterQueryListener
             return;
         }
 
-        $displayMode = $this->getDisplayMode($request);
+        $params = ArrayUtility::mergedRequestParameters($request);
+        $displayMode = $this->getStringParameter($params, 'displayMode');
         $deferWorkspaceFilters = $displayMode !== '' && $displayMode !== 'list'
             && $this->queryService->shouldDeferWorkspaceEvaluation(
                 $event->getTable(),
                 $event->getPageId(),
                 $request,
-                $this->getSearchTerm($request),
+                $this->getStringParameter($params, 'searchTerm'),
             );
 
         $this->queryService->applyActiveFilters(
@@ -41,21 +43,12 @@ final readonly class RecordFilterQueryListener
         );
     }
 
-    private function getDisplayMode(ServerRequestInterface $request): string
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function getStringParameter(array $params, string $key): string
     {
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $bodyParams = is_array($parsedBody) ? $parsedBody : [];
-        $displayMode = $queryParams['displayMode'] ?? $bodyParams['displayMode'] ?? '';
-        return is_scalar($displayMode) ? trim((string) $displayMode) : '';
-    }
-
-    private function getSearchTerm(ServerRequestInterface $request): string
-    {
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $bodyParams = is_array($parsedBody) ? $parsedBody : [];
-        $searchTerm = $queryParams['searchTerm'] ?? $bodyParams['searchTerm'] ?? '';
-        return is_scalar($searchTerm) ? trim((string) $searchTerm) : '';
+        $value = $params[$key] ?? '';
+        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

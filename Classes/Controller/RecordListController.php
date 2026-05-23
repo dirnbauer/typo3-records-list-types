@@ -13,7 +13,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use ReflectionException;
 use ReflectionMethod;
 use RuntimeException;
-use Stringable;
 use TYPO3\CMS\Backend\Context\PageContext;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
@@ -39,10 +38,13 @@ use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use Webconsulting\RecordsListTypes\Pagination\DatabasePaginator;
 use Webconsulting\RecordsListTypes\Service\GridConfigurationService;
 use Webconsulting\RecordsListTypes\Service\MiddlewareDiagnosticService;
+use Webconsulting\RecordsListTypes\Service\RecordDisplayValueFormatter;
 use Webconsulting\RecordsListTypes\Service\RecordFilterQueryService;
 use Webconsulting\RecordsListTypes\Service\RecordFilterStateService;
 use Webconsulting\RecordsListTypes\Service\RecordFilterViewDataFactory;
 use Webconsulting\RecordsListTypes\Service\RecordGridDataProvider;
+use Webconsulting\RecordsListTypes\Service\RecordListRequestParameterService;
+use Webconsulting\RecordsListTypes\Service\RecordSortingService;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 use Webconsulting\RecordsListTypes\Service\ViewTypeRegistry;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
@@ -64,6 +66,12 @@ final class RecordListController extends CoreRecordListController
 {
     private ?ViewTypeRegistry $viewTypeRegistry = null;
 
+    private ?RecordSortingService $recordSortingService = null;
+
+    private ?RecordListRequestParameterService $requestParameterService = null;
+
+    private ?RecordDisplayValueFormatter $displayValueFormatter = null;
+
     /** Whether the clipboard is enabled for this request. */
     private bool $clipboardEnabled = false;
 
@@ -72,6 +80,9 @@ final class RecordListController extends CoreRecordListController
      * parent-overridden hooks (renderPageTranslations) can access it.
      */
     private ?ServerRequestInterface $currentRequest = null;
+
+    /** Active non-list view mode used when building return URLs for actions. */
+    private string $currentViewMode = 'list';
 
     /**
      * Get the ViewTypeRegistry from the DI container.
@@ -88,6 +99,30 @@ final class RecordListController extends CoreRecordListController
             $this->viewTypeRegistry = $registry;
         }
         return $this->viewTypeRegistry;
+    }
+
+    private function getRecordSortingService(): RecordSortingService
+    {
+        if (!$this->recordSortingService instanceof RecordSortingService) {
+            $this->recordSortingService = GeneralUtility::makeInstance(RecordSortingService::class);
+        }
+        return $this->recordSortingService;
+    }
+
+    private function getRequestParameterService(): RecordListRequestParameterService
+    {
+        if (!$this->requestParameterService instanceof RecordListRequestParameterService) {
+            $this->requestParameterService = GeneralUtility::makeInstance(RecordListRequestParameterService::class);
+        }
+        return $this->requestParameterService;
+    }
+
+    private function getDisplayValueFormatter(): RecordDisplayValueFormatter
+    {
+        if (!$this->displayValueFormatter instanceof RecordDisplayValueFormatter) {
+            $this->displayValueFormatter = GeneralUtility::makeInstance(RecordDisplayValueFormatter::class);
+        }
+        return $this->displayValueFormatter;
     }
 
     /**
@@ -150,15 +185,13 @@ final class RecordListController extends CoreRecordListController
         // Get view mode resolver
         $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
 
-        // Get page ID from request
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        $pageId = ArrayUtility::intValue($queryParams['id'] ?? $parsedBodyArray['id'] ?? null);
-        $requestedTable = ArrayUtility::stringValue($parsedBodyArray['table'] ?? $queryParams['table'] ?? null);
+        $requestParams = ArrayUtility::mergedRequestParameters($request);
+        $pageId = ArrayUtility::intValue($requestParams['id'] ?? null);
+        $requestedTable = ArrayUtility::stringValue($requestParams['table'] ?? null);
 
         // Get the active view mode
         $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId, $requestedTable);
+        $this->currentViewMode = $viewMode;
 
         // Only handle non-list views
         if ($viewMode === 'list' || !$viewModeResolver->isModeAllowed($viewMode, $pageId)) {
@@ -188,13 +221,13 @@ final class RecordListController extends CoreRecordListController
         $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/contextual-record-edit-trigger.js');
 
         BackendUtility::lockRecords();
-        $pointer = max(0, ArrayUtility::intValue($parsedBodyArray['pointer'] ?? $queryParams['pointer'] ?? null));
-        $this->table = ArrayUtility::stringValue($parsedBodyArray['table'] ?? $queryParams['table'] ?? null);
-        $this->searchTerm = trim(ArrayUtility::stringValue($parsedBodyArray['searchTerm'] ?? $queryParams['searchTerm'] ?? null));
+        $pointer = max(0, ArrayUtility::intValue($requestParams['pointer'] ?? null));
+        $this->table = ArrayUtility::stringValue($requestParams['table'] ?? null);
+        $this->searchTerm = trim(ArrayUtility::stringValue($requestParams['searchTerm'] ?? null));
         $this->returnUrl = GeneralUtility::sanitizeLocalUrl(
-            ArrayUtility::stringValue($parsedBodyArray['returnUrl'] ?? $queryParams['returnUrl'] ?? null),
+            ArrayUtility::stringValue($requestParams['returnUrl'] ?? null),
         );
-        $cmd = ArrayUtility::stringValue($parsedBodyArray['cmd'] ?? $queryParams['cmd'] ?? null);
+        $cmd = ArrayUtility::stringValue($requestParams['cmd'] ?? null);
 
         // Ensure default language is included
         $languagesToDisplay = $this->pageContext->selectedLanguageIds;
@@ -239,7 +272,7 @@ final class RecordListController extends CoreRecordListController
             $rawDefault = $searchLevelConfig['default'] ?? 0;
             $searchLevelDefault = is_numeric($rawDefault) ? (int) $rawDefault : 0;
         }
-        $searchLevels = ArrayUtility::intValue($parsedBodyArray['search_levels'] ?? $queryParams['search_levels'] ?? null, $searchLevelDefault);
+        $searchLevels = ArrayUtility::intValue($requestParams['search_levels'] ?? null, $searchLevelDefault);
 
         // Create DatabaseRecordList (needed for URL building and other parent methods)
         $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
@@ -292,6 +325,7 @@ final class RecordListController extends CoreRecordListController
 
         $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
         $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId, $this->table);
+        $this->currentViewMode = $viewMode;
 
         // Initialize dbList for URL building, clipboard functionality, and search queries
         $dbList->start($this->pageContext->pageId, $this->table, $pointer, $this->searchTerm, $searchLevels);
@@ -384,18 +418,15 @@ final class RecordListController extends CoreRecordListController
             'displayMode' => $viewMode,
         ];
 
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        $queryParams = array_replace_recursive($queryParams, $parsedBodyArray);
+        $requestParams = ArrayUtility::mergedRequestParameters($request);
 
         // Preserve table filter if set
         if ($this->table !== '') {
             $searchParams['table'] = $this->table;
         }
         foreach (['filters', 'recordFilters', 'sort', 'sortingMode'] as $param) {
-            if (isset($queryParams[$param]) && $queryParams[$param] !== '') {
-                $searchParams[$param] = $queryParams[$param];
+            if (isset($requestParams[$param]) && $requestParams[$param] !== '') {
+                $searchParams[$param] = $requestParams[$param];
             }
         }
 
@@ -457,12 +488,10 @@ final class RecordListController extends CoreRecordListController
         $recordFilterViewDataFactory = GeneralUtility::makeInstance(RecordFilterViewDataFactory::class);
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
 
-        // Parse request parameters
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        $sortParams = (array) ($queryParams['sort'] ?? $parsedBodyArray['sort'] ?? []);
-        $sortingModeParams = (array) ($queryParams['sortingMode'] ?? $parsedBodyArray['sortingMode'] ?? []);
+        // Parse request parameters once at the action boundary.
+        $requestParams = ArrayUtility::mergedRequestParameters($request);
+        $sortParams = (array) ($requestParams['sort'] ?? []);
+        $sortingModeParams = (array) ($requestParams['sortingMode'] ?? []);
 
         // Middleware diagnostics (only GridView template shows this)
         $middlewareWarning = null;
@@ -525,7 +554,7 @@ final class RecordListController extends CoreRecordListController
                 if ($isSingleTableMode) {
                     // Single-table search: full pagination support
                     $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
-                    $currentPointer = $this->getCurrentPointer($request, $tableName);
+                    $currentPointer = $this->getRequestParameterService()->getCurrentPointer($request, $tableName);
                     $offset = ($currentPointer - 1) * $itemsPerPage;
                     $records = $this->getRecordsUsingDbList(
                         $request,
@@ -566,7 +595,7 @@ final class RecordListController extends CoreRecordListController
             } elseif ($isSingleTableMode) {
                 // ---- SINGLE TABLE, NO SEARCH ----
                 $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
-                $currentPointer = $this->getCurrentPointer($request, $tableName);
+                $currentPointer = $this->getRequestParameterService()->getCurrentPointer($request, $tableName);
                 $offset = ($currentPointer - 1) * $itemsPerPage;
                 $records = $this->getRecordsUsingDbList(
                     $request,
@@ -638,13 +667,13 @@ final class RecordListController extends CoreRecordListController
                     'table' => $tableName,
                     'displayMode' => $viewMode,
                 ];
-                $singleTableUrlParams = array_replace($singleTableUrlParams, $this->getPreservedListParameters($request));
+                $singleTableUrlParams = array_replace($singleTableUrlParams, $this->getRequestParameterService()->getPreservedListParameters($request));
                 $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $singleTableUrlParams);
                 $clearTableUrlParams = [
                     'id' => $pageId,
                     'displayMode' => $viewMode,
                 ];
-                $clearTableUrlParams = array_replace($clearTableUrlParams, $this->getPreservedListParameters($request));
+                $clearTableUrlParams = array_replace($clearTableUrlParams, $this->getRequestParameterService()->getPreservedListParameters($request));
                 unset($clearTableUrlParams['table']);
                 $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
             } catch (Exception) {
@@ -1187,7 +1216,7 @@ final class RecordListController extends CoreRecordListController
                     // versioned/moved row that overlay to the same effective record.
                     // Reduce them by their live identity so custom views mirror the
                     // native list's single effective row per record.
-                    $identity = $this->getWorkspaceRecordIdentity($typedRow, $uid);
+                    $identity = $this->getRecordSortingService()->getWorkspaceRecordIdentity($typedRow, $uid);
                     $recordsByIdentity[$identity] = $recordData;
                 } else {
                     $records[] = $recordData;
@@ -1201,7 +1230,7 @@ final class RecordListController extends CoreRecordListController
         if ($useWorkspaceReduction) {
             $records = array_values($recordsByIdentity);
             if ($sortField !== '') {
-                $this->sortRecordsByRawField($records, $sortField, $sortDirection);
+                $this->getRecordSortingService()->sortRecordsByRawField($records, $sortField, $sortDirection);
             }
             if ($deferWorkspaceEvaluation && $limit > 0) {
                 $records = array_slice($records, $offset, $limit);
@@ -1210,95 +1239,6 @@ final class RecordListController extends CoreRecordListController
         }
 
         return $records;
-    }
-
-    /**
-     * Sort overlaid workspace rows by their effective field value.
-     *
-     * The SQL query has to fetch live rows first and workspaceOL() overlays
-     * draft values afterwards. Re-sorting the reduced result keeps manual
-     * `sortby` ordering and field sorting aligned with workspace changes.
-     *
-     * @param array<int, array<string, mixed>> $records
-     */
-    private function sortRecordsByRawField(array &$records, string $sortField, string $sortDirection): void
-    {
-        $descending = strtolower($sortDirection) === 'desc';
-
-        usort(
-            $records,
-            static function (array $left, array $right) use ($sortField, $descending): int {
-                $leftRaw = is_array($left['rawRecord'] ?? null) ? $left['rawRecord'] : [];
-                $rightRaw = is_array($right['rawRecord'] ?? null) ? $right['rawRecord'] : [];
-
-                $comparison = self::compareSortableValues($leftRaw[$sortField] ?? null, $rightRaw[$sortField] ?? null);
-                if ($comparison === 0) {
-                    $comparison = self::compareSortableValues($leftRaw['uid'] ?? null, $rightRaw['uid'] ?? null);
-                }
-
-                return $descending ? -$comparison : $comparison;
-            },
-        );
-    }
-
-    private static function compareSortableValues(mixed $left, mixed $right): int
-    {
-        if ($left === $right) {
-            return 0;
-        }
-        if ($left === null || $left === '') {
-            return 1;
-        }
-        if ($right === null || $right === '') {
-            return -1;
-        }
-        if (is_numeric($left) && is_numeric($right)) {
-            return (float) $left <=> (float) $right;
-        }
-
-        $leftString = self::sortableValueAsString($left);
-        $rightString = self::sortableValueAsString($right);
-        if ($leftString === $rightString) {
-            return 0;
-        }
-        if ($leftString === null) {
-            return 1;
-        }
-        if ($rightString === null) {
-            return -1;
-        }
-
-        return strnatcasecmp($leftString, $rightString);
-    }
-
-    private static function sortableValueAsString(mixed $value): ?string
-    {
-        if (is_bool($value)) {
-            return $value ? '1' : '0';
-        }
-        if (is_int($value) || is_float($value) || is_string($value)) {
-            return (string) $value;
-        }
-        if ($value instanceof Stringable) {
-            return (string) $value;
-        }
-
-        return null;
-    }
-
-    /**
-     * Return a stable workspace identity for a row after overlay.
-     *
-     * Versioned records point back to the live row via t3ver_oid; live rows and
-     * new workspace-only records fall back to their own uid.
-     *
-     * @param array<string, mixed> $row
-     */
-    private function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
-    {
-        $liveUidRaw = $row['t3ver_oid'] ?? 0;
-        $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
-        return (string) ($liveUid > 0 ? $liveUid : $fallbackUid);
     }
 
     /**
@@ -1415,7 +1355,7 @@ final class RecordListController extends CoreRecordListController
         try {
             $returnUrlParams = array_replace(
                 ['id' => $pageId, 'displayMode' => $viewMode, 'table' => $tableName],
-                $this->getPreservedListParameters($request),
+                $this->getRequestParameterService()->getPreservedListParameters($request),
             );
             $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $returnUrlParams);
         } catch (Exception) {
@@ -1524,18 +1464,19 @@ final class RecordListController extends CoreRecordListController
             }
         }
 
+        $requestParameters = $this->getRequestParameterService();
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        $baseParams = array_replace($baseParams, $this->getPreservedListParameters($request));
+        $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
 
         try {
-            $ascParams = $this->withSortingMode(
-                $this->withSortParams($baseParams, $tableName, $currentSortField !== '' ? $currentSortField : null, 'asc'),
+            $ascParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, $currentSortField !== '' ? $currentSortField : null, 'asc'),
                 $tableName,
                 'field',
             );
 
-            $descParams = $this->withSortingMode(
-                $this->withSortParams($baseParams, $tableName, $currentSortField !== '' ? $currentSortField : null, 'desc'),
+            $descParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, $currentSortField !== '' ? $currentSortField : null, 'desc'),
                 $tableName,
                 'field',
             );
@@ -1546,8 +1487,8 @@ final class RecordListController extends CoreRecordListController
                 if ($fieldName === '') {
                     continue;
                 }
-                $sortParams = $this->withSortingMode(
-                    $this->withSortParams($baseParams, $tableName, $fieldName, $currentSortDirection),
+                $sortParams = $requestParameters->withSortingMode(
+                    $requestParameters->withSortParams($baseParams, $tableName, $fieldName, $currentSortDirection),
                     $tableName,
                     'field',
                 );
@@ -1574,72 +1515,6 @@ final class RecordListController extends CoreRecordListController
         } catch (Exception) {
             return null;
         }
-    }
-
-    /**
-     * Preserve list state when building links after a filter form submission.
-     *
-     * @return array<string, mixed>
-     */
-    private function getPreservedListParameters(ServerRequestInterface $request): array
-    {
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-        $params = array_replace_recursive($queryParams, $parsedBodyArray);
-
-        $preserved = [];
-        foreach (['table', 'searchTerm', 'search_levels', 'pointer', 'filters', 'recordFilters', 'sort', 'sortingMode'] as $param) {
-            if (isset($params[$param]) && $params[$param] !== '') {
-                $preserved[$param] = $params[$param];
-            }
-        }
-
-        return $preserved;
-    }
-
-    /**
-     * @param array<string, mixed> $parameters
-     * @return array<string, mixed>
-     */
-    private function withSortingMode(array $parameters, string $tableName, string $mode): array
-    {
-        $sortingMode = is_array($parameters['sortingMode'] ?? null) ? $parameters['sortingMode'] : [];
-        $sortingMode[$tableName] = $mode;
-        $parameters['sortingMode'] = $sortingMode;
-
-        return $parameters;
-    }
-
-    /**
-     * @param array<string, mixed> $parameters
-     * @return array<string, mixed>
-     */
-    private function withSortParams(array $parameters, string $tableName, ?string $field, string $direction): array
-    {
-        $sort = is_array($parameters['sort'] ?? null) ? $parameters['sort'] : [];
-        $tableSort = is_array($sort[$tableName] ?? null) ? $sort[$tableName] : [];
-        if ($field !== null) {
-            $tableSort['field'] = $field;
-        }
-        $tableSort['direction'] = $direction;
-        $sort[$tableName] = $tableSort;
-        $parameters['sort'] = $sort;
-
-        return $parameters;
-    }
-
-    /**
-     * @param array<string, mixed> $parameters
-     * @return array<string, mixed>
-     */
-    private function withColumnSortParams(array $parameters, string $tableName, string $field, string $direction): array
-    {
-        return $this->withSortingMode(
-            $this->withSortParams($parameters, $tableName, $field, $direction),
-            $tableName,
-            'field',
-        );
     }
 
     /**
@@ -1673,26 +1548,27 @@ final class RecordListController extends CoreRecordListController
         $headingLabelT = $lang->sL('records_list_types.messages:sortingMode.label');
         $headingLabel = $headingLabelT !== '' ? $headingLabelT : 'Order';
 
+        $requestParameters = $this->getRequestParameterService();
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        $baseParams = array_replace($baseParams, $this->getPreservedListParameters($request));
+        $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
 
         try {
-            $manualParams = $this->withSortingMode(
-                $this->withSortParams($baseParams, $tableName, null, $currentDirection),
+            $manualParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, null, $currentDirection),
                 $tableName,
                 'manual',
             );
 
-            $fieldParams = $this->withSortingMode($baseParams, $tableName, 'field');
+            $fieldParams = $requestParameters->withSortingMode($baseParams, $tableName, 'field');
 
-            $ascParams = $this->withSortingMode(
-                $this->withSortParams($baseParams, $tableName, null, 'asc'),
+            $ascParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, null, 'asc'),
                 $tableName,
                 'manual',
             );
 
-            $descParams = $this->withSortingMode(
-                $this->withSortParams($baseParams, $tableName, null, 'desc'),
+            $descParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, null, 'desc'),
                 $tableName,
                 'manual',
             );
@@ -1743,8 +1619,9 @@ final class RecordListController extends CoreRecordListController
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
+        $requestParameters = $this->getRequestParameterService();
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        $baseParams = array_replace($baseParams, $this->getPreservedListParameters($request));
+        $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
 
         $isActiveField = ($currentSortField === $field);
         $isAscActive = $isActiveField && $currentSortDirection !== 'desc';
@@ -1780,8 +1657,8 @@ final class RecordListController extends CoreRecordListController
         }
 
         try {
-            $ascParams = $this->withColumnSortParams($baseParams, $tableName, $field, 'asc');
-            $descParams = $this->withColumnSortParams($baseParams, $tableName, $field, 'desc');
+            $ascParams = $requestParameters->withColumnSortParams($baseParams, $tableName, $field, 'asc');
+            $descParams = $requestParameters->withColumnSortParams($baseParams, $tableName, $field, 'desc');
 
             return [
                 'label' => $label,
@@ -1869,7 +1746,7 @@ final class RecordListController extends CoreRecordListController
 
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        $baseParams = array_replace($baseParams, $this->getPreservedListParameters($request));
+        $baseParams = array_replace($baseParams, $this->getRequestParameterService()->getPreservedListParameters($request));
 
         try {
             $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
@@ -2009,20 +1886,9 @@ final class RecordListController extends CoreRecordListController
         }
     }
 
-
     /**
      * Generate sortable column headers for compact view.
      *
-     * @param string $tableName The database table name
-     * @param array $displayColumns The columns to display
-     * @param string $currentSortField Currently active sort field
-     * @param string $currentSortDirection Current sort direction
-     * @param int $pageId Current page ID
-     * @param string $viewMode Current view mode
-     * @param ServerRequestInterface $request Current request
-     * @return array Array of column configs with structured sort metadata
-     */
-    /**
      * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
      * @return array<int, array<string, mixed>>
      */
@@ -2421,6 +2287,7 @@ final class RecordListController extends CoreRecordListController
     {
         $tcaForTable = $this->getTcaForTable($tableName);
         $tcaColumns = $tcaForTable['columns'];
+        $formatter = $this->getDisplayValueFormatter();
 
         foreach ($records as &$record) {
             $displayValues = [];
@@ -2435,7 +2302,7 @@ final class RecordListController extends CoreRecordListController
                 // For boolean/check fields, invert display value when TCA has invertStateDisplay
                 // (e.g., hidden field labeled "Enabled": hidden=0 should display as Yes/true)
                 $displayRaw = $rawValue;
-                if ($type === 'boolean' && $this->shouldInvertBooleanDisplay($field, $tcaColumns)) {
+                if ($type === 'boolean' && $formatter->shouldInvertBooleanDisplay($field, $tcaColumns)) {
                     $displayRaw = ((bool) $rawValue) ? 0 : 1;
                 }
                 $isLabelField = $column['isLabelField'] ?? false;
@@ -2448,7 +2315,13 @@ final class RecordListController extends CoreRecordListController
                     'raw' => $displayRaw,
                     'formatted' => $isLabelField
                         ? BackendUtility::getRecordTitle($tableName, $rawRecord, false, true)
-                        : $this->formatFieldValue($displayRaw, $type, $field, $tcaColumns),
+                        : $formatter->formatFieldValue(
+                            $displayRaw,
+                            $type,
+                            $field,
+                            $tcaColumns,
+                            fn(string $label): string => $this->getLanguageService()->sL($label),
+                        ),
                     'isEmpty' => in_array($rawValue, [null, '', 0, '0'], true),
                 ];
             }
@@ -2791,7 +2664,12 @@ final class RecordListController extends CoreRecordListController
 
         $params = [
             'id' => $this->pageContext->pageId,
+            'displayMode' => $this->currentViewMode,
         ];
+
+        if ($this->currentRequest instanceof ServerRequestInterface) {
+            $params = array_replace($params, $this->getRequestParameterService()->getPreservedListParameters($this->currentRequest));
+        }
 
         $tableName = $record['tableName'] ?? null;
         if (is_string($tableName) && $tableName !== '') {
@@ -3050,111 +2928,6 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Format a field value for display.
-     *
-     * @param mixed $value The raw value
-     * @param string $type The field type
-     * @param string $field The field name
-     * @param array $tcaColumns TCA columns configuration
-     * @return string Formatted value for display
-     */
-    /**
-     * @param array<string, mixed> $tcaColumns
-     */
-    private function formatFieldValue(mixed $value, string $type, string $field, array $tcaColumns): string
-    {
-        if ($value === null || $value === '') {
-            return '';
-        }
-
-        switch ($type) {
-            case 'boolean':
-                return (bool) $value ? 'yes' : 'no';
-
-            case 'datetime':
-                if (is_numeric($value) && $value > 0) {
-                    return date('d.m.Y H:i', (int) $value);
-                }
-                return is_scalar($value) ? (string) $value : '';
-
-            case 'number':
-                return is_scalar($value) ? (string) $value : '';
-
-            case 'select':
-                // Try to resolve select value to label
-                $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
-                $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
-                $items = is_array($config['items'] ?? null) ? $config['items'] : [];
-                $valueStr = is_scalar($value) ? (string) $value : '';
-                foreach ($items as $item) {
-                    if (!is_array($item)) {
-                        continue;
-                    }
-                    // TYPO3 v12+ item format: ['label' => ..., 'value' => ...]
-                    $itemValue = $item['value'] ?? $item[1] ?? null;
-                    $itemLabelVal = $item['label'] ?? $item[0] ?? '';
-                    $itemLabel = is_string($itemLabelVal) ? $itemLabelVal : (is_scalar($itemLabelVal) ? (string) $itemLabelVal : '');
-                    $itemValueStr = is_scalar($itemValue) ? (string) $itemValue : '';
-                    if ($itemValueStr === $valueStr) {
-                        if (str_starts_with($itemLabel, 'LLL:')) {
-                            $langService = $this->getLanguageService();
-                            $translated = $langService->sL($itemLabel);
-                            return $translated !== '' ? $translated : $valueStr;
-                        }
-                        return $itemLabel;
-                    }
-                }
-                return $valueStr;
-
-            case 'relation':
-                // For relations, just show count or basic info
-                if (is_numeric($value)) {
-                    return $value > 0 ? $value . ' item(s)' : '';
-                }
-                return is_scalar($value) ? (string) $value : '';
-
-            default:
-                // Text - strip HTML and limit length
-                $textInput = is_scalar($value) ? (string) $value : '';
-                $text = strip_tags(html_entity_decode($textInput));
-                $text = preg_replace('/\s+/', ' ', $text) ?? $text;
-                return trim($text);
-        }
-    }
-
-    /**
-     * Check if a boolean/check field should invert its display value.
-     *
-     * Respects TCA `invertStateDisplay` at both the config level and per-item level.
-     * This is commonly used for the `hidden` field, where the label says "Enabled"
-     * but the DB value 1 means hidden (disabled), so the display must be inverted.
-     *
-     * @param string $field The field name
-     * @param array<string, mixed> $tcaColumns TCA columns configuration
-     * @return bool True if the display value should be inverted
-     */
-    private function shouldInvertBooleanDisplay(string $field, array $tcaColumns): bool
-    {
-        $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
-        $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
-
-        // Check top-level invertStateDisplay (config.invertStateDisplay)
-        if (isset($config['invertStateDisplay']) && (bool) $config['invertStateDisplay']) {
-            return true;
-        }
-
-        // Check per-item invertStateDisplay (config.items[n].invertStateDisplay)
-        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
-        foreach ($items as $item) {
-            if (is_array($item) && isset($item['invertStateDisplay']) && (bool) $item['invertStateDisplay']) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Get the number of items per page for a view mode.
      *
      * Resolution order:
@@ -3261,7 +3034,7 @@ final class RecordListController extends CoreRecordListController
         // link switches to single-table mode (matches TYPO3 Core behavior).
         $urlParams = array_replace(
             ['id' => $pageId, 'displayMode' => $viewMode],
-            $this->getPreservedListParameters($request),
+            $this->getRequestParameterService()->getPreservedListParameters($request),
         );
         $urlParams['table'] = $tableName;
         unset($urlParams['pointer']);
@@ -3278,31 +3051,6 @@ final class RecordListController extends CoreRecordListController
             'pagination' => $pagination,
             'currentUrl' => $currentUrl,
         ];
-    }
-
-    /**
-     * Get the current pagination pointer for a specific table from the request.
-     *
-     * Uses 1-based page numbers like TYPO3 Core's DatabaseRecordList.
-     * The pointer is passed as pointer[<tableName>]=<pageNumber>.
-     *
-     * @param ServerRequestInterface $request The current request
-     * @param string $tableName The table name
-     * @return int The current page number (1-based)
-     */
-    private function getCurrentPointer(ServerRequestInterface $request, string $tableName): int
-    {
-        $queryParams = $request->getQueryParams();
-        $parsedBody = $request->getParsedBody();
-        $parsedBodyArray = is_array($parsedBody) ? $parsedBody : [];
-
-        $pointer = $queryParams['pointer'] ?? $parsedBodyArray['pointer'] ?? [];
-        if (is_array($pointer) && isset($pointer[$tableName])) {
-            $value = $pointer[$tableName];
-            return is_numeric($value) ? max(1, (int) $value) : 1;
-        }
-
-        return 1;
     }
 
     /**
@@ -3572,7 +3320,7 @@ final class RecordListController extends CoreRecordListController
             if ($useWorkspaceReduction) {
                 $uidRaw = $typedRow['uid'] ?? 0;
                 $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
-                $identity = $this->getWorkspaceRecordIdentity($typedRow, $uid);
+                $identity = $this->getRecordSortingService()->getWorkspaceRecordIdentity($typedRow, $uid);
                 $recordsByIdentity[$identity] = $recordData;
             } else {
                 $records[] = $recordData;

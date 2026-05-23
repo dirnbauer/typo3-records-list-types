@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Utility;
 
+use Psr\Http\Message\ServerRequestInterface;
+
 /**
  * Small typed boundary helpers for TYPO3 TSconfig and request arrays.
  */
@@ -72,6 +74,23 @@ final class ArrayUtility
     public static function intValue(mixed $value, int $default = 0): int
     {
         return is_numeric($value) ? (int) $value : $default;
+    }
+
+    /**
+     * Merge query and parsed body parameters at the HTTP boundary.
+     *
+     * Parsed body values win over query values, matching TYPO3 form/action
+     * handling. Keys are normalized to strings because request arrays may
+     * contain integer keys after nested form submissions.
+     *
+     * @return array<string, mixed>
+     */
+    public static function mergedRequestParameters(ServerRequestInterface $request): array
+    {
+        $parsedBody = $request->getParsedBody();
+        $bodyParams = is_array($parsedBody) ? $parsedBody : [];
+
+        return self::stringKeyArray(array_replace_recursive($request->getQueryParams(), $bodyParams));
     }
 
     /**

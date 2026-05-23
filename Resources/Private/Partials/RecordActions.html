@@ -7,42 +7,55 @@
     Record Actions for custom Grid View cards
     
     This legacy partial renders action buttons when a custom template
-    explicitly passes record.actions. Built-in TYPO3 v14 templates use
-    controller-provided edit URLs and DataHandler action attributes.
+    explicitly passes record.actions. It uses the same data-gridview-action
+    hooks as the maintained built-in templates.
 </f:comment>
 
 <div class="btn-group btn-group-sm" role="group">
-    <f:comment>Edit Button (always shown)</f:comment>
-    <typo3-backend-contextual-record-edit-trigger
-        class="btn btn-default"
-        title="{f:translate(key: 'action.edit', extensionName: 'RecordsListTypes')}"
-        edit-url="{record.editUrl}"
-        url="{record.contextualEditUrl}">
-        <core:icon identifier="actions-open" size="small" />
-    </typo3-backend-contextual-record-edit-trigger>
+    <f:if condition="{record.permissions.canEdit}">
+        <typo3-backend-contextual-record-edit-trigger
+            class="btn btn-default"
+            title="{f:translate(key: 'action.edit', extensionName: 'RecordsListTypes')}"
+            edit-url="{record.editUrl}"
+            url="{record.contextualEditUrl}">
+            <core:icon identifier="actions-open" size="small" />
+        </typo3-backend-contextual-record-edit-trigger>
+    </f:if>
 
-    <f:comment>View/Info Button</f:comment>
-    <a href="#" class="btn btn-default" 
-       data-dispatch-action="TYPO3.InfoWindow.showItem" 
-       data-dispatch-args-list="{record.tableName},{record.uid}"
-       title="{f:translate(key: 'action.info', extensionName: 'RecordsListTypes')}">
-        <core:icon identifier="actions-document-info" size="small" />
-    </a>
+    <f:if condition="{record.permissions.canShowInfo}">
+        <a href="#"
+           class="btn btn-default"
+           data-gridview-action="info"
+           data-table="{record.tableName}"
+           data-uid="{record.uid}"
+           title="{f:translate(key: 'action.info', extensionName: 'RecordsListTypes')}">
+            <core:icon identifier="actions-document-info" size="small" />
+        </a>
+    </f:if>
 
-    <f:comment>Hide/Unhide Button (if record supports it)</f:comment>
-    <f:if condition="{record.hidden}">
-        <f:then>
-            <a href="#" class="btn btn-default"
-               title="{f:translate(key: 'action.unhide', extensionName: 'RecordsListTypes')}">
-                <core:icon identifier="actions-edit-unhide" size="small" />
-            </a>
-        </f:then>
-        <f:else>
-            <a href="#" class="btn btn-default"
-               title="{f:translate(key: 'action.hide', extensionName: 'RecordsListTypes')}">
-                <core:icon identifier="actions-edit-hide" size="small" />
-            </a>
-        </f:else>
+    <f:if condition="{record.permissions.canToggleVisibility}">
+        <f:if condition="{record.hidden}">
+            <f:then>
+                <button type="button"
+                        class="btn btn-default"
+                        data-gridview-action="show"
+                        data-table="{record.tableName}"
+                        data-uid="{record.uid}"
+                        title="{f:translate(key: 'action.unhide', extensionName: 'RecordsListTypes')}">
+                    <core:icon identifier="actions-edit-unhide" size="small" />
+                </button>
+            </f:then>
+            <f:else>
+                <button type="button"
+                        class="btn btn-default"
+                        data-gridview-action="hide"
+                        data-table="{record.tableName}"
+                        data-uid="{record.uid}"
+                        title="{f:translate(key: 'action.hide', extensionName: 'RecordsListTypes')}">
+                    <core:icon identifier="actions-edit-hide" size="small" />
+                </button>
+            </f:else>
+        </f:if>
     </f:if>
 </div>
 
