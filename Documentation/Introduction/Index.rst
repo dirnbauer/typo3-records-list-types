@@ -35,7 +35,7 @@ Requirements
 ============
 
 -   TYPO3 v14.3 LTS or higher
--   PHP 8.3 or higher
+-   PHP 8.3, 8.4, or 8.5
 
 View modes
 ==========

@@ -133,7 +133,7 @@ final class RecordListControllerTest extends FunctionalTestCase
 
     private function createPageContext(int $pageId): PageContext
     {
-        $site = $this->createMock(SiteInterface::class);
+        $site = $this->createStub(SiteInterface::class);
         $site->method('getAvailableLanguages')->willReturn([]);
 
         return new PageContext(

@@ -28,7 +28,7 @@ final class ViewModeControllerTest extends TestCase
         $loggerMock = $this->createMock(LoggerInterface::class);
         $loggerMock->expects(self::once())->method('error');
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getParsedBody')
             ->willThrowException(new RuntimeException('Test error'));
 
@@ -54,7 +54,7 @@ final class ViewModeControllerTest extends TestCase
         $loggerMock = $this->createMock(LoggerInterface::class);
         $loggerMock->expects(self::once())->method('error');
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getQueryParams')
             ->willThrowException(new RuntimeException('Request error'));
 
@@ -78,7 +78,7 @@ final class ViewModeControllerTest extends TestCase
     {
         $controller = new ViewModeController(
             new ViewModeResolver(),
-            $this->createMock(LoggerInterface::class),
+            $this->createStub(LoggerInterface::class),
         );
 
         self::assertInstanceOf(ViewModeController::class, $controller);

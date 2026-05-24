@@ -9,7 +9,7 @@
 # Usage:
 #   Build/Scripts/runTests.sh -s <suite> [-p <php>]
 #
-#   Suites: unit | functional | architecture | phpstan | cgl | composer | ci
+#   Suites: unit | unit-coverage | functional | functional-coverage | architecture | phpstan | cgl | composer | ci
 
 set -euo pipefail
 
@@ -20,25 +20,31 @@ cd "${PROJECT_ROOT}"
 
 SUITE=""
 PHP_VERSION=""
+PHP_MEMORY_LIMIT="${PHP_MEMORY_LIMIT:-1G}"
 
 usage() {
     cat <<'EOF'
 Usage: Build/Scripts/runTests.sh -s <suite> [-p <php>]
 
 Suites:
-  unit           Unit test suite.
-  functional     Functional test suite (needs a database via env vars).
-  architecture   PHPat architecture rules.
-  phpstan        Static analysis at PHPStan level max.
-  cgl            PHP-CS-Fixer dry run.
-  composer       composer validate + composer audit.
-  ci             Run everything except functional (which needs a DB).
+  unit                 Unit test suite.
+  unit-coverage        Unit test suite with Clover, HTML, and text coverage reports.
+  functional           Functional test suite (needs a database via env vars).
+  functional-coverage  Functional test suite with Clover, HTML, and text coverage reports.
+  architecture         PHPat architecture rules.
+  phpstan              Static analysis at PHPStan level max.
+  cgl                  PHP-CS-Fixer dry run.
+  composer             composer validate + composer audit.
+  ci                   Run everything except functional (which needs a DB).
 
 Options:
   -p <php>       Informational only: PHP version the suite is expected
-                 to run on (e.g. 8.3, 8.4). The script uses whatever
+                 to run on (e.g. 8.3, 8.4, 8.5). The script uses whatever
                  `php` resolves to in PATH.
   -h             Show this help.
+
+Environment:
+  PHP_MEMORY_LIMIT  Memory limit for PHPUnit runs (default: 1G).
 EOF
 }
 
@@ -60,12 +66,37 @@ if [[ -n "${PHP_VERSION}" ]]; then
     echo "# Target PHP version: ${PHP_VERSION} (informational)"
 fi
 
+ensure_coverage_driver() {
+    if ! php -m | grep -Eiq '^(xdebug|pcov)$'; then
+        echo "Coverage suites require Xdebug or PCOV. Enable a coverage driver or run the non-coverage suite." >&2
+        exit 65
+    fi
+}
+
 run_unit() {
-    vendor/bin/phpunit --testsuite Unit
+    php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit --testsuite Unit
+}
+
+run_unit_coverage() {
+    ensure_coverage_driver
+    mkdir -p var/log/coverage/unit-html
+    XDEBUG_MODE=coverage php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit --testsuite Unit \
+        --coverage-clover var/log/unit-coverage.xml \
+        --coverage-html var/log/coverage/unit-html \
+        --coverage-text
 }
 
 run_functional() {
-    vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml
+    php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml
+}
+
+run_functional_coverage() {
+    ensure_coverage_driver
+    mkdir -p var/log/coverage/functional-html
+    XDEBUG_MODE=coverage php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml \
+        --coverage-clover var/log/functional-coverage.xml \
+        --coverage-html var/log/coverage/functional-html \
+        --coverage-text
 }
 
 run_architecture() {
@@ -88,12 +119,14 @@ run_composer() {
 }
 
 case "${SUITE}" in
-    unit)         run_unit ;;
-    functional)   run_functional ;;
-    architecture) run_architecture ;;
-    phpstan)      run_phpstan ;;
-    cgl)          run_cgl ;;
-    composer)     run_composer ;;
+    unit)                run_unit ;;
+    unit-coverage)       run_unit_coverage ;;
+    functional)          run_functional ;;
+    functional-coverage) run_functional_coverage ;;
+    architecture)        run_architecture ;;
+    phpstan)             run_phpstan ;;
+    cgl)                 run_cgl ;;
+    composer)            run_composer ;;
     ci)
         run_composer
         run_cgl

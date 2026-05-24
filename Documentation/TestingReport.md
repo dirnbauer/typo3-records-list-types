@@ -1,25 +1,28 @@
 # Testing Report
 
-> Run date: 2026-05-16 (round 3)
+> Run date: 2026-05-24 (round 4)
 > Skill: typo3-testing
 > Extension: records_list_types @ TYPO3 v14
 
-Supersedes the round-2 snapshot. The v14-only cleanup raises PHPStan to
-`level: max` and keeps unit, functional, CGL, composer, and aggregate CI
-checks green.
+Supersedes the round-3 snapshot. The toolchain now runs on the TYPO3
+14.3.1 lock set with PHPUnit 12, PHPStan 2.1.55, PHP-CS-Fixer 3.95.2,
+and CI coverage reporting on the PHP 8.5 jobs.
 
 ## Current state
 
-- **Unit**: 120 tests / 326 assertions.
-- **Functional**: 72 tests / 155 assertions (pdo_sqlite driver).
+- **Unit**: 132 tests / 340 assertions.
+- **Functional**: 79 tests / 185 assertions (pdo_sqlite driver, 1 skipped).
 - **Architecture**: phpat rules evaluated under PHPStan
   (`vendor/phpat/phpat/extension.neon` included in `phpstan.neon`).
 - **PHPStan**: level max + strict rules + phpat +
-  `saschaegerer/phpstan-typo3:^3.0`.
-- **CI**: PHP 8.3 + 8.4 matrix, MySQL 8 service for functional tests,
-  dedicated `composer audit` job.
+  `saschaegerer/phpstan-typo3:^3.0`, analysed against the PHP 8.3
+  lower bound.
+- **CI**: PHP 8.3 + 8.4 + 8.5 matrix, MySQL 8 service for functional
+  tests, a PHPUnit-latest PHP 8.5 compatibility lane, dedicated
+  `composer audit` job, and PHP 8.5 coverage artifacts.
 - **Test runner**: `Build/Scripts/runTests.sh` (unit / functional /
-  architecture alias / phpstan / cgl / composer / ci).
+  unit-coverage / functional-coverage / architecture alias / phpstan /
+  cgl / composer / ci).
 
 ## Gap checklist
 
@@ -28,7 +31,7 @@ checks green.
 | `Build/Scripts/runTests.sh` exists + executable | Pass | Added round 1. |
 | phpat architecture rules | Pass | `Tests/Architecture/ArchitectureTest.php` — 5 rules. |
 | PHPStan level max | Pass | `phpstan.neon` uses `level: max`. |
-| runTests.sh supports `-s` and `-p` | Pass | Both flags wired. |
+| runTests.sh supports `-s` and `-p` | Pass | Both flags wired; PHP 8.5 is documented for matrix use. |
 | Captainhook pre-commit hooks | Not set up | Git hooks documented as a follow-up; `.git/hooks` not committed. |
 | Mutation testing (Infection) | Not set up | Deferred — more valuable once coverage reaches ~80%. |
 | E2E (Playwright) | Not set up | Deferred — a meaningful E2E suite needs a seeded TYPO3 v14 backend and is out of scope here. |
@@ -45,22 +48,26 @@ checks green.
 
 ## Actions in this pass
 
-- Added typed TSconfig/request array boundary helpers so PHPStan max can
-  validate the v14 workspace-aware code without a baseline.
-- Added TYPO3 14.3 classic-mode compatibility metadata to `composer.json`,
-  removing the functional-suite deprecation.
-- Verified the workspace-aware search/filter path after active filters and
-  module search terms were moved behind `BackendUtility::workspaceOL()` for
-  alternative view modes.
+- Updated dev tooling to PHPUnit 12.5.26, PHPStan 2.1.55,
+  PHP-CS-Fixer 3.95.2, and `typo3/testing-framework:^9.5`.
+- Pinned PHPStan's analysed PHP version to 8.3 so the PHP 8.5 CI runtime
+  cannot mask lower-bound compatibility regressions.
+- Extended CI unit and functional matrices to PHP 8.5.
+- Added an unlocked PHPUnit-latest lane on PHP 8.5 so the Composer
+  constraint allowing PHPUnit 13 is continuously verified.
+- Added `unit-coverage` and `functional-coverage` runner suites with
+  Clover, HTML, and text coverage output.
+- Added an explicit coverage-driver guard for local coverage runs.
+- Replaced PHPUnit 12 mock objects without expectations with stubs.
 
 ## Verification
 
 ```bash
-Build/Scripts/runTests.sh -s unit          # 120 tests, 326 assertions
+Build/Scripts/runTests.sh -s unit          # 132 tests, 340 assertions
 Build/Scripts/runTests.sh -s phpstan       # 0 errors (includes phpat rules)
 Build/Scripts/runTests.sh -s cgl           # 0 diff
 Build/Scripts/runTests.sh -s composer      # validate + audit clean
 typo3DatabaseDriver=pdo_sqlite vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml
-# 72 tests, 155 assertions
+# 79 tests, 185 assertions, 1 skipped
 Build/Scripts/runTests.sh -s ci            # composer + cgl + phpstan + unit
 ```

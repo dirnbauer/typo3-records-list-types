@@ -5,6 +5,7 @@ includes:
 
 parameters:
     level: max
+    phpVersion: 80300
     paths:
         - Classes
         - Tests/Architecture

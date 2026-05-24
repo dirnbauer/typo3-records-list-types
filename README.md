@@ -1,19 +1,20 @@
 # Records List Types for TYPO3 v14
 
-A TYPO3 extension that transforms the backend **Records** module with multiple view modes -- Grid, Compact, Teaser -- providing rich visual alternatives to the traditional table-based List View. Browse records as cards with thumbnails, reorder them with drag-and-drop, and configure view modes and filters via TSconfig.
+A TYPO3 extension that transforms the backend **Records** module with Grid, Compact, Teaser, and custom view modes plus configurable record filters for both the classic List View and alternative views. Browse records as cards with thumbnails, reorder them with drag-and-drop, and filter records by fields such as title, hidden yes/no, Top news yes/no, dates, categories, and select values via TSconfig.
 
 ## Features at a Glance
 
 - **Grid View** -- Card-based layout with thumbnails, drag-and-drop reordering, and field display
 - **Compact View** -- Dense single-line rows with fixed columns and horizontal scrolling
 - **Teaser View** -- News-style cards with title, date, and description excerpt
+- **Record Filters** -- Filter the Records module by title/text, visibility, Top news yes/no, dates, categories, and select fields
 - **Custom Views** -- Add view types with TSconfig, Fluid templates, and optional PSR-14 registration hooks
 - **Drag & Drop** -- Mouse and keyboard reordering with full WCAG 2.1 accessibility
 - **Language Flags** -- Language flag icons displayed per record in grid cards
 - **Workspace Support** -- Color-coded indicators for new, modified, moved, and deleted records
 - **Dark Mode** -- Full compatibility with TYPO3's dark mode (light/dark themes)
 - **Per-Table Config** -- Configure title, description, image, and display fields via TSconfig
-- **Record Filters** -- Configure text, visibility, date, category, and select filters via TSconfig
+- **Filter Persistence** -- Editors toggle filters from the View menu; state is stored in TYPO3 module data
 - **User Preferences** -- View mode is persisted per backend user via AJAX
 - **Sorting Controls** -- Manual drag ordering and field-based sorting with direction toggle
 - **Pagination** -- Matches TYPO3 Core: multi-table mode shows limited records with "Expand table" button, single-table mode shows full pagination (record range, page input, first/prev/next/last)
@@ -38,7 +39,7 @@ All views work with any table -- `tx_news`, `tt_content`, `fe_users`, `pages`, o
 ## Requirements
 
 - TYPO3 v14.3 LTS+
-- PHP 8.3+
+- PHP 8.3, 8.4, or 8.5
 
 ## Installation
 
@@ -47,7 +48,7 @@ Add the VCS repository in your TYPO3 project's root `composer.json` first:
 
 ```bash
 composer config repositories.records-list-types vcs https://github.com/dirnbauer/typo3-records-list-types.git
-composer require webconsulting/records-list-types:dev-main
+composer require webconsulting/records-list-types:^1.0
 ```
 
 Set up the extension and clear TYPO3 caches:
@@ -172,6 +173,11 @@ mod.web_list.gridView.table.tx_news_domain_model_news {
 | `preview`          | Enable thumbnail rendering (`1` or `0`) | `1`              |
 
 ### Record Filters
+
+Record filters bring field-level filtering to TYPO3's backend Records module.
+They work in the classic List View and in Grid, Compact, Teaser, and custom
+views. Common use cases include filtering records by title, hidden yes/no,
+Top news yes/no, date ranges, categories, or table-specific select fields.
 
 Filters are configured in Page TSconfig and share TYPO3's record-list query
 setup. In LIVE and in the classic List View they are applied directly in the
@@ -425,9 +431,10 @@ The extension includes a comprehensive test suite:
 
 - PHPStan analysis (level max with PHPat architecture rules)
 - PHP-CS-Fixer (auto-fix)
-- Unit tests (PHP 8.3 + 8.4)
-- Functional tests (PHP 8.3 + 8.4, MySQL 8.0)
-- Coverage reports (Clover XML)
+- Unit tests (PHP 8.3 + 8.4 + 8.5)
+- Functional tests (PHP 8.3 + 8.4 + 8.5, MySQL 8.0)
+- PHPUnit latest compatibility lane on PHP 8.5
+- Coverage reports on PHP 8.5 (Clover XML + HTML)
 
 ## Localization
 
