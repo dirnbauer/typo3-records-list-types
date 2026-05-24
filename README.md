@@ -516,7 +516,6 @@ records_list_types/
 │   ├── Functional/                            # Functional tests with fixtures
 │   └── Architecture/                          # PHPat architecture tests
 ├── composer.json
-├── ext_emconf.php
 └── ext_localconf.php
 ```
 

@@ -47,8 +47,8 @@ checks green.
 
 - Added typed TSconfig/request array boundary helpers so PHPStan max can
   validate the v14 workspace-aware code without a baseline.
-- Added TYPO3 14.3 `ext_emconf.php` compatibility metadata to
-  `composer.json`, removing the functional-suite deprecation.
+- Added TYPO3 14.3 classic-mode compatibility metadata to `composer.json`,
+  removing the functional-suite deprecation.
 - Verified the workspace-aware search/filter path after active filters and
   module search terms were moved behind `BackendUtility::workspaceOL()` for
   alternative view modes.

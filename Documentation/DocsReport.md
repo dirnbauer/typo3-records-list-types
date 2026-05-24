@@ -14,7 +14,7 @@ Supersedes the round-1 snapshot.
 | `Index.rst` in every subdirectory | Pass | `find Documentation -mindepth 1 -type d` → 0 misses. |
 | Permalink anchor before every heading | Pass | All `.rst` files (except `Sitemap.rst`, auto-generated) open with a `.. _label:` anchor. |
 | No `mailto:` links in RST | Pass | Only matches are prose references in the `*.md` report files. |
-| README and Documentation synchronized | Pass | README and RST now describe TYPO3 14.3 LTS, PHPStan level max, retained `ext_emconf.php` metadata, and workspace-aware search/filter evaluation. |
+| README and Documentation synchronized | Pass | README and RST now describe TYPO3 14.3 LTS, PHPStan level max, Composer-based extension metadata, and workspace-aware search/filter evaluation. |
 | 4-space indent, LF endings, UTF-8 | Pass | Enforced by `Documentation/.editorconfig` + `.editorconfig` at repo root. |
 
 ## Page length observations

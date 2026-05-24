@@ -64,7 +64,7 @@ their boundaries. No baseline or inline ignores are used.
 | XClass registration | v14 API | `$GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects']` in `ext_localconf.php`. |
 | AJAX routes | v14 API | Registered in `Configuration/Backend/AjaxRoutes.php`. |
 | Composer constraints | v14-only | `typo3/cms-*` pinned to `^14.3`. |
-| ext_emconf.php | Present for tooling | Mirrors v14-only constraints. Composer carries `extra.typo3/cms.version` and empty `Package.providesPackages` per TYPO3 14.3 metadata rules. |
+| ext_emconf.php | Removed | TYPO3 14.2+ deprecates `ext_emconf.php`; Composer carries `extra.typo3/cms.version` and empty `Package.providesPackages` per TYPO3 14.3 metadata rules. |
 | PHPStan TYPO3 extension | Active | `saschaegerer/phpstan-typo3:^3.0` + `phpat`. |
 
 ## Verification after fixes
