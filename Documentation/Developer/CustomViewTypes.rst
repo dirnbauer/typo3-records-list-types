@@ -13,7 +13,7 @@ sorting, action buttons, and asset loading.
 ..  tip::
 
     Install the companion extension
-    `Records List Examples <https://github.com/dirnbauer/typo3-records-list-examples>`__
+    `Records List Examples <https://github.com/webconsulting-at/typo3-records-list-examples>`__
     to get 6 ready-to-use view types (Timeline, Catalog, Address Book,
     Event List, Gallery, Dashboard) with full templates and CSS.
 
@@ -59,7 +59,7 @@ For built-in templates, the current systematic is:
     still comes from TYPO3/core button and multi-selection APIs
 
 The companion `Records List Examples
-<https://github.com/dirnbauer/typo3-records-list-examples>`__ repository
+<https://github.com/webconsulting-at/typo3-records-list-examples>`__ repository
 still demonstrates a lighter TSconfig-only custom-template style for
 satellite extensions. The built-in templates in ``records_list_types``
 already use the newer structured heading/sorting approach described here.

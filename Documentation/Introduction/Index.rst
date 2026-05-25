@@ -23,7 +23,7 @@ Features
     sitepackage-specific view types
 -   **Custom Views**: Register your own view types via PSR-14 events or
     TSconfig (see `Records List Examples
-    <https://github.com/dirnbauer/typo3-records-list-examples>`__
+    <https://github.com/webconsulting-at/typo3-records-list-examples>`__
     for 6 ready-to-use examples; this extension's built-in templates use
     the newer structured heading/sorting rendering model)
 -   **User preferences**: Selected view mode is persisted per user

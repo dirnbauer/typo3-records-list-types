@@ -10,10 +10,10 @@
             "role": "Developer"
         }
     ],
-    "homepage": "https://github.com/dirnbauer/typo3-records-list-types",
+    "homepage": "https://github.com/webconsulting-at/typo3-records-list-types",
     "support": {
-        "issues": "https://github.com/dirnbauer/typo3-records-list-types/issues",
-        "source": "https://github.com/dirnbauer/typo3-records-list-types"
+        "issues": "https://github.com/webconsulting-at/typo3-records-list-types/issues",
+        "source": "https://github.com/webconsulting-at/typo3-records-list-types"
     },
     "require": {
         "php": "^8.3",
@@ -44,7 +44,7 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "records_list_types",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "Package": {
                 "providesPackages": {}
             },
