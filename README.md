@@ -47,7 +47,7 @@ The package is installed from GitHub when it is not available via Packagist.
 Add the VCS repository in your TYPO3 project's root `composer.json` first:
 
 ```bash
-composer config repositories.records-list-types vcs https://github.com/webconsulting-at/typo3-records-list-types.git
+composer config repositories.records-list-types vcs https://github.com/dirnbauer/typo3-records-list-types.git
 composer require webconsulting/records-list-types:^1.0
 ```
 
@@ -148,7 +148,7 @@ Restrict a view type to a specific page using TSconfig conditions:
 
 See [Custom View Types](Documentation/Developer/CustomViewTypes.rst) for full documentation with step-by-step guide, real-world examples, and template variable reference.
 
-For ready-to-use examples, install the companion extension [Records List Examples](https://github.com/webconsulting-at/typo3-records-list-examples) which adds 6 additional view types (Timeline, Catalog, Address Book, Event List, Gallery, Dashboard) with zero PHP.
+For ready-to-use examples, install the companion extension [Records List Examples](https://github.com/dirnbauer/typo3-records-list-examples) which adds 6 additional view types (Timeline, Catalog, Address Book, Event List, Gallery, Dashboard) with zero PHP.
 
 ## Configuration
 
@@ -529,7 +529,7 @@ records_list_types/
 ## Known Limitations
 
 - **Workspace FAL limitation.** TYPO3 does not version physical files. Thumbnails rendered in the Grid and Teaser views always reflect the live binary, regardless of the active workspace. When preparing workspace content that changes imagery, upload new files with unique names instead of overwriting existing ones. See [Documentation/Developer/Workspaces.rst](Documentation/Developer/Workspaces.rst) for the full rationale.
-- **Drag-and-drop accessibility has limited assistive technology coverage.** Keyboard-based drag-and-drop is implemented with ARIA attributes and live region announcements, but has primarily been tested with keyboard navigation in modern browsers. Testing with dedicated screen readers (NVDA, JAWS, VoiceOver) has been limited. If drag-and-drop reordering is critical for users relying on assistive technology, the standard List View provides a more thoroughly tested fallback. Please [report accessibility barriers on GitHub](https://github.com/webconsulting-at/typo3-records-list-types/issues).
+- **Drag-and-drop accessibility has limited assistive technology coverage.** Keyboard-based drag-and-drop is implemented with ARIA attributes and live region announcements, but has primarily been tested with keyboard navigation in modern browsers. Testing with dedicated screen readers (NVDA, JAWS, VoiceOver) has been limited. If drag-and-drop reordering is critical for users relying on assistive technology, the standard List View provides a more thoroughly tested fallback. Please [report accessibility barriers on GitHub](https://github.com/dirnbauer/typo3-records-list-types/issues).
 
 ## Documentation
 
@@ -544,7 +544,7 @@ Comprehensive documentation is available in the `Documentation/` folder:
 | [Architecture](Documentation/Developer/Architecture.rst) | Technical architecture |
 | [Custom view types](Documentation/Developer/CustomViewTypes.rst) | Creating custom view types |
 | [Extending](Documentation/Developer/Extending.rst) | Extension points and PSR-14 events |
-| [Records List Examples](https://github.com/webconsulting-at/typo3-records-list-examples) | Companion extension with example view types |
+| [Records List Examples](https://github.com/dirnbauer/typo3-records-list-examples) | Companion extension with example view types |
 
 ## License
 

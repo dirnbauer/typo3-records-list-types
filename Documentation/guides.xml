@@ -7,11 +7,11 @@
             class="\T3Docs\Typo3DocsTheme\DependencyInjection\Typo3DocsThemeExtension"
             typo3-core-preferred="stable"
             interlink-shortcode="webconsulting/records-list-types"
-            project-home="https://github.com/webconsulting-at/typo3-records-list-types"
-            project-contact="https://github.com/webconsulting-at/typo3-records-list-types/issues"
-            project-repository="https://github.com/webconsulting-at/typo3-records-list-types"
-            project-issues="https://github.com/webconsulting-at/typo3-records-list-types/issues"
-            edit-on-github="webconsulting-at/typo3-records-list-types"
+            project-home="https://github.com/dirnbauer/typo3-records-list-types"
+            project-contact="https://github.com/dirnbauer/typo3-records-list-types/issues"
+            project-repository="https://github.com/dirnbauer/typo3-records-list-types"
+            project-issues="https://github.com/dirnbauer/typo3-records-list-types/issues"
+            edit-on-github="dirnbauer/typo3-records-list-types"
             edit-on-github-branch="main"
             edit-on-github-directory="Documentation"/>
     <inventory id="t3coreapi" url="https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/"/>

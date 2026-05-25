@@ -19,7 +19,7 @@ Run the following commands in your TYPO3 project root:
 
 ..  code-block:: bash
 
-    composer config repositories.records-list-types vcs https://github.com/webconsulting-at/typo3-records-list-types.git
+    composer config repositories.records-list-types vcs https://github.com/dirnbauer/typo3-records-list-types.git
     composer require webconsulting/records-list-types:^1.0
 
 Then set up the extension and clear caches:

@@ -201,7 +201,7 @@ to ensure only tested views are offered:
    mod.web_list.viewMode.allowed = list,grid
 
 If you encounter accessibility barriers, please report them on the
-`GitHub issue tracker <https://github.com/webconsulting-at/typo3-records-list-types/issues>`__
+`GitHub issue tracker <https://github.com/dirnbauer/typo3-records-list-types/issues>`__
 with the following details:
 
 - Assistive technology and version (e.g. NVDA 2024.1, VoiceOver on macOS 15)
