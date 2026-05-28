@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Controller;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Exception;
 use JsonException;
@@ -71,6 +72,12 @@ final class RecordListController extends CoreRecordListController
     private ?RecordListRequestParameterService $requestParameterService = null;
 
     private ?RecordDisplayValueFormatter $displayValueFormatter = null;
+
+    /** @var array<int, array<string, mixed>> */
+    private array $workspaceRows = [];
+
+    /** @var array<int, array{id: int, label: string, title: string, description: string, isLive: bool}> */
+    private array $workspaceBadges = [];
 
     /** Whether the clipboard is enabled for this request. */
     private bool $clipboardEnabled = false;
@@ -694,6 +701,7 @@ final class RecordListController extends CoreRecordListController
             $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
             $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
             $enrichedRecords = $this->enrichRecordsWithPermissions($enrichedRecords, $tableName);
+            $enrichedRecords = $this->enrichRecordsWithWorkspaceBadges($enrichedRecords, $tableName);
 
             // Separate connected translations from default-language / free-mode records
             $enrichedRecords = $this->groupTranslationsOnRecords($enrichedRecords, $tableName, $pageId, $recordGridDataProvider);
@@ -1258,9 +1266,13 @@ final class RecordListController extends CoreRecordListController
     /**
      * @return array{id: int, label: string, title: string, description: string, isLive: bool}
      */
-    private function buildWorkspaceBadgeData(): array
+    private function buildWorkspaceBadgeData(?int $workspaceId = null): array
     {
-        $workspaceId = $this->getCurrentWorkspaceId();
+        $workspaceId ??= $this->getCurrentWorkspaceId();
+        if (isset($this->workspaceBadges[$workspaceId])) {
+            return $this->workspaceBadges[$workspaceId];
+        }
+
         $isLive = $workspaceId === 0;
         $label = $isLive
             ? $this->translate(
@@ -1293,13 +1305,16 @@ final class RecordListController extends CoreRecordListController
             'Workspace',
         );
 
-        return [
+        $badge = [
             'id' => $workspaceId,
             'label' => $label,
             'title' => $description !== '' ? $description : $titlePrefix . ': ' . $label,
             'description' => $description,
             'isLive' => $isLive,
         ];
+
+        $this->workspaceBadges[$workspaceId] = $badge;
+        return $badge;
     }
 
     /**
@@ -1307,6 +1322,10 @@ final class RecordListController extends CoreRecordListController
      */
     private function getWorkspaceRow(int $workspaceId): array
     {
+        if (isset($this->workspaceRows[$workspaceId])) {
+            return $this->workspaceRows[$workspaceId];
+        }
+
         try {
             $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
                 ->getQueryBuilderForTable('sys_workspace');
@@ -1325,7 +1344,150 @@ final class RecordListController extends CoreRecordListController
             return [];
         }
 
-        return is_array($row) ? ArrayUtility::stringKeyArray($row) : [];
+        $workspaceRow = is_array($row) ? ArrayUtility::stringKeyArray($row) : [];
+        $this->workspaceRows[$workspaceId] = $workspaceRow;
+        return $workspaceRow;
+    }
+
+    /**
+     * Add a record-specific workspace badge.
+     *
+     * A workspace-versioned row gets the name of its own workspace. A live row
+     * gets the name of the newest non-live workspace that has a version for
+     * this record. If no non-live version exists, it stays assigned to Live.
+     *
+     * @param array<int, array<string, mixed>> $records
+     * @return array<int, array<string, mixed>>
+     */
+    private function enrichRecordsWithWorkspaceBadges(array $records, string $tableName): array
+    {
+        $latestWorkspaceIds = $this->getLatestWorkspaceChangeIdsByLiveUid($tableName, $records);
+
+        foreach ($records as &$record) {
+            /** @var array<string, mixed> $rawRecord */
+            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
+            $rowWorkspaceId = $this->getWorkspaceIdFromRow($rawRecord);
+            $liveUid = $this->getLiveUidFromRow($rawRecord);
+            $workspaceId = $rowWorkspaceId > 0
+                ? $rowWorkspaceId
+                : ($latestWorkspaceIds[$liveUid] ?? 0);
+
+            $record['workspace'] = $this->buildWorkspaceBadgeData($workspaceId);
+        }
+        unset($record);
+
+        return $records;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $records
+     * @return array<int, int> live uid => latest workspace id
+     */
+    private function getLatestWorkspaceChangeIdsByLiveUid(string $tableName, array $records): array
+    {
+        if (!$this->isWorkspaceAwareTable($tableName)) {
+            return [];
+        }
+
+        $liveUids = [];
+        foreach ($records as $record) {
+            /** @var array<string, mixed> $rawRecord */
+            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
+            if ($this->getWorkspaceIdFromRow($rawRecord) > 0) {
+                continue;
+            }
+            $liveUid = $this->getLiveUidFromRow($rawRecord);
+            if ($liveUid > 0) {
+                $liveUids[$liveUid] = $liveUid;
+            }
+        }
+
+        if ($liveUids === []) {
+            return [];
+        }
+
+        $tcaCtrl = $this->getTcaForTable($tableName)['ctrl'];
+        $tstampField = is_string($tcaCtrl['tstamp'] ?? null) ? $tcaCtrl['tstamp'] : '';
+        $selectFields = ['uid', 't3ver_oid', 't3ver_wsid'];
+        if ($tstampField !== '') {
+            $selectFields[] = $tstampField;
+        }
+
+        try {
+            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+                ->getQueryBuilderForTable($tableName);
+            $queryBuilder->getRestrictions()
+                ->removeAll()
+                ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+
+            $queryBuilder
+                ->select(...$selectFields)
+                ->from($tableName)
+                ->where(
+                    $queryBuilder->expr()->gt(
+                        't3ver_wsid',
+                        $queryBuilder->createNamedParameter(0, ParameterType::INTEGER),
+                    ),
+                    $queryBuilder->expr()->in(
+                        't3ver_oid',
+                        $queryBuilder->createNamedParameter(array_values($liveUids), ArrayParameterType::INTEGER),
+                    ),
+                );
+
+            if ($tstampField !== '') {
+                $queryBuilder->orderBy($tstampField, 'DESC');
+                $queryBuilder->addOrderBy('uid', 'DESC');
+            } else {
+                $queryBuilder->orderBy('uid', 'DESC');
+            }
+
+            $rows = $queryBuilder->executeQuery()->fetchAllAssociative();
+        } catch (Exception) {
+            return [];
+        }
+
+        $workspaceIds = [];
+        foreach ($rows as $row) {
+            $liveUidRaw = $row['t3ver_oid'] ?? 0;
+            $workspaceIdRaw = $row['t3ver_wsid'] ?? 0;
+            $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
+            $workspaceId = is_numeric($workspaceIdRaw) ? (int) $workspaceIdRaw : 0;
+            if ($liveUid > 0 && $workspaceId > 0 && !isset($workspaceIds[$liveUid])) {
+                $workspaceIds[$liveUid] = $workspaceId;
+            }
+        }
+
+        return $workspaceIds;
+    }
+
+    private function isWorkspaceAwareTable(string $tableName): bool
+    {
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+        return $schemaFactory->has($tableName) && $schemaFactory->get($tableName)->isWorkspaceAware();
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function getWorkspaceIdFromRow(array $row): int
+    {
+        $workspaceIdRaw = $row['t3ver_wsid'] ?? 0;
+        return is_numeric($workspaceIdRaw) ? (int) $workspaceIdRaw : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function getLiveUidFromRow(array $row): int
+    {
+        $workspaceOriginalUidRaw = $row['t3ver_oid'] ?? 0;
+        $workspaceOriginalUid = is_numeric($workspaceOriginalUidRaw) ? (int) $workspaceOriginalUidRaw : 0;
+        if ($workspaceOriginalUid > 0) {
+            return $workspaceOriginalUid;
+        }
+
+        $uidRaw = $row['uid'] ?? 0;
+        return is_numeric($uidRaw) ? (int) $uidRaw : 0;
     }
 
     /**
@@ -3249,6 +3411,7 @@ final class RecordListController extends CoreRecordListController
         $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
         $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
         $enrichedRecords = $this->enrichRecordsWithPermissions($enrichedRecords, $tableName);
+        $enrichedRecords = $this->enrichRecordsWithWorkspaceBadges($enrichedRecords, $tableName);
 
         // Translated pages are themselves translation records; they don't
         // carry further translation slots, so mark every row as a regular
