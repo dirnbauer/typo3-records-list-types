@@ -1037,26 +1037,6 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Get TCA configuration for a table with proper type assertions.
-     *
-     * @return array{ctrl: array<string, mixed>, columns: array<string, array<string, mixed>>}
-     */
-    private function getTcaForTable(string $tableName): array
-    {
-        /** @var array<string, mixed> $allTca */
-        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
-        $tca = $allTca[$tableName] ?? [];
-        if (!is_array($tca)) {
-            return ['ctrl' => [], 'columns' => []];
-        }
-        /** @var array<string, mixed> $ctrl */
-        $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
-        /** @var array<string, array<string, mixed>> $columns */
-        $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
-        return ['ctrl' => $ctrl, 'columns' => $columns];
-    }
-
-    /**
      * Translate a label key with a fallback value.
      * Avoids short ternary operator (?:) that PHPStan disallows.
      */
