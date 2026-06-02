@@ -41,6 +41,19 @@ services:
   Webconsulting\RecordsListTypes\Service\RecordDisplayValueFormatter:
     public: true
 
+  # TCA helpers for record-list column and enrichment services
+  Webconsulting\RecordsListTypes\Service\TcaTableConfigurationService:
+    public: true
+
+  Webconsulting\RecordsListTypes\Service\RecordDisplayColumnResolver:
+    public: true
+
+  Webconsulting\RecordsListTypes\Service\RecordViewEnrichmentService:
+    public: true
+
+  Webconsulting\RecordsListTypes\Service\RecordTranslationGroupingService:
+    public: true
+
   # Thumbnail Service - Handles image thumbnail generation
   Webconsulting\RecordsListTypes\Service\ThumbnailService:
     public: true
