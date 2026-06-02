@@ -529,23 +529,11 @@ typo3-backend-contextual-record-edit-trigger.gridview-action-sm {
     text-overflow: ellipsis;
 }
 
-.gridview-workspace-badge--workspace {
-    color: var(--gv-card-state-color);
-    background: color-mix(in srgb, var(--gv-card-state-color) 10%, var(--gv-bg));
-    border-color: color-mix(in srgb, var(--gv-card-state-border) 55%, var(--gv-border));
-}
-
-.gridview-workspace-badge--live {
+/* Workspace state chip is intentionally neutral grey — no per-state colour. */
+.gridview-workspace-badge--state {
     color: var(--gv-text-muted);
     background: var(--gv-bg);
     border-color: var(--gv-border);
-}
-
-.gridview-workspace-badge--state {
-    color: var(--gv-card-state-color);
-    background: var(--gv-card-state-bg);
-    border-color: var(--gv-card-state-border);
-    box-shadow: inset 2px 0 0 var(--gv-card-state-border);
 }
 
 /* =============================================================================

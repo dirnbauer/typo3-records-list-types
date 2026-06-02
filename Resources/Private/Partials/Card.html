@@ -203,19 +203,19 @@
                 </ul>
             </div>
 
-            <f:if condition="{workspace.label}">
+            <f:comment>
+                Workspace state chip: a single neutral-grey badge that only appears
+                when the record actually differs in the current workspace (new,
+                changed, moved, deleted). The workspace name is intentionally not
+                shown, and unchanged/live records render no badge at all —
+                record.workspaceState is null in both cases.
+            </f:comment>
+            <f:if condition="{record.workspaceState}">
                 <div class="gridview-card__workspace-badges">
-                    <span class="gridview-workspace-badge gridview-workspace-badge--workspace{f:if(condition: workspace.isLive, then: ' gridview-workspace-badge--live')}"
-                          title="{workspace.title}">
-                        <core:icon identifier="actions-workspace" size="small" />
-                        <span class="gridview-workspace-badge__text">{workspace.label}</span>
+                    <span class="gridview-workspace-badge gridview-workspace-badge--state"
+                          title="{record.workspaceStateTitle}">
+                        <span class="gridview-workspace-badge__text">{record.workspaceStateLabel}</span>
                     </span>
-                    <f:if condition="{record.workspaceStateLabel}">
-                        <span class="gridview-workspace-badge gridview-workspace-badge--state gridview-workspace-badge--state-{record.workspaceStateBadge.key}"
-                              title="{record.workspaceStateTitle}">
-                            <span class="gridview-workspace-badge__text">{record.workspaceStateLabel}</span>
-                        </span>
-                    </f:if>
                 </div>
             </f:if>
         </div>
