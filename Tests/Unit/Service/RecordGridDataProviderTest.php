@@ -11,6 +11,7 @@ use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\WorkspaceAspect;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Imaging\IconFactory;
+use TYPO3\CMS\Core\Resource\FileRepository;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use Webconsulting\RecordsListTypes\Service\GridConfigurationService;
 use Webconsulting\RecordsListTypes\Service\RecordGridDataProvider;
@@ -27,12 +28,14 @@ final class RecordGridDataProviderTest extends TestCase
         $context = new Context();
         $context->setAspect('workspace', new WorkspaceAspect(0));
 
+        $tcaSchemaFactory = $this->createStub(TcaSchemaFactory::class);
+
         $this->subject = new RecordGridDataProvider(
             $this->createStub(ConnectionPool::class),
             $this->createStub(IconFactory::class),
-            $this->createStub(GridConfigurationService::class),
-            $this->createStub(ThumbnailService::class),
-            $this->createStub(TcaSchemaFactory::class),
+            new GridConfigurationService($tcaSchemaFactory),
+            new ThumbnailService($this->createStub(FileRepository::class)),
+            $tcaSchemaFactory,
             $context,
         );
     }
