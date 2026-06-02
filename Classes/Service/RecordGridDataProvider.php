@@ -107,6 +107,23 @@ final readonly class RecordGridDataProvider implements SingletonInterface
     }
 
     /**
+     * Whether any record in a view payload includes a grid thumbnail URL.
+     *
+     * @param array<int, array<string, mixed>> $records
+     */
+    public function recordsContainThumbnails(array $records): bool
+    {
+        foreach ($records as $record) {
+            $thumbnailUrl = $record['thumbnailUrl'] ?? null;
+            if (is_string($thumbnailUrl) && $thumbnailUrl !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Get total count of records for a table.
      *
      * Uses TYPO3's WorkspaceRestriction for proper workspace support.
