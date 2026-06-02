@@ -38,13 +38,17 @@ use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use Webconsulting\RecordsListTypes\Pagination\DatabasePaginator;
 use Webconsulting\RecordsListTypes\Service\GridConfigurationService;
 use Webconsulting\RecordsListTypes\Service\MiddlewareDiagnosticService;
-use Webconsulting\RecordsListTypes\Service\RecordDisplayValueFormatter;
+use Webconsulting\RecordsListTypes\Service\RecordDisplayColumnResolver;
 use Webconsulting\RecordsListTypes\Service\RecordFilterQueryService;
 use Webconsulting\RecordsListTypes\Service\RecordFilterStateService;
 use Webconsulting\RecordsListTypes\Service\RecordFilterViewDataFactory;
 use Webconsulting\RecordsListTypes\Service\RecordGridDataProvider;
 use Webconsulting\RecordsListTypes\Service\RecordListRequestParameterService;
 use Webconsulting\RecordsListTypes\Service\RecordSortingService;
+use Webconsulting\RecordsListTypes\Service\RecordTranslationGroupingService;
+use Webconsulting\RecordsListTypes\Service\RecordViewEnrichmentContext;
+use Webconsulting\RecordsListTypes\Service\RecordViewEnrichmentService;
+use Webconsulting\RecordsListTypes\Service\TcaTableConfigurationService;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 use Webconsulting\RecordsListTypes\Service\ViewTypeRegistry;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
@@ -69,8 +73,6 @@ final class RecordListController extends CoreRecordListController
     private ?RecordSortingService $recordSortingService = null;
 
     private ?RecordListRequestParameterService $requestParameterService = null;
-
-    private ?RecordDisplayValueFormatter $displayValueFormatter = null;
 
     /** Whether the clipboard is enabled for this request. */
     private bool $clipboardEnabled = false;
@@ -117,12 +119,44 @@ final class RecordListController extends CoreRecordListController
         return $this->requestParameterService;
     }
 
-    private function getDisplayValueFormatter(): RecordDisplayValueFormatter
+    private function getTcaConfigurationService(): TcaTableConfigurationService
     {
-        if (!$this->displayValueFormatter instanceof RecordDisplayValueFormatter) {
-            $this->displayValueFormatter = GeneralUtility::makeInstance(RecordDisplayValueFormatter::class);
-        }
-        return $this->displayValueFormatter;
+        return GeneralUtility::makeInstance(TcaTableConfigurationService::class);
+    }
+
+    private function getDisplayColumnResolver(): RecordDisplayColumnResolver
+    {
+        return GeneralUtility::makeInstance(RecordDisplayColumnResolver::class);
+    }
+
+    private function getViewEnrichmentService(): RecordViewEnrichmentService
+    {
+        return GeneralUtility::makeInstance(RecordViewEnrichmentService::class);
+    }
+
+    private function getTranslationGroupingService(): RecordTranslationGroupingService
+    {
+        return GeneralUtility::makeInstance(RecordTranslationGroupingService::class);
+    }
+
+    private function createViewEnrichmentContext(): RecordViewEnrichmentContext
+    {
+        return new RecordViewEnrichmentContext(
+            $this->pageContext,
+            $this->currentViewMode,
+            $this->currentRequest,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getModuleTsConfigForColumns(): array
+    {
+        /** @var array<string, mixed> $modTsConfig */
+        $modTsConfig = $this->modTSconfig;
+
+        return $modTsConfig;
     }
 
     /**
@@ -681,18 +715,31 @@ final class RecordListController extends CoreRecordListController
 
             // Display columns (from ViewTypeRegistry config)
             $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
+            $columnResolver = $this->getDisplayColumnResolver();
             if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
-                $displayColumns = $this->getDisplayColumns($tableName);
+                $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->getModuleTsConfigForColumns());
             } elseif ($columnsArray !== []) {
-                $displayColumns = $this->getSpecificDisplayColumns($tableName, $columnsArray);
+                $displayColumns = $columnResolver->getSpecificDisplayColumns($tableName, $columnsArray);
             } else {
-                $displayColumns = $this->getTeaserDisplayColumns($tableName);
+                $displayColumns = $columnResolver->getTeaserDisplayColumns($tableName);
             }
 
-            $enrichedRecords = $this->enrichRecordsForAlternativeViews($records, $displayColumns, $tableName);
+            $enrichmentContext = $this->createViewEnrichmentContext();
+            $enrichedRecords = $this->getViewEnrichmentService()->enrichForAlternativeViews(
+                $records,
+                $displayColumns,
+                $tableName,
+                $enrichmentContext,
+            );
 
             // Separate connected translations from default-language / free-mode records
-            $enrichedRecords = $this->groupTranslationsOnRecords($enrichedRecords, $tableName, $pageId, $recordGridDataProvider);
+            $enrichedRecords = $this->getTranslationGroupingService()->groupTranslationsOnRecords(
+                $enrichedRecords,
+                $tableName,
+                $pageId,
+                $recordGridDataProvider,
+                $enrichmentContext,
+            );
 
             // Assign a per-GROUP zebra class here so every row a template
             // renders (parent + all its translation slots) ends up with the
@@ -874,131 +921,11 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Get specific display columns by field names.
-     *
-     * @param string $tableName The table name
-     * @param array<int, string> $fieldNames Array of field names to include
-     * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
+     * @return array{ctrl: array<string, mixed>, columns: array<string, array<string, mixed>>}
      */
-    private function getSpecificDisplayColumns(string $tableName, array $fieldNames): array
+    private function getTcaForTable(string $tableName): array
     {
-        $columns = [];
-        $tcaForTable = $this->getTcaForTable($tableName);
-        $ctrl = $tcaForTable['ctrl'];
-        $tcaColumns = $tcaForTable['columns'];
-        $labelVal = $ctrl['label'] ?? 'uid';
-        $labelField = is_string($labelVal) ? $labelVal : 'uid';
-
-        foreach ($fieldNames as $field) {
-            // Handle special field names
-            if ($field === 'label') {
-                $field = $labelField;
-            } elseif ($field === 'datetime' || $field === 'date') {
-                // Find first date field
-                $dateFields = ['datetime', 'date', 'starttime'];
-                foreach ($dateFields as $df) {
-                    if (isset($tcaColumns[$df])) {
-                        $field = $df;
-                        break;
-                    }
-                }
-                if ($field === 'datetime') {
-                    $crdateFieldVal = $ctrl['crdate'] ?? '';
-                    if (is_string($crdateFieldVal) && $crdateFieldVal !== '') {
-                        $field = $crdateFieldVal;
-                    }
-                }
-            } elseif ($field === 'teaser') {
-                // Find first teaser field
-                $teaserFields = ['teaser', 'abstract', 'description', 'bodytext', 'short'];
-                foreach ($teaserFields as $tf) {
-                    if (isset($tcaColumns[$tf])) {
-                        $field = $tf;
-                        break;
-                    }
-                }
-            }
-
-            // Skip if field doesn't exist
-            if (!isset($tcaColumns[$field]) && !in_array($field, ['uid', 'pid', $ctrl['crdate'] ?? '', $ctrl['tstamp'] ?? ''], true)) {
-                continue;
-            }
-
-            $columns[] = [
-                'field' => $field,
-                'label' => $this->getFieldLabel($field, $tcaColumns, $ctrl),
-                'type' => $this->getFieldType($field, $tcaColumns, $ctrl),
-                'isLabelField' => ($field === $labelField),
-            ];
-        }
-
-        return $columns;
-    }
-
-    /**
-     * Get display columns for teaser view - minimal set: title, date, teaser.
-     *
-     * @param string $tableName The table name
-     * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
-     */
-    private function getTeaserDisplayColumns(string $tableName): array
-    {
-        $columns = [];
-        $tcaForTable = $this->getTcaForTable($tableName);
-        $ctrl = $tcaForTable['ctrl'];
-        $tcaColumns = $tcaForTable['columns'];
-
-        // 1. Label field (title) - always first
-        $labelVal = $ctrl['label'] ?? 'uid';
-        $labelField = is_string($labelVal) ? $labelVal : 'uid';
-        if (isset($tcaColumns[$labelField])) {
-            $columns[] = [
-                'field' => $labelField,
-                'label' => $this->getFieldLabel($labelField, $tcaColumns, $ctrl),
-                'type' => 'text',
-                'isLabelField' => true,
-            ];
-        }
-
-        // 2. Date field - prefer datetime, then crdate, then tstamp
-        $dateField = null;
-        $dateFields = ['datetime', 'date', 'starttime'];
-        foreach ($dateFields as $field) {
-            if (isset($tcaColumns[$field])) {
-                $dateField = $field;
-                break;
-            }
-        }
-        if ($dateField === null) {
-            $crdateVal = $ctrl['crdate'] ?? '';
-            if (is_string($crdateVal) && $crdateVal !== '') {
-                $dateField = $crdateVal;
-            }
-        }
-        if ($dateField !== null) {
-            $columns[] = [
-                'field' => $dateField,
-                'label' => $this->getFieldLabel($dateField, $tcaColumns, $ctrl),
-                'type' => 'datetime',
-                'isLabelField' => false,
-            ];
-        }
-
-        // 3. Teaser/description field - prefer teaser, abstract, bodytext
-        $teaserFields = ['teaser', 'abstract', 'description', 'bodytext', 'short'];
-        foreach ($teaserFields as $field) {
-            if (isset($tcaColumns[$field]) && $field !== $labelField) {
-                $columns[] = [
-                    'field' => $field,
-                    'label' => $this->getFieldLabel($field, $tcaColumns, $ctrl),
-                    'type' => 'text',
-                    'isLabelField' => false,
-                ];
-                break;
-            }
-        }
-
-        return $columns;
+        return $this->getTcaConfigurationService()->getTcaForTable($tableName);
     }
 
     /**
@@ -1927,7 +1854,7 @@ final class RecordListController extends CoreRecordListController
         ];
 
         // Title/Label column (second fixed column)
-        $labelLabel = $this->getFieldLabel($labelField, $tcaColumns, $ctrl);
+        $labelLabel = $this->getTcaConfigurationService()->getFieldLabel($labelField, $tcaColumns, $ctrl);
         $headers[] = [
             'field' => $labelField,
             'label' => $labelLabel,
@@ -2035,903 +1962,6 @@ final class RecordListController extends CoreRecordListController
         return $iconIdentifier;
     }
 
-    /**
-     * Get the columns to display for a table.
-     *
-     * Uses user-selected columns from "Show columns" selector (list/displayFields),
-     * falling back to TSconfig or TCA defaults if no columns are selected.
-     *
-     * @return array<int, array{field: string, label: string, type: string, isLabelField: bool}>
-     */
-    private function getDisplayColumns(string $tableName): array
-    {
-        $columns = [];
-        $tcaForTable = $this->getTcaForTable($tableName);
-        $ctrl = $tcaForTable['ctrl'];
-        $tcaColumns = $tcaForTable['columns'];
-        $backendUser = $this->getBackendUserAuthentication();
-
-        // Get the label field (title) - always first
-        $labelVal = $ctrl['label'] ?? 'uid';
-        $labelField = is_string($labelVal) ? $labelVal : 'uid';
-
-        // Priority 1: User's selected columns from "Show columns" selector
-        $displayFields = $backendUser->getModuleData('list/displayFields');
-        $displayFieldsArray = is_array($displayFields) ? $displayFields : [];
-        $userSelectedFields = is_array($displayFieldsArray[$tableName] ?? null) ? $displayFieldsArray[$tableName] : [];
-
-        if ($userSelectedFields !== []) {
-            // User has selected specific columns
-            $fieldList = $userSelectedFields;
-        } else {
-            // Priority 2: TSconfig showFields
-            $modTableConfig = is_array($this->modTSconfig['table'] ?? null) ? $this->modTSconfig['table'] : [];
-            $tableConfigArr = is_array($modTableConfig[$tableName] ?? null) ? $modTableConfig[$tableName] : [];
-            $showFieldsVal = $tableConfigArr['showFields'] ?? '';
-            $showFields = is_string($showFieldsVal) ? $showFieldsVal : '';
-
-            if ($showFields !== '') {
-                $fieldList = GeneralUtility::trimExplode(',', $showFields, true);
-            } else {
-                // Priority 3: TCA searchFields or label field as fallback
-                $searchFieldsVal = $ctrl['searchFields'] ?? '';
-                $searchFields = is_string($searchFieldsVal) ? $searchFieldsVal : '';
-                if ($searchFields !== '') {
-                    $fieldList = GeneralUtility::trimExplode(',', $searchFields, true);
-                } else {
-                    $fieldList = [$labelField];
-                }
-            }
-        }
-
-        // Always include label field first if not already included
-        if (!in_array($labelField, $fieldList, true)) {
-            array_unshift($fieldList, $labelField);
-        }
-
-        // Build column configuration
-        foreach ($fieldList as $rawField) {
-            $field = is_string($rawField) ? $rawField : '';
-            if ($field === '') {
-                continue;
-            }
-            // Skip internal fields
-            $skipFields = [
-                't3ver_oid', 't3ver_wsid', 't3ver_state', 't3ver_stage',
-                'l10n_parent', 'l10n_source', 'l10n_diffsource', 'l10n_state',
-                'sys_language_uid',
-            ];
-            if (in_array($field, $skipFields, true)) {
-                continue;
-            }
-
-            // Validate field exists in TCA or is a known system field
-            $coreSystemFields = ['uid', 'pid'];
-            $enableColumns = is_array($ctrl['enablecolumns'] ?? null) ? $ctrl['enablecolumns'] : [];
-            $disabledField = $enableColumns['disabled'] ?? null;
-            $sortbyField = $ctrl['sortby'] ?? null;
-            $crdateField = $ctrl['crdate'] ?? null;
-            $tstampField = $ctrl['tstamp'] ?? null;
-
-            // List of valid fields for this table
-            $validNonTcaFields = array_filter([
-                ...$coreSystemFields,
-                $disabledField,
-                $sortbyField,
-                $crdateField,
-                $tstampField,
-            ], static fn(mixed $v): bool => $v !== null && $v !== '');
-
-            if (!isset($tcaColumns[$field]) && !in_array($field, $validNonTcaFields, true)) {
-                continue;
-            }
-
-            // Get field label
-            $label = $this->getFieldLabel($field, $tcaColumns, $ctrl);
-
-            // Determine field type for formatting
-            $type = $this->getFieldType($field, $tcaColumns, $ctrl);
-
-            $columns[] = [
-                'field' => $field,
-                'label' => $label,
-                'type' => $type,
-                'isLabelField' => ($field === $labelField),
-            ];
-        }
-
-        return $columns;
-    }
-
-    /**
-     * Get the label for a field.
-     *
-     * Handles both traditional LLL: format and TYPO3 v12+ translation domain format
-     * (e.g., 'frontend.db.tt_content:header').
-     *
-     * @param array<string, mixed> $tcaColumns
-     * @param array<string, mixed> $ctrl
-     */
-    private function getFieldLabel(string $field, array $tcaColumns, array $ctrl): string
-    {
-        $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
-        if (isset($fieldDef['label'])) {
-            $labelRawVal = $fieldDef['label'];
-            $label = is_string($labelRawVal) ? $labelRawVal : '';
-            return $this->translateTcaLabel($label, $field);
-        }
-
-        // System field labels
-        $systemLabels = [
-            'uid' => 'UID',
-            'pid' => 'Page',
-        ];
-
-        if (isset($systemLabels[$field])) {
-            return $systemLabels[$field];
-        }
-
-        $langService = $this->getLanguageService();
-
-        // Check if field matches ctrl fields
-        if ($field === ($ctrl['crdate'] ?? null) || $field === 'crdate') {
-            $translated = $langService->sL('core.general:LGL.creationDate');
-            return $translated !== '' ? $translated : 'Created';
-        }
-        if ($field === ($ctrl['tstamp'] ?? null) || $field === 'tstamp') {
-            $translated = $langService->sL('core.general:LGL.timestamp');
-            return $translated !== '' ? $translated : 'Modified';
-        }
-        if ($field === ($ctrl['sortby'] ?? null)) {
-            $translated = $langService->sL('core.general:LGL.sorting');
-            return $translated !== '' ? $translated : 'Sorting';
-        }
-
-        // Hidden/disabled field
-        $enableCols = is_array($ctrl['enablecolumns'] ?? null) ? $ctrl['enablecolumns'] : [];
-        $disabledField = $enableCols['disabled'] ?? null;
-        if ($field === $disabledField) {
-            $translated = $langService->sL('core.general:LGL.hidden');
-            return $translated !== '' ? $translated : 'Hidden';
-        }
-
-        return $field;
-    }
-
-    /**
-     * Translate a TCA label.
-     *
-     * Handles both traditional LLL: format and TYPO3 v12+ translation domain format
-     * (e.g., 'frontend.db.tt_content:header').
-     *
-     * @param string $label The label to translate
-     * @param string $fallback Fallback value if translation fails
-     * @return string The translated label
-     */
-    private function translateTcaLabel(string $label, string $fallback = ''): string
-    {
-        // Empty label - return fallback
-        if ($label === '') {
-            return $fallback !== '' ? $fallback : $label;
-        }
-
-        // Traditional LLL: format or TYPO3 v12+ translation domain format
-        // The LanguageService::sL() method handles both:
-        // - LLL:EXT:core/Resources/Private/Language/locallang.xlf:key
-        // - domain.name:key (e.g., frontend.db.tt_content:header)
-        if (str_starts_with($label, 'LLL:') || str_contains($label, ':')) {
-            $langService = $this->getLanguageService();
-            $translated = $langService->sL($label);
-            return $translated !== '' ? $translated : ($fallback !== '' ? $fallback : $label);
-        }
-
-        // Plain string - return as-is
-        return $label;
-    }
-
-    /**
-     * Get the type for a field (for formatting).
-     */
-    /**
-     * @param array<string, mixed> $tcaColumns
-     * @param array<string, mixed> $ctrl
-     */
-    private function getFieldType(string $field, array $tcaColumns, array $ctrl): string
-    {
-        // System date fields
-        if (in_array($field, ['crdate', 'tstamp'], true)) {
-            return 'datetime';
-        }
-
-        // Disabled/hidden field
-        $enableCols = is_array($ctrl['enablecolumns'] ?? null) ? $ctrl['enablecolumns'] : [];
-        $disabledField = $enableCols['disabled'] ?? null;
-        if ($field === $disabledField) {
-            return 'boolean';
-        }
-
-        // TCA-configured type
-        $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
-        $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
-        $typeVal = $config['type'] ?? '';
-        $type = is_string($typeVal) ? $typeVal : '';
-
-        return match ($type) {
-            'check' => 'boolean',
-            'datetime' => 'datetime',
-            'number' => 'number',
-            'select', 'radio' => 'select',
-            'inline', 'file' => 'relation',
-            default => 'text',
-        };
-    }
-
-    /**
-     * Enrich base grid records for compact/grid/teaser rendering.
-     *
-     * @param array<int, array<string, mixed>> $records
-     * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
-     * @return array<int, array<string, mixed>>
-     */
-    private function enrichRecordsForAlternativeViews(array $records, array $displayColumns, string $tableName): array
-    {
-        $records = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
-        $records = $this->enrichRecordsWithLanguageInfo($records, $tableName);
-        return $this->enrichRecordsWithPermissions($records, $tableName);
-    }
-
-    /**
-     * Enrich records with formatted display values for all columns.
-     *
-     * This pre-formats values in PHP so Fluid doesn't need dynamic variable access.
-     *
-     * @param array<int, array<string, mixed>> $records
-     * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
-     * @return array<int, array<string, mixed>>
-     */
-    private function enrichRecordsWithDisplayValues(array $records, array $displayColumns, string $tableName): array
-    {
-        $tcaForTable = $this->getTcaForTable($tableName);
-        $tcaColumns = $tcaForTable['columns'];
-        $formatter = $this->getDisplayValueFormatter();
-
-        foreach ($records as &$record) {
-            $displayValues = [];
-            /** @var array<string, mixed> $rawRecord */
-            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
-
-            foreach ($displayColumns as $column) {
-                $field = $column['field'];
-                $type = $column['type'];
-                $rawValue = $rawRecord[$field] ?? null;
-
-                // For boolean/check fields, invert display value when TCA has invertStateDisplay
-                // (e.g., hidden field labeled "Enabled": hidden=0 should display as Yes/true)
-                $displayRaw = $rawValue;
-                if ($type === 'boolean' && $formatter->shouldInvertBooleanDisplay($field, $tcaColumns)) {
-                    $displayRaw = ((bool) $rawValue) ? 0 : 1;
-                }
-                $isLabelField = $column['isLabelField'] ?? false;
-
-                $displayValues[$field] = [
-                    'field' => $field,
-                    'label' => $column['label'],
-                    'type' => $type,
-                    'isLabelField' => $isLabelField,
-                    'raw' => $displayRaw,
-                    'formatted' => $isLabelField
-                        ? BackendUtility::getRecordTitle($tableName, $rawRecord, false, true)
-                        : $formatter->formatFieldValue(
-                            $displayRaw,
-                            $type,
-                            $field,
-                            $tcaColumns,
-                            fn(string $label): string => $this->getLanguageService()->sL($label),
-                        ),
-                    'isEmpty' => in_array($rawValue, [null, '', 0, '0'], true),
-                ];
-            }
-
-            $record['displayValues'] = $displayValues;
-            $record = $this->enrichRecordWithEditUrls($record);
-        }
-
-        return $records;
-    }
-
-    /**
-     * Enrich records with language information (flag identifier, language title).
-     *
-     * Resolves the sys_language_uid from each record's raw data to the corresponding
-     * site language flag identifier, so the card can display the language flag.
-     *
-     * @param array<int, array<string, mixed>> $records The enriched records
-     * @param string $tableName The table name
-     * @return array<int, array<string, mixed>> Records with language info added
-     */
-    private function enrichRecordsWithLanguageInfo(array $records, string $tableName): array
-    {
-        $tcaForTable = $this->getTcaForTable($tableName);
-        $languageField = $tcaForTable['ctrl']['languageField'] ?? null;
-
-        // If no language field is defined for this table, skip
-        if (!is_string($languageField) || $languageField === '') {
-            return $records;
-        }
-
-        // Get available site languages
-        $backendUser = $this->getBackendUserAuthentication();
-        $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
-
-        foreach ($records as &$record) {
-            /** @var array<string, mixed> $rawRecord */
-            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
-            $langUidRaw = $rawRecord[$languageField] ?? 0;
-            $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
-
-            $record['sysLanguageUid'] = $langUid;
-            $record['languageFlagIdentifier'] = '';
-            $record['languageTitle'] = '';
-
-            // Resolve flag identifier from site languages
-            foreach ($siteLanguages as $siteLanguage) {
-                if ($siteLanguage->getLanguageId() === $langUid) {
-                    $record['languageFlagIdentifier'] = $siteLanguage->getFlagIdentifier();
-                    $record['languageTitle'] = $siteLanguage->getTitle();
-                    break;
-                }
-            }
-        }
-
-        return $records;
-    }
-
-    /**
-     * Enrich records with permission flags derived from TYPO3's backend user
-     * API (be_groups, tables_modify, page permissions, record edit access,
-     * editlock, language access). Templates then gate action buttons on
-     * `record.permissions.*` so users never see actions they can't perform.
-     *
-     * @param array<int, array<string, mixed>> $records
-     * @return array<int, array<string, mixed>>
-     */
-    private function enrichRecordsWithPermissions(array $records, string $tableName): array
-    {
-        foreach ($records as &$record) {
-            /** @var array<string, mixed> $raw */
-            $raw = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
-            $record['permissions'] = $this->computeRecordPermissions($tableName, $raw);
-        }
-        unset($record);
-        return $records;
-    }
-
-    /**
-     * Compute the action-permission set for a single record. Mirrors the
-     * combination of checks used by TYPO3's DatabaseRecordList when it
-     * decides whether to render the edit / delete / visibility buttons.
-     *
-     * @param array<string, mixed> $row Raw database row
-     * @return array{canEdit:bool,canDelete:bool,canToggleVisibility:bool,canLocalize:bool,canCopy:bool,canHistory:bool,canShowInfo:bool}
-     */
-    private function computeRecordPermissions(string $tableName, array $row): array
-    {
-        $backendUser = $this->getBackendUserAuthentication();
-        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
-
-        $defaults = [
-            'canEdit' => false,
-            'canDelete' => false,
-            'canToggleVisibility' => false,
-            'canLocalize' => false,
-            'canCopy' => false,
-            'canHistory' => false,
-            'canShowInfo' => true,
-        ];
-
-        if (!$schemaFactory->has($tableName)) {
-            return $defaults;
-        }
-        $schema = $schemaFactory->get($tableName);
-        $tcaCtrl = $this->getTcaForTable($tableName)['ctrl'];
-        $hiddenField = '';
-        $enableColumns = is_array($tcaCtrl['enablecolumns'] ?? null) ? $tcaCtrl['enablecolumns'] : [];
-        if (is_string($enableColumns['disabled'] ?? null)) {
-            $hiddenField = $enableColumns['disabled'];
-        }
-        $hasHiddenField = $hiddenField !== '';
-
-        $isDeletePlaceholder = $this->isDeletePlaceholder($row);
-        $languageAware = $schema->isLanguageAware();
-        $languageId = 0;
-        $parentPointer = 0;
-        if ($languageAware) {
-            $languageField = $schema->getCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::Language)
-                ->getLanguageField()->getName();
-            $transOrigField = $schema->getCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::Language)
-                ->getTranslationOriginPointerField()->getName();
-            $languageId = is_numeric($row[$languageField] ?? null) ? (int) $row[$languageField] : 0;
-            $parentPointer = is_numeric($row[$transOrigField] ?? null) ? (int) $row[$transOrigField] : 0;
-        }
-
-        if ($backendUser->isAdmin()) {
-            return [
-                'canEdit' => !$isDeletePlaceholder,
-                'canDelete' => !$isDeletePlaceholder,
-                'canToggleVisibility' => $hasHiddenField && !$isDeletePlaceholder,
-                'canLocalize' => $languageAware && $languageId === 0 && $parentPointer === 0 && !$isDeletePlaceholder,
-                'canCopy' => !$isDeletePlaceholder,
-                'canHistory' => !$isDeletePlaceholder,
-                'canShowInfo' => !$isDeletePlaceholder,
-            ];
-        }
-
-        $schemaReadOnly = $schema->hasCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::AccessReadOnly);
-        $tableModify = !$schemaReadOnly && $backendUser->check('tables_modify', $tableName);
-
-        // Page-level permissions. For content records we use the containing
-        // page's calcPerms; for page records we compute perms against the
-        // page record itself.
-        $pagePerms = $this->resolvePagePermission($tableName, $row);
-        $pageEdit = $tableName === 'pages'
-            ? $pagePerms->editPagePermissionIsGranted()
-            : $pagePerms->editContentPermissionIsGranted();
-        $pageDelete = $tableName === 'pages'
-            ? $pagePerms->deletePagePermissionIsGranted()
-            : $pagePerms->editContentPermissionIsGranted();
-
-        $recordAccess = $backendUser->checkRecordEditAccess($tableName, $row)->isAllowed;
-
-        // editlock transitive check: respects page editlock for content and
-        // page's own editlock for pages.
-        $editLockOk = $this->checkEditLock($tableName, $row, $pageEdit);
-
-        $canEdit = $tableModify && $pageEdit && $recordAccess && $editLockOk && !$isDeletePlaceholder;
-
-        $userTsConfig = $backendUser->getTSConfig();
-        $disableDelete = (bool) trim(ArrayUtility::stringValue(
-            ArrayUtility::valuePath($userTsConfig, ['options.', 'disableDelete.', $tableName])
-                ?? ArrayUtility::valuePath($userTsConfig, ['options.', 'disableDelete']),
-        ));
-
-        $canDelete = $canEdit && !$disableDelete && $pageDelete && !$this->isCurrentBackendUser($tableName, $row);
-
-        return [
-            'canEdit' => $canEdit,
-            'canDelete' => $canDelete,
-            'canToggleVisibility' => $canEdit && $hasHiddenField && !$this->isCurrentBackendUser($tableName, $row),
-            'canLocalize' => $canEdit && $languageAware && $languageId === 0 && $parentPointer === 0,
-            'canCopy' => $tableModify && !$isDeletePlaceholder,
-            'canHistory' => !$isDeletePlaceholder,
-            'canShowInfo' => !$isDeletePlaceholder,
-        ];
-    }
-
-    /**
-     * Resolve the page-level permission bitmask for a record. For records
-     * on `pages`, we compute against the record itself; for others, we
-     * compute against the containing page.
-     *
-     * @param array<string, mixed> $row
-     */
-    private function resolvePagePermission(string $tableName, array $row): \TYPO3\CMS\Core\Type\Bitmask\Permission
-    {
-        $backendUser = $this->getBackendUserAuthentication();
-
-        if ($tableName === 'pages') {
-            return new \TYPO3\CMS\Core\Type\Bitmask\Permission($backendUser->calcPerms($row));
-        }
-
-        $pidRaw = $row['pid'] ?? 0;
-        $pid = is_numeric($pidRaw) ? (int) $pidRaw : 0;
-
-        // Fast path: the current page's permissions are already loaded.
-        if ($pid === $this->pageContext->pageId) {
-            return $this->pageContext->pagePermissions;
-        }
-
-        $pageRow = BackendUtility::getRecord('pages', $pid);
-        if (!is_array($pageRow)) {
-            return new \TYPO3\CMS\Core\Type\Bitmask\Permission(0);
-        }
-        return new \TYPO3\CMS\Core\Type\Bitmask\Permission($backendUser->calcPerms($pageRow));
-    }
-
-    /**
-     * Whether editing is locked on this row (mirrors DatabaseRecordList's
-     * overlayEditLockPermissions for single records). Admins bypass this
-     * via the caller; here we only evaluate when $permissionEdit is true.
-     *
-     * @param array<string, mixed> $row
-     */
-    private function checkEditLock(string $tableName, array $row, bool $permissionEdit): bool
-    {
-        if (!$permissionEdit) {
-            return false;
-        }
-        $backendUser = $this->getBackendUserAuthentication();
-        if ($backendUser->isAdmin()) {
-            return true;
-        }
-        $pagesCtrl = $this->getTcaForTable('pages')['ctrl'];
-        $pageEditLockField = is_string($pagesCtrl['editlock'] ?? null) ? $pagesCtrl['editlock'] : '';
-        $pageHasEditLock = false;
-        if ($pageEditLockField !== '') {
-            $pageRecord = $this->pageContext->pageRecord ?? [];
-            $pageHasEditLock = (bool) ($pageRecord[$pageEditLockField] ?? false);
-        }
-
-        if ($tableName === 'pages') {
-            // pages are only blocked by their own editlock, not by the ancestor's
-            $ownEditLockField = $pageEditLockField;
-            if ($ownEditLockField !== '' && (bool) ($row[$ownEditLockField] ?? false)) {
-                return false;
-            }
-            return true;
-        }
-
-        // Non-pages rows inherit editlock from the containing page, plus
-        // honour their own table-level editlock field.
-        if ($pageHasEditLock) {
-            return false;
-        }
-        $tableCtrl = $this->getTcaForTable($tableName)['ctrl'];
-        $tableEditLockField = is_string($tableCtrl['editlock'] ?? null) ? $tableCtrl['editlock'] : '';
-        if ($tableEditLockField !== '' && (bool) ($row[$tableEditLockField] ?? false)) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Forbid delete on the currently logged-in user's own be_users record.
-     *
-     * @param array<string, mixed> $row
-     */
-    private function isCurrentBackendUser(string $tableName, array $row): bool
-    {
-        if ($tableName !== 'be_users') {
-            return false;
-        }
-        $backendUser = $this->getBackendUserAuthentication();
-        $uidRaw = $row['uid'] ?? 0;
-        $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
-        $currentId = is_numeric($backendUser->user['uid'] ?? null) ? (int) $backendUser->user['uid'] : 0;
-        return $uid > 0 && $uid === $currentId;
-    }
-
-    /**
-     * @param array<string, mixed> $row
-     */
-    private function isDeletePlaceholder(array $row): bool
-    {
-        $stateRaw = $row['t3ver_state'] ?? 0;
-        return (is_numeric($stateRaw) ? (int) $stateRaw : 0) === 2;
-    }
-
-    /**
-     * Add TYPO3 14 native edit URLs for contextual and full FormEngine editing.
-     *
-     * @param array<string, mixed> $record
-     * @return array<string, mixed>
-     */
-    private function enrichRecordWithEditUrls(array $record): array
-    {
-        $uidRaw = $record['uid'] ?? null;
-        $tableNameRaw = $record['tableName'] ?? null;
-
-        if (!is_numeric($uidRaw) || !is_string($tableNameRaw) || $tableNameRaw === '') {
-            return $record;
-        }
-
-        $uid = (int) $uidRaw;
-        if ($uid <= 0) {
-            return $record;
-        }
-
-        $returnUrl = $this->buildContextualEditReturnUrl($record);
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-
-        try {
-            $record['editUrl'] = (string) $uriBuilder->buildUriFromRoute('record_edit', [
-                'edit' => [
-                    $tableNameRaw => [
-                        $uid => 'edit',
-                    ],
-                ],
-                'module' => 'records',
-                'returnUrl' => $returnUrl,
-            ]);
-            $record['contextualEditUrl'] = (string) $uriBuilder->buildUriFromRoute('record_edit_contextual', [
-                'edit' => [
-                    $tableNameRaw => [
-                        $uid => 'edit',
-                    ],
-                ],
-                'module' => 'records',
-                'returnUrl' => $returnUrl,
-            ]);
-        } catch (Exception) {
-            $record['editUrl'] = '';
-            $record['contextualEditUrl'] = '';
-        }
-
-        return $record;
-    }
-
-    /**
-     * Build a stable Records-module return URL for contextual edit dialogs.
-     *
-     * @param array<string, mixed> $record
-     */
-    private function buildContextualEditReturnUrl(array $record): string
-    {
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-
-        $params = [
-            'id' => $this->pageContext->pageId,
-            'displayMode' => $this->currentViewMode,
-        ];
-
-        if ($this->currentRequest instanceof ServerRequestInterface) {
-            $params = array_replace($params, $this->getRequestParameterService()->getPreservedListParameters($this->currentRequest));
-        }
-
-        $tableName = $record['tableName'] ?? null;
-        if (is_string($tableName) && $tableName !== '') {
-            $params['table'] = $tableName;
-        }
-
-        try {
-            return (string) $uriBuilder->buildUriFromRoute('records', $params);
-        } catch (Exception) {
-            return '';
-        }
-    }
-
-    /**
-     * Separate connected translations from the flat record list and attach
-     * unified translation slots to every default-language record.
-     *
-     * For each default-language record the returned array exposes a
-     * `translations` list with one entry per non-default site language, each
-     * tagged as either `translated` (existing connected translation record) or
-     * `untranslated` (placeholder that renders a localize-to button). The set
-     * of slots is derived from the current page's `$siteLanguages`, so views
-     * render the same "connected" information the TYPO3 core list view shows.
-     *
-     * Free translations (records with `sys_language_uid > 0` but no parent
-     * pointer) stay in the top-level list and are tagged `isFreeTranslation`.
-     * Connected translations are dropped from the top-level list so they do
-     * not render as independent cards/rows.
-     *
-     * @param array<int, array<string, mixed>> $records Enriched records
-     * @param string                            $tableName Table name
-     * @param int                               $pageId    Current page ID
-     * @param RecordGridDataProvider            $dataProvider Data provider
-     * @return array<int, array<string, mixed>> Records with slotted translations
-     */
-    private function groupTranslationsOnRecords(
-        array $records,
-        string $tableName,
-        int $pageId,
-        RecordGridDataProvider $dataProvider,
-    ): array {
-        if (!$dataProvider->isLanguageAwareTable($tableName)) {
-            return $records;
-        }
-
-        $langFields = $dataProvider->getLanguageFields($tableName);
-        $languageField = $langFields['languageField'];
-        $transOrigPointerField = $langFields['transOrigPointerField'];
-
-        if ($languageField === '' || $transOrigPointerField === '') {
-            return $records;
-        }
-
-        $defaultRecords = [];
-        $freeTranslations = [];
-
-        foreach ($records as $record) {
-            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
-            $langUidRaw = $rawRecord[$languageField] ?? 0;
-            $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
-            $parentPointerRaw = $rawRecord[$transOrigPointerField] ?? 0;
-            $parentPointer = is_numeric($parentPointerRaw) ? (int) $parentPointerRaw : 0;
-
-            if ($langUid === 0 || $langUid === -1) {
-                $record['translations'] = [];
-                $record['isFreeTranslation'] = false;
-                $defaultRecords[] = $record;
-            } elseif ($parentPointer === 0) {
-                $record['isFreeTranslation'] = true;
-                $record['translations'] = [];
-                $freeTranslations[] = $record;
-            }
-        }
-
-        $parentUids = array_map(
-            static function (array $r): int {
-                $uidRaw = $r['uid'] ?? 0;
-                return is_numeric($uidRaw) ? (int) $uidRaw : 0;
-            },
-            $defaultRecords,
-        );
-        $parentUids = array_values(array_filter($parentUids, static fn(int $uid): bool => $uid > 0));
-
-        $translatedByParent = [];
-        if ($parentUids !== []) {
-            $translationsGrouped = $dataProvider->getTranslationsForRecords($tableName, $pageId, $parentUids);
-            $translatedByParent = $this->enrichTranslationsWithLanguage($translationsGrouped, $tableName, $languageField);
-        }
-
-        $translationLanguages = $this->getTranslationLanguages($tableName);
-
-        foreach ($defaultRecords as &$record) {
-            $uidRaw = $record['uid'] ?? 0;
-            $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
-            $translated = $translatedByParent[$uid] ?? [];
-            $record['translations'] = $this->buildTranslationSlots(
-                $tableName,
-                $uid,
-                $translated,
-                $translationLanguages,
-            );
-            $record['translatedCount'] = count(array_filter(
-                $record['translations'],
-                static fn(array $slot): bool => ($slot['state'] ?? '') === 'translated',
-            ));
-            $record['untranslatedCount'] = count($record['translations']) - $record['translatedCount'];
-        }
-        unset($record);
-
-        return array_merge($defaultRecords, $freeTranslations);
-    }
-
-    /**
-     * Enrich the grouped translation records with per-language metadata
-     * (flag identifier, language title, edit URLs, permissions) and index
-     * them by language ID within each parent bucket.
-     *
-     * @param array<int, array<int, array<string, mixed>>> $translationsGrouped
-     * @return array<int, array<int, array<string, mixed>>> Parent UID => language UID => translation
-     */
-    private function enrichTranslationsWithLanguage(
-        array $translationsGrouped,
-        string $tableName,
-        string $languageField,
-    ): array {
-        $backendUser = $this->getBackendUserAuthentication();
-        $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
-        $enriched = [];
-
-        foreach ($translationsGrouped as $parentUid => $translations) {
-            $perLang = [];
-            foreach ($translations as $translation) {
-                $rawRecord = is_array($translation['rawRecord'] ?? null) ? $translation['rawRecord'] : [];
-                $langUidRaw = $rawRecord[$languageField] ?? 0;
-                $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
-
-                $translation['sysLanguageUid'] = $langUid;
-                $translation['languageFlagIdentifier'] = '';
-                $translation['languageTitle'] = '';
-
-                foreach ($siteLanguages as $siteLanguage) {
-                    if ($siteLanguage->getLanguageId() === $langUid) {
-                        $translation['languageFlagIdentifier'] = $siteLanguage->getFlagIdentifier();
-                        $translation['languageTitle'] = $siteLanguage->getTitle();
-                        break;
-                    }
-                }
-
-                $translation = $this->enrichRecordWithEditUrls($translation);
-                $translation['title'] = BackendUtility::getRecordTitle($tableName, $rawRecord, false, true);
-                $translation['permissions'] = $this->computeRecordPermissions($tableName, ArrayUtility::stringKeyArray($rawRecord));
-                $perLang[$langUid] = $translation;
-            }
-            $enriched[(int) $parentUid] = $perLang;
-        }
-
-        return $enriched;
-    }
-
-    /**
-     * Return the non-default site languages that translations can target for
-     * the given table, ordered by language ID. Filtered by the docheader
-     * language selector (`PageContext::selectedLanguageIds`) so unchecking a
-     * language hides both its existing translation rows and its
-     * "translate to" placeholder — matching the classic list view.
-     *
-     * @return array<int, array{id:int, title:string, flagIdentifier:string}>
-     */
-    private function getTranslationLanguages(string $tableName): array
-    {
-        $backendUser = $this->getBackendUserAuthentication();
-        $siteLanguages = $this->pageContext->site->getAvailableLanguages(
-            $backendUser,
-            false,
-            $this->pageContext->pageId,
-        );
-        $selectedLanguageIds = $this->pageContext->selectedLanguageIds;
-
-        $languages = [];
-        foreach ($siteLanguages as $siteLanguage) {
-            $languageId = $siteLanguage->getLanguageId();
-            if ($languageId <= 0) {
-                continue;
-            }
-            if (!$backendUser->checkLanguageAccess($languageId)) {
-                continue;
-            }
-            if ($selectedLanguageIds !== [] && !in_array($languageId, $selectedLanguageIds, true)) {
-                continue;
-            }
-            $languages[$languageId] = [
-                'id' => $languageId,
-                'title' => $siteLanguage->getTitle(),
-                'flagIdentifier' => $siteLanguage->getFlagIdentifier(),
-            ];
-        }
-
-        ksort($languages);
-        return $languages;
-    }
-
-    /**
-     * Build the ordered translation-slot list for a single default-language
-     * record. Each slot is either a real translation record or an
-     * `untranslated` placeholder that the templates render as a localize-to
-     * button (matching TYPO3 core's DatabaseRecordList behavior).
-     *
-     * @param array<int, array<string, mixed>> $translationsByLanguage
-     *        Existing translations indexed by their `sys_language_uid`.
-     * @param array<int, array{id:int, title:string, flagIdentifier:string}> $languages
-     * @return array<int, array<string, mixed>>
-     */
-    private function buildTranslationSlots(
-        string $tableName,
-        int $parentUid,
-        array $translationsByLanguage,
-        array $languages,
-    ): array {
-        $slots = [];
-        foreach ($languages as $language) {
-            $languageId = $language['id'];
-            if (isset($translationsByLanguage[$languageId])) {
-                $translation = $translationsByLanguage[$languageId];
-                $translation['state'] = 'translated';
-                $translation['languageId'] = $languageId;
-                // Keep the pre-existing flag/title fields but fall back to
-                // the resolved language metadata when they were empty.
-                if (($translation['languageFlagIdentifier'] ?? '') === '') {
-                    $translation['languageFlagIdentifier'] = $language['flagIdentifier'];
-                }
-                if (($translation['languageTitle'] ?? '') === '') {
-                    $translation['languageTitle'] = $language['title'];
-                }
-                $slots[] = $translation;
-                continue;
-            }
-
-            $slots[] = [
-                'state' => 'untranslated',
-                'languageId' => $languageId,
-                'languageTitle' => $language['title'],
-                'languageFlagIdentifier' => $language['flagIdentifier'],
-                'parentTable' => $tableName,
-                'parentUid' => $parentUid,
-                'permissions' => [
-                    'canEdit' => false,
-                    'canDelete' => false,
-                    'canToggleVisibility' => false,
-                    'canLocalize' => $this->getBackendUserAuthentication()->checkLanguageAccess($languageId)
-                        && $this->getBackendUserAuthentication()->check('tables_modify', $tableName),
-                ],
-            ];
-        }
-
-        return $slots;
-    }
 
     /**
      * Get the number of items per page for a view mode.
@@ -3060,26 +2090,6 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Get TCA configuration for a table with proper type assertions.
-     *
-     * @return array{ctrl: array<string, mixed>, columns: array<string, array<string, mixed>>}
-     */
-    private function getTcaForTable(string $tableName): array
-    {
-        /** @var array<string, mixed> $allTca */
-        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
-        $tca = $allTca[$tableName] ?? [];
-        if (!is_array($tca)) {
-            return ['ctrl' => [], 'columns' => []];
-        }
-        /** @var array<string, mixed> $ctrl */
-        $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
-        /** @var array<string, array<string, mixed>> $columns */
-        $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
-        return ['ctrl' => $ctrl, 'columns' => $columns];
-    }
-
-    /**
      * Translate a label key with a fallback value.
      * Avoids short ternary operator (?:) that PHPStan disallows.
      */
@@ -3153,15 +2163,21 @@ final class RecordListController extends CoreRecordListController
 
         $columnsConfig = $registry->getDisplayColumnsConfig($viewMode, $pageId);
         $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
+        $columnResolver = $this->getDisplayColumnResolver();
         if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
-            $displayColumns = $this->getDisplayColumns($tableName);
+            $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->getModuleTsConfigForColumns());
         } elseif ($columnsArray !== []) {
-            $displayColumns = $this->getSpecificDisplayColumns($tableName, $columnsArray);
+            $displayColumns = $columnResolver->getSpecificDisplayColumns($tableName, $columnsArray);
         } else {
-            $displayColumns = $this->getTeaserDisplayColumns($tableName);
+            $displayColumns = $columnResolver->getTeaserDisplayColumns($tableName);
         }
 
-        $enrichedRecords = $this->enrichRecordsForAlternativeViews($records, $displayColumns, $tableName);
+        $enrichedRecords = $this->getViewEnrichmentService()->enrichForAlternativeViews(
+            $records,
+            $displayColumns,
+            $tableName,
+            $this->createViewEnrichmentContext(),
+        );
 
         // Translated pages are themselves translation records; they don't
         // carry further translation slots, so mark every row as a regular
