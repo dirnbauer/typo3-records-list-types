@@ -113,7 +113,7 @@
                                      data-index="{iterator.index}"
                                      {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}
                                      data-uid="{record.uid}">
-                                    <f:render partial="Card" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, canReorder: table.canReorder, multiSelectEnabled: table.multiSelectEnabled, workspace: record.workspace}" />
+                                    <f:render partial="Card" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, canReorder: table.canReorder, multiSelectEnabled: table.multiSelectEnabled}" />
                                 </div>
                             </f:for>
                             <f:comment>End dropzone - visible during drag to allow dropping after last item</f:comment>

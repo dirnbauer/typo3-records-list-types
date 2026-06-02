@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Controller;
 
-use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Exception;
 use JsonException;
@@ -72,12 +71,6 @@ final class RecordListController extends CoreRecordListController
     private ?RecordListRequestParameterService $requestParameterService = null;
 
     private ?RecordDisplayValueFormatter $displayValueFormatter = null;
-
-    /** @var array<int, array<string, mixed>> */
-    private array $workspaceRows = [];
-
-    /** @var array<int, array{id: int, label: string, title: string, description: string, isLive: bool}> */
-    private array $workspaceBadges = [];
 
     /** Whether the clipboard is enabled for this request. */
     private bool $clipboardEnabled = false;
@@ -499,7 +492,6 @@ final class RecordListController extends CoreRecordListController
         $requestParams = ArrayUtility::mergedRequestParameters($request);
         $sortParams = (array) ($requestParams['sort'] ?? []);
         $sortingModeParams = (array) ($requestParams['sortingMode'] ?? []);
-        $workspaceBadge = $this->buildWorkspaceBadgeData();
 
         // Middleware diagnostics (only GridView template shows this)
         $middlewareWarning = null;
@@ -697,11 +689,7 @@ final class RecordListController extends CoreRecordListController
                 $displayColumns = $this->getTeaserDisplayColumns($tableName);
             }
 
-            // Enrich records
-            $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
-            $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
-            $enrichedRecords = $this->enrichRecordsWithPermissions($enrichedRecords, $tableName);
-            $enrichedRecords = $this->enrichRecordsWithWorkspaceBadges($enrichedRecords, $tableName);
+            $enrichedRecords = $this->enrichRecordsForAlternativeViews($records, $displayColumns, $tableName);
 
             // Separate connected translations from default-language / free-mode records
             $enrichedRecords = $this->groupTranslationsOnRecords($enrichedRecords, $tableName, $pageId, $recordGridDataProvider);
@@ -811,10 +799,9 @@ final class RecordListController extends CoreRecordListController
                 'tableLabel' => $this->getTableLabel($tableName),
                 'tableIcon' => $this->getTableIcon($tableName),
                 'tableConfig' => $tableConfig,
-                'workspace' => $workspaceBadge,
                 'filters' => $filterViewData,
                 'records' => $enrichedRecords,
-                'hasThumbnails' => $this->recordsContainThumbnails($enrichedRecords),
+                'hasThumbnails' => $recordGridDataProvider->recordsContainThumbnails($enrichedRecords),
                 'recordCount' => $recordCount,
                 'hasMore' => $hasMore,
                 'hasActiveFilters' => $hasActiveFilters,
@@ -1261,233 +1248,6 @@ final class RecordListController extends CoreRecordListController
         $workspaceId = GeneralUtility::makeInstance(Context::class)
             ->getPropertyFromAspect('workspace', 'id', 0);
         return is_numeric($workspaceId) ? (int) $workspaceId : 0;
-    }
-
-    /**
-     * @return array{id: int, label: string, title: string, description: string, isLive: bool}
-     */
-    private function buildWorkspaceBadgeData(?int $workspaceId = null): array
-    {
-        $workspaceId ??= $this->getCurrentWorkspaceId();
-        if (isset($this->workspaceBadges[$workspaceId])) {
-            return $this->workspaceBadges[$workspaceId];
-        }
-
-        $isLive = $workspaceId === 0;
-        $label = $isLive
-            ? $this->translate(
-                $this->getLanguageService(),
-                'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:workspace.live',
-                'Live',
-            )
-            : sprintf(
-                $this->translate(
-                    $this->getLanguageService(),
-                    'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:workspace.fallback',
-                    'Workspace %d',
-                ),
-                $workspaceId,
-            );
-        $description = '';
-
-        if (!$isLive) {
-            $workspaceRow = $this->getWorkspaceRow($workspaceId);
-            $title = trim(ArrayUtility::stringValue($workspaceRow['title'] ?? null));
-            if ($title !== '') {
-                $label = $title;
-            }
-            $description = trim(ArrayUtility::stringValue($workspaceRow['description'] ?? null));
-        }
-
-        $titlePrefix = $this->translate(
-            $this->getLanguageService(),
-            'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:workspace.badgeTitle',
-            'Workspace',
-        );
-
-        $badge = [
-            'id' => $workspaceId,
-            'label' => $label,
-            'title' => $description !== '' ? $description : $titlePrefix . ': ' . $label,
-            'description' => $description,
-            'isLive' => $isLive,
-        ];
-
-        $this->workspaceBadges[$workspaceId] = $badge;
-        return $badge;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function getWorkspaceRow(int $workspaceId): array
-    {
-        if (isset($this->workspaceRows[$workspaceId])) {
-            return $this->workspaceRows[$workspaceId];
-        }
-
-        try {
-            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-                ->getQueryBuilderForTable('sys_workspace');
-            $row = $queryBuilder
-                ->select('*')
-                ->from('sys_workspace')
-                ->where(
-                    $queryBuilder->expr()->eq(
-                        'uid',
-                        $queryBuilder->createNamedParameter($workspaceId, ParameterType::INTEGER),
-                    ),
-                )
-                ->executeQuery()
-                ->fetchAssociative();
-        } catch (Exception) {
-            return [];
-        }
-
-        $workspaceRow = is_array($row) ? ArrayUtility::stringKeyArray($row) : [];
-        $this->workspaceRows[$workspaceId] = $workspaceRow;
-        return $workspaceRow;
-    }
-
-    /**
-     * Add a record-specific workspace badge.
-     *
-     * A workspace-versioned row gets the name of its own workspace. A live row
-     * gets the name of the newest non-live workspace that has a version for
-     * this record. If no non-live version exists, it stays assigned to Live.
-     *
-     * @param array<int, array<string, mixed>> $records
-     * @return array<int, array<string, mixed>>
-     */
-    private function enrichRecordsWithWorkspaceBadges(array $records, string $tableName): array
-    {
-        $latestWorkspaceIds = $this->getLatestWorkspaceChangeIdsByLiveUid($tableName, $records);
-
-        foreach ($records as &$record) {
-            /** @var array<string, mixed> $rawRecord */
-            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
-            $rowWorkspaceId = $this->getWorkspaceIdFromRow($rawRecord);
-            $liveUid = $this->getLiveUidFromRow($rawRecord);
-            $workspaceId = $rowWorkspaceId > 0
-                ? $rowWorkspaceId
-                : ($latestWorkspaceIds[$liveUid] ?? 0);
-
-            $record['workspace'] = $this->buildWorkspaceBadgeData($workspaceId);
-        }
-        unset($record);
-
-        return $records;
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $records
-     * @return array<int, int> live uid => latest workspace id
-     */
-    private function getLatestWorkspaceChangeIdsByLiveUid(string $tableName, array $records): array
-    {
-        if (!$this->isWorkspaceAwareTable($tableName)) {
-            return [];
-        }
-
-        $liveUids = [];
-        foreach ($records as $record) {
-            /** @var array<string, mixed> $rawRecord */
-            $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
-            if ($this->getWorkspaceIdFromRow($rawRecord) > 0) {
-                continue;
-            }
-            $liveUid = $this->getLiveUidFromRow($rawRecord);
-            if ($liveUid > 0) {
-                $liveUids[$liveUid] = $liveUid;
-            }
-        }
-
-        if ($liveUids === []) {
-            return [];
-        }
-
-        $tcaCtrl = $this->getTcaForTable($tableName)['ctrl'];
-        $tstampField = is_string($tcaCtrl['tstamp'] ?? null) ? $tcaCtrl['tstamp'] : '';
-        $selectFields = ['uid', 't3ver_oid', 't3ver_wsid'];
-        if ($tstampField !== '') {
-            $selectFields[] = $tstampField;
-        }
-
-        try {
-            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-                ->getQueryBuilderForTable($tableName);
-            $queryBuilder->getRestrictions()
-                ->removeAll()
-                ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
-
-            $queryBuilder
-                ->select(...$selectFields)
-                ->from($tableName)
-                ->where(
-                    $queryBuilder->expr()->gt(
-                        't3ver_wsid',
-                        $queryBuilder->createNamedParameter(0, ParameterType::INTEGER),
-                    ),
-                    $queryBuilder->expr()->in(
-                        't3ver_oid',
-                        $queryBuilder->createNamedParameter(array_values($liveUids), ArrayParameterType::INTEGER),
-                    ),
-                );
-
-            if ($tstampField !== '') {
-                $queryBuilder->orderBy($tstampField, 'DESC');
-                $queryBuilder->addOrderBy('uid', 'DESC');
-            } else {
-                $queryBuilder->orderBy('uid', 'DESC');
-            }
-
-            $rows = $queryBuilder->executeQuery()->fetchAllAssociative();
-        } catch (Exception) {
-            return [];
-        }
-
-        $workspaceIds = [];
-        foreach ($rows as $row) {
-            $liveUidRaw = $row['t3ver_oid'] ?? 0;
-            $workspaceIdRaw = $row['t3ver_wsid'] ?? 0;
-            $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
-            $workspaceId = is_numeric($workspaceIdRaw) ? (int) $workspaceIdRaw : 0;
-            if ($liveUid > 0 && $workspaceId > 0 && !isset($workspaceIds[$liveUid])) {
-                $workspaceIds[$liveUid] = $workspaceId;
-            }
-        }
-
-        return $workspaceIds;
-    }
-
-    private function isWorkspaceAwareTable(string $tableName): bool
-    {
-        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
-        return $schemaFactory->has($tableName) && $schemaFactory->get($tableName)->isWorkspaceAware();
-    }
-
-    /**
-     * @param array<string, mixed> $row
-     */
-    private function getWorkspaceIdFromRow(array $row): int
-    {
-        $workspaceIdRaw = $row['t3ver_wsid'] ?? 0;
-        return is_numeric($workspaceIdRaw) ? (int) $workspaceIdRaw : 0;
-    }
-
-    /**
-     * @param array<string, mixed> $row
-     */
-    private function getLiveUidFromRow(array $row): int
-    {
-        $workspaceOriginalUidRaw = $row['t3ver_oid'] ?? 0;
-        $workspaceOriginalUid = is_numeric($workspaceOriginalUidRaw) ? (int) $workspaceOriginalUidRaw : 0;
-        if ($workspaceOriginalUid > 0) {
-            return $workspaceOriginalUid;
-        }
-
-        $uidRaw = $row['uid'] ?? 0;
-        return is_numeric($uidRaw) ? (int) $uidRaw : 0;
     }
 
     /**
@@ -2507,16 +2267,24 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * Enrich base grid records for compact/grid/teaser rendering.
+     *
+     * @param array<int, array<string, mixed>> $records
+     * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
+     * @return array<int, array<string, mixed>>
+     */
+    private function enrichRecordsForAlternativeViews(array $records, array $displayColumns, string $tableName): array
+    {
+        $records = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
+        $records = $this->enrichRecordsWithLanguageInfo($records, $tableName);
+        return $this->enrichRecordsWithPermissions($records, $tableName);
+    }
+
+    /**
      * Enrich records with formatted display values for all columns.
      *
      * This pre-formats values in PHP so Fluid doesn't need dynamic variable access.
      *
-     * @param array $records The records to enrich
-     * @param array $displayColumns The columns to display
-     * @param string $tableName The table name
-     * @return array Enriched records with 'displayValues' array
-     */
-    /**
      * @param array<int, array<string, mixed>> $records
      * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
      * @return array<int, array<string, mixed>>
@@ -2569,21 +2337,6 @@ final class RecordListController extends CoreRecordListController
         }
 
         return $records;
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $records
-     */
-    private function recordsContainThumbnails(array $records): bool
-    {
-        foreach ($records as $record) {
-            $thumbnailUrl = $record['thumbnailUrl'] ?? null;
-            if (is_string($thumbnailUrl) && $thumbnailUrl !== '') {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -3408,10 +3161,7 @@ final class RecordListController extends CoreRecordListController
             $displayColumns = $this->getTeaserDisplayColumns($tableName);
         }
 
-        $enrichedRecords = $this->enrichRecordsWithDisplayValues($records, $displayColumns, $tableName);
-        $enrichedRecords = $this->enrichRecordsWithLanguageInfo($enrichedRecords, $tableName);
-        $enrichedRecords = $this->enrichRecordsWithPermissions($enrichedRecords, $tableName);
-        $enrichedRecords = $this->enrichRecordsWithWorkspaceBadges($enrichedRecords, $tableName);
+        $enrichedRecords = $this->enrichRecordsForAlternativeViews($records, $displayColumns, $tableName);
 
         // Translated pages are themselves translation records; they don't
         // carry further translation slots, so mark every row as a regular
@@ -3442,13 +3192,12 @@ final class RecordListController extends CoreRecordListController
             'tableLabel' => $headingLabel,
             'tableIcon' => $this->getTableIcon($tableName),
             'tableConfig' => $tableConfig,
-            'workspace' => $this->buildWorkspaceBadgeData(),
             'filters' => [
                 'visible' => false,
                 'items' => [],
             ],
             'records' => $enrichedRecords,
-            'hasThumbnails' => $this->recordsContainThumbnails($enrichedRecords),
+            'hasThumbnails' => $recordGridDataProvider->recordsContainThumbnails($enrichedRecords),
             'recordCount' => $recordCount,
             'hasMore' => false,
             'hasActiveFilters' => false,
