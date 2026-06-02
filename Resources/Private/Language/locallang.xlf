@@ -149,15 +149,6 @@
             <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
                 <source>All elements translated</source>
             </trans-unit>
-            <trans-unit id="workspace.live" resname="workspace.live">
-                <source>Live</source>
-            </trans-unit>
-            <trans-unit id="workspace.fallback" resname="workspace.fallback">
-                <source>Workspace %d</source>
-            </trans-unit>
-            <trans-unit id="workspace.badgeTitle" resname="workspace.badgeTitle">
-                <source>Workspace</source>
-            </trans-unit>
             <trans-unit id="workspace.state.title" resname="workspace.state.title">
                 <source>Workspace state</source>
             </trans-unit>

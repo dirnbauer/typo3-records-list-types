@@ -183,18 +183,6 @@
                 <source>All elements translated</source>
                 <target>Alle Elemente übersetzt</target>
             </trans-unit>
-            <trans-unit id="workspace.live" resname="workspace.live">
-                <source>Live</source>
-                <target>Live</target>
-            </trans-unit>
-            <trans-unit id="workspace.fallback" resname="workspace.fallback">
-                <source>Workspace %d</source>
-                <target>Arbeitsumgebung %d</target>
-            </trans-unit>
-            <trans-unit id="workspace.badgeTitle" resname="workspace.badgeTitle">
-                <source>Workspace</source>
-                <target>Arbeitsumgebung</target>
-            </trans-unit>
             <trans-unit id="workspace.state.title" resname="workspace.state.title">
                 <source>Workspace state</source>
                 <target>Workspace-Status</target>
