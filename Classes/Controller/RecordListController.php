@@ -6,7 +6,10 @@ namespace Webconsulting\RecordsListTypes\Controller;
 
 use Doctrine\DBAL\ParameterType;
 use Exception;
+use JsonException;
 use Override;
+use ReflectionException;
+use ReflectionMethod;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
@@ -16,13 +19,17 @@ use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListControlle
 use TYPO3\CMS\Backend\Module\ModuleData;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
+use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
+use TYPO3\CMS\Core\Imaging\IconFactory;
+use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
+use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Pagination\SlidingWindowPagination;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -909,6 +916,1041 @@ final class RecordListController extends CoreRecordListController
     {
         return $this->getTcaConfigurationService()->getTcaForTable($tableName);
     }
+
+    /**
+     * Get tables that should be rendered, considering search.
+     *
+     * When searching, checks which tables have matching records.
+     * When not searching, returns tables with records on the current page.
+     *
+     * @param int $pageId The current page ID
+     * @param string $specificTable If set, only this table is returned
+     * @param string $searchTerm The search term
+     * @param int $searchLevels The search depth level
+     * @param ServerRequestInterface $request The current request
+     * @return array<int, string> List of table names
+     */
+    private function getSearchableTables(
+        int $pageId,
+        string $specificTable,
+        string $searchTerm,
+        int $searchLevels,
+        ServerRequestInterface $request,
+    ): array {
+        // If a specific table is selected, only return that
+        if ($specificTable !== '') {
+            return [$specificTable];
+        }
+
+        $tables = [];
+        $backendUser = $this->getBackendUserAuthentication();
+
+        // Get hidden tables from TSconfig
+        $hideTables = ArrayUtility::commaSeparatedList($this->modTSconfig['hideTables'] ?? null);
+
+        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
+        foreach ($allTca as $tableName => $tca) {
+            if (!is_string($tableName)) {
+                continue;
+            }
+            if (!is_array($tca)) {
+                continue;
+            }
+            // Skip hidden tables
+            $ctrlArr = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
+            if (isset($ctrlArr['hideTable']) && (bool) $ctrlArr['hideTable']) {
+                continue;
+            }
+
+            // Skip tables hidden by TSconfig
+            if (in_array($tableName, $hideTables, true)) {
+                continue;
+            }
+
+            // Check user permissions
+            if (!$backendUser->check('tables_select', $tableName)) {
+                continue;
+            }
+
+            // When searching, check if this table has matching records
+            if ($searchTerm !== '') {
+                try {
+                    if ($this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request) > 0) {
+                        $tables[] = $tableName;
+                    }
+                } catch (Exception) {
+                    // Table might not be accessible, skip it
+                    continue;
+                }
+            } else {
+                // No search - check if table has records on this page
+                $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
+                if ($count > 0) {
+                    $tables[] = $tableName;
+                }
+            }
+        }
+
+        return $tables;
+    }
+
+    /**
+     * Create a properly initialized DatabaseRecordList for a specific table.
+     *
+     * This ensures the DatabaseRecordList has the correct internal state for
+     * search queries, including searchString, searchLevels, and page context.
+     *
+     * @param string $tableName The table to initialize for
+     * @param int $pageId The current page ID
+     * @param string $searchTerm The search term
+     * @param int $searchLevels The search depth level
+     * @param ServerRequestInterface $request The current request
+     * @return DatabaseRecordList The initialized DatabaseRecordList
+     */
+    private function createDatabaseRecordListForTable(
+        string $tableName,
+        int $pageId,
+        string $searchTerm,
+        int $searchLevels,
+        ServerRequestInterface $request,
+    ): DatabaseRecordList {
+        $backendUser = $this->getBackendUserAuthentication();
+        $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
+        $dbList->setRequest($request);
+        if (!$this->moduleData instanceof ModuleData) {
+            $this->moduleData = null;
+        }
+        if ($this->moduleData instanceof ModuleData) {
+            $dbList->setModuleData($this->moduleData);
+        }
+        $dbList->calcPerms = $this->pageContext->pagePermissions;
+        $dbList->returnUrl = $this->returnUrl;
+        $dbList->showClipboardActions = true;
+        $dbList->disableSingleTableView = (bool) ($this->modTSconfig['disableSingleTableView'] ?? false);
+        $dbList->listOnlyInSingleTableMode = (bool) ($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
+        $dbList->hideTables = ArrayUtility::stringValue($this->modTSconfig['hideTables'] ?? null);
+        $dbList->hideTranslations = ArrayUtility::stringValue($this->modTSconfig['hideTranslations'] ?? null);
+        $dbList->tableTSconfigOverTCA = $this->getTableTsConfigOverTca();
+        $dbList->allowedNewTables = ArrayUtility::commaSeparatedList($this->modTSconfig['allowedNewTables'] ?? null);
+        $dbList->deniedNewTables = ArrayUtility::commaSeparatedList($this->modTSconfig['deniedNewTables'] ?? null);
+        /** @var array<string> $pageRecord */
+        $pageRecord = $this->pageContext->pageRecord ?? [];
+        $dbList->pageRow = $pageRecord;
+        $dbList->modTSconfig = $this->getNestedModTsConfig();
+        $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
+        $dbList->setLanguagesAllowedForUser($siteLanguages);
+        $clickTitleMode = trim(ArrayUtility::stringValue($this->modTSconfig['clickTitleMode'] ?? null));
+        $dbList->clickTitleMode = $clickTitleMode === '' ? 'edit' : $clickTitleMode;
+        $tableDisplayOrder = $this->modTSconfig['tableDisplayOrder'] ?? null;
+        if (is_array($tableDisplayOrder)) {
+            $dbList->setTableDisplayOrder($tableDisplayOrder);
+        }
+        $clipboardEnabled = $this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('clipBoard');
+        $dbList->clipObj = $this->initializeClipboard($request, $clipboardEnabled);
+        $dbList->start($pageId, $tableName, 0, $searchTerm, $searchLevels);
+        return $dbList;
+    }
+
+    /**
+     * Get records using DatabaseRecordList's query builder.
+     *
+     * This leverages TYPO3's native search functionality including searchLevels
+     * and workspace handling. Uses the same API as the core list view.
+     *
+     * @param ServerRequestInterface $request The current request
+     * @param string $tableName The table to query
+     * @param int $pageId The current page ID
+     * @param string $searchTerm The search term
+     * @param int $searchLevels The search depth level
+     * @param int $limit Maximum number of records to fetch (0 = no limit)
+     * @param int $offset Number of records to skip (for pagination)
+     * @return array<int, array<string, mixed>> Array of enriched record data
+     */
+    private function getRecordsUsingDbList(
+        ServerRequestInterface $request,
+        string $tableName,
+        int $pageId,
+        string $searchTerm,
+        int $searchLevels,
+        int $limit = 100,
+        int $offset = 0,
+        string $sortField = '',
+        string $sortDirection = 'asc',
+        ?RecordGridDataProvider $recordGridDataProvider = null,
+        ?RecordFilterQueryService $recordFilterQueryService = null,
+    ): array {
+        $records = [];
+        $recordsByIdentity = [];
+        $workspaceId = $this->getCurrentWorkspaceId();
+        $useWorkspaceReduction = $workspaceId > 0;
+        $recordGridDataProvider ??= GeneralUtility::makeInstance(RecordGridDataProvider::class);
+        $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
+        $deferWorkspaceEvaluation = $recordFilterQueryService->shouldDeferWorkspaceEvaluation($tableName, $pageId, $request, $searchTerm);
+        $querySearchTerm = $deferWorkspaceEvaluation ? '' : $searchTerm;
+
+        try {
+            // Create a properly initialized DatabaseRecordList for this table
+            $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $querySearchTerm, $searchLevels, $request);
+            $dbList->sortField = $sortField;
+            $dbList->sortRev = strtolower($sortDirection) === 'desc';
+
+            // Use DatabaseRecordList's query builder which handles search properly
+            // This is the same API the core list view uses
+            $queryBuilder = $dbList->getQueryBuilder(
+                $tableName,
+                ['*'],
+                true,
+                $deferWorkspaceEvaluation ? 0 : $offset,
+                $deferWorkspaceEvaluation ? 0 : $limit,
+            );
+            $recordFilterQueryService->applyActiveFilters($queryBuilder, $tableName, $pageId, $request, $deferWorkspaceEvaluation);
+            $result = $queryBuilder->executeQuery();
+
+            while ($row = $result->fetchAssociative()) {
+                // Apply workspace overlay to get the correct version for the
+                // current workspace. The -99 placeholder tells workspaceOL()
+                // to read the active workspace id itself.
+                BackendUtility::workspaceOL($tableName, $row, -99, true);
+
+                // workspaceOL returns false/null if record is deleted in workspace or should not be shown
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $typedRow = ArrayUtility::stringKeyArray($row);
+                if ($deferWorkspaceEvaluation && !$recordFilterQueryService->matchesDeferredWorkspaceEvaluation($tableName, $pageId, $request, $typedRow, $searchTerm)) {
+                    continue;
+                }
+
+                $uid = ArrayUtility::intValue($typedRow['uid'] ?? null);
+                $recordData = $recordGridDataProvider->buildRecordDataFromRow($tableName, $typedRow, $pageId);
+
+                if ($useWorkspaceReduction) {
+                    // In workspaces the DB query can still yield both a live row and a
+                    // versioned/moved row that overlay to the same effective record.
+                    // Reduce them by their live identity so custom views mirror the
+                    // native list's single effective row per record.
+                    $identity = $this->getRecordSortingService()->getWorkspaceRecordIdentity($typedRow, $uid);
+                    $recordsByIdentity[$identity] = $recordData;
+                } else {
+                    $records[] = $recordData;
+                }
+            }
+        } catch (Exception) {
+            // Log error but don't fail - return empty results
+            // This can happen if the table doesn't exist or user lacks permissions
+        }
+
+        if ($useWorkspaceReduction) {
+            $records = array_values($recordsByIdentity);
+            if ($sortField !== '') {
+                $this->getRecordSortingService()->sortRecordsByRawField($records, $sortField, $sortDirection);
+            }
+            if ($deferWorkspaceEvaluation && $limit > 0) {
+                $records = array_slice($records, $offset, $limit);
+            }
+            return $records;
+        }
+
+        return $records;
+    }
+
+    /**
+     * Resolve the current workspace id via the Context aspect — the canonical
+     * TYPO3 v14 API. Falls back to 0 (LIVE) when the aspect is missing.
+     */
+    private function getCurrentWorkspaceId(): int
+    {
+        $workspaceId = GeneralUtility::makeInstance(Context::class)
+            ->getPropertyFromAspect('workspace', 'id', 0);
+        return is_numeric($workspaceId) ? (int) $workspaceId : 0;
+    }
+
+    /**
+     * Get total count of search results for a table.
+     *
+     * Uses the same DatabaseRecordList query builder as getRecordsUsingDbList()
+     * to build a COUNT query with identical search/WHERE conditions.
+     *
+     * @param string $tableName The table to count records for
+     * @param int $pageId The current page ID
+     * @param string $searchTerm The search term
+     * @param int $searchLevels The search depth level
+     * @param ServerRequestInterface $request The current request
+     * @return int Total number of matching records
+     */
+    private function getSearchRecordCount(
+        string $tableName,
+        int $pageId,
+        string $searchTerm,
+        int $searchLevels,
+        ServerRequestInterface $request,
+        ?RecordFilterQueryService $recordFilterQueryService = null,
+    ): int {
+        return $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request, $recordFilterQueryService);
+    }
+
+    private function getRecordCountUsingDbList(
+        string $tableName,
+        int $pageId,
+        string $searchTerm,
+        int $searchLevels,
+        ServerRequestInterface $request,
+        ?RecordFilterQueryService $recordFilterQueryService = null,
+    ): int {
+        try {
+            $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
+            if ($recordFilterQueryService->shouldDeferWorkspaceEvaluation($tableName, $pageId, $request, $searchTerm)) {
+                return count($this->getRecordsUsingDbList(
+                    $request,
+                    $tableName,
+                    $pageId,
+                    $searchTerm,
+                    $searchLevels,
+                    0,
+                    0,
+                    '',
+                    'asc',
+                    GeneralUtility::makeInstance(RecordGridDataProvider::class),
+                    $recordFilterQueryService,
+                ));
+            }
+
+            $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
+            $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
+            $recordFilterQueryService->applyActiveFilters($qb, $tableName, $pageId, $request);
+            $count = $qb->count('*')->executeQuery()->fetchOne();
+            return is_numeric($count) ? (int) $count : 0;
+        } catch (Exception) {
+            return 0;
+        }
+    }
+
+    /**
+     * Render the multi-record-selection action buttons for a table.
+     *
+     * Generates the hidden action bar that appears when records are
+     * selected via checkboxes. Uses TYPO3's Multi Record Selection API.
+     *
+     * @param string $tableName The database table
+     * @param int $pageId The current page ID
+     * @param string $viewMode The current view mode
+     * @param ServerRequestInterface $request The current request
+     * @return string Rendered HTML for the action buttons row
+     */
+    /**
+     * @param list<int> $currentRecordUids Record UIDs currently shown in the table
+     * @param list<int> $currentRecordUids UIDs of currently rendered records
+     * @param list<string> $displayColumnFields Field names of the currently displayed columns
+     */
+    private function renderMultiRecordSelectionActions(
+        string $tableName,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+        array $currentRecordUids = [],
+        array $displayColumnFields = [],
+    ): string {
+        $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, '', 0, $request);
+        $buttons = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'renderMultiRecordSelectionActions',
+            [$tableName, $currentRecordUids],
+        );
+
+        if ($displayColumnFields === []) {
+            return $buttons;
+        }
+        $languageService = $this->getLanguageService();
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
+
+        $returnUrl = '';
+        try {
+            $returnUrlParams = array_replace(
+                ['id' => $pageId, 'displayMode' => $viewMode, 'table' => $tableName],
+                $this->getRequestParameterService()->getPreservedListParameters($request),
+            );
+            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $returnUrlParams);
+        } catch (Exception) {
+            $returnUrl = (string) $request->getUri();
+        }
+
+        // Edit columns action - only edit the currently displayed columns
+        $editColumnsConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
+            'idField' => 'uid',
+            'tableName' => $tableName,
+            'returnUrl' => $returnUrl,
+            'columnsOnly' => $displayColumnFields,
+        ], true);
+        $editColumnsButton = '<button type="button" class="btn btn-sm btn-default"'
+            . ' data-multi-record-selection-action="edit"'
+            . ' data-multi-record-selection-action-config="' . $editColumnsConfig . '">'
+            . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
+            . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns', 'Edit columns'))
+            . '</button>';
+
+        if ($buttons === '') {
+            return $editColumnsButton;
+        }
+
+        return $buttons . PHP_EOL . $editColumnsButton;
+    }
+
+    /**
+     * Build structured table-heading data for Fluid rendering.
+     *
+     * @return array{label: string, recordCount: int, linkUrl: string, iconIdentifier: string}
+     */
+    private function buildTableHeading(
+        string $tableName,
+        int $recordCount,
+        bool $isSingleTableMode,
+        string $singleTableUrl,
+        string $clearTableUrl,
+        bool $disableSingleTableView,
+    ): array {
+        $lang = $this->getLanguageService();
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+        if (!$schemaFactory->has($tableName)) {
+            return [
+                'label' => $tableName,
+                'recordCount' => $recordCount,
+                'linkUrl' => '',
+                'iconIdentifier' => '',
+            ];
+        }
+        $schema = $schemaFactory->get($tableName);
+        $resolvedTitle = $schema->getTitle($lang->sL(...));
+        $tableTitle = $resolvedTitle !== '' ? $resolvedTitle : $tableName;
+
+        if ($disableSingleTableView) {
+            return [
+                'label' => $tableTitle,
+                'recordCount' => $recordCount,
+                'linkUrl' => '',
+                'iconIdentifier' => '',
+            ];
+        }
+
+        return [
+            'label' => $tableTitle,
+            'recordCount' => $recordCount,
+            'linkUrl' => $isSingleTableMode ? $clearTableUrl : $singleTableUrl,
+            'iconIdentifier' => $isSingleTableMode ? 'actions-view-table-collapse' : 'actions-view-table-expand',
+        ];
+    }
+
+    /**
+     * Build structured data for the field-sorting dropdown.
+     *
+     * @param array<int, array{field: string, label: string}> $sortableFields
+     * @return array<string, mixed>|null
+     */
+    private function buildSortingDropdown(
+        string $tableName,
+        array $sortableFields,
+        string $currentSortField,
+        string $currentSortDirection,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+    ): ?array {
+        if ($sortableFields === []) {
+            return null;
+        }
+
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $lang = $this->getLanguageService();
+
+        $fieldModeLabelTranslated = $lang->sL('records_list_types.messages:sortingMode.field');
+        $fieldModeLabel = $fieldModeLabelTranslated !== '' ? $fieldModeLabelTranslated : 'By Column';
+        $ascLabelTranslated = $lang->sL('records_list_types.messages:sort.ascending');
+        $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
+        $descLabelTranslated = $lang->sL('records_list_types.messages:sort.descending');
+        $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
+
+        $currentFieldLabel = $fieldModeLabel;
+        foreach ($sortableFields as $field) {
+            if (($field['field'] ?? '') === $currentSortField) {
+                $currentFieldLabel = $field['label'] ?? $currentSortField;
+                break;
+            }
+        }
+
+        $requestParameters = $this->getRequestParameterService();
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
+
+        try {
+            $ascParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, $currentSortField !== '' ? $currentSortField : null, 'asc'),
+                $tableName,
+                'field',
+            );
+
+            $descParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, $currentSortField !== '' ? $currentSortField : null, 'desc'),
+                $tableName,
+                'field',
+            );
+
+            $items = [];
+            foreach ($sortableFields as $field) {
+                $fieldName = $field['field'] ?? '';
+                if ($fieldName === '') {
+                    continue;
+                }
+                $sortParams = $requestParameters->withSortingMode(
+                    $requestParameters->withSortParams($baseParams, $tableName, $fieldName, $currentSortDirection),
+                    $tableName,
+                    'field',
+                );
+                $items[] = [
+                    'field' => $fieldName,
+                    'label' => $field['label'] ?? $fieldName,
+                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $sortParams),
+                    'isActive' => $fieldName === $currentSortField,
+                ];
+            }
+
+            return [
+                'fieldModeLabel' => $fieldModeLabel,
+                'currentFieldLabel' => $currentFieldLabel,
+                'sortIconIdentifier' => $currentSortDirection === 'desc' ? 'actions-sort-amount-down' : 'actions-sort-amount-up',
+                'ascLabel' => $ascLabel,
+                'descLabel' => $descLabel,
+                'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
+                'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                'isAscActive' => $currentSortDirection === 'asc',
+                'isDescActive' => $currentSortDirection === 'desc',
+                'items' => $items,
+            ];
+        } catch (Exception) {
+            return null;
+        }
+    }
+
+    /**
+     * Build structured data for the manual/field sorting toggle.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function buildSortingModeToggle(
+        string $tableName,
+        string $currentMode,
+        string $currentDirection,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+    ): ?array {
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $lang = $this->getLanguageService();
+
+        $manualLabelT = $lang->sL('records_list_types.messages:sortingMode.manual');
+        $manualLabel = $manualLabelT !== '' ? $manualLabelT : 'Manual Sorting';
+        $fieldLabelT = $lang->sL('records_list_types.messages:sortingMode.field');
+        $fieldLabel = $fieldLabelT !== '' ? $fieldLabelT : 'Field Sorting';
+        $manualTitleT = $lang->sL('records_list_types.messages:sortingMode.manual.title');
+        $manualTitle = $manualTitleT !== '' ? $manualTitleT : 'Enable drag-and-drop reordering';
+        $fieldTitleT = $lang->sL('records_list_types.messages:sortingMode.field.title');
+        $fieldTitle = $fieldTitleT !== '' ? $fieldTitleT : 'Sort by selected field';
+        $ascLabelT = $lang->sL('records_list_types.messages:sort.ascending');
+        $ascLabel = $ascLabelT !== '' ? $ascLabelT : 'Ascending';
+        $descLabelT = $lang->sL('records_list_types.messages:sort.descending');
+        $descLabel = $descLabelT !== '' ? $descLabelT : 'Descending';
+        $headingLabelT = $lang->sL('records_list_types.messages:sortingMode.label');
+        $headingLabel = $headingLabelT !== '' ? $headingLabelT : 'Order';
+
+        $requestParameters = $this->getRequestParameterService();
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
+
+        try {
+            $manualParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, null, $currentDirection),
+                $tableName,
+                'manual',
+            );
+
+            $fieldParams = $requestParameters->withSortingMode($baseParams, $tableName, 'field');
+
+            $ascParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, null, 'asc'),
+                $tableName,
+                'manual',
+            );
+
+            $descParams = $requestParameters->withSortingMode(
+                $requestParameters->withSortParams($baseParams, $tableName, null, 'desc'),
+                $tableName,
+                'manual',
+            );
+
+            return [
+                'headingLabel' => $headingLabel,
+                'manual' => [
+                    'label' => $manualLabel,
+                    'title' => $manualTitle,
+                    'active' => $currentMode === 'manual',
+                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $manualParams),
+                    'stateLabel' => $currentDirection === 'desc' ? $descLabel : $ascLabel,
+                    'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
+                    'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                    'ascLabel' => $ascLabel,
+                    'descLabel' => $descLabel,
+                    'ascActive' => $currentDirection === 'asc',
+                    'descActive' => $currentDirection === 'desc',
+                ],
+                'field' => [
+                    'label' => $fieldLabel,
+                    'title' => $fieldTitle,
+                    'active' => $currentMode === 'field',
+                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $fieldParams),
+                ],
+            ];
+        } catch (Exception) {
+            return null;
+        }
+    }
+
+    /**
+     * Build structured data for one sortable compact-view column header.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildSortableColumnHeader(
+        string $tableName,
+        string $field,
+        string $label,
+        string $currentSortField,
+        string $currentSortDirection,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+        bool $isSingleTableMode = false,
+    ): array {
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $lang = $this->getLanguageService();
+
+        $requestParameters = $this->getRequestParameterService();
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
+
+        $isActiveField = ($currentSortField === $field);
+        $isAscActive = $isActiveField && $currentSortDirection !== 'desc';
+        $isDescActive = $isActiveField && $currentSortDirection === 'desc';
+        $ascLabelTranslated = $lang->sL('core.core:labels.sorting.asc');
+        $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
+        $descLabelTranslated = $lang->sL('core.core:labels.sorting.desc');
+        $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
+
+        // Native multi-edit for this column: offered only in single-table mode
+        // (mirrors core DatabaseRecordList::renderListTableFieldHeader) when
+        // the field is editable for the current user. Uses TYPO3's own JS
+        // hook — `.t3js-record-edit-multiple` — which walks to the enclosing
+        // `[data-table]` element and opens FormEngine for the selected UIDs.
+        $canMultiEdit = $isSingleTableMode
+            && $field !== 'uid'
+            && $this->isTableEditableForUser($tableName)
+            && $this->isFieldEditableForUser($tableName, $field);
+        $multiEditLabel = '';
+        $multiEditColumnsOnly = '';
+        $multiEditReturnUrl = '';
+        if ($canMultiEdit) {
+            $rawLabel = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editThisColumn');
+            $multiEditLabel = $rawLabel !== ''
+                ? sprintf($rawLabel, $label)
+                : sprintf('Edit "%s"', $label);
+            $multiEditColumnsOnly = json_encode([$field], JSON_THROW_ON_ERROR);
+            try {
+                $multiEditReturnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
+            } catch (Exception) {
+                $multiEditReturnUrl = '';
+            }
+        }
+
+        try {
+            $ascParams = $requestParameters->withColumnSortParams($baseParams, $tableName, $field, 'asc');
+            $descParams = $requestParameters->withColumnSortParams($baseParams, $tableName, $field, 'desc');
+
+            return [
+                'label' => $label,
+                'hasSortUrls' => true,
+                'isActiveField' => $isActiveField,
+                'iconIdentifier' => $isActiveField
+                    ? ($isDescActive ? 'actions-sort-amount-down' : 'actions-sort-amount-up')
+                    : 'empty-empty',
+                'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
+                'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                'ascLabel' => $ascLabel,
+                'descLabel' => $descLabel,
+                'isAscActive' => $isAscActive,
+                'isDescActive' => $isDescActive,
+                'canMultiEdit' => $canMultiEdit,
+                'multiEditLabel' => $multiEditLabel,
+                'multiEditColumnsOnly' => $multiEditColumnsOnly,
+                'multiEditReturnUrl' => $multiEditReturnUrl,
+            ];
+        } catch (Exception) {
+            return [
+                'label' => $label,
+                'hasSortUrls' => false,
+                'isActiveField' => false,
+                'iconIdentifier' => 'empty-empty',
+                'ascUrl' => '',
+                'descUrl' => '',
+                'ascLabel' => $ascLabel,
+                'descLabel' => $descLabel,
+                'isAscActive' => false,
+                'isDescActive' => false,
+                'canMultiEdit' => $canMultiEdit,
+                'multiEditLabel' => $multiEditLabel,
+                'multiEditColumnsOnly' => $multiEditColumnsOnly,
+                'multiEditReturnUrl' => $multiEditReturnUrl,
+            ];
+        }
+    }
+
+    /**
+     * Build the data payload for the native "Edit shown columns" bulk-edit
+     * button in the compact view thead. Returns null when not applicable
+     * (multi-table mode, read-only, missing permissions). When shown, the
+     * button uses TYPO3's `t3js-record-edit-multiple` JS hook — same code
+     * path the standard list view uses.
+     *
+     * @param array<int, array{field:string,label:string,type:string,isLabelField:bool}> $displayColumns
+     * @return array{label:string,columnsOnly:string,returnUrl:string}|null
+     */
+    private function buildBulkEditHeader(
+        string $tableName,
+        array $displayColumns,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+        bool $isSingleTableMode,
+    ): ?array {
+        if (!$isSingleTableMode) {
+            return null;
+        }
+        if (!$this->isTableEditableForUser($tableName)) {
+            return null;
+        }
+
+        $editableFields = [];
+        foreach ($displayColumns as $column) {
+            $field = $column['field'] ?? '';
+            if ($field === '' || $field === 'uid') {
+                continue;
+            }
+            if (!$this->isFieldEditableForUser($tableName, $field)) {
+                continue;
+            }
+            $editableFields[] = $field;
+        }
+        if ($editableFields === []) {
+            return null;
+        }
+
+        $lang = $this->getLanguageService();
+        $label = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editShownColumns');
+        if ($label === '') {
+            $label = 'Edit shown columns';
+        }
+
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+        $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
+        $baseParams = array_replace($baseParams, $this->getRequestParameterService()->getPreservedListParameters($request));
+
+        try {
+            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
+        } catch (Exception) {
+            $returnUrl = '';
+        }
+
+        try {
+            $columnsOnly = json_encode($editableFields, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
+
+        return [
+            'label' => $label,
+            'columnsOnly' => $columnsOnly,
+            'returnUrl' => $returnUrl,
+        ];
+    }
+
+    /**
+     * Table-level editability (tables_modify + schema not readOnly + workspace
+     * write allowed). Mirrors DatabaseRecordList::isEditable at table level.
+     */
+    private function isTableEditableForUser(string $tableName): bool
+    {
+        $be = $this->getBackendUserAuthentication();
+        if ($be->isAdmin()) {
+            return true;
+        }
+        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+        if (!$schemaFactory->has($tableName)) {
+            return false;
+        }
+        $schema = $schemaFactory->get($tableName);
+        if ($schema->hasCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::AccessReadOnly)) {
+            return false;
+        }
+        if (!$be->check('tables_modify', $tableName)) {
+            return false;
+        }
+        if (!$schema->isWorkspaceAware() && !$be->workspaceAllowsLiveEditingInTable($tableName)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Field-level editability — no `readOnly` on the column configuration.
+     */
+    private function isFieldEditableForUser(string $tableName, string $field): bool
+    {
+        $tcaForTable = $this->getTcaForTable($tableName);
+        $columns = $tcaForTable['columns'];
+        $columnConfig = is_array($columns[$field] ?? null) ? $columns[$field] : [];
+        $config = is_array($columnConfig['config'] ?? null) ? $columnConfig['config'] : [];
+        return !(bool) ($config['readOnly'] ?? false);
+    }
+
+    /**
+     * Create table action buttons using TYPO3's ComponentFactory API.
+     *
+     * Returns an array with rendered HTML for each button type:
+     * - newRecordButton: HTML for "New record" button
+     * - downloadButton: HTML for "Download/Export" button
+     * - columnSelectorButton: HTML for "Show columns" button (web component)
+     * - collapseButton: HTML for "Collapse/Expand" button
+     *
+     * @param string $tableName The database table name
+     * @param int $recordCount Number of records for this table
+     * @param bool $isSingleTableMode Whether we're in single table view mode
+     * @return array<string, string> Array of rendered button HTML
+     */
+    private function createTableActionButtons(
+        DatabaseRecordList $dbList,
+        string $tableName,
+        int $recordCount,
+        bool $isSingleTableMode,
+    ): array {
+        $buttons = [
+            'newRecordButton' => '',
+            'downloadButton' => '',
+            'columnSelectorButton' => '',
+            'collapseButton' => '',
+        ];
+
+        $newRecordButton = $dbList->createActionButtonNewRecord($tableName);
+        if ($newRecordButton instanceof ButtonInterface) {
+            $buttons['newRecordButton'] = $newRecordButton->render();
+        }
+
+        $buttons['downloadButton'] = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'createActionButtonDownload',
+            [$tableName, $recordCount],
+        );
+        $buttons['columnSelectorButton'] = $this->renderDatabaseRecordListButton(
+            $dbList,
+            'createActionButtonColumnSelector',
+            [$tableName],
+        );
+        if (!$isSingleTableMode) {
+            $buttons['collapseButton'] = $this->renderDatabaseRecordListButton(
+                $dbList,
+                'createActionButtonCollapse',
+                [$tableName],
+            );
+        }
+
+        return $buttons;
+    }
+
+    /**
+     * Render a TYPO3 core DatabaseRecordList button via its native button builder.
+     *
+     * The core keeps some table header button methods protected. Using reflection
+     * here lets the custom views render the exact same button markup and behavior
+     * as the native list view instead of approximating it.
+     *
+     * @param list<mixed> $arguments
+     */
+    private function renderDatabaseRecordListButton(
+        DatabaseRecordList $dbList,
+        string $methodName,
+        array $arguments,
+    ): string {
+        try {
+            $method = new ReflectionMethod($dbList, $methodName);
+            $result = $method->invokeArgs($dbList, $arguments);
+            if (is_object($result) && method_exists($result, 'render')) {
+                $rendered = $result->render();
+                return is_string($rendered) ? $rendered : '';
+            }
+            return is_string($result) ? $result : '';
+        } catch (ReflectionException|Exception) {
+            return '';
+        }
+    }
+
+    /**
+     * Generate sortable column headers for compact view.
+     *
+     * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
+     * @return array<int, array<string, mixed>>
+     */
+    private function getSortableColumnHeaders(
+        string $tableName,
+        array $displayColumns,
+        string $currentSortField,
+        string $currentSortDirection,
+        int $pageId,
+        string $viewMode,
+        ServerRequestInterface $request,
+        bool $isSingleTableMode = false,
+    ): array {
+        $headers = [];
+        $tcaForTable = $this->getTcaForTable($tableName);
+        $tcaColumns = $tcaForTable['columns'];
+        $ctrl = $tcaForTable['ctrl'];
+        $labelVal = $ctrl['label'] ?? 'uid';
+        $labelField = is_string($labelVal) ? $labelVal : 'uid';
+
+        // UID column (always first fixed column)
+        $headers[] = [
+            'field' => 'uid',
+            'label' => 'UID',
+            'header' => $this->buildSortableColumnHeader(
+                $tableName,
+                'uid',
+                'UID',
+                $currentSortField,
+                $currentSortDirection,
+                $pageId,
+                $viewMode,
+                $request,
+                $isSingleTableMode,
+            ),
+            'isFixed' => true,
+            'type' => 'uid',
+        ];
+
+        // Title/Label column (second fixed column)
+        $labelLabel = $this->getTcaConfigurationService()->getFieldLabel($labelField, $tcaColumns, $ctrl);
+        $headers[] = [
+            'field' => $labelField,
+            'label' => $labelLabel,
+            'header' => $this->buildSortableColumnHeader(
+                $tableName,
+                $labelField,
+                $labelLabel,
+                $currentSortField,
+                $currentSortDirection,
+                $pageId,
+                $viewMode,
+                $request,
+                $isSingleTableMode,
+            ),
+            'isFixed' => true,
+            'type' => 'title',
+        ];
+
+        // Dynamic columns
+        foreach ($displayColumns as $column) {
+            if ($column['isLabelField'] ?? false) {
+                continue; // Skip label field, already added
+            }
+
+            $field = ArrayUtility::stringValue($column['field'] ?? null);
+            $label = ArrayUtility::stringValue($column['label'] ?? null, $field);
+
+            if ($field === '') {
+                continue;
+            }
+
+            $headers[] = [
+                'field' => $field,
+                'label' => $label,
+                'header' => $this->buildSortableColumnHeader(
+                    $tableName,
+                    $field,
+                    $label,
+                    $currentSortField,
+                    $currentSortDirection,
+                    $pageId,
+                    $viewMode,
+                    $request,
+                    $isSingleTableMode,
+                ),
+                'isFixed' => false,
+                'type' => $column['type'] ?? 'text',
+            ];
+        }
+
+        return $headers;
+    }
+
+    /**
+     * Get a human-readable label for a table.
+     */
+    private function getTableLabel(string $tableName): string
+    {
+        $tcaForTable = $this->getTcaForTable($tableName);
+        $labelTitleVal = $tcaForTable['ctrl']['title'] ?? $tableName;
+        $label = is_string($labelTitleVal) ? $labelTitleVal : $tableName;
+
+        if (str_starts_with($label, 'LLL:')) {
+            $langService = $this->getLanguageService();
+            $translated = $langService->sL($label);
+            $label = $translated !== '' ? $translated : $tableName;
+        }
+
+        return $label;
+    }
+
+    /**
+     * Get the icon identifier for a table.
+     */
+    private function getTableIcon(string $tableName): string
+    {
+        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
+        $icon = $this->mapRecordTypeToIconIdentifier($iconFactory, $tableName, []);
+        return $icon !== '' ? $icon : 'mimetypes-x-content-text';
+    }
+
+    /**
+     * TYPO3 v14 minors changed this core method signature to require a TCA schema.
+     * Keep the extension compatible across both variants.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
+    {
+        $method = new ReflectionMethod($iconFactory, 'mapRecordTypeToIconIdentifier');
+
+        if ($method->getNumberOfParameters() >= 3) {
+            $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
+            if (!$schemaFactory->has($tableName)) {
+                return '';
+            }
+
+            /** @var string $iconIdentifier */
+            $iconIdentifier = $method->invoke($iconFactory, $tableName, $row, $schemaFactory->get($tableName));
+            return $iconIdentifier;
+        }
+
+        /** @var string $iconIdentifier */
+        $iconIdentifier = $method->invoke($iconFactory, $tableName, $row);
+        return $iconIdentifier;
+    }
+
 
     /**
      * Get the number of items per page for a view mode.
