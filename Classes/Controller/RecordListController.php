@@ -149,6 +149,17 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function getModuleTsConfigForColumns(): array
+    {
+        /** @var array<string, mixed> $modTsConfig */
+        $modTsConfig = $this->modTSconfig;
+
+        return $modTsConfig;
+    }
+
+    /**
      * @return array<array<mixed>>
      */
     private function getNestedModTsConfig(): array
@@ -706,7 +717,7 @@ final class RecordListController extends CoreRecordListController
             $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
             $columnResolver = $this->getDisplayColumnResolver();
             if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
-                $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->modTSconfig);
+                $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->getModuleTsConfigForColumns());
             } elseif ($columnsArray !== []) {
                 $displayColumns = $columnResolver->getSpecificDisplayColumns($tableName, $columnsArray);
             } else {
@@ -2154,7 +2165,7 @@ final class RecordListController extends CoreRecordListController
         $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
         $columnResolver = $this->getDisplayColumnResolver();
         if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
-            $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->modTSconfig);
+            $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->getModuleTsConfigForColumns());
         } elseif ($columnsArray !== []) {
             $displayColumns = $columnResolver->getSpecificDisplayColumns($tableName, $columnsArray);
         } else {

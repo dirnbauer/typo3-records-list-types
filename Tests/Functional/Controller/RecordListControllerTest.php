@@ -16,10 +16,14 @@ use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 use Webconsulting\RecordsListTypes\Controller\RecordListController;
+use Webconsulting\RecordsListTypes\Service\RecordViewEnrichmentContext;
+use Webconsulting\RecordsListTypes\Service\RecordViewEnrichmentService;
 
 #[CoversClass(RecordListController::class)]
+#[CoversClass(RecordViewEnrichmentService::class)]
 final class RecordListControllerTest extends FunctionalTestCase
 {
     protected array $testExtensionsToLoad = [
@@ -80,12 +84,9 @@ final class RecordListControllerTest extends FunctionalTestCase
     #[Test]
     public function enrichRecordWithEditUrlsKeepsCustomViewReturnUrlContext(): void
     {
-        $controller = $this->createControllerForPage(1);
-        $this->setControllerProperty($controller, 'currentViewMode', 'compact');
-        $this->setControllerProperty(
-            $controller,
-            'currentRequest',
-            (new ServerRequest('https://example.test/typo3/module/records'))->withQueryParams([
+        $pageContext = $this->createPageContext(1);
+        $request = (new ServerRequest('https://example.test/typo3/module/records'))
+            ->withQueryParams([
                 'id' => 1,
                 'displayMode' => 'compact',
                 'table' => 'tt_content',
@@ -94,17 +95,18 @@ final class RecordListControllerTest extends FunctionalTestCase
                         'hidden' => '0',
                     ],
                 ],
-            ])->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE),
-        );
+            ])
+            ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE);
 
-        $record = $this->invokeEnrichRecordWithEditUrls($controller, [
+        $context = new RecordViewEnrichmentContext($pageContext, 'compact', $request);
+        $record = GeneralUtility::makeInstance(RecordViewEnrichmentService::class)->enrichRecordWithEditUrls([
             'uid' => 42,
             'tableName' => 'tt_content',
             'rawRecord' => [
                 'uid' => 42,
                 'pid' => 1,
             ],
-        ]);
+        ], $context);
 
         self::assertIsString($record['editUrl'] ?? null);
         self::assertIsString($record['contextualEditUrl'] ?? null);
@@ -161,19 +163,6 @@ final class RecordListControllerTest extends FunctionalTestCase
         $method = new ReflectionMethod(RecordListController::class, 'renderSearchBox');
         $result = $method->invoke($controller, $request, $dbList, $searchWord, $searchLevels);
         self::assertIsString($result);
-
-        return $result;
-    }
-
-    /**
-     * @param array<string, mixed> $record
-     * @return array<string, mixed>
-     */
-    private function invokeEnrichRecordWithEditUrls(RecordListController $controller, array $record): array
-    {
-        $method = new ReflectionMethod(RecordListController::class, 'enrichRecordWithEditUrls');
-        $result = $method->invoke($controller, $record);
-        self::assertIsArray($result);
 
         return $result;
     }
