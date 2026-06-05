@@ -6,20 +6,30 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   security:
     name: Composer security audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
         with:
           php-version: '8.5'
           coverage: none
 
-      - name: Install dependencies
+      - name: Install dependencies (pull request)
+        if: github.event_name == 'pull_request'
+        run: composer install --no-progress --prefer-dist --no-scripts
+
+      - name: Install dependencies (trusted)
+        if: github.event_name != 'pull_request'
         env:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
@@ -35,16 +45,23 @@ jobs:
       matrix:
         php: ['8.3', '8.5']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
         with:
           php-version: ${{ matrix.php }}
           extensions: intl, pdo_sqlite
           coverage: none
 
-      - name: Install dependencies
+      - name: Install dependencies (pull request)
+        if: github.event_name == 'pull_request'
+        run: composer install --no-progress --prefer-dist --no-scripts
+
+      - name: Install dependencies (trusted)
+        if: github.event_name != 'pull_request'
         env:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
@@ -55,21 +72,49 @@ jobs:
   php-cs-fixer:
     name: PHP-CS-Fixer (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
         php: ['8.3', '8.5']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
+          persist-credentials: false
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
         with:
           php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Install dependencies (pull request)
+        if: github.event_name == 'pull_request'
+        run: composer install --no-progress --prefer-dist --no-scripts
+
+      - name: Install dependencies (trusted)
+        if: github.event_name != 'pull_request'
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
+        run: composer install --no-progress --prefer-dist
+
+      - name: Run PHP-CS-Fixer
+        run: vendor/bin/php-cs-fixer fix --diff --dry-run
+
+  php-cs-fixer-commit:
+    name: PHP-CS-Fixer auto-commit (trusted push)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
+        with:
+          php-version: '8.5'
           coverage: none
 
       - name: Install dependencies
@@ -81,8 +126,7 @@ jobs:
         run: vendor/bin/php-cs-fixer fix --diff
 
       - name: Commit fixes
-        if: matrix.php == '8.5'
-        uses: stefanzweifel/git-auto-commit-action@v7
+        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7
         with:
           commit_message: "style: auto-fix coding standards via PHP-CS-Fixer"
           commit_user_name: "github-actions[bot]"
@@ -92,16 +136,23 @@ jobs:
     name: PHPUnit Latest (PHP 8.5)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
         with:
           php-version: '8.5'
           extensions: intl, pdo_sqlite
           coverage: none
 
-      - name: Install latest allowed PHPUnit
+      - name: Install latest allowed PHPUnit (pull request)
+        if: github.event_name == 'pull_request'
+        run: composer update phpunit/phpunit --with-all-dependencies --no-progress --prefer-dist --no-scripts
+
+      - name: Install latest allowed PHPUnit (trusted)
+        if: github.event_name != 'pull_request'
         env:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer update phpunit/phpunit --with-all-dependencies --no-progress --prefer-dist
@@ -131,16 +182,23 @@ jobs:
           - php: '8.5'
             coverage: xdebug
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
         with:
           php-version: ${{ matrix.php }}
           extensions: intl, pdo_sqlite
           coverage: ${{ matrix.coverage }}
 
-      - name: Install dependencies
+      - name: Install dependencies (pull request)
+        if: github.event_name == 'pull_request'
+        run: composer install --no-progress --prefer-dist --no-scripts
+
+      - name: Install dependencies (trusted)
+        if: github.event_name != 'pull_request'
         env:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
@@ -156,7 +214,7 @@ jobs:
 
       - name: Upload unit coverage
         if: matrix.coverage == 'xdebug' && always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: unit-coverage-php-${{ matrix.php }}
           path: |
@@ -197,16 +255,23 @@ jobs:
       typo3DatabasePassword: root
       typo3DatabaseName: typo3_test
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
         with:
           php-version: ${{ matrix.php }}
           extensions: intl, pdo_mysql, mysqli
           coverage: ${{ matrix.coverage }}
 
-      - name: Install dependencies
+      - name: Install dependencies (pull request)
+        if: github.event_name == 'pull_request'
+        run: composer install --no-progress --prefer-dist --no-scripts
+
+      - name: Install dependencies (trusted)
+        if: github.event_name != 'pull_request'
         env:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         run: composer install --no-progress --prefer-dist
@@ -222,7 +287,7 @@ jobs:
 
       - name: Upload functional coverage
         if: matrix.coverage == 'xdebug' && always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: functional-coverage-php-${{ matrix.php }}
           path: |
