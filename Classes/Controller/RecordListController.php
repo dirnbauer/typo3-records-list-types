@@ -1732,6 +1732,29 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
+     * Action buttons for the page-translations sub-list.
+     *
+     * Mirrors the classic List View header: column selector and
+     * collapse/expand only (no new-record or download actions).
+     *
+     * @return array<string, string>
+     */
+    private function createPageTranslationActionButtons(
+        DatabaseRecordList $dbList,
+        string $tableName,
+        int $recordCount,
+    ): array {
+        $buttons = $this->createTableActionButtons($dbList, $tableName, $recordCount, false);
+
+        return [
+            'newRecordButton' => '',
+            'downloadButton' => '',
+            'columnSelectorButton' => $buttons['columnSelectorButton'],
+            'collapseButton' => $buttons['collapseButton'],
+        ];
+    }
+
+    /**
      * Create table action buttons using TYPO3's ComponentFactory API.
      *
      * Returns an array with rendered HTML for each button type:
@@ -2124,7 +2147,7 @@ final class RecordListController extends CoreRecordListController
         }
 
         try {
-            $custom = $this->renderPageTranslationsInViewMode($request, $pageId, $viewMode);
+            $custom = $this->renderPageTranslationsInViewMode($request, $dbList, $pageId, $viewMode);
             if ($custom !== '') {
                 return $custom;
             }
@@ -2142,6 +2165,7 @@ final class RecordListController extends CoreRecordListController
      */
     private function renderPageTranslationsInViewMode(
         ServerRequestInterface $request,
+        DatabaseRecordList $dbList,
         int $pageId,
         string $viewMode,
     ): string {
@@ -2196,6 +2220,20 @@ final class RecordListController extends CoreRecordListController
             $headingLabel = 'Page Translations';
         }
 
+        $actionButtons = $this->createPageTranslationActionButtons($dbList, $tableName, $recordCount);
+        $sortableColumnHeaders = $this->getSortableColumnHeaders(
+            $tableName,
+            $displayColumns,
+            '',
+            'asc',
+            $pageId,
+            $viewMode,
+            $request,
+        );
+
+        GeneralUtility::makeInstance(PageRenderer::class)
+            ->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
+
         $tableData = [[
             'tableName' => $tableName,
             'tableIdentifier' => 'pages_translated',
@@ -2219,10 +2257,10 @@ final class RecordListController extends CoreRecordListController
             'hasActiveFilters' => false,
             'multiSelectEnabled' => false,
             'lastRecordUid' => '',
-            'actionButtons' => [],
+            'actionButtons' => $actionButtons,
             'sortingDropdown' => null,
             'sortingModeToggle' => null,
-            'sortableColumnHeaders' => [],
+            'sortableColumnHeaders' => $sortableColumnHeaders,
             'bulkEditHeader' => null,
             'singleTableUrl' => '',
             'clearTableUrl' => '',
