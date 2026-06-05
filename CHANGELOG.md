@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.0.3 - 2026-06-05
+
+### Added
+
+- Column selector ("Spalten anzeigen") and collapse control for the page translations sub-list in alternative view modes (Grid, Compact, Teaser, custom).
+
+### Changed
+
+- Reduced grid view ID pill contrast to meet WCAG 2.2 AA minimum.
+- Split record view enrichment out of `RecordListController` for maintainability.
+
 ## 1.0.0 - 2026-05-24
 
 First stable release for TYPO3 v14.3 LTS.
