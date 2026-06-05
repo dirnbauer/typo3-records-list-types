@@ -48,7 +48,7 @@ Add the VCS repository in your TYPO3 project's root `composer.json` first:
 
 ```bash
 composer config repositories.records-list-types vcs https://github.com/dirnbauer/typo3-records-list-types.git
-composer require webconsulting/records-list-types:^1.0
+composer require webconsulting/records-list-types:^1.0.3
 ```
 
 Set up the extension and clear TYPO3 caches:
@@ -56,6 +56,14 @@ Set up the extension and clear TYPO3 caches:
 ```bash
 ./vendor/bin/typo3 extension:setup -e records_list_types
 ./vendor/bin/typo3 cache:flush
+```
+
+In a DDEV project (for example `webconsulting-typo3-lab`):
+
+```bash
+ddev composer require webconsulting/records-list-types:^1.0.3
+ddev exec ./vendor/bin/typo3 extension:setup -e records_list_types
+ddev exec ./vendor/bin/typo3 cache:flush
 ```
 
 After installation, navigate to **Content > Records** in the TYPO3 backend. View mode toggle buttons appear in the module header -- click to switch between List, Grid, Compact, and Teaser views.
