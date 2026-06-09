@@ -31,8 +31,11 @@
                     </span>
                 </f:then>
                 <f:else>
+                    <f:variable name="translationTotal" value="{f:count(subject: record.translations)}" />
                     <span class="gridview-card__translations-badge">
-                        {record.translatedCount} / <f:count subject="{record.translations}" />
+                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.progress"
+                                     arguments="{translated: record.translatedCount, total: translationTotal}"
+                                     default="{record.translatedCount} / {translationTotal}" />
                     </span>
                 </f:else>
             </f:if>

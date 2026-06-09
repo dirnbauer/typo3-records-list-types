@@ -15,9 +15,6 @@
             <trans-unit id="viewMode.teaser" resname="viewMode.teaser">
                 <source>Teaser List</source>
             </trans-unit>
-            <trans-unit id="viewMode.switch.title" resname="viewMode.switch.title">
-                <source>Switch View Mode</source>
-            </trans-unit>
             <trans-unit id="button.viewMode" resname="button.viewMode">
                 <source>List Type</source>
             </trans-unit>
@@ -45,8 +42,26 @@
             <trans-unit id="action.delete" resname="action.delete">
                 <source>Delete record</source>
             </trans-unit>
-            <trans-unit id="action.newRecord" resname="action.newRecord">
-                <source>Create new record</source>
+            <trans-unit id="action.show.detail" resname="action.show.detail">
+                <source>Show record (currently hidden)</source>
+            </trans-unit>
+            <trans-unit id="action.hide.detail" resname="action.hide.detail">
+                <source>Hide record (currently visible)</source>
+            </trans-unit>
+            <trans-unit id="action.moreActions" resname="action.moreActions">
+                <source>More actions</source>
+            </trans-unit>
+            <trans-unit id="action.info" resname="action.info">
+                <source>Info</source>
+            </trans-unit>
+            <trans-unit id="action.history" resname="action.history">
+                <source>History</source>
+            </trans-unit>
+            <trans-unit id="action.copy" resname="action.copy">
+                <source>Copy</source>
+            </trans-unit>
+            <trans-unit id="action.cut" resname="action.cut">
+                <source>Cut</source>
             </trans-unit>
             <trans-unit id="sorting" resname="sorting">
                 <source>Sorting</source>
@@ -56,9 +71,6 @@
             </trans-unit>
             <trans-unit id="sort.descending" resname="sort.descending">
                 <source>Sort descending</source>
-            </trans-unit>
-            <trans-unit id="sort.default" resname="sort.default">
-                <source>Default</source>
             </trans-unit>
             <trans-unit id="sortingMode.label" resname="sortingMode.label">
                 <source>Order</source>
@@ -119,15 +131,6 @@
             </trans-unit>
             
             <!-- Translations -->
-            <trans-unit id="translation.label" resname="translation.label">
-                <source>translation(s)</source>
-            </trans-unit>
-            <trans-unit id="translation.expand" resname="translation.expand">
-                <source>Show translations</source>
-            </trans-unit>
-            <trans-unit id="translation.collapse" resname="translation.collapse">
-                <source>Hide translations</source>
-            </trans-unit>
             <trans-unit id="translation.free" resname="translation.free">
                 <source>FREE</source>
             </trans-unit>
@@ -143,8 +146,8 @@
             <trans-unit id="translation.sectionLabel" resname="translation.sectionLabel">
                 <source>Translations</source>
             </trans-unit>
-            <trans-unit id="translation.summary" resname="translation.summary">
-                <source>%d of %d translated</source>
+            <trans-unit id="translation.progress" resname="translation.progress">
+                <source>{translated, plural, =0 {None of {total} translated} one {# of {total} translated} other {# of {total} translated}}</source>
             </trans-unit>
             <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
                 <source>All elements translated</source>

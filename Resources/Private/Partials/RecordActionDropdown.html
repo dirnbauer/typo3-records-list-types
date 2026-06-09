@@ -1,0 +1,69 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Shared "More actions" dropdown (Info, History, Copy, Cut) used by the
+    grid, teaser, and compact views.
+
+    Arguments:
+    - record: enriched record (uid, tableName, permissions)
+    - buttonClass: view-specific CSS class for the trigger button
+</f:comment>
+
+<div class="dropdown">
+    <button type="button"
+            class="{buttonClass} dropdown-toggle dropdown-toggle-no-chevron"
+            popovertarget="rlt-actions-{record.tableName}-{record.uid}"
+            title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.moreActions', default: 'More actions')}"
+            aria-label="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.moreActions', default: 'More actions')}">
+        <core:icon identifier="actions-menu-alternative" size="small" />
+    </button>
+    <ul id="rlt-actions-{record.tableName}-{record.uid}" class="dropdown-menu dropdown-menu-end" popover>
+        <f:if condition="{record.permissions.canShowInfo}">
+            <li>
+                <a class="dropdown-item" href="#"
+                   data-gridview-action="info"
+                   data-table="{record.tableName}"
+                   data-uid="{record.uid}">
+                    <core:icon identifier="actions-document-info" size="small" />
+                    <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.info" default="Info" /></span>
+                </a>
+            </li>
+        </f:if>
+        <f:if condition="{record.permissions.canHistory}">
+            <li>
+                <a class="dropdown-item" href="#"
+                   data-gridview-action="history"
+                   data-table="{record.tableName}"
+                   data-uid="{record.uid}">
+                    <core:icon identifier="actions-document-history-open" size="small" />
+                    <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.history" default="History" /></span>
+                </a>
+            </li>
+        </f:if>
+        <f:if condition="{record.permissions.canCopy}">
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item" href="#"
+                   data-gridview-action="copy"
+                   data-table="{record.tableName}"
+                   data-uid="{record.uid}">
+                    <core:icon identifier="actions-edit-copy" size="small" />
+                    <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.copy" default="Copy" /></span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="#"
+                   data-gridview-action="cut"
+                   data-table="{record.tableName}"
+                   data-uid="{record.uid}">
+                    <core:icon identifier="actions-edit-cut" size="small" />
+                    <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.cut" default="Cut" /></span>
+                </a>
+            </li>
+        </f:if>
+    </ul>
+</div>
+
+</html>

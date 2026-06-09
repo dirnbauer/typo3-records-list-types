@@ -19,10 +19,6 @@
                 <source>Teaser List</source>
                 <target>Teaser-Liste</target>
             </trans-unit>
-            <trans-unit id="viewMode.switch.title" resname="viewMode.switch.title">
-                <source>Switch View Mode</source>
-                <target>Ansichtsmodus wechseln</target>
-            </trans-unit>
             <trans-unit id="button.viewMode" resname="button.viewMode">
                 <source>List Type</source>
                 <target>Listentyp</target>
@@ -30,6 +26,18 @@
             <trans-unit id="noRecords" resname="noRecords">
                 <source>No records found on this page.</source>
                 <target>Keine Datensätze auf dieser Seite gefunden.</target>
+            </trans-unit>
+            <trans-unit id="noRecords.search" resname="noRecords.search">
+                <source>No records match the current search.</source>
+                <target>Keine Datensätze entsprechen der aktuellen Suche.</target>
+            </trans-unit>
+            <trans-unit id="noRecords.filtered" resname="noRecords.filtered">
+                <source>No records match the current filters.</source>
+                <target>Keine Datensätze entsprechen den aktuellen Filtern.</target>
+            </trans-unit>
+            <trans-unit id="noRecords.filteredAndSearch" resname="noRecords.filteredAndSearch">
+                <source>No records match the current filters or search.</source>
+                <target>Keine Datensätze entsprechen den aktuellen Filtern oder der Suche.</target>
             </trans-unit>
             <trans-unit id="action.edit" resname="action.edit">
                 <source>Edit record</source>
@@ -47,9 +55,33 @@
                 <source>Delete record</source>
                 <target>Datensatz löschen</target>
             </trans-unit>
-            <trans-unit id="action.newRecord" resname="action.newRecord">
-                <source>Create new record</source>
-                <target>Neuen Datensatz erstellen</target>
+            <trans-unit id="action.show.detail" resname="action.show.detail">
+                <source>Show record (currently hidden)</source>
+                <target>Datensatz anzeigen (derzeit verborgen)</target>
+            </trans-unit>
+            <trans-unit id="action.hide.detail" resname="action.hide.detail">
+                <source>Hide record (currently visible)</source>
+                <target>Datensatz ausblenden (derzeit sichtbar)</target>
+            </trans-unit>
+            <trans-unit id="action.moreActions" resname="action.moreActions">
+                <source>More actions</source>
+                <target>Weitere Aktionen</target>
+            </trans-unit>
+            <trans-unit id="action.info" resname="action.info">
+                <source>Info</source>
+                <target>Info</target>
+            </trans-unit>
+            <trans-unit id="action.history" resname="action.history">
+                <source>History</source>
+                <target>Verlauf</target>
+            </trans-unit>
+            <trans-unit id="action.copy" resname="action.copy">
+                <source>Copy</source>
+                <target>Kopieren</target>
+            </trans-unit>
+            <trans-unit id="action.cut" resname="action.cut">
+                <source>Cut</source>
+                <target>Ausschneiden</target>
             </trans-unit>
             <trans-unit id="sorting" resname="sorting">
                 <source>Sorting</source>
@@ -62,10 +94,6 @@
             <trans-unit id="sort.descending" resname="sort.descending">
                 <source>Sort descending</source>
                 <target>Absteigend sortieren</target>
-            </trans-unit>
-            <trans-unit id="sort.default" resname="sort.default">
-                <source>Default</source>
-                <target>Standard</target>
             </trans-unit>
             <trans-unit id="sortingMode.label" resname="sortingMode.label">
                 <source>Order</source>
@@ -143,18 +171,6 @@
             </trans-unit>
             
             <!-- Translations -->
-            <trans-unit id="translation.label" resname="translation.label">
-                <source>translation(s)</source>
-                <target>Übersetzung(en)</target>
-            </trans-unit>
-            <trans-unit id="translation.expand" resname="translation.expand">
-                <source>Show translations</source>
-                <target>Übersetzungen anzeigen</target>
-            </trans-unit>
-            <trans-unit id="translation.collapse" resname="translation.collapse">
-                <source>Hide translations</source>
-                <target>Übersetzungen ausblenden</target>
-            </trans-unit>
             <trans-unit id="translation.free" resname="translation.free">
                 <source>FREE</source>
                 <target>FREI</target>
@@ -175,9 +191,9 @@
                 <source>Translations</source>
                 <target>Übersetzungen</target>
             </trans-unit>
-            <trans-unit id="translation.summary" resname="translation.summary">
-                <source>%d of %d translated</source>
-                <target>%d von %d übersetzt</target>
+            <trans-unit id="translation.progress" resname="translation.progress">
+                <source>{translated, plural, =0 {None of {total} translated} one {# of {total} translated} other {# of {total} translated}}</source>
+                <target>{translated, plural, =0 {Keine von {total} übersetzt} one {# von {total} übersetzt} other {# von {total} übersetzt}}</target>
             </trans-unit>
             <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
                 <source>All elements translated</source>

@@ -109,7 +109,7 @@
                         <f:then>
                             <button type="button"
                                     class="teaserview-action teaserview-action--warning"
-                                    title="Show record"
+                                    title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.show.detail', default: 'Show record (currently hidden)')}"
                                     data-gridview-action="show"
                                     data-table="{record.tableName}"
                                     data-uid="{record.uid}"
@@ -120,7 +120,7 @@
                         <f:else>
                             <button type="button"
                                     class="teaserview-action teaserview-action--success"
-                                    title="Hide record"
+                                    title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.hide.detail', default: 'Hide record (currently visible)')}"
                                     data-gridview-action="hide"
                                     data-table="{record.tableName}"
                                     data-uid="{record.uid}"
@@ -135,7 +135,7 @@
                 <f:if condition="{record.permissions.canEdit}">
                     <typo3-backend-contextual-record-edit-trigger
                         class="teaserview-action teaserview-action--primary"
-                        title="Edit"
+                        title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.edit', default: 'Edit record')}"
                         url="{record.contextualEditUrl}"
                         edit-url="{record.editUrl}">
                         <core:icon identifier="actions-open" size="small" />
@@ -146,7 +146,7 @@
                 <f:if condition="{record.permissions.canDelete}">
                     <button type="button"
                             class="teaserview-action teaserview-action--danger"
-                            title="Delete"
+                            title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.delete', default: 'Delete record')}"
                             data-gridview-action="delete"
                             data-table="{record.tableName}"
                             data-uid="{record.uid}">
@@ -155,60 +155,7 @@
                 </f:if>
 
                 <f:comment>More Actions dropdown</f:comment>
-                <f:variable name="actionsPopoverId">rlt-actions-{record.tableName}-{record.uid}</f:variable>
-                <div class="dropdown">
-                    <button type="button" class="teaserview-action dropdown-toggle dropdown-toggle-no-chevron"
-                            popovertarget="{actionsPopoverId}"
-                            title="More actions"
-                            aria-label="More actions">
-                        <core:icon identifier="actions-menu-alternative" size="small" />
-                    </button>
-                    <ul id="{actionsPopoverId}" class="dropdown-menu dropdown-menu-end" popover>
-                        <f:if condition="{record.permissions.canShowInfo}">
-                            <li>
-                                <a class="dropdown-item" href="#"
-                                   data-gridview-action="info"
-                                   data-table="{record.tableName}"
-                                   data-uid="{record.uid}">
-                                    <core:icon identifier="actions-document-info" size="small" />
-                                    <span>Info</span>
-                                </a>
-                            </li>
-                        </f:if>
-                        <f:if condition="{record.permissions.canHistory}">
-                            <li>
-                                <a class="dropdown-item" href="#"
-                                   data-gridview-action="history"
-                                   data-table="{record.tableName}"
-                                   data-uid="{record.uid}">
-                                    <core:icon identifier="actions-document-history-open" size="small" />
-                                    <span>History</span>
-                                </a>
-                            </li>
-                        </f:if>
-                        <f:if condition="{record.permissions.canCopy}">
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="#"
-                                   data-gridview-action="copy"
-                                   data-table="{record.tableName}"
-                                   data-uid="{record.uid}">
-                                    <core:icon identifier="actions-edit-copy" size="small" />
-                                    <span>Copy</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="#"
-                                   data-gridview-action="cut"
-                                   data-table="{record.tableName}"
-                                   data-uid="{record.uid}">
-                                    <core:icon identifier="actions-edit-cut" size="small" />
-                                    <span>Cut</span>
-                                </a>
-                            </li>
-                        </f:if>
-                    </ul>
-                </div>
+                <f:render partial="RecordActionDropdown" arguments="{record: record, buttonClass: 'teaserview-action'}" />
             </div>
         </div>
     </div>
