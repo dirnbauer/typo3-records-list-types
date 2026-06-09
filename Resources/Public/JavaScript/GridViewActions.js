@@ -112,6 +112,22 @@ class GridViewActions extends LitElement {
         }
     }
 
+    /**
+     * Resolve a backend label registered via addInlineLanguageLabelFile(),
+     * replacing %d/%s placeholders with the given arguments.
+     * @param {string} key - Label key (e.g. "drag.position")
+     * @param {string} fallback - Fallback text when the label is unavailable
+     * @param {...(string|number)} args - Placeholder replacements
+     * @returns {string}
+     */
+    lang(key, fallback, ...args) {
+        let label = window.TYPO3?.lang?.[key] || fallback;
+        for (const arg of args) {
+            label = label.replace(/%[ds]/, String(arg));
+        }
+        return label;
+    }
+
     // =========================================================================
     // Mouse Drag and Drop
     // =========================================================================
@@ -548,7 +564,7 @@ class GridViewActions extends LitElement {
         
         // Announce to screen reader
         const title = card.dataset.recordTitle || 'Item';
-        this.announce(`${title} grabbed. Use arrow keys to move. Press Space or Enter to drop, Escape to cancel.`);
+        this.announce(`${title} ${this.lang('drag.grabbed', 'Grabbed. Use arrow keys to move.')}`);
     }
 
     /**
@@ -573,7 +589,7 @@ class GridViewActions extends LitElement {
                 endDropzone.classList.add('gridview-keyboard-target');
             }
             // Announce "end" position
-            this.announce(`End position (after last item)`);
+            this.announce(this.lang('drag.endPosition', 'End position (after last item)'));
         } else {
             // Show drop indicator on target wrapper
             const targetWrapper = wrappers[newIndex];
@@ -586,7 +602,7 @@ class GridViewActions extends LitElement {
                 }
             }
             // Announce position
-            this.announce(`Position ${newIndex + 1} of ${wrappers.length}`);
+            this.announce(this.lang('drag.position', 'Position %d of %d', newIndex + 1, wrappers.length));
         }
     }
 
@@ -647,14 +663,16 @@ class GridViewActions extends LitElement {
             
             // Calculate TYPO3 move target
             moveTarget = this.calculateMoveTarget(targetCard, position, targetUid, targetPid);
-            announcePosition = `position ${targetIndex + 1}`;
+            announcePosition = targetIndex + 1;
         }
         
         // Clean up keyboard drag state first
         this.keyboardCleanup();
         
         // Announce and execute move
-        this.announce(`Item moved to ${announcePosition}`);
+        this.announce(announcePosition === 'end'
+            ? this.lang('drag.endPosition', 'End position (after last item)')
+            : this.lang('drag.moved', 'Item moved to position %d', announcePosition));
         this.executeMove(table, uid, moveTarget);
     }
 
@@ -669,7 +687,7 @@ class GridViewActions extends LitElement {
         
         this.keyboardCleanup();
         
-        this.announce('Reorder cancelled');
+        this.announce(this.lang('drag.cancelled', 'Reorder cancelled'));
         
         // Return focus to handle
         if (handle) {
@@ -1453,8 +1471,17 @@ class GridViewActions extends LitElement {
     }
     
     /**
-     * Replace a TYPO3 icon element with a new icon.
+     * Parse server-rendered icon markup into a DOM node.
      * Uses DOMParser instead of innerHTML for safer HTML parsing.
+     */
+    parseIconMarkup(iconMarkup) {
+        const doc = new DOMParser().parseFromString(iconMarkup, 'text/html');
+        const icon = doc.body.firstElementChild;
+        return icon ? document.adoptNode(icon) : null;
+    }
+
+    /**
+     * Replace a TYPO3 icon element with a new icon.
      */
     replaceIcon(iconEl, newIdentifier) {
         // For typo3-backend-icon web component
@@ -1462,24 +1489,15 @@ class GridViewActions extends LitElement {
             iconEl.setAttribute('identifier', newIdentifier);
             return;
         }
-        
-        const parseAndReplace = (iconMarkup) => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(iconMarkup, 'text/html');
-            const newIcon = doc.body.firstElementChild;
-            if (newIcon && iconEl.parentNode) {
-                iconEl.parentNode.replaceChild(
-                    document.adoptNode(newIcon),
-                    iconEl
-                );
-            }
-        };
 
         this.getDefaultModule('@typo3/backend/icons.js')
-            .then(Icons => {
-                return Icons.getIcon(newIdentifier, 'small');
+            .then(Icons => Icons.getIcon(newIdentifier, 'small'))
+            .then(iconMarkup => {
+                const newIcon = this.parseIconMarkup(iconMarkup);
+                if (newIcon && iconEl.parentNode) {
+                    iconEl.parentNode.replaceChild(newIcon, iconEl);
+                }
             })
-            .then(parseAndReplace)
             .catch(() => {
                 iconEl.dataset.identifier = newIdentifier;
             });
@@ -1488,17 +1506,17 @@ class GridViewActions extends LitElement {
     async createIconElement(identifier) {
         try {
             const Icons = await this.getDefaultModule('@typo3/backend/icons.js');
-            const iconMarkup = await Icons.getIcon(identifier, 'small');
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(iconMarkup, 'text/html');
-            const icon = doc.body.firstElementChild;
-            return icon ? document.adoptNode(icon) : null;
+            const icon = this.parseIconMarkup(await Icons.getIcon(identifier, 'small'));
+            if (icon) {
+                return icon;
+            }
         } catch {
-            const icon = document.createElement('typo3-backend-icon');
-            icon.setAttribute('identifier', identifier);
-            icon.setAttribute('size', 'small');
-            return icon;
+            // Fall through to the web component fallback below.
         }
+        const icon = document.createElement('typo3-backend-icon');
+        icon.setAttribute('identifier', identifier);
+        icon.setAttribute('size', 'small');
+        return icon;
     }
     
     /**
