@@ -21,17 +21,25 @@ use WeakMap;
  * the current controller request, while the classic list view can still apply
  * the same logic through TYPO3's record-list query event.
  */
-final readonly class RecordFilterQueryService implements SingletonInterface
+final class RecordFilterQueryService implements SingletonInterface
 {
     /** @var WeakMap<QueryBuilder, true> */
-    private WeakMap $appliedQueryBuilders;
+    private readonly WeakMap $appliedQueryBuilders;
+
+    /**
+     * Per-request cache of record uids matching a category filter,
+     * keyed by table/field/category combination.
+     *
+     * @var array<string, array<int, true>>
+     */
+    private array $categoryMatchCache = [];
 
     public function __construct(
-        private RecordFilterConfigurationService $configurationService,
-        private RecordFilterStateService $stateService,
-        private Context $context,
-        private TcaSchemaFactory $tcaSchemaFactory,
-        private ConnectionPool $connectionPool,
+        private readonly RecordFilterConfigurationService $configurationService,
+        private readonly RecordFilterStateService $stateService,
+        private readonly Context $context,
+        private readonly TcaSchemaFactory $tcaSchemaFactory,
+        private readonly ConnectionPool $connectionPool,
     ) {
         $this->appliedQueryBuilders = new WeakMap();
     }
@@ -44,6 +52,9 @@ final readonly class RecordFilterQueryService implements SingletonInterface
         bool $deferWorkspaceFilters = false,
     ): void {
         if (isset($this->appliedQueryBuilders[$queryBuilder])) {
+            return;
+        }
+        if (!$this->tcaSchemaFactory->has($table)) {
             return;
         }
         if ($this->stateService->getSelectedTable($request) !== $table) {
@@ -295,16 +306,33 @@ final readonly class RecordFilterQueryService implements SingletonInterface
             return;
         }
 
-        $subQuery = 'SELECT 1 FROM sys_category_record_mm record_filter_category_mm'
-            . ' WHERE record_filter_category_mm.uid_foreign = ' . $queryBuilder->quoteIdentifier($table . '.uid')
-            . ' AND ' . $queryBuilder->expr()->in(
-                'record_filter_category_mm.uid_local',
-                $queryBuilder->createNamedParameter($categoryUids, ArrayParameterType::INTEGER),
-            )
-            . ' AND record_filter_category_mm.tablenames = ' . $queryBuilder->createNamedParameter($table)
-            . ' AND record_filter_category_mm.fieldname = ' . $queryBuilder->createNamedParameter($field);
+        // Parameters are created on the outer query builder so they are bound
+        // when the EXISTS() sub-select is embedded into the outer query.
+        $subQuery = $this->connectionPool->getQueryBuilderForTable('sys_category_record_mm');
+        $subQuery->getRestrictions()->removeAll();
+        $subQuery
+            ->selectLiteral('1')
+            ->from('sys_category_record_mm', 'record_filter_category_mm')
+            ->where(
+                $subQuery->expr()->eq(
+                    'record_filter_category_mm.uid_foreign',
+                    $queryBuilder->quoteIdentifier($table . '.uid'),
+                ),
+                $subQuery->expr()->in(
+                    'record_filter_category_mm.uid_local',
+                    $queryBuilder->createNamedParameter($categoryUids, ArrayParameterType::INTEGER),
+                ),
+                $subQuery->expr()->eq(
+                    'record_filter_category_mm.tablenames',
+                    $queryBuilder->createNamedParameter($table),
+                ),
+                $subQuery->expr()->eq(
+                    'record_filter_category_mm.fieldname',
+                    $queryBuilder->createNamedParameter($field),
+                ),
+            );
 
-        $queryBuilder->andWhere('EXISTS (' . $subQuery . ')');
+        $queryBuilder->andWhere('EXISTS (' . $subQuery->getSQL() . ')');
     }
 
     /**
@@ -429,15 +457,35 @@ final readonly class RecordFilterQueryService implements SingletonInterface
             return false;
         }
 
+        $matchedUids = $this->getCategoryMatchedRecordUids($table, $field, $categoryUids);
+        foreach ($recordUids as $uid) {
+            if (isset($matchedUids[$uid])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Loads all record uids assigned to one of the given categories once per
+     * request, so deferred per-row evaluation does not query per record.
+     *
+     * @param list<int> $categoryUids
+     * @return array<int, true>
+     */
+    private function getCategoryMatchedRecordUids(string $table, string $field, array $categoryUids): array
+    {
+        $cacheKey = $table . '|' . $field . '|' . implode(',', $categoryUids);
+        if (isset($this->categoryMatchCache[$cacheKey])) {
+            return $this->categoryMatchCache[$cacheKey];
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_category_record_mm');
-        $count = $queryBuilder
-            ->count('*')
+        $result = $queryBuilder
+            ->select('uid_foreign')
             ->from('sys_category_record_mm')
             ->where(
-                $queryBuilder->expr()->in(
-                    'uid_foreign',
-                    $queryBuilder->createNamedParameter($recordUids, ArrayParameterType::INTEGER),
-                ),
                 $queryBuilder->expr()->in(
                     'uid_local',
                     $queryBuilder->createNamedParameter($categoryUids, ArrayParameterType::INTEGER),
@@ -451,10 +499,17 @@ final readonly class RecordFilterQueryService implements SingletonInterface
                     $queryBuilder->createNamedParameter($field, ParameterType::STRING),
                 ),
             )
-            ->executeQuery()
-            ->fetchOne();
+            ->executeQuery();
 
-        return is_numeric($count) && (int) $count > 0;
+        $matchedUids = [];
+        foreach ($result->fetchFirstColumn() as $uid) {
+            if (is_numeric($uid)) {
+                $matchedUids[(int) $uid] = true;
+            }
+        }
+
+        $this->categoryMatchCache[$cacheKey] = $matchedUids;
+        return $matchedUids;
     }
 
     /**
@@ -508,6 +563,11 @@ final readonly class RecordFilterQueryService implements SingletonInterface
 
     private function normalizeDateValue(string $table, string $field, string $date, bool $endOfDay): int|string
     {
+        // The filter UI sends ISO dates; reject anything else (e.g. relative
+        // strtotime() expressions) before the value reaches the query.
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
+            return $this->dateParameterType($table, $field) === ParameterType::STRING ? '' : 0;
+        }
         if ($this->dateParameterType($table, $field) === ParameterType::STRING) {
             return $date;
         }
