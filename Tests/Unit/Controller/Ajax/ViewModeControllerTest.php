@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use TYPO3\CMS\Core\EventDispatcher\NoopEventDispatcher;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use Webconsulting\RecordsListTypes\Controller\Ajax\ViewModeController;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
@@ -33,7 +34,7 @@ final class ViewModeControllerTest extends TestCase
             ->willThrowException(new RuntimeException('Test error'));
 
         $controller = new ViewModeController(
-            new ViewModeResolver(),
+            new ViewModeResolver(new NoopEventDispatcher()),
             $loggerMock,
         );
 
@@ -59,7 +60,7 @@ final class ViewModeControllerTest extends TestCase
             ->willThrowException(new RuntimeException('Request error'));
 
         $controller = new ViewModeController(
-            new ViewModeResolver(),
+            new ViewModeResolver(new NoopEventDispatcher()),
             $loggerMock,
         );
 
@@ -77,7 +78,7 @@ final class ViewModeControllerTest extends TestCase
     public function controllerAcceptsRequiredDependencies(): void
     {
         $controller = new ViewModeController(
-            new ViewModeResolver(),
+            new ViewModeResolver(new NoopEventDispatcher()),
             $this->createStub(LoggerInterface::class),
         );
 

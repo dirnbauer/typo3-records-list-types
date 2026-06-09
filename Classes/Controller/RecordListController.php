@@ -8,18 +8,22 @@ use Doctrine\DBAL\ParameterType;
 use Exception;
 use JsonException;
 use Override;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use ReflectionException;
 use ReflectionMethod;
-use RuntimeException;
 use TYPO3\CMS\Backend\Context\PageContext;
+use TYPO3\CMS\Backend\Context\PageContextFactory;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
 use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListController;
 use TYPO3\CMS\Backend\Module\ModuleData;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
+use TYPO3\CMS\Backend\Template\Components\Buttons\LanguageSelectorBuilder;
+use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
+use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Context\Context;
@@ -29,6 +33,7 @@ use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
+use TYPO3\CMS\Core\Messaging\FlashMessageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Pagination\SlidingWindowPagination;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
@@ -68,12 +73,6 @@ use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
  */
 final class RecordListController extends CoreRecordListController
 {
-    private ?ViewTypeRegistry $viewTypeRegistry = null;
-
-    private ?RecordSortingService $recordSortingService = null;
-
-    private ?RecordListRequestParameterService $requestParameterService = null;
-
     /** Whether the clipboard is enabled for this request. */
     private bool $clipboardEnabled = false;
 
@@ -87,56 +86,51 @@ final class RecordListController extends CoreRecordListController
     private string $currentViewMode = 'list';
 
     /**
-     * Get the ViewTypeRegistry from the DI container.
-     * XClasses can't use constructor injection for additional dependencies,
-     * so we fetch it from the container on demand.
+     * The XCLASS is resolved through the DI container (it is registered as a
+     * public service), so constructor injection works for additional
+     * dependencies as long as the parent dependencies are passed through.
      */
-    private function getViewTypeRegistry(): ViewTypeRegistry
-    {
-        if (!$this->viewTypeRegistry instanceof ViewTypeRegistry) {
-            $registry = GeneralUtility::getContainer()->get(ViewTypeRegistry::class);
-            if (!$registry instanceof ViewTypeRegistry) {
-                throw new RuntimeException('ViewTypeRegistry not available from container', 1735600200);
-            }
-            $this->viewTypeRegistry = $registry;
-        }
-        return $this->viewTypeRegistry;
-    }
-
-    private function getRecordSortingService(): RecordSortingService
-    {
-        if (!$this->recordSortingService instanceof RecordSortingService) {
-            $this->recordSortingService = GeneralUtility::makeInstance(RecordSortingService::class);
-        }
-        return $this->recordSortingService;
-    }
-
-    private function getRequestParameterService(): RecordListRequestParameterService
-    {
-        if (!$this->requestParameterService instanceof RecordListRequestParameterService) {
-            $this->requestParameterService = GeneralUtility::makeInstance(RecordListRequestParameterService::class);
-        }
-        return $this->requestParameterService;
-    }
-
-    private function getTcaConfigurationService(): TcaTableConfigurationService
-    {
-        return GeneralUtility::makeInstance(TcaTableConfigurationService::class);
-    }
-
-    private function getDisplayColumnResolver(): RecordDisplayColumnResolver
-    {
-        return GeneralUtility::makeInstance(RecordDisplayColumnResolver::class);
-    }
-
-    private function getViewEnrichmentService(): RecordViewEnrichmentService
-    {
-        return GeneralUtility::makeInstance(RecordViewEnrichmentService::class);
-    }
-
-    private function getTranslationGroupingService(): RecordTranslationGroupingService
-    {
-        return GeneralUtility::makeInstance(RecordTranslationGroupingService::class);
+    public function __construct(
+        ComponentFactory $componentFactory,
+        IconFactory $iconFactory,
+        PageRenderer $pageRenderer,
+        EventDispatcherInterface $eventDispatcher,
+        UriBuilder $uriBuilder,
+        ModuleTemplateFactory $moduleTemplateFactory,
+        TcaSchemaFactory $tcaSchemaFactory,
+        FlashMessageService $flashMessageService,
+        PageContextFactory $pageContextFactory,
+        LanguageSelectorBuilder $languageSelectorBuilder,
+        private readonly ViewModeResolver $viewModeResolver,
+        private readonly ViewTypeRegistry $viewTypeRegistry,
+        private readonly GridConfigurationService $gridConfigurationService,
+        private readonly RecordGridDataProvider $recordGridDataProvider,
+        private readonly MiddlewareDiagnosticService $middlewareDiagnosticService,
+        private readonly RecordFilterQueryService $recordFilterQueryService,
+        private readonly RecordFilterStateService $recordFilterStateService,
+        private readonly RecordFilterViewDataFactory $recordFilterViewDataFactory,
+        private readonly RecordSortingService $recordSortingService,
+        private readonly RecordListRequestParameterService $requestParameterService,
+        private readonly TcaTableConfigurationService $tcaConfigurationService,
+        private readonly RecordDisplayColumnResolver $displayColumnResolver,
+        private readonly RecordViewEnrichmentService $viewEnrichmentService,
+        private readonly RecordTranslationGroupingService $translationGroupingService,
+        private readonly ViewFactoryInterface $viewFactory,
+        private readonly ConnectionPool $connectionPool,
+        private readonly Context $context,
+    ) {
+        parent::__construct(
+            $componentFactory,
+            $iconFactory,
+            $pageRenderer,
+            $eventDispatcher,
+            $uriBuilder,
+            $moduleTemplateFactory,
+            $tcaSchemaFactory,
+            $flashMessageService,
+            $pageContextFactory,
+            $languageSelectorBuilder,
+        );
     }
 
     private function createViewEnrichmentContext(): RecordViewEnrichmentContext
@@ -217,18 +211,17 @@ final class RecordListController extends CoreRecordListController
     {
         $this->currentRequest = $request;
         // Get view mode resolver
-        $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
 
         $requestParams = ArrayUtility::mergedRequestParameters($request);
         $pageId = ArrayUtility::intValue($requestParams['id'] ?? null);
         $requestedTable = ArrayUtility::stringValue($requestParams['table'] ?? null);
 
         // Get the active view mode
-        $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId, $requestedTable);
+        $viewMode = $this->viewModeResolver->getActiveViewMode($request, $pageId, $requestedTable);
         $this->currentViewMode = $viewMode;
 
         // Only handle non-list views
-        if ($viewMode === 'list' || !$viewModeResolver->isModeAllowed($viewMode, $pageId)) {
+        if ($viewMode === 'list' || !$this->viewModeResolver->isModeAllowed($viewMode, $pageId)) {
             // Delegate to parent for standard List View
             return parent::mainAction($request);
         }
@@ -251,6 +244,7 @@ final class RecordListController extends CoreRecordListController
         $backendUser = $this->getBackendUserAuthentication();
 
         $this->pageRenderer->addInlineLanguageLabelFile('EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf');
+        $this->pageRenderer->addInlineLanguageLabelFile('EXT:records_list_types/Resources/Private/Language/locallang.xlf', 'drag.');
         $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/dispatch-modal-button.js');
         $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/contextual-record-edit-trigger.js');
 
@@ -353,14 +347,6 @@ final class RecordListController extends CoreRecordListController
             $this->deleteRecords($request, $clipboard);
         }
 
-        // =========================================================================
-        // Render the appropriate view based on mode
-        // =========================================================================
-
-        $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
-        $viewMode = $viewModeResolver->getActiveViewMode($request, $pageId, $this->table);
-        $this->currentViewMode = $viewMode;
-
         // Initialize dbList for URL building, clipboard functionality, and search queries
         $dbList->start($this->pageContext->pageId, $this->table, $pointer, $this->searchTerm, $searchLevels);
 
@@ -440,12 +426,10 @@ final class RecordListController extends CoreRecordListController
         int $searchLevels,
     ): string {
         // Get the current view mode
-        $viewModeResolver = GeneralUtility::makeInstance(ViewModeResolver::class);
-        $viewMode = $viewModeResolver->getActiveViewMode($request, $this->pageContext->pageId, $this->table);
+        $viewMode = $this->viewModeResolver->getActiveViewMode($request, $this->pageContext->pageId, $this->table);
 
         // Build the search URL using the 'records' route (not web_list)
         // This is critical - dbList->listURL() returns a web_list URL which bypasses our controller
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
 
         $searchParams = [
             'id' => $this->pageContext->pageId,
@@ -465,7 +449,7 @@ final class RecordListController extends CoreRecordListController
         }
 
         try {
-            $baseUrl = (string) $uriBuilder->buildUriFromRoute('records', $searchParams);
+            $baseUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $searchParams);
         } catch (Exception) {
             // Fallback to dbList URL if route building fails
             $baseUrl = (string) $dbList->listURL('', '-1', 'pointer,searchTerm,displayMode');
@@ -506,21 +490,13 @@ final class RecordListController extends CoreRecordListController
         string $viewMode,
     ): string {
         // Get view type configuration (null = unknown type, fall back to grid)
-        $registry = $this->getViewTypeRegistry();
-        $viewConfig = $registry->getViewType($viewMode, $pageId);
+        $viewConfig = $this->viewTypeRegistry->getViewType($viewMode, $pageId);
         if ($viewConfig === null) {
             $viewMode = 'grid';
-            $viewConfig = $registry->getViewType($viewMode, $pageId);
+            $viewConfig = $this->viewTypeRegistry->getViewType($viewMode, $pageId);
         }
 
         // Services
-        $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
-        $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
-        $middlewareDiagnosticService = GeneralUtility::makeInstance(MiddlewareDiagnosticService::class);
-        $recordFilterQueryService = GeneralUtility::makeInstance(RecordFilterQueryService::class);
-        $recordFilterStateService = GeneralUtility::makeInstance(RecordFilterStateService::class);
-        $recordFilterViewDataFactory = GeneralUtility::makeInstance(RecordFilterViewDataFactory::class);
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
 
         // Parse request parameters once at the action boundary.
         $requestParams = ArrayUtility::mergedRequestParameters($request);
@@ -530,14 +506,14 @@ final class RecordListController extends CoreRecordListController
         // Middleware diagnostics (only GridView template shows this)
         $middlewareWarning = null;
         $forceListViewUrl = null;
-        $diagnosis = $middlewareDiagnosticService->diagnose($request);
+        $diagnosis = $this->middlewareDiagnosticService->diagnose($request);
         if ($diagnosis['hasRisk']) {
-            $middlewareWarning = $middlewareDiagnosticService->getWarningMessage($request);
+            $middlewareWarning = $this->middlewareDiagnosticService->getWarningMessage($request);
             $forceListViewUrl = $diagnosis['forceListViewUrl'];
         }
 
         // Display columns configuration from ViewTypeRegistry
-        $columnsConfig = $registry->getDisplayColumnsConfig($viewMode, $pageId);
+        $columnsConfig = $this->viewTypeRegistry->getDisplayColumnsConfig($viewMode, $pageId);
 
         // Get tables to display
         $tablesToRender = $this->getSearchableTables($pageId, $table, $searchTerm, $searchLevels, $request);
@@ -545,8 +521,8 @@ final class RecordListController extends CoreRecordListController
         // Collect all records grouped by table
         $tableData = [];
         foreach ($tablesToRender as $tableName) {
-            $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
-            $filterViewData = $recordFilterViewDataFactory->createForTable($tableName, $pageId, $viewMode, $request);
+            $tableConfig = $this->gridConfigurationService->getTableConfig($tableName, $pageId);
+            $filterViewData = $this->recordFilterViewDataFactory->createForTable($tableName, $pageId, $viewMode, $request);
 
             // TCA info for sorting capabilities
             $tcaForTable = $this->getTcaForTable($tableName);
@@ -576,97 +552,35 @@ final class RecordListController extends CoreRecordListController
             }
 
             $isSingleTableMode = ($table !== '');
-            $hasActiveFilters = $recordFilterStateService->hasActiveValuesForTable($request, $tableName);
-            $totalRecordCount = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request, $recordFilterQueryService);
+            $isSearching = ($searchTerm !== '');
+            $hasActiveFilters = $this->recordFilterStateService->hasActiveValuesForTable($request, $tableName);
+            $totalRecordCount = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
 
-            // Pagination and record fetching strategy depends on mode + search state
-            if ($searchTerm !== '') {
-                // ---- SEARCH MODE ----
-                // Get total count of matching records for this table
-                $searchTotalCount = $this->getSearchRecordCount($tableName, $pageId, $searchTerm, $searchLevels, $request, $recordFilterQueryService);
-
-                if ($isSingleTableMode) {
-                    // Single-table search: full pagination support
-                    $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
-                    $currentPointer = $this->getRequestParameterService()->getCurrentPointer($request, $tableName);
-                    $offset = ($currentPointer - 1) * $itemsPerPage;
-                    $records = $this->getRecordsUsingDbList(
-                        $request,
-                        $tableName,
-                        $pageId,
-                        $searchTerm,
-                        $searchLevels,
-                        $itemsPerPage,
-                        $offset,
-                        $sortField,
-                        $sortDirection,
-                        $recordGridDataProvider,
-                        $recordFilterQueryService,
-                    );
-                    $recordCount = $searchTotalCount;
-                    $hasMore = false; // pagination handles navigation
-                } else {
-                    // Multi-table search: show limited results with "Expand table"
-                    $itemsPerPage = $this->getItemsLimitPerTable($pageId);
-                    $currentPointer = 1;
-                    $offset = 0;
-                    $records = $this->getRecordsUsingDbList(
-                        $request,
-                        $tableName,
-                        $pageId,
-                        $searchTerm,
-                        $searchLevels,
-                        $itemsPerPage,
-                        0,
-                        $sortField,
-                        $sortDirection,
-                        $recordGridDataProvider,
-                        $recordFilterQueryService,
-                    );
-                    $recordCount = $searchTotalCount;
-                    $hasMore = $searchTotalCount > count($records);
-                }
-            } elseif ($isSingleTableMode) {
-                // ---- SINGLE TABLE, NO SEARCH ----
+            // Single-table mode paginates fully; multi-table mode shows a
+            // limited per-table preview with an "Expand table" link instead.
+            $recordCount = $isSearching
+                ? $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request)
+                : $totalRecordCount;
+            if ($isSingleTableMode) {
                 $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
-                $currentPointer = $this->getRequestParameterService()->getCurrentPointer($request, $tableName);
-                $offset = ($currentPointer - 1) * $itemsPerPage;
-                $records = $this->getRecordsUsingDbList(
-                    $request,
-                    $tableName,
-                    $pageId,
-                    $searchTerm,
-                    $searchLevels,
-                    $itemsPerPage,
-                    $offset,
-                    $sortField,
-                    $sortDirection,
-                    $recordGridDataProvider,
-                    $recordFilterQueryService,
-                );
-                $recordCount = $totalRecordCount;
-                $hasMore = false; // pagination handles navigation
+                $currentPointer = $this->requestParameterService->getCurrentPointer($request, $tableName);
             } else {
-                // ---- MULTI TABLE, NO SEARCH ----
                 $itemsPerPage = $this->getItemsLimitPerTable($pageId);
                 $currentPointer = 1;
-                $offset = 0;
-                $records = $this->getRecordsUsingDbList(
-                    $request,
-                    $tableName,
-                    $pageId,
-                    '',
-                    0,
-                    $itemsPerPage,
-                    $offset,
-                    $sortField,
-                    $sortDirection,
-                    $recordGridDataProvider,
-                    $recordFilterQueryService,
-                );
-                $recordCount = $totalRecordCount;
-                $hasMore = $recordCount > count($records);
             }
+            $offset = ($currentPointer - 1) * $itemsPerPage;
+            $records = $this->getRecordsUsingDbList(
+                $request,
+                $tableName,
+                $pageId,
+                ($isSearching || $isSingleTableMode) ? $searchTerm : '',
+                ($isSearching || $isSingleTableMode) ? $searchLevels : 0,
+                $itemsPerPage,
+                $offset,
+                $sortField,
+                $sortDirection,
+            );
+            $hasMore = !$isSingleTableMode && $recordCount > count($records);
 
             if ($records === [] && !$isSingleTableMode) {
                 continue;
@@ -701,21 +615,21 @@ final class RecordListController extends CoreRecordListController
                     'table' => $tableName,
                     'displayMode' => $viewMode,
                 ];
-                $singleTableUrlParams = array_replace($singleTableUrlParams, $this->getRequestParameterService()->getPreservedListParameters($request));
-                $singleTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $singleTableUrlParams);
+                $singleTableUrlParams = array_replace($singleTableUrlParams, $this->requestParameterService->getPreservedListParameters($request));
+                $singleTableUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $singleTableUrlParams);
                 $clearTableUrlParams = [
                     'id' => $pageId,
                     'displayMode' => $viewMode,
                 ];
-                $clearTableUrlParams = array_replace($clearTableUrlParams, $this->getRequestParameterService()->getPreservedListParameters($request));
+                $clearTableUrlParams = array_replace($clearTableUrlParams, $this->requestParameterService->getPreservedListParameters($request));
                 unset($clearTableUrlParams['table']);
-                $clearTableUrl = (string) $uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
+                $clearTableUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
             } catch (Exception) {
             }
 
             // Display columns (from ViewTypeRegistry config)
             $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
-            $columnResolver = $this->getDisplayColumnResolver();
+            $columnResolver = $this->displayColumnResolver;
             if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
                 $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->getModuleTsConfigForColumns());
             } elseif ($columnsArray !== []) {
@@ -725,7 +639,7 @@ final class RecordListController extends CoreRecordListController
             }
 
             $enrichmentContext = $this->createViewEnrichmentContext();
-            $enrichedRecords = $this->getViewEnrichmentService()->enrichForAlternativeViews(
+            $enrichedRecords = $this->viewEnrichmentService->enrichForAlternativeViews(
                 $records,
                 $displayColumns,
                 $tableName,
@@ -733,11 +647,11 @@ final class RecordListController extends CoreRecordListController
             );
 
             // Separate connected translations from default-language / free-mode records
-            $enrichedRecords = $this->getTranslationGroupingService()->groupTranslationsOnRecords(
+            $enrichedRecords = $this->translationGroupingService->groupTranslationsOnRecords(
                 $enrichedRecords,
                 $tableName,
                 $pageId,
-                $recordGridDataProvider,
+                $this->recordGridDataProvider,
                 $enrichmentContext,
             );
 
@@ -766,7 +680,7 @@ final class RecordListController extends CoreRecordListController
             unset($recordRef);
 
             // Sorting dropdown / toggle data
-            $sortableFields = $recordGridDataProvider->getSortableFields($tableName);
+            $sortableFields = $this->recordGridDataProvider->getSortableFields($tableName);
             $sortingDropdown = $this->buildSortingDropdown(
                 $tableName,
                 $sortableFields,
@@ -848,7 +762,7 @@ final class RecordListController extends CoreRecordListController
                 'tableConfig' => $tableConfig,
                 'filters' => $filterViewData,
                 'records' => $enrichedRecords,
-                'hasThumbnails' => $recordGridDataProvider->recordsContainThumbnails($enrichedRecords),
+                'hasThumbnails' => $this->recordGridDataProvider->recordsContainThumbnails($enrichedRecords),
                 'recordCount' => $recordCount,
                 'hasMore' => $hasMore,
                 'hasActiveFilters' => $hasActiveFilters,
@@ -878,25 +792,23 @@ final class RecordListController extends CoreRecordListController
         }
 
         // Load CSS and JS from ViewTypeRegistry
-        $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
-        foreach ($registry->getCssFiles($viewMode, $pageId) as $cssFile) {
-            $pageRenderer->addCssFile($cssFile);
+        foreach ($this->viewTypeRegistry->getCssFiles($viewMode, $pageId) as $cssFile) {
+            $this->pageRenderer->addCssFile($cssFile);
         }
-        foreach ($registry->getJsModules($viewMode, $pageId) as $jsModule) {
-            $pageRenderer->loadJavaScriptModule($jsModule);
+        foreach ($this->viewTypeRegistry->getJsModules($viewMode, $pageId) as $jsModule) {
+            $this->pageRenderer->loadJavaScriptModule($jsModule);
         }
-        $pageRenderer->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
 
         // Multi Record Selection JS modules (TYPO3 core API for bulk actions)
-        $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection.js');
-        $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection-delete-action.js');
-        $pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection-edit-action.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection-delete-action.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/backend/multi-record-selection-edit-action.js');
         // recordlist.js handles copyMarked/removeMarked via form submission
-        $pageRenderer->loadJavaScriptModule('@typo3/backend/recordlist.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/backend/recordlist.js');
 
         // Create the view from ViewTypeRegistry template paths
-        $templatePaths = $registry->getTemplatePaths($viewMode, $pageId);
-        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
+        $templatePaths = $this->viewTypeRegistry->getTemplatePaths($viewMode, $pageId);
         $viewFactoryData = new ViewFactoryData(
             templateRootPaths: $templatePaths['templateRootPaths'],
             partialRootPaths: $templatePaths['partialRootPaths'],
@@ -904,7 +816,7 @@ final class RecordListController extends CoreRecordListController
             request: $request,
         );
 
-        $view = $viewFactory->create($viewFactoryData);
+        $view = $this->viewFactory->create($viewFactoryData);
         $view->assignMultiple([
             'pageId' => $pageId,
             'tableData' => $tableData,
@@ -925,7 +837,7 @@ final class RecordListController extends CoreRecordListController
      */
     private function getTcaForTable(string $tableName): array
     {
-        return $this->getTcaConfigurationService()->getTcaForTable($tableName);
+        return $this->tcaConfigurationService->getTcaForTable($tableName);
     }
 
     /**
@@ -1087,16 +999,12 @@ final class RecordListController extends CoreRecordListController
         int $offset = 0,
         string $sortField = '',
         string $sortDirection = 'asc',
-        ?RecordGridDataProvider $recordGridDataProvider = null,
-        ?RecordFilterQueryService $recordFilterQueryService = null,
     ): array {
         $records = [];
         $recordsByIdentity = [];
         $workspaceId = $this->getCurrentWorkspaceId();
         $useWorkspaceReduction = $workspaceId > 0;
-        $recordGridDataProvider ??= GeneralUtility::makeInstance(RecordGridDataProvider::class);
-        $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
-        $deferWorkspaceEvaluation = $recordFilterQueryService->shouldDeferWorkspaceEvaluation($tableName, $pageId, $request, $searchTerm);
+        $deferWorkspaceEvaluation = $this->recordFilterQueryService->shouldDeferWorkspaceEvaluation($tableName, $pageId, $request, $searchTerm);
         $querySearchTerm = $deferWorkspaceEvaluation ? '' : $searchTerm;
 
         try {
@@ -1114,7 +1022,7 @@ final class RecordListController extends CoreRecordListController
                 $deferWorkspaceEvaluation ? 0 : $offset,
                 $deferWorkspaceEvaluation ? 0 : $limit,
             );
-            $recordFilterQueryService->applyActiveFilters($queryBuilder, $tableName, $pageId, $request, $deferWorkspaceEvaluation);
+            $this->recordFilterQueryService->applyActiveFilters($queryBuilder, $tableName, $pageId, $request, $deferWorkspaceEvaluation);
             $result = $queryBuilder->executeQuery();
 
             while ($row = $result->fetchAssociative()) {
@@ -1129,19 +1037,19 @@ final class RecordListController extends CoreRecordListController
                 }
 
                 $typedRow = ArrayUtility::stringKeyArray($row);
-                if ($deferWorkspaceEvaluation && !$recordFilterQueryService->matchesDeferredWorkspaceEvaluation($tableName, $pageId, $request, $typedRow, $searchTerm)) {
+                if ($deferWorkspaceEvaluation && !$this->recordFilterQueryService->matchesDeferredWorkspaceEvaluation($tableName, $pageId, $request, $typedRow, $searchTerm)) {
                     continue;
                 }
 
                 $uid = ArrayUtility::intValue($typedRow['uid'] ?? null);
-                $recordData = $recordGridDataProvider->buildRecordDataFromRow($tableName, $typedRow, $pageId);
+                $recordData = $this->recordGridDataProvider->buildRecordDataFromRow($tableName, $typedRow, $pageId);
 
                 if ($useWorkspaceReduction) {
                     // In workspaces the DB query can still yield both a live row and a
                     // versioned/moved row that overlay to the same effective record.
                     // Reduce them by their live identity so custom views mirror the
                     // native list's single effective row per record.
-                    $identity = $this->getRecordSortingService()->getWorkspaceRecordIdentity($typedRow, $uid);
+                    $identity = $this->recordSortingService->getWorkspaceRecordIdentity($typedRow, $uid);
                     $recordsByIdentity[$identity] = $recordData;
                 } else {
                     $records[] = $recordData;
@@ -1155,7 +1063,7 @@ final class RecordListController extends CoreRecordListController
         if ($useWorkspaceReduction) {
             $records = array_values($recordsByIdentity);
             if ($sortField !== '') {
-                $this->getRecordSortingService()->sortRecordsByRawField($records, $sortField, $sortDirection);
+                $this->recordSortingService->sortRecordsByRawField($records, $sortField, $sortDirection);
             }
             if ($deferWorkspaceEvaluation && $limit > 0) {
                 $records = array_slice($records, $offset, $limit);
@@ -1172,46 +1080,25 @@ final class RecordListController extends CoreRecordListController
      */
     private function getCurrentWorkspaceId(): int
     {
-        $workspaceId = GeneralUtility::makeInstance(Context::class)
+        $workspaceId = $this->context
             ->getPropertyFromAspect('workspace', 'id', 0);
         return is_numeric($workspaceId) ? (int) $workspaceId : 0;
     }
 
     /**
-     * Get total count of search results for a table.
-     *
-     * Uses the same DatabaseRecordList query builder as getRecordsUsingDbList()
-     * to build a COUNT query with identical search/WHERE conditions.
-     *
-     * @param string $tableName The table to count records for
-     * @param int $pageId The current page ID
-     * @param string $searchTerm The search term
-     * @param int $searchLevels The search depth level
-     * @param ServerRequestInterface $request The current request
-     * @return int Total number of matching records
+     * Get total count of records for a table, honoring search term and
+     * active record filters by using the same DatabaseRecordList query
+     * builder as getRecordsUsingDbList().
      */
-    private function getSearchRecordCount(
-        string $tableName,
-        int $pageId,
-        string $searchTerm,
-        int $searchLevels,
-        ServerRequestInterface $request,
-        ?RecordFilterQueryService $recordFilterQueryService = null,
-    ): int {
-        return $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request, $recordFilterQueryService);
-    }
-
     private function getRecordCountUsingDbList(
         string $tableName,
         int $pageId,
         string $searchTerm,
         int $searchLevels,
         ServerRequestInterface $request,
-        ?RecordFilterQueryService $recordFilterQueryService = null,
     ): int {
         try {
-            $recordFilterQueryService ??= GeneralUtility::makeInstance(RecordFilterQueryService::class);
-            if ($recordFilterQueryService->shouldDeferWorkspaceEvaluation($tableName, $pageId, $request, $searchTerm)) {
+            if ($this->recordFilterQueryService->shouldDeferWorkspaceEvaluation($tableName, $pageId, $request, $searchTerm)) {
                 return count($this->getRecordsUsingDbList(
                     $request,
                     $tableName,
@@ -1219,17 +1106,12 @@ final class RecordListController extends CoreRecordListController
                     $searchTerm,
                     $searchLevels,
                     0,
-                    0,
-                    '',
-                    'asc',
-                    GeneralUtility::makeInstance(RecordGridDataProvider::class),
-                    $recordFilterQueryService,
                 ));
             }
 
             $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
             $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
-            $recordFilterQueryService->applyActiveFilters($qb, $tableName, $pageId, $request);
+            $this->recordFilterQueryService->applyActiveFilters($qb, $tableName, $pageId, $request);
             $count = $qb->count('*')->executeQuery()->fetchOne();
             return is_numeric($count) ? (int) $count : 0;
         } catch (Exception) {
@@ -1273,16 +1155,14 @@ final class RecordListController extends CoreRecordListController
             return $buttons;
         }
         $languageService = $this->getLanguageService();
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
 
         $returnUrl = '';
         try {
             $returnUrlParams = array_replace(
                 ['id' => $pageId, 'displayMode' => $viewMode, 'table' => $tableName],
-                $this->getRequestParameterService()->getPreservedListParameters($request),
+                $this->requestParameterService->getPreservedListParameters($request),
             );
-            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $returnUrlParams);
+            $returnUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $returnUrlParams);
         } catch (Exception) {
             $returnUrl = (string) $request->getUri();
         }
@@ -1297,7 +1177,7 @@ final class RecordListController extends CoreRecordListController
         $editColumnsButton = '<button type="button" class="btn btn-sm btn-default"'
             . ' data-multi-record-selection-action="edit"'
             . ' data-multi-record-selection-action-config="' . $editColumnsConfig . '">'
-            . $iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
+            . $this->iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
             . ' ' . htmlspecialchars($this->translate($languageService, 'LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editColumns', 'Edit columns'))
             . '</button>';
 
@@ -1322,8 +1202,7 @@ final class RecordListController extends CoreRecordListController
         bool $disableSingleTableView,
     ): array {
         $lang = $this->getLanguageService();
-        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
-        if (!$schemaFactory->has($tableName)) {
+        if (!$this->tcaSchemaFactory->has($tableName)) {
             return [
                 'label' => $tableName,
                 'recordCount' => $recordCount,
@@ -1331,7 +1210,7 @@ final class RecordListController extends CoreRecordListController
                 'iconIdentifier' => '',
             ];
         }
-        $schema = $schemaFactory->get($tableName);
+        $schema = $this->tcaSchemaFactory->get($tableName);
         $resolvedTitle = $schema->getTitle($lang->sL(...));
         $tableTitle = $resolvedTitle !== '' ? $resolvedTitle : $tableName;
 
@@ -1371,7 +1250,6 @@ final class RecordListController extends CoreRecordListController
             return null;
         }
 
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
         $fieldModeLabelTranslated = $lang->sL('records_list_types.messages:sortingMode.field');
@@ -1389,7 +1267,7 @@ final class RecordListController extends CoreRecordListController
             }
         }
 
-        $requestParameters = $this->getRequestParameterService();
+        $requestParameters = $this->requestParameterService;
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
         $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
 
@@ -1420,7 +1298,7 @@ final class RecordListController extends CoreRecordListController
                 $items[] = [
                     'field' => $fieldName,
                     'label' => $field['label'] ?? $fieldName,
-                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $sortParams),
+                    'url' => (string) $this->uriBuilder->buildUriFromRoute('records', $sortParams),
                     'isActive' => $fieldName === $currentSortField,
                 ];
             }
@@ -1431,8 +1309,8 @@ final class RecordListController extends CoreRecordListController
                 'sortIconIdentifier' => $currentSortDirection === 'desc' ? 'actions-sort-amount-down' : 'actions-sort-amount-up',
                 'ascLabel' => $ascLabel,
                 'descLabel' => $descLabel,
-                'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
-                'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                'ascUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $ascParams),
+                'descUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $descParams),
                 'isAscActive' => $currentSortDirection === 'asc',
                 'isDescActive' => $currentSortDirection === 'desc',
                 'items' => $items,
@@ -1455,7 +1333,6 @@ final class RecordListController extends CoreRecordListController
         string $viewMode,
         ServerRequestInterface $request,
     ): ?array {
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
         $manualLabelT = $lang->sL('records_list_types.messages:sortingMode.manual');
@@ -1473,7 +1350,7 @@ final class RecordListController extends CoreRecordListController
         $headingLabelT = $lang->sL('records_list_types.messages:sortingMode.label');
         $headingLabel = $headingLabelT !== '' ? $headingLabelT : 'Order';
 
-        $requestParameters = $this->getRequestParameterService();
+        $requestParameters = $this->requestParameterService;
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
         $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
 
@@ -1504,10 +1381,10 @@ final class RecordListController extends CoreRecordListController
                     'label' => $manualLabel,
                     'title' => $manualTitle,
                     'active' => $currentMode === 'manual',
-                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $manualParams),
+                    'url' => (string) $this->uriBuilder->buildUriFromRoute('records', $manualParams),
                     'stateLabel' => $currentDirection === 'desc' ? $descLabel : $ascLabel,
-                    'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
-                    'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                    'ascUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $ascParams),
+                    'descUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $descParams),
                     'ascLabel' => $ascLabel,
                     'descLabel' => $descLabel,
                     'ascActive' => $currentDirection === 'asc',
@@ -1517,7 +1394,7 @@ final class RecordListController extends CoreRecordListController
                     'label' => $fieldLabel,
                     'title' => $fieldTitle,
                     'active' => $currentMode === 'field',
-                    'url' => (string) $uriBuilder->buildUriFromRoute('records', $fieldParams),
+                    'url' => (string) $this->uriBuilder->buildUriFromRoute('records', $fieldParams),
                 ],
             ];
         } catch (Exception) {
@@ -1541,10 +1418,9 @@ final class RecordListController extends CoreRecordListController
         ServerRequestInterface $request,
         bool $isSingleTableMode = false,
     ): array {
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $lang = $this->getLanguageService();
 
-        $requestParameters = $this->getRequestParameterService();
+        $requestParameters = $this->requestParameterService;
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
         $baseParams = array_replace($baseParams, $requestParameters->getPreservedListParameters($request));
 
@@ -1575,7 +1451,7 @@ final class RecordListController extends CoreRecordListController
                 : sprintf('Edit "%s"', $label);
             $multiEditColumnsOnly = json_encode([$field], JSON_THROW_ON_ERROR);
             try {
-                $multiEditReturnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
+                $multiEditReturnUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $baseParams);
             } catch (Exception) {
                 $multiEditReturnUrl = '';
             }
@@ -1592,8 +1468,8 @@ final class RecordListController extends CoreRecordListController
                 'iconIdentifier' => $isActiveField
                     ? ($isDescActive ? 'actions-sort-amount-down' : 'actions-sort-amount-up')
                     : 'empty-empty',
-                'ascUrl' => (string) $uriBuilder->buildUriFromRoute('records', $ascParams),
-                'descUrl' => (string) $uriBuilder->buildUriFromRoute('records', $descParams),
+                'ascUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $ascParams),
+                'descUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $descParams),
                 'ascLabel' => $ascLabel,
                 'descLabel' => $descLabel,
                 'isAscActive' => $isAscActive,
@@ -1669,12 +1545,11 @@ final class RecordListController extends CoreRecordListController
             $label = 'Edit shown columns';
         }
 
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
-        $baseParams = array_replace($baseParams, $this->getRequestParameterService()->getPreservedListParameters($request));
+        $baseParams = array_replace($baseParams, $this->requestParameterService->getPreservedListParameters($request));
 
         try {
-            $returnUrl = (string) $uriBuilder->buildUriFromRoute('records', $baseParams);
+            $returnUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $baseParams);
         } catch (Exception) {
             $returnUrl = '';
         }
@@ -1702,11 +1577,10 @@ final class RecordListController extends CoreRecordListController
         if ($be->isAdmin()) {
             return true;
         }
-        $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
-        if (!$schemaFactory->has($tableName)) {
+        if (!$this->tcaSchemaFactory->has($tableName)) {
             return false;
         }
-        $schema = $schemaFactory->get($tableName);
+        $schema = $this->tcaSchemaFactory->get($tableName);
         if ($schema->hasCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::AccessReadOnly)) {
             return false;
         }
@@ -1877,7 +1751,7 @@ final class RecordListController extends CoreRecordListController
         ];
 
         // Title/Label column (second fixed column)
-        $labelLabel = $this->getTcaConfigurationService()->getFieldLabel($labelField, $tcaColumns, $ctrl);
+        $labelLabel = $this->tcaConfigurationService->getFieldLabel($labelField, $tcaColumns, $ctrl);
         $headers[] = [
             'field' => $labelField,
             'label' => $labelLabel,
@@ -1954,35 +1828,20 @@ final class RecordListController extends CoreRecordListController
      */
     private function getTableIcon(string $tableName): string
     {
-        $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
-        $icon = $this->mapRecordTypeToIconIdentifier($iconFactory, $tableName, []);
+        $icon = $this->mapRecordTypeToIconIdentifier($tableName, []);
         return $icon !== '' ? $icon : 'mimetypes-x-content-text';
     }
 
     /**
-     * TYPO3 v14 minors changed this core method signature to require a TCA schema.
-     * Keep the extension compatible across both variants.
-     *
      * @param array<string, mixed> $row
      */
-    private function mapRecordTypeToIconIdentifier(IconFactory $iconFactory, string $tableName, array $row): string
+    private function mapRecordTypeToIconIdentifier(string $tableName, array $row): string
     {
-        $method = new ReflectionMethod($iconFactory, 'mapRecordTypeToIconIdentifier');
-
-        if ($method->getNumberOfParameters() >= 3) {
-            $schemaFactory = GeneralUtility::makeInstance(TcaSchemaFactory::class);
-            if (!$schemaFactory->has($tableName)) {
-                return '';
-            }
-
-            /** @var string $iconIdentifier */
-            $iconIdentifier = $method->invoke($iconFactory, $tableName, $row, $schemaFactory->get($tableName));
-            return $iconIdentifier;
+        if (!$this->tcaSchemaFactory->has($tableName)) {
+            return '';
         }
 
-        /** @var string $iconIdentifier */
-        $iconIdentifier = $method->invoke($iconFactory, $tableName, $row);
-        return $iconIdentifier;
+        return $this->iconFactory->mapRecordTypeToIconIdentifier($tableName, $row, $this->tcaSchemaFactory->get($tableName));
     }
 
 
@@ -2088,19 +1947,18 @@ final class RecordListController extends CoreRecordListController
 
         // Build the currentUrl for page navigation (same pattern as Core ListNavigation).
         // The Fluid template appends &pointer[<table>]=<pageNumber> to this URL.
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         // Always include table in pagination URLs so clicking any pagination
         // link switches to single-table mode (matches TYPO3 Core behavior).
         $urlParams = array_replace(
             ['id' => $pageId, 'displayMode' => $viewMode],
-            $this->getRequestParameterService()->getPreservedListParameters($request),
+            $this->requestParameterService->getPreservedListParameters($request),
         );
         $urlParams['table'] = $tableName;
         unset($urlParams['pointer']);
 
         $currentUrl = '';
         try {
-            $currentUrl = (string) $uriBuilder->buildUriFromRoute('records', $urlParams);
+            $currentUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $urlParams);
         } catch (Exception) {
             // Ignore
         }
@@ -2138,11 +1996,10 @@ final class RecordListController extends CoreRecordListController
             return parent::renderPageTranslations($dbList, $siteLanguages);
         }
 
-        $resolver = GeneralUtility::makeInstance(ViewModeResolver::class);
         $pageId = $this->pageContext->pageId;
-        $viewMode = $resolver->getActiveViewMode($request, $pageId, $this->table);
+        $viewMode = $this->viewModeResolver->getActiveViewMode($request, $pageId, $this->table);
 
-        if ($viewMode === 'list' || !$resolver->isModeAllowed($viewMode, $pageId)) {
+        if ($viewMode === 'list' || !$this->viewModeResolver->isModeAllowed($viewMode, $pageId)) {
             return parent::renderPageTranslations($dbList, $siteLanguages);
         }
 
@@ -2170,24 +2027,21 @@ final class RecordListController extends CoreRecordListController
         string $viewMode,
     ): string {
         $tableName = 'pages';
-        $registry = $this->getViewTypeRegistry();
-        $viewConfig = $registry->getViewType($viewMode, $pageId);
+        $viewConfig = $this->viewTypeRegistry->getViewType($viewMode, $pageId);
         if ($viewConfig === null) {
             return '';
         }
 
-        $gridConfigurationService = GeneralUtility::makeInstance(GridConfigurationService::class);
-        $recordGridDataProvider = GeneralUtility::makeInstance(RecordGridDataProvider::class);
-        $tableConfig = $gridConfigurationService->getTableConfig($tableName, $pageId);
+        $tableConfig = $this->gridConfigurationService->getTableConfig($tableName, $pageId);
 
-        $records = $this->fetchPageTranslationRecords($pageId, $recordGridDataProvider);
+        $records = $this->fetchPageTranslationRecords($pageId);
         if ($records === []) {
             return '';
         }
 
-        $columnsConfig = $registry->getDisplayColumnsConfig($viewMode, $pageId);
+        $columnsConfig = $this->viewTypeRegistry->getDisplayColumnsConfig($viewMode, $pageId);
         $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
-        $columnResolver = $this->getDisplayColumnResolver();
+        $columnResolver = $this->displayColumnResolver;
         if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
             $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->getModuleTsConfigForColumns());
         } elseif ($columnsArray !== []) {
@@ -2196,7 +2050,7 @@ final class RecordListController extends CoreRecordListController
             $displayColumns = $columnResolver->getTeaserDisplayColumns($tableName);
         }
 
-        $enrichedRecords = $this->getViewEnrichmentService()->enrichForAlternativeViews(
+        $enrichedRecords = $this->viewEnrichmentService->enrichForAlternativeViews(
             $records,
             $displayColumns,
             $tableName,
@@ -2231,7 +2085,7 @@ final class RecordListController extends CoreRecordListController
             $request,
         );
 
-        GeneralUtility::makeInstance(PageRenderer::class)
+        $this->pageRenderer
             ->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
 
         $tableData = [[
@@ -2251,7 +2105,7 @@ final class RecordListController extends CoreRecordListController
                 'items' => [],
             ],
             'records' => $enrichedRecords,
-            'hasThumbnails' => $recordGridDataProvider->recordsContainThumbnails($enrichedRecords),
+            'hasThumbnails' => $this->recordGridDataProvider->recordsContainThumbnails($enrichedRecords),
             'recordCount' => $recordCount,
             'hasMore' => false,
             'hasActiveFilters' => false,
@@ -2279,9 +2133,8 @@ final class RecordListController extends CoreRecordListController
             'multiRecordSelectionActionsHtml' => '',
         ]];
 
-        $templatePaths = $registry->getTemplatePaths($viewMode, $pageId);
-        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
-        $view = $viewFactory->create(new ViewFactoryData(
+        $templatePaths = $this->viewTypeRegistry->getTemplatePaths($viewMode, $pageId);
+        $view = $this->viewFactory->create(new ViewFactoryData(
             templateRootPaths: $templatePaths['templateRootPaths'],
             partialRootPaths: $templatePaths['partialRootPaths'],
             layoutRootPaths: $templatePaths['layoutRootPaths'],
@@ -2321,12 +2174,12 @@ final class RecordListController extends CoreRecordListController
      *
      * @return array<int, array<string, mixed>>
      */
-    private function fetchPageTranslationRecords(int $pageId, RecordGridDataProvider $dataProvider): array
+    private function fetchPageTranslationRecords(int $pageId): array
     {
         $backendUser = $this->getBackendUserAuthentication();
         $workspaceId = $this->getCurrentWorkspaceId();
         $selectedLanguageIds = $this->pageContext->selectedLanguageIds;
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+        $queryBuilder = $this->connectionPool
             ->getQueryBuilderForTable('pages');
         $queryBuilder->getRestrictions()
             ->removeAll()
@@ -2374,12 +2227,12 @@ final class RecordListController extends CoreRecordListController
             }
 
             $typedRow = ArrayUtility::stringKeyArray($row);
-            $recordData = $dataProvider->buildRecordDataFromRow('pages', $typedRow, $pageId);
+            $recordData = $this->recordGridDataProvider->buildRecordDataFromRow('pages', $typedRow, $pageId);
 
             if ($useWorkspaceReduction) {
                 $uidRaw = $typedRow['uid'] ?? 0;
                 $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
-                $identity = $this->getRecordSortingService()->getWorkspaceRecordIdentity($typedRow, $uid);
+                $identity = $this->recordSortingService->getWorkspaceRecordIdentity($typedRow, $uid);
                 $recordsByIdentity[$identity] = $recordData;
             } else {
                 $records[] = $recordData;

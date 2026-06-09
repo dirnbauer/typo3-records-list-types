@@ -4,99 +4,35 @@ services:
     autoconfigure: true
     public: false
 
-  # ==========================================================================
-  # Auto-register all classes in Classes/ directory
-  # Event listeners with #[AsEventListener] attribute are auto-registered
-  # ==========================================================================
   Webconsulting\RecordsListTypes\:
     resource: '../Classes/*'
     exclude:
       - '../Classes/Domain/Model/*'
 
-  # ==========================================================================
-  # Core Services
-  # ==========================================================================
-
-  # View Mode Resolver - Determines which view to render
+  # Public extension points: resolvable via the container for custom view
+  # types and third-party integrations.
   Webconsulting\RecordsListTypes\Service\ViewModeResolver:
     public: true
 
-  # Grid Configuration Service - Parses TSconfig for per-table settings
   Webconsulting\RecordsListTypes\Service\GridConfigurationService:
     public: true
 
-  # Record Grid Data Provider - Fetches records with FAL resolution
-  Webconsulting\RecordsListTypes\Service\RecordGridDataProvider:
-    public: true
-
-  # Record Sorting Service - Workspace-aware sorting helpers for custom views
-  Webconsulting\RecordsListTypes\Service\RecordSortingService:
-    public: true
-
-  # Record List Request Parameter Service - Preserves list state and sort parameters
-  Webconsulting\RecordsListTypes\Service\RecordListRequestParameterService:
-    public: true
-
-  # Record Display Value Formatter - Formats raw TCA values for Fluid view data
-  Webconsulting\RecordsListTypes\Service\RecordDisplayValueFormatter:
-    public: true
-
-  # TCA helpers for record-list column and enrichment services
-  Webconsulting\RecordsListTypes\Service\TcaTableConfigurationService:
-    public: true
-
-  Webconsulting\RecordsListTypes\Service\RecordDisplayColumnResolver:
+  Webconsulting\RecordsListTypes\Service\ViewTypeRegistry:
     public: true
 
   Webconsulting\RecordsListTypes\Service\RecordViewEnrichmentService:
     public: true
 
-  Webconsulting\RecordsListTypes\Service\RecordTranslationGroupingService:
-    public: true
-
-  # Thumbnail Service - Handles image thumbnail generation
-  Webconsulting\RecordsListTypes\Service\ThumbnailService:
-    public: true
-
-  # Middleware Diagnostic Service - Detects potential middleware interference
-  Webconsulting\RecordsListTypes\Service\MiddlewareDiagnosticService:
-    public: true
-
-  # View Type Registry - Manages custom view types from TSconfig
-  Webconsulting\RecordsListTypes\Service\ViewTypeRegistry:
-    public: true
-
-  # Record Filter Configuration Service - Parses TSconfig/TCA filter metadata
-  Webconsulting\RecordsListTypes\Service\RecordFilterConfigurationService:
-    public: true
-
-  # Record Filter State Service - Reads selected table and filter values
-  Webconsulting\RecordsListTypes\Service\RecordFilterStateService:
-    public: true
-
-  # Record Filter Query Service - Applies filters to list query builders
-  Webconsulting\RecordsListTypes\Service\RecordFilterQueryService:
-    public: true
-
-  # Record Filter View Data Factory - Builds Fluid-ready filter state
-  Webconsulting\RecordsListTypes\Service\RecordFilterViewDataFactory:
-    public: true
-
-  # ==========================================================================
-  # Controllers
-  # ==========================================================================
-
-  # Extended RecordListController with multiple view types support (XClass)
+  # Controllers: XCLASSes are resolved through GeneralUtility::makeInstance(),
+  # which delegates to the container only for public services.
   Webconsulting\RecordsListTypes\Controller\RecordListController:
     public: true
     tags: ['backend.controller']
 
-  # Extended ElementHistoryController for the tabbed history overlay (XClass)
   Webconsulting\RecordsListTypes\Controller\ContentElement\ElementHistoryController:
     public: true
     tags: ['backend.controller']
 
-  # AJAX Controller for view mode persistence
   Webconsulting\RecordsListTypes\Controller\Ajax\ViewModeController:
     public: true
     tags: ['backend.controller']

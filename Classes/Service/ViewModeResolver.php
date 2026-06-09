@@ -11,7 +11,6 @@ use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\SingletonInterface;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Constants;
 use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
@@ -80,6 +79,10 @@ final class ViewModeResolver implements SingletonInterface
      * @var array<string, array{label: string, icon: string, description: string}>|null
      */
     private ?array $viewModes = null;
+
+    public function __construct(
+        private readonly EventDispatcherInterface $eventDispatcher,
+    ) {}
 
     /**
      * Get the active view mode for the current request.
@@ -152,9 +155,8 @@ final class ViewModeResolver implements SingletonInterface
         $modes = self::DEFAULT_VIEW_MODES;
 
         // Allow extensions to register custom modes via PSR-14 event
-        $eventDispatcher = GeneralUtility::makeInstance(EventDispatcherInterface::class);
         $event = new RegisterViewModesEvent($modes);
-        $eventDispatcher->dispatch($event);
+        $this->eventDispatcher->dispatch($event);
         $modes = $event->getViewModes();
 
         // Also check TSconfig for custom modes (including root page = 0)

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\ViewHelpers;
 
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 use Webconsulting\RecordsListTypes\EventListener\GridViewRecordActionsListener;
 
@@ -27,6 +26,10 @@ final class RecordActionsViewHelper extends AbstractViewHelper
 {
     /** Do not escape output - actions contain HTML. */
     protected $escapeOutput = false;
+
+    public function __construct(
+        private readonly GridViewRecordActionsListener $recordActionsListener,
+    ) {}
 
     public function initializeArguments(): void
     {
@@ -81,14 +84,9 @@ final class RecordActionsViewHelper extends AbstractViewHelper
         $separatorRaw = $this->arguments['separator'] ?? '';
         $separator = is_string($separatorRaw) ? $separatorRaw : '';
 
-        // Get the actions listener (singleton)
-        $listener = GeneralUtility::makeInstance(GridViewRecordActionsListener::class);
-
-        // Get actions based on requested group
         $actions = match ($group) {
-            'primary' => $listener->getPrimaryActionsHtml($table, $uid),
-            'all' => $listener->getAllActionsHtml($table, $uid),
-            default => $listener->getAllActionsHtml($table, $uid),
+            'primary' => $this->recordActionsListener->getPrimaryActionsHtml($table, $uid),
+            default => $this->recordActionsListener->getAllActionsHtml($table, $uid),
         };
 
         if ($asArray) {

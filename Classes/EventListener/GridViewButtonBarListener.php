@@ -19,7 +19,6 @@ use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Constants;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
@@ -39,12 +38,8 @@ final readonly class GridViewButtonBarListener
         private IconFactory $iconFactory,
         private UriBuilder $uriBuilder,
         private PageRenderer $pageRenderer,
+        private ComponentFactory $componentFactory,
     ) {}
-
-    private function getComponentFactory(): ComponentFactory
-    {
-        return GeneralUtility::makeInstance(ComponentFactory::class);
-    }
 
     public function __invoke(ModifyButtonBarEvent $event): void
     {
@@ -124,13 +119,11 @@ final readonly class GridViewButtonBarListener
             $currentModeConfig = reset($allowedModes);
         }
         if ($currentModeConfig === false) {
-            return GeneralUtility::makeInstance(ComponentFactory::class)->createDropDownButton();
+            return $this->componentFactory->createDropDownButton();
         }
 
-        $componentFactory = $this->getComponentFactory();
-
         // Create dropdown button showing the active view mode label
-        $dropdownButton = $componentFactory->createDropDownButton()
+        $dropdownButton = $this->componentFactory->createDropDownButton()
             ->setLabel($lang->sL('records_list_types.messages:button.viewMode'))
             ->setIcon($this->iconFactory->getIcon($currentModeConfig['icon'], IconSize::SMALL))
             ->setShowLabelText(true)
@@ -159,7 +152,7 @@ final readonly class GridViewButtonBarListener
                 $url = (string) $request->getUri()->withQuery(http_build_query($params));
             }
 
-            $dropdownItem = $componentFactory->createDropDownRadio()
+            $dropdownItem = $this->componentFactory->createDropDownRadio()
                 ->setActive($currentMode === $modeId)
                 ->setLabel($modeConfig['label'])
                 ->setHref($url)

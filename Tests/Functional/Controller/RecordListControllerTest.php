@@ -16,7 +16,6 @@ use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 use Webconsulting\RecordsListTypes\Controller\RecordListController;
 use Webconsulting\RecordsListTypes\Service\RecordViewEnrichmentContext;
@@ -99,7 +98,9 @@ final class RecordListControllerTest extends FunctionalTestCase
             ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE);
 
         $context = new RecordViewEnrichmentContext($pageContext, 'compact', $request);
-        $record = GeneralUtility::makeInstance(RecordViewEnrichmentService::class)->enrichRecordWithEditUrls([
+        $enrichmentService = $this->get(RecordViewEnrichmentService::class);
+        self::assertInstanceOf(RecordViewEnrichmentService::class, $enrichmentService);
+        $record = $enrichmentService->enrichRecordWithEditUrls([
             'uid' => 42,
             'tableName' => 'tt_content',
             'rawRecord' => [
@@ -126,7 +127,7 @@ final class RecordListControllerTest extends FunctionalTestCase
 
     private function createControllerForPage(int $pageId): RecordListController
     {
-        $controller = (new ReflectionClass(RecordListController::class))->newInstanceWithoutConstructor();
+        $controller = $this->get(RecordListController::class);
         self::assertInstanceOf(RecordListController::class, $controller);
         $this->setControllerProperty($controller, 'pageContext', $this->createPageContext($pageId));
 
