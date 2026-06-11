@@ -29,6 +29,15 @@ services:
     public: true
     tags: ['backend.controller']
 
+  # The XCLASS constructor is wider than the core one, so the core service
+  # definition must be replaced by an alias: otherwise the compiled container
+  # builds the core service via GeneralUtility::makeInstanceForDi() with the
+  # core constructor arguments, XCLASS resolution swaps in this extension's
+  # class, and instantiation fails with an ArgumentCountError.
+  TYPO3\CMS\Backend\Controller\RecordListController:
+    alias: Webconsulting\RecordsListTypes\Controller\RecordListController
+    public: true
+
   Webconsulting\RecordsListTypes\Controller\ContentElement\ElementHistoryController:
     public: true
     tags: ['backend.controller']
