@@ -221,18 +221,22 @@ final class ViewTypeRegistry implements SingletonInterface
         $partialPaths = ['EXT:records_list_types/Resources/Private/Partials/'];
         $layoutPaths = ['EXT:records_list_types/Resources/Private/Layouts/'];
 
-        // Add custom paths from TSconfig if specified
+        // Add custom paths from TSconfig if specified. Fluid resolves paths
+        // in reverse array order (last entry wins), so custom paths must be
+        // APPENDED to take precedence — otherwise a custom view's partial
+        // with the same name as a built-in one (e.g. TranslationStrip,
+        // RecordActions) silently resolves to the built-in file.
         $templateRootPath = $config['templateRootPath'] ?? null;
         if (is_string($templateRootPath) && $templateRootPath !== '') {
-            array_unshift($templatePaths, $templateRootPath);
+            $templatePaths[] = $templateRootPath;
         }
         $partialRootPath = $config['partialRootPath'] ?? null;
         if (is_string($partialRootPath) && $partialRootPath !== '') {
-            array_unshift($partialPaths, $partialRootPath);
+            $partialPaths[] = $partialRootPath;
         }
         $layoutRootPath = $config['layoutRootPath'] ?? null;
         if (is_string($layoutRootPath) && $layoutRootPath !== '') {
-            array_unshift($layoutPaths, $layoutRootPath);
+            $layoutPaths[] = $layoutRootPath;
         }
 
         $templateName = $config['template'] ?? null;

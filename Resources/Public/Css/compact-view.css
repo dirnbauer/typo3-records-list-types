@@ -14,7 +14,11 @@
     --cv-bg: var(--typo3-component-bg, #ffffff);
     --cv-bg-muted: var(--typo3-surface-container-low, #fafafa);
     --cv-bg-subtle: var(--typo3-surface-container-default, #f4f4f5);
-    --cv-bg-hidden: var(--typo3-surface-container-lowest, #f5f5f5);
+    /* Hidden state: amber tint matching grid + teaser view. Opaque hex is
+       required — hidden cells must mask scrolled content behind the sticky
+       columns. (surface-container-lowest was darker than the page in dark
+       mode, which made hidden rows read as black holes.) */
+    --cv-bg-hidden: #fffbeb;
     --cv-border: #e4e4e7;
     --cv-border-muted: #f0f0f2;
     --cv-tree-line: color-mix(in srgb, var(--typo3-component-border-color, var(--cv-border)) 72%, transparent);
@@ -33,7 +37,9 @@
     --cv-success-bg: var(--typo3-state-success-bg, #f0fdf4);
     --cv-danger: var(--typo3-state-danger-color, #ef4444);
     --cv-danger-bg: var(--typo3-state-danger-bg, #fef2f2);
-    --cv-warning: var(--typo3-state-warning-color, #f59e0b);
+    /* Fixed amber — --typo3-state-warning-color is a *text* color and goes
+       near-white in dark mode, which is wrong for the hidden state bar. */
+    --cv-warning: #f59e0b;
     
     /* Shadows */
     --cv-shadow-sm: var(--typo3-shadow-1, 0 1px 2px 0 rgb(0 0 0 / 0.05));
@@ -67,6 +73,7 @@
 [data-color-scheme="dark"] .recordlist-compactview-container {
     --cv-border: #3f3f46;
     --cv-border-muted: #2e2e33;
+    --cv-bg-hidden: #3e311b;
     --cv-accent-bg-opaque: #1e2a3e;
     --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.3);
 }
@@ -75,6 +82,7 @@
     html:not([data-color-scheme="light"]) .recordlist-compactview-container {
         --cv-border: #3f3f46;
         --cv-border-muted: #2e2e33;
+        --cv-bg-hidden: #3e311b;
         --cv-accent-bg-opaque: #1e2a3e;
         --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.3);
     }
@@ -616,6 +624,13 @@ typo3-backend-contextual-record-edit-trigger.compactview-row__title-link:hover {
 
 .compactview-row--hidden .compactview-td {
     background: var(--cv-bg-hidden);
+}
+
+/* Amber state bar — same "hidden" cue as grid cards and teaser cards.
+   inset box-shadow instead of border-left so the sticky column layout
+   and cell widths stay untouched. */
+.compactview-row--hidden .compactview-td:first-child {
+    box-shadow: inset 3px 0 0 var(--cv-warning);
 }
 
 /* Hidden rows: fixed columns MUST have opaque background to mask scrolled content */

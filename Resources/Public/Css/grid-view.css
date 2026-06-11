@@ -1444,9 +1444,10 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
     border-color: var(--gv-border);
 }
 
+/* Untranslated slot: recessed transparent slot with a quiet hairline —
+   no dashed border (same language as compact + teaser untranslated rows). */
 .gridview-card__translation--untranslated {
     border-color: color-mix(in srgb, var(--gv-text-muted) 25%, transparent);
-    border-style: dashed;
     background: transparent;
 }
 
@@ -1454,10 +1455,6 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
     border-color: var(--gv-accent);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--gv-accent) 30%, transparent);
     background: var(--gv-accent-bg);
-}
-
-.gridview-card__translation--untranslated:hover {
-    border-style: solid;
 }
 
 .gridview-card__translation-link {
@@ -1543,12 +1540,21 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
     color: var(--gv-accent);
 }
 
+/* Hidden translation: amber tint + warning bar — the shared "hidden"
+   language across all views. Title stays at full opacity for WCAG
+   contrast; the muted color carries the de-emphasis. */
+.gridview-card__translation--translated.gridview-card__translation--hidden {
+    background: var(--gv-warning-bg);
+    box-shadow: inset 3px 0 0 var(--gv-warning);
+}
+
 .gridview-card__translation--hidden .gridview-card__translation-title {
-    opacity: 0.55;
+    color: var(--gv-text-muted);
+    font-weight: 400;
 }
 
 .gridview-card__translation--hidden .gridview-card__translation-state {
-    color: #b45309;
+    color: light-dark(#92400e, #fbbf24);
 }
 
 /* Workspace state indicators */
@@ -1633,6 +1639,10 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
     background: var(--gv-bg);
 }
 
+[data-color-scheme="dark"] .gridview-card__translation--translated.gridview-card__translation--hidden {
+    background: var(--gv-warning-bg);
+}
+
 [data-color-scheme="dark"] .gridview-card__translation:hover {
     background: var(--gv-accent-bg);
 }
@@ -1648,6 +1658,10 @@ body:has(.gridview-keyboard-dragging) .gridview-end-dropzone {
 
     html:not([data-color-scheme="light"]) .gridview-card__translation--translated {
         background: var(--gv-bg);
+    }
+
+    html:not([data-color-scheme="light"]) .gridview-card__translation--translated.gridview-card__translation--hidden {
+        background: var(--gv-warning-bg);
     }
 
     html:not([data-color-scheme="light"]) .gridview-card__translation:hover {
