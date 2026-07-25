@@ -363,7 +363,7 @@ base.css            ← Loaded for ALL view modes (always first)
 | `ThumbnailService` | Resolves FAL references and generates thumbnail URLs |
 | `ViewModeResolver` | Determines active view mode from request, user preference, or TSconfig |
 | `ViewTypeRegistry` | Registry for built-in and custom view types |
-| `MiddlewareDiagnosticService` | Detects middleware interference with view rendering |
+| `MiddlewareDiagnosticService` | Validates Grid View request context and required core middleware entries |
 
 ### PSR-14 Events
 
@@ -470,7 +470,7 @@ records_list_types/
 │   │   └── DatabasePaginator.php              # Paginator for pre-fetched database records
 │   ├── Service/
 │   │   ├── GridConfigurationService.php       # TSconfig parsing
-│   │   ├── MiddlewareDiagnosticService.php    # Middleware diagnostics
+│   │   ├── MiddlewareDiagnosticService.php    # Grid View request context diagnostics
 │   │   ├── RecordFilterConfigurationService.php
 │   │   ├── RecordFilterQueryService.php
 │   │   ├── RecordFilterStateService.php

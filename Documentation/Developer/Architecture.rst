@@ -52,7 +52,8 @@ Services
         -   Manages built-in and custom view types from TSconfig/events
 
     *   -   :php:`MiddlewareDiagnosticService`
-        -   Detects middleware configurations that could break rendering
+        -   Validates Grid View request context and required core middleware
+            entries
 
     *   -   :php:`ArrayUtility`
         -   Normalizes TYPO3 TSconfig, request, and TCA arrays at typed

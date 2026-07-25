@@ -10,15 +10,16 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
- * MiddlewareDiagnosticService - Detects potential middleware interference.
+ * MiddlewareDiagnosticService - Detects missing middleware prerequisites.
  *
- * This service analyzes the middleware stack and request attributes to identify
- * configurations that might interfere with alternative view mode rendering.
+ * This service validates the concrete request attributes and core stack entries
+ * Grid View needs. It deliberately does not warn merely because third-party
+ * backend middlewares are present: TYPO3 extensions commonly add valid backend
+ * middlewares late in the stack, especially for response headers or assets.
  *
  * Detection strategies:
- * 1. Stack Analysis: Inspects TYPO3's resolved backend middleware execution order
- *    for custom middlewares in rendering-critical positions
- * 2. Runtime Check: Verifies required request attributes exist
+ * 1. Runtime Check: Verifies required request attributes exist
+ * 2. Stack Analysis: Verifies required core middlewares are present
  */
 final class MiddlewareDiagnosticService implements SingletonInterface
 {
@@ -28,12 +29,6 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         'applicationType',
     ];
 
-    /**
-     * Middleware positions that define the backend rendering phase.
-     *
-     * Custom middlewares executed after page context initialization can still
-     * mutate the final backend HTML and therefore affect Grid View rendering.
-     */
     private const string PAGE_CONTEXT_MIDDLEWARE = 'typo3/cms-backend/page-context';
     private const string RESPONSE_PROPAGATION_MIDDLEWARE = 'typo3/cms-core/response-propagation';
     private const string NORMALIZED_PARAMS_MIDDLEWARE = 'typo3/cms-core/normalized-params-attribute';
@@ -44,12 +39,8 @@ final class MiddlewareDiagnosticService implements SingletonInterface
         self::RESPONSE_PROPAGATION_MIDDLEWARE,
     ];
 
-    private const string TYPO3_MIDDLEWARE_PREFIX = 'typo3/';
-
     /** @var array{
      *     missingCoreMiddlewares: string[],
-     *     invalidOrder: bool,
-     *     riskyMiddlewares: string[],
      *     executionOrder: string[]
      * }|null
      */
@@ -71,7 +62,6 @@ final class MiddlewareDiagnosticService implements SingletonInterface
      *     hasRisk: bool,
      *     warnings: string[],
      *     forceListViewUrl: string,
-     *     riskyMiddlewares: string[],
      *     executionOrder: string[]
      * }
      */
@@ -88,21 +78,12 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             );
         }
 
-        // 2. Check for custom middlewares in rendering-critical positions
+        // 2. Check for core middlewares that provide the request baseline
         $stackAnalysis = $this->analyzeBackendMiddlewareStack();
         if ($stackAnalysis['missingCoreMiddlewares'] !== []) {
             $warnings[] = sprintf(
                 'Required backend middleware(s) missing from resolved stack: %s.',
                 implode(', ', $stackAnalysis['missingCoreMiddlewares']),
-            );
-        }
-        if ($stackAnalysis['invalidOrder']) {
-            $warnings[] = 'Resolved backend middleware order is invalid: page context must run before response propagation.';
-        }
-        if ($stackAnalysis['riskyMiddlewares'] !== []) {
-            $warnings[] = sprintf(
-                'Custom backend middleware(s) run in the rendering phase after page context initialization: %s.',
-                implode(', ', $stackAnalysis['riskyMiddlewares']),
             );
         }
 
@@ -115,7 +96,6 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             'hasRisk' => $warnings !== [],
             'warnings' => $warnings,
             'forceListViewUrl' => (string) $uri,
-            'riskyMiddlewares' => $stackAnalysis['riskyMiddlewares'],
             'executionOrder' => $stackAnalysis['executionOrder'],
         ];
     }
@@ -144,8 +124,6 @@ final class MiddlewareDiagnosticService implements SingletonInterface
      *
      * @return array{
      *     missingCoreMiddlewares: string[],
-     *     invalidOrder: bool,
-     *     riskyMiddlewares: string[],
      *     executionOrder: string[]
      * }
      */
@@ -164,33 +142,13 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             static fn(string $middleware): bool => !in_array($middleware, $executionOrder, true),
         ));
 
-        $pageContextIndex = array_search(self::PAGE_CONTEXT_MIDDLEWARE, $executionOrder, true);
-        $responsePropagationIndex = array_search(self::RESPONSE_PROPAGATION_MIDDLEWARE, $executionOrder, true);
-        $invalidOrder = is_int($pageContextIndex)
-            && is_int($responsePropagationIndex)
-            && $pageContextIndex > $responsePropagationIndex;
-
-        $riskyMiddlewares = [];
-        if (is_int($pageContextIndex) && !$invalidOrder) {
-            foreach ($executionOrder as $index => $middlewareIdentifier) {
-                if ($index <= $pageContextIndex || !$this->isCustomMiddlewareIdentifier($middlewareIdentifier)) {
-                    continue;
-                }
-                $riskyMiddlewares[] = $middlewareIdentifier;
-            }
-        }
-
         /** @var array{
          *     missingCoreMiddlewares: string[],
-         *     invalidOrder: bool,
-         *     riskyMiddlewares: string[],
          *     executionOrder: string[]
          * } $analysis
          */
         $analysis = [
             'missingCoreMiddlewares' => $missingCoreMiddlewares,
-            'invalidOrder' => $invalidOrder,
-            'riskyMiddlewares' => $riskyMiddlewares,
             'executionOrder' => $executionOrder,
         ];
         $this->stackAnalysisCache = $analysis;
@@ -212,9 +170,9 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             return null;
         }
 
-        return 'System Warning: A custom middleware configuration has been detected that may '
-            . 'interfere with the Grid View visualization. If the display is corrupted, please '
-            . 'verify middleware stack configuration in System > Configuration.';
+        return 'System Warning: Required backend request context for Grid View is incomplete. '
+            . 'If the display is corrupted, switch to List View and verify the backend '
+            . 'middleware stack in System > Configuration.';
     }
 
     /**
@@ -253,7 +211,6 @@ final class MiddlewareDiagnosticService implements SingletonInterface
             'missingRequiredAttributes' => $this->checkRequiredAttributes($request),
             'resolvedBackendExecutionOrder' => $stackAnalysis['executionOrder'],
             'missingCoreMiddlewares' => $stackAnalysis['missingCoreMiddlewares'],
-            'riskyMiddlewares' => $stackAnalysis['riskyMiddlewares'],
             'diagnosis' => $this->diagnose($request),
         ];
     }
@@ -264,10 +221,5 @@ final class MiddlewareDiagnosticService implements SingletonInterface
     public function clearCache(): void
     {
         $this->stackAnalysisCache = null;
-    }
-
-    private function isCustomMiddlewareIdentifier(string $middlewareIdentifier): bool
-    {
-        return !str_starts_with($middlewareIdentifier, self::TYPO3_MIDDLEWARE_PREFIX);
     }
 }

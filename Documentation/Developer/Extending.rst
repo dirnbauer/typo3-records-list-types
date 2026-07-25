@@ -201,6 +201,7 @@ Thumbnails not showing
 Middleware warning
 ------------------
 
-If you see a middleware warning, a custom middleware may be interfering
-with the response. Check the middleware stack in
+If you see a middleware warning, Grid View is missing required backend
+request context or a required core middleware entry. Switch to List View
+and check the middleware stack in
 :guilabel:`Admin Tools > Configuration > HTTP Middlewares`.
