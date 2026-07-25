@@ -391,9 +391,11 @@
     color: var(--gv-text-muted);
 }
 
+/* Record icon at its authored size. Content-block icons are drawn on a
+   16-unit viewBox, so anything below 16px renders sub-pixel strokes.
+   Sized through core's `--icon-size` so `.icon`'s line-height follows. */
 .gridview-card__icon .icon {
-    width: 14px;
-    height: 14px;
+    --icon-size: 16px;
 }
 
 .gridview-card__title {

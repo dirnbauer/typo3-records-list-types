@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.0.7 - 2026-07-25
+
+### Fixed
+
+- Record icons in the compact and grid views were hard-sized with `width`/`height` (12px and 14px), overriding TYPO3's `--icon-size` contract. Because `.icon`'s `line-height` still came from the core `icon-size-small` value, the artwork was squeezed inside a taller line box. Content-block icons are authored on a 16-unit viewBox, so 12px rendered them at 0.75× with sub-pixel strokes. Both views now size icons through `--icon-size` and render at the native 16px; row height is unchanged.
+- Compact-view tree connectors were pinned at `left: 15px`, but `.compactview-row__icon` is a centred flex child of the 34px icon column, putting the icon's center at 17px. The connectors were 2px off the icon they were meant to meet. They now derive from a `--cv-tree-x` token.
+
+### Changed
+
+- Every icon size in `compact-view.css`, `grid-view.css` and `base.css` is now expressed as `--icon-size` instead of `width`/`height`, so `.icon`'s box and line box can no longer drift apart. Chrome glyphs (sort indicator, badges, toggles, row actions, sorting dropdown) keep their existing 12/14px sizes — only the mechanism changed.
+
+## 1.0.6 - 2026-07-06
+
+### Changed
+
+- Refreshed the TYPO3 v14 extension icon and updated audited dependencies.
+
 ## 1.0.5 - 2026-06-11
 
 ### Fixed

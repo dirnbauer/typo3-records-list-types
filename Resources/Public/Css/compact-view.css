@@ -65,6 +65,24 @@
     --cv-col-status: 28px;
     --cv-col-action: 26px;
 
+    /* Icon sizes. Applied through core's `--icon-size` custom property, never
+       through width/height — a hard box leaves `.icon`'s line-height at the
+       core value and squeezes the artwork inside a taller line box.
+       Record icons stay at 16px: content-block icons are authored on a
+       16-unit viewBox (1:1, no sub-pixel strokes), the translation-row icon
+       cell only exposes 16px of content width, and 16px still fits the
+       19.5px line box so row height is unchanged. Chrome icons (sort, badge,
+       toggle, action) are core monochrome glyphs and stay deliberately
+       smaller. */
+    --cv-icon-size: 16px;
+    --cv-icon-size-chrome: 12px;
+
+    /* Horizontal center of the record-icon column. `.compactview-row__icon`
+       is a block-level flex container filling the cell's content box with
+       `justify-content: center`, so the icon's center is the column's
+       midpoint — the translation tree connectors align to this. */
+    --cv-tree-x: calc(var(--cv-col-icon) / 2);
+
     /* Opaque accent background for hover + selected rows (light mode) */
     --cv-accent-bg-opaque: #dbeafe;
 }
@@ -239,8 +257,7 @@
 }
 
 .compactview-th__sort-icon .icon {
-    width: 12px;
-    height: 12px;
+    --icon-size: var(--cv-icon-size-chrome);
 }
 
 /* Column widths:
@@ -514,7 +531,7 @@
 .compactview-row:not(.compactview-row--translation):has(+ .compactview-row--translation) .compactview-td--icon::after {
     content: "";
     position: absolute;
-    left: 15px;
+    left: var(--cv-tree-x);
     top: 50%;
     bottom: 0;
     width: var(--cv-tree-line-width);
@@ -580,8 +597,7 @@
 }
 
 .compactview-row__icon .icon {
-    width: 12px;
-    height: 12px;
+    --icon-size: var(--cv-icon-size);
 }
 
 .compactview-row__uid {
@@ -671,8 +687,7 @@ typo3-backend-contextual-record-edit-trigger.compactview-row__title-link:hover {
 }
 
 .cv-badge .icon {
-    width: 12px;
-    height: 12px;
+    --icon-size: var(--cv-icon-size-chrome);
 }
 
 /* Yes/True state - using TYPO3 success color */
@@ -738,8 +753,7 @@ typo3-backend-contextual-record-edit-trigger.compactview-row__title-link:hover {
 }
 
 .cv-toggle .icon {
-    width: 12px;
-    height: 12px;
+    --icon-size: var(--cv-icon-size-chrome);
 }
 
 .cv-toggle--visible {
@@ -795,15 +809,9 @@ typo3-backend-contextual-record-edit-trigger.cv-action {
     text-decoration: none;
 }
 
-.cv-action .icon {
-    width: 12px;
-    height: 12px;
-}
-
 .cv-action .icon,
 typo3-backend-contextual-record-edit-trigger.cv-action .icon {
-    width: 12px;
-    height: 12px;
+    --icon-size: var(--cv-icon-size-chrome);
 }
 
 .cv-action:hover {
@@ -896,8 +904,9 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
    the horizontal center of the parent icon. Position stays sticky — we
    inherit it from the fixed-left base rule.
 
-   Parent icon is 16px wide, flush-left (padding-left:0) → center at x=8.
-   The tree connector is centred on that column so the branch reads clean.
+   The parent icon is a centred flex child of the 34px icon column, so its
+   horizontal center is --cv-tree-x (17px) — that is where the connectors
+   are anchored, not at the cell's left edge.
    Background intentionally NOT overridden here — we inherit whatever the
    group-parity zebra set, so the whole group reads as one stripe. */
 .compactview-row--translation .compactview-td--icon {
@@ -908,7 +917,7 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
 .compactview-row--translation .compactview-td--icon::before {
     content: "";
     position: absolute;
-    left: 15px;
+    left: var(--cv-tree-x);
     top: 0;
     bottom: 50%;
     width: var(--cv-tree-line-width);
@@ -925,7 +934,7 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
 .compactview-row--translation .compactview-td--icon::after {
     content: "";
     position: absolute;
-    left: 15px;
+    left: var(--cv-tree-x);
     top: 50%;
     width: 10px;
     height: var(--cv-tree-line-width);
@@ -949,15 +958,14 @@ typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: var(--cv-icon-size);
+    height: var(--cv-icon-size);
     margin-right: 0.375rem;
     vertical-align: -3px;
 }
 
 .compactview-row__lang-flag .icon {
-    width: 16px;
-    height: 16px;
+    --icon-size: var(--cv-icon-size);
 }
 
 /* Keep flag + title on a single line. The base title-link is
