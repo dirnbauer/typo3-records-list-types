@@ -120,6 +120,24 @@ records-list-types-actions {
     color: var(--typo3-text-color-variant, #52525b);
 }
 
+.recordlist-filters__label-text,
+.recordlist-filters__field-list {
+    display: block;
+    min-width: 0;
+}
+
+.recordlist-filters__field-list {
+    margin-top: 0.125rem;
+    overflow: hidden;
+    color: var(--typo3-text-color-variant, #6b7280);
+    font-family: var(--typo3-font-family-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: 0.6875rem;
+    font-weight: 400;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .recordlist-filters__range {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

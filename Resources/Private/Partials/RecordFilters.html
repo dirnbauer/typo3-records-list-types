@@ -34,7 +34,10 @@
                     <f:for each="{filters.items}" as="filter">
                         <div class="recordlist-filters__field recordlist-filters__field--{filter.type}">
                             <label class="recordlist-filters__label" for="record-filter-{filters.tableName}-{filter.id}">
-                                {filter.label}
+                                <span class="recordlist-filters__label-text">{filter.label}</span>
+                                <f:if condition="{filter.fieldList}">
+                                    <span class="recordlist-filters__field-list">{filter.fieldList}</span>
+                                </f:if>
                             </label>
 
                             <f:switch expression="{filter.type}">

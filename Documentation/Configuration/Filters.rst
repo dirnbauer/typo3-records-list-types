@@ -141,7 +141,9 @@ TSconfig reference
     :type: string (comma-separated)
     :default: derived from the filter ID
 
-    Fields searched by ``text`` filters. Non-existing fields are skipped.
+    Fields searched by ``text`` filters. Non-existing fields are skipped. The
+    filter panel displays the resolved field list below the filter label so
+    editors can see where the text input searches.
 
 .. _configuration-filters-aliases:
 

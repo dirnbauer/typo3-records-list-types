@@ -355,6 +355,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             'type' => 'text',
             'label' => $this->resolveFilterLabel($filterConfig, $this->getFieldLabel($table, $fields[0])),
             'fields' => $fields,
+            'fieldList' => implode(', ', $fields),
             'placeholder' => is_string($filterConfig['placeholder'] ?? null) ? $filterConfig['placeholder'] : '',
         ];
     }
