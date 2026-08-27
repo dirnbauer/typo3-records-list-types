@@ -149,13 +149,17 @@ jobs:
 
       - name: Install latest allowed PHPUnit (pull request)
         if: github.event_name == 'pull_request'
-        run: composer update phpunit/phpunit --with-all-dependencies --no-progress --prefer-dist --no-scripts
+        run: |
+          composer config platform.php 8.5.0
+          composer update phpunit/phpunit --with-all-dependencies --no-progress --prefer-dist --no-scripts
 
       - name: Install latest allowed PHPUnit (trusted)
         if: github.event_name != 'pull_request'
         env:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
-        run: composer update phpunit/phpunit --with-all-dependencies --no-progress --prefer-dist
+        run: |
+          composer config platform.php 8.5.0
+          composer update phpunit/phpunit --with-all-dependencies --no-progress --prefer-dist
 
       - name: Assert PHPUnit 13 is selected
         run: vendor/bin/phpunit --version | grep -E '^PHPUnit 13\.'
