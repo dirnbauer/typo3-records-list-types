@@ -10,6 +10,11 @@ The extension hooks into the TYPO3 v14 Records module using PSR-14
 events and an XClass. It does not modify the core module but augments
 it with alternative visualizations.
 
+The controller delegates table visibility and header actions to Core through
+:php:`AlternativeDatabaseRecordList`. It uses Core query builders for search,
+then applies workspace overlays before preparing data for Fluid. There is no
+parallel query cache or separate legacy search implementation.
+
 .. _architecture-services:
 
 Services
@@ -30,7 +35,7 @@ Services
         -   Parses TSconfig for per-table field mappings, caches results
 
     *   -   :php:`RecordGridDataProvider`
-        -   Fetches records with resolved FAL references for thumbnails
+        -   Enriches Core record-list rows with thumbnails, icons and workspace state
 
     *   -   :php:`RecordFilterConfigurationService`
         -   Resolves TSconfig and TCA metadata for configurable filters
@@ -50,9 +55,6 @@ Services
 
     *   -   :php:`ViewTypeRegistry`
         -   Manages built-in and custom view types from TSconfig/events
-
-    *   -   :php:`MiddlewareDiagnosticService`
-        -   Detects middleware configurations that could break rendering
 
     *   -   :php:`ArrayUtility`
         -   Normalizes TYPO3 TSconfig, request, and TCA arrays at typed
@@ -78,14 +80,6 @@ Event listeners
     *   -   :php:`GridViewButtonBarListener`
         -   ``ModifyButtonBarEvent``
         -   Injects the view-mode dropdown into the DocHeader
-
-    *   -   :php:`GridViewQueryListener`
-        -   ``ModifyDatabaseQueryForRecordListingEvent``
-        -   Caches query modifications made by other record-list listeners
-
-    *   -   :php:`GridViewRecordActionsListener`
-        -   ``ModifyRecordListRecordActionsEvent``
-        -   Observes Core record-action events and keeps helper access for custom templates
 
     *   -   :php:`RecordFilterButtonBarListener`
         -   ``ModifyButtonBarEvent``
@@ -115,13 +109,14 @@ The view mode is determined with strict precedence:
 
 .. _architecture-ajax:
 
-AJAX preference persistence
-============================
+Preference persistence
+======================
 
-When a user clicks a view mode button, JavaScript sends an AJAX
-request to :php:`ViewModeController::setViewModeAction()` which
-stores the preference in the backend user configuration. The page
-then reloads to show the selected view.
+The view dropdown links to the Records module with ``displayMode`` and
+the current filter, search, and sorting parameters. The controller stores
+the selected mode in the backend user configuration when handling that
+request. :php:`ViewModeController` also exposes AJAX endpoints for custom
+integrations that need to read or change the preference.
 
 .. _architecture-css:
 
@@ -157,13 +152,10 @@ their own view-specific CSS.
 Bootstrap 5 integration
 ========================
 
-The Grid View uses Bootstrap 5 components included in the TYPO3 v14
-backend. The responsive grid uses ``row-cols-*`` classes:
-
--   ``xs`` (<576px): 1 column (stacked)
--   ``md`` (>=768px): 2 columns
--   ``lg`` (>=992px): 3 columns
--   ``xl`` (>=1200px): configurable (default 4)
+The views use TYPO3 v14 backend components. Grid cards use CSS Grid with
+automatically fitted columns and a minimum width of 320 pixels (360 pixels
+on wide screens). Small screens use a single column. The legacy
+``gridView.cols`` setting does not control this layout.
 
 All CSS uses TYPO3's CSS custom properties (``--bs-body-bg``,
 ``--bs-body-color``, ``--bs-border-color``) for automatic dark mode
@@ -235,69 +227,11 @@ The request body contains only the Core endpoint's expected values:
 -   ``uid`` -- the record UID
 -   ``action`` -- either ``hide`` or ``show``
 
-On success the module reloads. For ``pages`` records the shared action
-component also dispatches the page-tree refresh event before the reload, so
-the backend navigation reflects the changed visibility state.
+On success the component updates the record's visibility button, styling,
+and badge in place. For ``pages`` records it also dispatches the page-tree
+refresh event so the backend navigation reflects the changed state.
 
-The action dropdown positioning logic is shared across compact, grid, and
-teaser. All variants use the same dropdown hook plus the same
-teleport-to-``<body>`` mechanism so TYPO3/Bootstrap menus behave
-consistently inside backend overflow and stacking contexts.
-
-.. _architecture-files:
-
-File structure
-==============
-
-..  code-block:: text
-
-    Classes/
-    ├── Constants.php
-    ├── Controller/
-    │   ├── Ajax/ViewModeController.php
-    │   └── RecordListController.php
-    ├── Event/
-    │   └── RegisterViewModesEvent.php
-    ├── EventListener/
-    │   ├── GridViewButtonBarListener.php
-    │   ├── GridViewQueryListener.php
-    │   ├── GridViewRecordActionsListener.php
-    │   ├── RecordFilterAdditionalContentListener.php
-    │   ├── RecordFilterButtonBarListener.php
-    │   └── RecordFilterQueryListener.php
-    ├── Html/
-    │   └── BackendFragmentSanitizerBuilder.php
-    ├── Pagination/
-    │   └── DatabasePaginator.php
-    ├── Service/
-    │   ├── GridConfigurationService.php
-    │   ├── MiddlewareDiagnosticService.php
-    │   ├── RecordFilterConfigurationService.php
-    │   ├── RecordFilterQueryService.php
-    │   ├── RecordFilterStateService.php
-    │   ├── RecordFilterViewDataFactory.php
-    │   ├── RecordGridDataProvider.php
-    │   ├── ThumbnailService.php
-    │   ├── ViewModeResolver.php
-    │   └── ViewTypeRegistry.php
-    ├── Utility/
-    │   └── ArrayUtility.php
-    └── ViewHelpers/
-        └── RecordActionsViewHelper.php
-
-    Configuration/
-    ├── Backend/AjaxRoutes.php
-    ├── Icons.php
-    ├── JavaScriptModules.php
-    ├── Services.yaml
-    └── page.tsconfig
-
-    Resources/
-    ├── Private/
-    │   ├── Language/
-    │   ├── Layouts/
-    │   ├── Partials/
-    │   └── Templates/
-    └── Public/
-        ├── Css/
-        └── JavaScript/
+Copy, cut, and delete delegate to Core's :js:`ContextMenuActions`. Record
+action dropdowns use the native HTML Popover API and TYPO3 dropdown styles,
+so menus can open above scrolling containers without custom positioning
+JavaScript.

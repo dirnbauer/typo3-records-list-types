@@ -47,9 +47,9 @@ field with a password/sudo confirmation, for example for backend users or
 backend user groups, the Core confirmation flow is shown before the
 visibility change continues.
 
-After a successful toggle, the Records module reloads so the card, compact
-row, workspace markers, and page tree state reflect the persisted record
-state.
+After a successful toggle, the visibility button, record styling, and hidden
+badge update immediately. Changes to page visibility also refresh the page
+tree.
 
 .. _usage-sort-records:
 

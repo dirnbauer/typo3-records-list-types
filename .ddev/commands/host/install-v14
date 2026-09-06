@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+## Description: Install the local TYPO3 v14 backend with this checkout linked in.
+## Usage: install-v14
+
+set -euo pipefail
+cd "${DDEV_APPROOT}"
+mkdir -p .Build/v14/config/system
+if [[ ! -f .Build/v14/composer.json ]]; then
+    cp Build/Development/composer.json .Build/v14/composer.json
+fi
+cp Build/Development/additional.php .Build/v14/config/system/additional.php
+ddev start
+ddev composer install
+if [[ ! -f .Build/v14/config/system/settings.php ]]; then
+    ddev exec .Build/v14/vendor/bin/typo3 setup \
+        --driver=mysqli --host=db --dbname=db --username=db --password=db \
+        --server-type=apache --project-name='Records List Types' \
+        --create-site=https://v14.records-list-types.ddev.site/
+fi
+ddev exec .Build/v14/vendor/bin/typo3 extension:setup
+ddev exec .Build/v14/vendor/bin/typo3 cache:flush

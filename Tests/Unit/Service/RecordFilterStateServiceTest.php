@@ -332,7 +332,7 @@ final class RecordFilterStateServiceTest extends TestCase
             ->withQueryParams($queryParams);
 
         if ($moduleData instanceof ModuleData) {
-            $request = $request->withAttribute('moduleData', $moduleData);
+            return $request->withAttribute('moduleData', $moduleData);
         }
 
         return $request;

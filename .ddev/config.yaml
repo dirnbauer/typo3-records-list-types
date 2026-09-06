@@ -1,0 +1,13 @@
+name: records-list-types
+type: typo3
+docroot: .Build/v14/public
+php_version: "8.3"
+webserver_type: apache-fpm
+database:
+  type: mariadb
+  version: "10.11"
+additional_hostnames:
+  - v14.records-list-types
+composer_root: .Build/v14
+web_environment:
+  - TYPO3_CONTEXT=Development

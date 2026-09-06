@@ -102,7 +102,7 @@ final readonly class RecordFilterViewDataFactory
     {
         $fields = [];
         foreach ($parameters as $key => $value) {
-            $name = $prefix === '' ? (string) $key : $prefix . '[' . (string) $key . ']';
+            $name = $prefix === '' ? (string) $key : $prefix . '[' . $key . ']';
             if (is_array($value)) {
                 $nestedParameters = [];
                 foreach ($value as $nestedKey => $nestedValue) {

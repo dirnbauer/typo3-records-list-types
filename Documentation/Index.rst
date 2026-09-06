@@ -50,7 +50,6 @@ configuration, and PSR-14 extensibility.
     Configuration/Index
     Developer/Index
     KnownProblems/Index
-    Reports/Index
 
 ..  toctree::
     :hidden:

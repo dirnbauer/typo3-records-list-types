@@ -13,6 +13,7 @@ and how to create custom view types.
     :maxdepth: 2
     :titlesonly:
 
+    Development
     Architecture
     CustomViewTypes
     Extending

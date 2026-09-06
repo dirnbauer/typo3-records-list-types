@@ -1,0 +1,4 @@
+"be_users"
+,"uid","pid","username","password","admin","disable","db_mountpoints"
+,1,0,"test-admin","",1,0,"1"
+,2,0,"test-editor","",0,0,"1"

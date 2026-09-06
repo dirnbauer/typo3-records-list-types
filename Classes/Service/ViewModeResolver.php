@@ -164,20 +164,17 @@ final class ViewModeResolver implements SingletonInterface
             BackendUtility::getPagesTSconfig($pageId),
             ['mod.', 'web_list.', 'viewMode.', 'types.'],
         );
-        if ($customModes !== []) {
-
-            foreach ($customModes as $modeId => $config) {
-                $modeId = rtrim((string) $modeId, '.');
-                if (is_array($config) && !isset($modes[$modeId])) {
-                    $labelVal = $config['label'] ?? $modeId;
-                    $iconVal = $config['icon'] ?? 'actions-viewmode-list';
-                    $descVal = $config['description'] ?? '';
-                    $modes[$modeId] = [
-                        'label' => is_string($labelVal) ? $labelVal : $modeId,
-                        'icon' => is_string($iconVal) ? $iconVal : 'actions-viewmode-list',
-                        'description' => is_string($descVal) ? $descVal : '',
-                    ];
-                }
+        foreach ($customModes as $modeId => $config) {
+            $modeId = rtrim((string) $modeId, '.');
+            if (is_array($config) && !isset($modes[$modeId])) {
+                $labelVal = $config['label'] ?? $modeId;
+                $iconVal = $config['icon'] ?? 'actions-viewmode-list';
+                $descVal = $config['description'] ?? '';
+                $modes[$modeId] = [
+                    'label' => is_string($labelVal) ? $labelVal : $modeId,
+                    'icon' => is_string($iconVal) ? $iconVal : 'actions-viewmode-list',
+                    'description' => is_string($descVal) ? $descVal : '',
+                ];
             }
         }
 
@@ -204,7 +201,7 @@ final class ViewModeResolver implements SingletonInterface
         }
 
         // Filter to only valid modes
-        return array_values(array_filter($configured, fn($mode): bool => isset($allModes[$mode])));
+        return array_values(array_filter($configured, fn(string $mode): bool => isset($allModes[$mode])));
     }
 
     /**
@@ -331,7 +328,7 @@ final class ViewModeResolver implements SingletonInterface
             return '';
         }
 
-        return preg_match('/^[a-zA-Z0-9_]+$/', $tableName) === 1 ? $tableName : '';
+        return preg_match('/^\w+$/', $tableName) === 1 ? $tableName : '';
     }
 
     /**

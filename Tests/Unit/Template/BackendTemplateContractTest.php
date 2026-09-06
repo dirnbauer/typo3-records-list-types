@@ -16,7 +16,7 @@ final class BackendTemplateContractTest extends TestCase
     /**
      * @return array<string, string>
      */
-    private static function getBackendTemplates(): array
+    private function getBackendTemplates(): array
     {
         $basePath = dirname(__DIR__, 3) . '/Resources/Private';
         $templates = [];
@@ -41,7 +41,7 @@ final class BackendTemplateContractTest extends TestCase
     #[Test]
     public function backendTemplatesDoNotUseFrontendContentAreaRendering(): void
     {
-        foreach (self::getBackendTemplates() as $relativePath => $templatePath) {
+        foreach ($this->getBackendTemplates() as $relativePath => $templatePath) {
             $template = (string) file_get_contents($templatePath);
 
             self::assertStringNotContainsString('f:render.contentArea', $template, $relativePath);

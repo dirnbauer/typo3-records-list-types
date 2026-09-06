@@ -11,8 +11,7 @@ use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use ReflectionException;
-use ReflectionMethod;
+use TYPO3\CMS\Backend\Clipboard\Clipboard;
 use TYPO3\CMS\Backend\Context\PageContext;
 use TYPO3\CMS\Backend\Context\PageContextFactory;
 use TYPO3\CMS\Backend\Controller\Event\RenderAdditionalContentToRecordListEvent;
@@ -20,7 +19,6 @@ use TYPO3\CMS\Backend\Controller\RecordListController as CoreRecordListControlle
 use TYPO3\CMS\Backend\Module\ModuleData;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
-use TYPO3\CMS\Backend\Template\Components\Buttons\ButtonInterface;
 use TYPO3\CMS\Backend\Template\Components\Buttons\LanguageSelectorBuilder;
 use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
@@ -36,13 +34,14 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Messaging\FlashMessageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Pagination\SlidingWindowPagination;
+use TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\View\ViewFactoryData;
 use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use Webconsulting\RecordsListTypes\Pagination\DatabasePaginator;
+use Webconsulting\RecordsListTypes\RecordList\AlternativeDatabaseRecordList;
 use Webconsulting\RecordsListTypes\Service\GridConfigurationService;
-use Webconsulting\RecordsListTypes\Service\MiddlewareDiagnosticService;
 use Webconsulting\RecordsListTypes\Service\RecordDisplayColumnResolver;
 use Webconsulting\RecordsListTypes\Service\RecordFilterQueryService;
 use Webconsulting\RecordsListTypes\Service\RecordFilterStateService;
@@ -105,7 +104,6 @@ final class RecordListController extends CoreRecordListController
         private readonly ViewTypeRegistry $viewTypeRegistry,
         private readonly GridConfigurationService $gridConfigurationService,
         private readonly RecordGridDataProvider $recordGridDataProvider,
-        private readonly MiddlewareDiagnosticService $middlewareDiagnosticService,
         private readonly RecordFilterQueryService $recordFilterQueryService,
         private readonly RecordFilterStateService $recordFilterStateService,
         private readonly RecordFilterViewDataFactory $recordFilterViewDataFactory,
@@ -140,32 +138,6 @@ final class RecordListController extends CoreRecordListController
             $this->currentViewMode,
             $this->currentRequest,
         );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function getModuleTsConfigForColumns(): array
-    {
-        /** @var array<string, mixed> $modTsConfig */
-        $modTsConfig = $this->modTSconfig;
-
-        return $modTsConfig;
-    }
-
-    /**
-     * @return array<array<mixed>>
-     */
-    private function getNestedModTsConfig(): array
-    {
-        $nested = [];
-        foreach ($this->modTSconfig as $key => $value) {
-            if (is_array($value)) {
-                $nested[$key] = $value;
-            }
-        }
-
-        return $nested;
     }
 
     /**
@@ -254,6 +226,7 @@ final class RecordListController extends CoreRecordListController
         $this->searchTerm = trim(ArrayUtility::stringValue($requestParams['searchTerm'] ?? null));
         $this->returnUrl = GeneralUtility::sanitizeLocalUrl(
             ArrayUtility::stringValue($requestParams['returnUrl'] ?? null),
+            $request,
         );
         $cmd = ArrayUtility::stringValue($requestParams['cmd'] ?? null);
 
@@ -302,31 +275,7 @@ final class RecordListController extends CoreRecordListController
         }
         $searchLevels = ArrayUtility::intValue($requestParams['search_levels'] ?? null, $searchLevelDefault);
 
-        // Create DatabaseRecordList (needed for URL building and other parent methods)
-        $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
-        $dbList->setRequest($request);
-        $dbList->setModuleData($this->moduleData);
-        $dbList->calcPerms = $this->pageContext->pagePermissions;
-        $dbList->returnUrl = $this->returnUrl;
-        $dbList->showClipboardActions = true;
-        $dbList->disableSingleTableView = (bool) ($this->modTSconfig['disableSingleTableView'] ?? false);
-        $dbList->listOnlyInSingleTableMode = (bool) ($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
-        $dbList->hideTables = ArrayUtility::stringValue($this->modTSconfig['hideTables'] ?? null);
-        $dbList->hideTranslations = ArrayUtility::stringValue($this->modTSconfig['hideTranslations'] ?? null);
-        $dbList->tableTSconfigOverTCA = $this->getTableTsConfigOverTca();
-        $dbList->allowedNewTables = ArrayUtility::commaSeparatedList($this->modTSconfig['allowedNewTables'] ?? null);
-        $dbList->deniedNewTables = ArrayUtility::commaSeparatedList($this->modTSconfig['deniedNewTables'] ?? null);
-        /** @var array<string> $pageRecord */
-        $pageRecord = $this->pageContext->pageRecord ?? [];
-        $dbList->pageRow = $pageRecord;
-        $dbList->modTSconfig = $this->getNestedModTsConfig();
-        $dbList->setLanguagesAllowedForUser($siteLanguages);
-        $clickTitleMode = trim(ArrayUtility::stringValue($this->modTSconfig['clickTitleMode'] ?? null));
-        $dbList->clickTitleMode = $clickTitleMode === '' ? 'edit' : $clickTitleMode;
-        $tableDisplayOrder = $this->modTSconfig['tableDisplayOrder'] ?? null;
-        if (is_array($tableDisplayOrder)) {
-            $dbList->setTableDisplayOrder($tableDisplayOrder);
-        }
+        $dbList = $this->createDatabaseRecordList($request);
 
         // Initialize clipboard
         $clipboard = $this->initializeClipboard($request, (bool) $this->moduleData->get('clipBoard'));
@@ -342,16 +291,15 @@ final class RecordListController extends CoreRecordListController
         // Create module template (this sets up the backend frame)
         $view = $this->moduleTemplateFactory->create($request);
 
-        // Handle delete command if posted
-        if ($cmd === 'delete' && $request->getMethod() === 'POST') {
-            $this->deleteRecords($request, $clipboard);
+        $customContent = '';
+        if ($this->pageContext->isAccessible()
+            || ($this->pageContext->pageId === 0 && $searchLevels !== 0 && $this->searchTerm !== '')) {
+            if ($cmd === 'delete' && $request->getMethod() === 'POST') {
+                $this->deleteRecords($request, $clipboard);
+            }
+            $dbList->start($this->pageContext->pageId, $this->table, $pointer, $this->searchTerm, $searchLevels);
+            $customContent = $this->renderViewContent($request, $dbList, $pageId, $this->table, $this->searchTerm, $searchLevels, $viewMode);
         }
-
-        // Initialize dbList for URL building, clipboard functionality, and search queries
-        $dbList->start($this->pageContext->pageId, $this->table, $pointer, $this->searchTerm, $searchLevels);
-
-        // Render the appropriate view (all view types use the same render path)
-        $customContent = $this->renderViewContent($request, $dbList, $pageId, $this->table, $this->searchTerm, $searchLevels, $viewMode);
 
         // Page title
         if ($this->pageContext->pageId === 0) {
@@ -477,12 +425,12 @@ final class RecordListController extends CoreRecordListController
      * display values, build pagination, create action buttons, and render via
      * Fluid. The only differences are handled by ViewTypeRegistry (template,
      * CSS, JS, display columns) and by computing all optional data (sorting
-     * toggle, column headers, language flags, middleware warning) for every
+     * toggle, column headers, language flags) for every
      * view -- templates simply ignore what they don't need.
      */
     private function renderViewContent(
         ServerRequestInterface $request,
-        DatabaseRecordList $dbList,
+        AlternativeDatabaseRecordList $dbList,
         int $pageId,
         string $table,
         string $searchTerm,
@@ -503,15 +451,6 @@ final class RecordListController extends CoreRecordListController
         $sortParams = (array) ($requestParams['sort'] ?? []);
         $sortingModeParams = (array) ($requestParams['sortingMode'] ?? []);
 
-        // Middleware diagnostics (only GridView template shows this)
-        $middlewareWarning = null;
-        $forceListViewUrl = null;
-        $diagnosis = $this->middlewareDiagnosticService->diagnose($request);
-        if ($diagnosis['hasRisk']) {
-            $middlewareWarning = $this->middlewareDiagnosticService->getWarningMessage($request);
-            $forceListViewUrl = $diagnosis['forceListViewUrl'];
-        }
-
         // Display columns configuration from ViewTypeRegistry
         $columnsConfig = $this->viewTypeRegistry->getDisplayColumnsConfig($viewMode, $pageId);
 
@@ -525,7 +464,7 @@ final class RecordListController extends CoreRecordListController
             $filterViewData = $this->recordFilterViewDataFactory->createForTable($tableName, $pageId, $viewMode, $request);
 
             // TCA info for sorting capabilities
-            $tcaForTable = $this->getTcaForTable($tableName);
+            $tcaForTable = $this->tcaConfigurationService->getTcaForTable($tableName);
             $tcaCtrl = $tcaForTable['ctrl'];
             $sortbyVal = $tcaCtrl['sortby'] ?? '';
             $sortbyFieldName = is_string($sortbyVal) ? $sortbyVal : '';
@@ -599,8 +538,7 @@ final class RecordListController extends CoreRecordListController
             );
 
             // Action buttons
-            $actionButtons = $this->createTableActionButtons(
-                $dbList,
+            $actionButtons = $dbList->getTableActions(
                 $tableName,
                 $recordCount,
                 $isSingleTableMode,
@@ -631,7 +569,7 @@ final class RecordListController extends CoreRecordListController
             $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
             $columnResolver = $this->displayColumnResolver;
             if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
-                $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->getModuleTsConfigForColumns());
+                $displayColumns = $columnResolver->getDisplayColumns($tableName, ArrayUtility::stringKeyArray($this->modTSconfig));
             } elseif ($columnsArray !== []) {
                 $displayColumns = $columnResolver->getSpecificDisplayColumns($tableName, $columnsArray);
             } else {
@@ -749,6 +687,7 @@ final class RecordListController extends CoreRecordListController
                 $pageId,
                 $viewMode,
                 $request,
+                $dbList->clipObj,
                 $recordUids,
                 $displayColumnFields,
             );
@@ -824,20 +763,10 @@ final class RecordListController extends CoreRecordListController
             'searchTerm' => $searchTerm,
             'viewMode' => $viewMode,
             'viewConfig' => $viewConfig,
-            'middlewareWarning' => $middlewareWarning,
-            'forceListViewUrl' => $forceListViewUrl,
             'clipboardEnabled' => $this->clipboardEnabled,
         ]);
 
         return $view->render($templatePaths['template']);
-    }
-
-    /**
-     * @return array{ctrl: array<string, mixed>, columns: array<string, array<string, mixed>>}
-     */
-    private function getTcaForTable(string $tableName): array
-    {
-        return $this->tcaConfigurationService->getTcaForTable($tableName);
     }
 
     /**
@@ -860,61 +789,19 @@ final class RecordListController extends CoreRecordListController
         int $searchLevels,
         ServerRequestInterface $request,
     ): array {
-        // If a specific table is selected, only return that
+        if ($specificTable !== '' && !$this->tcaSchemaFactory->has($specificTable)) {
+            return [];
+        }
+        $dbList = $this->createDatabaseRecordListForTable($specificTable, $pageId, $searchTerm, $searchLevels, $request);
+        $tables = $dbList->getTablesToRender();
         if ($specificTable !== '') {
-            return [$specificTable];
+            return $tables;
         }
 
-        $tables = [];
-        $backendUser = $this->getBackendUserAuthentication();
-
-        // Get hidden tables from TSconfig
-        $hideTables = ArrayUtility::commaSeparatedList($this->modTSconfig['hideTables'] ?? null);
-
-        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
-        foreach ($allTca as $tableName => $tca) {
-            if (!is_string($tableName)) {
-                continue;
-            }
-            if (!is_array($tca)) {
-                continue;
-            }
-            // Skip hidden tables
-            $ctrlArr = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
-            if (isset($ctrlArr['hideTable']) && (bool) $ctrlArr['hideTable']) {
-                continue;
-            }
-
-            // Skip tables hidden by TSconfig
-            if (in_array($tableName, $hideTables, true)) {
-                continue;
-            }
-
-            // Check user permissions
-            if (!$backendUser->check('tables_select', $tableName)) {
-                continue;
-            }
-
-            // When searching, check if this table has matching records
-            if ($searchTerm !== '') {
-                try {
-                    if ($this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request) > 0) {
-                        $tables[] = $tableName;
-                    }
-                } catch (Exception) {
-                    // Table might not be accessible, skip it
-                    continue;
-                }
-            } else {
-                // No search - check if table has records on this page
-                $count = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
-                if ($count > 0) {
-                    $tables[] = $tableName;
-                }
-            }
-        }
-
-        return $tables;
+        return array_values(array_filter(
+            $tables,
+            fn(string $table): bool => $this->getRecordCountUsingDbList($table, $pageId, $searchTerm, $searchLevels, $request) > 0,
+        ));
     }
 
     /**
@@ -928,7 +815,7 @@ final class RecordListController extends CoreRecordListController
      * @param string $searchTerm The search term
      * @param int $searchLevels The search depth level
      * @param ServerRequestInterface $request The current request
-     * @return DatabaseRecordList The initialized DatabaseRecordList
+     * @return AlternativeDatabaseRecordList The initialized record list
      */
     private function createDatabaseRecordListForTable(
         string $tableName,
@@ -936,13 +823,17 @@ final class RecordListController extends CoreRecordListController
         string $searchTerm,
         int $searchLevels,
         ServerRequestInterface $request,
-    ): DatabaseRecordList {
+    ): AlternativeDatabaseRecordList {
+        $dbList = $this->createDatabaseRecordList($request);
+        $dbList->start($pageId, $tableName, 0, $searchTerm, $searchLevels);
+        return $dbList;
+    }
+
+    private function createDatabaseRecordList(ServerRequestInterface $request): AlternativeDatabaseRecordList
+    {
         $backendUser = $this->getBackendUserAuthentication();
-        $dbList = GeneralUtility::makeInstance(DatabaseRecordList::class);
+        $dbList = GeneralUtility::makeInstance(AlternativeDatabaseRecordList::class);
         $dbList->setRequest($request);
-        if (!$this->moduleData instanceof ModuleData) {
-            $this->moduleData = null;
-        }
         if ($this->moduleData instanceof ModuleData) {
             $dbList->setModuleData($this->moduleData);
         }
@@ -959,7 +850,7 @@ final class RecordListController extends CoreRecordListController
         /** @var array<string> $pageRecord */
         $pageRecord = $this->pageContext->pageRecord ?? [];
         $dbList->pageRow = $pageRecord;
-        $dbList->modTSconfig = $this->getNestedModTsConfig();
+        $dbList->modTSconfig = $this->modTSconfig;
         $siteLanguages = $this->pageContext->site->getAvailableLanguages($backendUser, false, $this->pageContext->pageId);
         $dbList->setLanguagesAllowedForUser($siteLanguages);
         $clickTitleMode = trim(ArrayUtility::stringValue($this->modTSconfig['clickTitleMode'] ?? null));
@@ -968,9 +859,6 @@ final class RecordListController extends CoreRecordListController
         if (is_array($tableDisplayOrder)) {
             $dbList->setTableDisplayOrder($tableDisplayOrder);
         }
-        $clipboardEnabled = $this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('clipBoard');
-        $dbList->clipObj = $this->initializeClipboard($request, $clipboardEnabled);
-        $dbList->start($pageId, $tableName, 0, $searchTerm, $searchLevels);
         return $dbList;
     }
 
@@ -1066,7 +954,7 @@ final class RecordListController extends CoreRecordListController
                 $this->recordSortingService->sortRecordsByRawField($records, $sortField, $sortDirection);
             }
             if ($deferWorkspaceEvaluation && $limit > 0) {
-                $records = array_slice($records, $offset, $limit);
+                return array_slice($records, $offset, $limit);
             }
             return $records;
         }
@@ -1130,9 +1018,6 @@ final class RecordListController extends CoreRecordListController
      * @param string $viewMode The current view mode
      * @param ServerRequestInterface $request The current request
      * @return string Rendered HTML for the action buttons row
-     */
-    /**
-     * @param list<int> $currentRecordUids Record UIDs currently shown in the table
      * @param list<int> $currentRecordUids UIDs of currently rendered records
      * @param list<string> $displayColumnFields Field names of the currently displayed columns
      */
@@ -1141,15 +1026,13 @@ final class RecordListController extends CoreRecordListController
         int $pageId,
         string $viewMode,
         ServerRequestInterface $request,
+        Clipboard $clipboard,
         array $currentRecordUids = [],
         array $displayColumnFields = [],
     ): string {
         $dbList = $this->createDatabaseRecordListForTable($tableName, $pageId, '', 0, $request);
-        $buttons = $this->renderDatabaseRecordListButton(
-            $dbList,
-            'renderMultiRecordSelectionActions',
-            [$tableName, $currentRecordUids],
-        );
+        $dbList->clipObj = $clipboard;
+        $buttons = $dbList->renderMultiRecordSelectionActions($tableName, $currentRecordUids);
 
         if ($displayColumnFields === []) {
             return $buttons;
@@ -1445,7 +1328,7 @@ final class RecordListController extends CoreRecordListController
         $multiEditColumnsOnly = '';
         $multiEditReturnUrl = '';
         if ($canMultiEdit) {
-            $rawLabel = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editThisColumn');
+            $rawLabel = $lang->sL('core.mod_web_list:editThisColumn');
             $multiEditLabel = $rawLabel !== ''
                 ? sprintf($rawLabel, $label)
                 : sprintf('Edit "%s"', $label);
@@ -1540,7 +1423,7 @@ final class RecordListController extends CoreRecordListController
         }
 
         $lang = $this->getLanguageService();
-        $label = $lang->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:editShownColumns');
+        $label = $lang->sL('core.mod_web_list:editShownColumns');
         if ($label === '') {
             $label = 'Edit shown columns';
         }
@@ -1581,7 +1464,7 @@ final class RecordListController extends CoreRecordListController
             return false;
         }
         $schema = $this->tcaSchemaFactory->get($tableName);
-        if ($schema->hasCapability(\TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability::AccessReadOnly)) {
+        if ($schema->hasCapability(TcaSchemaCapability::AccessReadOnly)) {
             return false;
         }
         if (!$be->check('tables_modify', $tableName)) {
@@ -1598,7 +1481,7 @@ final class RecordListController extends CoreRecordListController
      */
     private function isFieldEditableForUser(string $tableName, string $field): bool
     {
-        $tcaForTable = $this->getTcaForTable($tableName);
+        $tcaForTable = $this->tcaConfigurationService->getTcaForTable($tableName);
         $columns = $tcaForTable['columns'];
         $columnConfig = is_array($columns[$field] ?? null) ? $columns[$field] : [];
         $config = is_array($columnConfig['config'] ?? null) ? $columnConfig['config'] : [];
@@ -1614,11 +1497,11 @@ final class RecordListController extends CoreRecordListController
      * @return array<string, string>
      */
     private function createPageTranslationActionButtons(
-        DatabaseRecordList $dbList,
+        AlternativeDatabaseRecordList $dbList,
         string $tableName,
         int $recordCount,
     ): array {
-        $buttons = $this->createTableActionButtons($dbList, $tableName, $recordCount, false);
+        $buttons = $dbList->getTableActions($tableName, $recordCount, false);
 
         return [
             'newRecordButton' => '',
@@ -1626,86 +1509,6 @@ final class RecordListController extends CoreRecordListController
             'columnSelectorButton' => $buttons['columnSelectorButton'],
             'collapseButton' => $buttons['collapseButton'],
         ];
-    }
-
-    /**
-     * Create table action buttons using TYPO3's ComponentFactory API.
-     *
-     * Returns an array with rendered HTML for each button type:
-     * - newRecordButton: HTML for "New record" button
-     * - downloadButton: HTML for "Download/Export" button
-     * - columnSelectorButton: HTML for "Show columns" button (web component)
-     * - collapseButton: HTML for "Collapse/Expand" button
-     *
-     * @param string $tableName The database table name
-     * @param int $recordCount Number of records for this table
-     * @param bool $isSingleTableMode Whether we're in single table view mode
-     * @return array<string, string> Array of rendered button HTML
-     */
-    private function createTableActionButtons(
-        DatabaseRecordList $dbList,
-        string $tableName,
-        int $recordCount,
-        bool $isSingleTableMode,
-    ): array {
-        $buttons = [
-            'newRecordButton' => '',
-            'downloadButton' => '',
-            'columnSelectorButton' => '',
-            'collapseButton' => '',
-        ];
-
-        $newRecordButton = $dbList->createActionButtonNewRecord($tableName);
-        if ($newRecordButton instanceof ButtonInterface) {
-            $buttons['newRecordButton'] = $newRecordButton->render();
-        }
-
-        $buttons['downloadButton'] = $this->renderDatabaseRecordListButton(
-            $dbList,
-            'createActionButtonDownload',
-            [$tableName, $recordCount],
-        );
-        $buttons['columnSelectorButton'] = $this->renderDatabaseRecordListButton(
-            $dbList,
-            'createActionButtonColumnSelector',
-            [$tableName],
-        );
-        if (!$isSingleTableMode) {
-            $buttons['collapseButton'] = $this->renderDatabaseRecordListButton(
-                $dbList,
-                'createActionButtonCollapse',
-                [$tableName],
-            );
-        }
-
-        return $buttons;
-    }
-
-    /**
-     * Render a TYPO3 core DatabaseRecordList button via its native button builder.
-     *
-     * The core keeps some table header button methods protected. Using reflection
-     * here lets the custom views render the exact same button markup and behavior
-     * as the native list view instead of approximating it.
-     *
-     * @param list<mixed> $arguments
-     */
-    private function renderDatabaseRecordListButton(
-        DatabaseRecordList $dbList,
-        string $methodName,
-        array $arguments,
-    ): string {
-        try {
-            $method = new ReflectionMethod($dbList, $methodName);
-            $result = $method->invokeArgs($dbList, $arguments);
-            if (is_object($result) && method_exists($result, 'render')) {
-                $rendered = $result->render();
-                return is_string($rendered) ? $rendered : '';
-            }
-            return is_string($result) ? $result : '';
-        } catch (ReflectionException|Exception) {
-            return '';
-        }
     }
 
     /**
@@ -1725,7 +1528,7 @@ final class RecordListController extends CoreRecordListController
         bool $isSingleTableMode = false,
     ): array {
         $headers = [];
-        $tcaForTable = $this->getTcaForTable($tableName);
+        $tcaForTable = $this->tcaConfigurationService->getTcaForTable($tableName);
         $tcaColumns = $tcaForTable['columns'];
         $ctrl = $tcaForTable['ctrl'];
         $labelVal = $ctrl['label'] ?? 'uid';
@@ -1810,7 +1613,7 @@ final class RecordListController extends CoreRecordListController
      */
     private function getTableLabel(string $tableName): string
     {
-        $tcaForTable = $this->getTcaForTable($tableName);
+        $tcaForTable = $this->tcaConfigurationService->getTcaForTable($tableName);
         $labelTitleVal = $tcaForTable['ctrl']['title'] ?? $tableName;
         $label = is_string($labelTitleVal) ? $labelTitleVal : $tableName;
 
@@ -1999,7 +1802,7 @@ final class RecordListController extends CoreRecordListController
         $pageId = $this->pageContext->pageId;
         $viewMode = $this->viewModeResolver->getActiveViewMode($request, $pageId, $this->table);
 
-        if ($viewMode === 'list' || !$this->viewModeResolver->isModeAllowed($viewMode, $pageId)) {
+        if (!$dbList instanceof AlternativeDatabaseRecordList || $viewMode === 'list' || !$this->viewModeResolver->isModeAllowed($viewMode, $pageId)) {
             return parent::renderPageTranslations($dbList, $siteLanguages);
         }
 
@@ -2022,7 +1825,7 @@ final class RecordListController extends CoreRecordListController
      */
     private function renderPageTranslationsInViewMode(
         ServerRequestInterface $request,
-        DatabaseRecordList $dbList,
+        AlternativeDatabaseRecordList $dbList,
         int $pageId,
         string $viewMode,
     ): string {
@@ -2043,7 +1846,7 @@ final class RecordListController extends CoreRecordListController
         $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
         $columnResolver = $this->displayColumnResolver;
         if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
-            $displayColumns = $columnResolver->getDisplayColumns($tableName, $this->getModuleTsConfigForColumns());
+            $displayColumns = $columnResolver->getDisplayColumns($tableName, ArrayUtility::stringKeyArray($this->modTSconfig));
         } elseif ($columnsArray !== []) {
             $displayColumns = $columnResolver->getSpecificDisplayColumns($tableName, $columnsArray);
         } else {
@@ -2069,7 +1872,7 @@ final class RecordListController extends CoreRecordListController
         unset($record);
 
         $recordCount = count($enrichedRecords);
-        $headingLabel = $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:pageTranslation');
+        $headingLabel = $this->getLanguageService()->sL('core.core:pageTranslation');
         if ($headingLabel === '') {
             $headingLabel = 'Page Translations';
         }
@@ -2147,8 +1950,6 @@ final class RecordListController extends CoreRecordListController
             'searchTerm' => '',
             'viewMode' => $viewMode,
             'viewConfig' => $viewConfig,
-            'middlewareWarning' => null,
-            'forceListViewUrl' => null,
             'clipboardEnabled' => false,
             'isPageTranslationsList' => true,
         ]);
