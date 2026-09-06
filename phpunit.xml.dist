@@ -11,6 +11,9 @@
          failOnPhpunitNotice="true"
          failOnRisky="true"
          failOnWarning="true">
+    <php>
+        <ini name="date.timezone" value="UTC"/>
+    </php>
     <testsuites>
         <testsuite name="Unit">
             <directory>Tests/Unit</directory>
@@ -34,10 +37,5 @@
         <include>
             <directory>Classes</directory>
         </include>
-        <exclude>
-            <directory>Classes/Domain/Model</directory>
-            <!-- ViewHelper extends AbstractViewHelper: needs Fluid bootstrap -->
-            <file>Classes/ViewHelpers/RecordActionsViewHelper.php</file>
-        </exclude>
     </source>
 </phpunit>

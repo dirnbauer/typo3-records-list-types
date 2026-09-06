@@ -1,0 +1,12 @@
+<?php
+
+namespace TYPO3\CMS\Backend\RecordList;
+
+class DatabaseRecordList
+{
+    /**
+     * Core's array[] annotation omits scalar options such as displayRecordDownload.
+     * @var array<mixed>
+     */
+    public $modTSconfig;
+}

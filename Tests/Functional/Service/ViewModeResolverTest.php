@@ -28,6 +28,8 @@ final class ViewModeResolverTest extends FunctionalTestCase
     {
         parent::setUp();
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Pages.csv');
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/BackendUsers.csv');
+        $this->setUpBackendUser(1);
         $this->subject = $this->get(ViewModeResolver::class);
     }
 
@@ -163,10 +165,6 @@ final class ViewModeResolverTest extends FunctionalTestCase
     #[Test]
     public function getActiveViewModeUsesTablePreferenceBeforeTableDefault(): void
     {
-        if (!isset($GLOBALS['BE_USER'])) {
-            self::markTestSkipped('Requires a backend user to persist table preferences.');
-        }
-
         $this->subject->setUserPreference('compact', 7, 'pages');
 
         $request = new ServerRequest('https://example.com/typo3/module/records?table=pages');

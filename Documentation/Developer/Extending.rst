@@ -52,9 +52,8 @@ For TYPO3 Core list-module actions, use
 
 ..  note::
 
-    The extension listens to ``ModifyRecordListRecordActionsEvent`` only as a
-    lightweight compatibility bridge. The default Grid, Compact, and Teaser
-    templates do not automatically render arbitrary Core action fragments.
+    ``ModifyRecordListRecordActionsEvent`` customizes the standard List View.
+    Grid, Compact, and Teaser do not render arbitrary Core action fragments.
     Add custom card actions in a custom Fluid template configured via Page
     TSconfig, or expose the needed action URLs in your own view data.
 
@@ -63,15 +62,19 @@ For TYPO3 Core list-module actions, use
 Custom thumbnail logic
 ======================
 
-For special image handling, override the thumbnail service in
-:file:`Configuration/Services.yaml`:
+Configure the FAL field used for previews in Page TSconfig:
 
-..  code-block:: yaml
-    :caption: Configuration/Services.yaml
+..  code-block:: typoscript
+    :caption: Page TSconfig
 
-    services:
-      Webconsulting\RecordsListTypes\Service\ThumbnailService:
-        class: YourVendor\YourExtension\Service\CustomThumbnailService
+    mod.web_list.gridView.table.tx_yourext_domain_model_item {
+        imageField = image
+        preview = 1
+    }
+
+For different presentation, register a :ref:`custom view type
+<custom-view-types>` with your own Fluid template. The internal
+:php:`ThumbnailService` is final and cannot be replaced by a subclass.
 
 .. _extending-disable:
 
@@ -197,10 +200,3 @@ Thumbnails not showing
 1.  Verify the ``imageField`` in TSconfig points to a valid FAL field
 2.  Ensure ``preview = 1`` is set for the table
 3.  Check that the records have images attached
-
-Middleware warning
-------------------
-
-If you see a middleware warning, a custom middleware may be interfering
-with the response. Check the middleware stack in
-:guilabel:`Admin Tools > Configuration > HTTP Middlewares`.

@@ -1,4 +1,7 @@
 import {LitElement, html} from 'lit-element';
+import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
+import AjaxDataHandler from '@typo3/backend/ajax-data-handler.js';
+import ContextMenuActions from '@typo3/backend/context-menu-actions.js';
 
 /**
  * Grid View Actions - ES Module for TYPO3 v14
@@ -8,7 +11,7 @@ import {LitElement, html} from 'lit-element';
  * - WCAG 2.1 compliant keyboard navigation for drag and drop
  * - Screen reader support with ARIA live regions
  * - Record actions (hide/show, delete, clipboard, info, history)
- * - DataHandler-backed move/delete actions with raw endpoint fallback
+ * - Core DataHandler move/delete actions
  * - Pagination input handling
  * - Scroll shadow detection for compact view
  */
@@ -464,6 +467,8 @@ class GridViewActions extends LitElement {
     onDragHandleKeydown(e) {
         if (e.key === ' ' || e.key === 'Enter') {
             e.preventDefault();
+            // Do not let the document handler also drop a record just grabbed here.
+            e.stopPropagation();
             
             const handle = e.target.closest('.gridview-card__drag');
             const card = handle?.closest('.gridview-card');
@@ -482,9 +487,6 @@ class GridViewActions extends LitElement {
                 // Start keyboard drag
                 this.keyboardStartDrag(card, wrapper, handle);
             }
-        } else if (e.key === 'Escape' && this.isKeyboardDragMode) {
-            e.preventDefault();
-            this.keyboardCancelDrag();
         }
     }
 
@@ -548,13 +550,13 @@ class GridViewActions extends LitElement {
     keyboardStartDrag(card, wrapper, handle) {
         const grid = wrapper.closest('.gridview-card-grid');
         if (!grid) return;
-        
+
+        this.keyboardDragCard = card;
+        this.keyboardDragWrapper = wrapper;
         const wrappers = this.getCompatibleReorderWrappers(grid);
         const index = wrappers.indexOf(wrapper);
         
         this.isKeyboardDragMode = true;
-        this.keyboardDragCard = card;
-        this.keyboardDragWrapper = wrapper;
         this.keyboardOriginalIndex = index;
         this.keyboardTargetIndex = index;
         
@@ -1034,7 +1036,7 @@ class GridViewActions extends LitElement {
 
         let restoreCard = true;
         try {
-            const data = await this.processDataHandlerCommand({
+            const data = await AjaxDataHandler.process({
                 cmd: {
                     [table]: {
                         [uid]: {
@@ -1061,62 +1063,6 @@ class GridViewActions extends LitElement {
                 card.style.opacity = '';
             }
         }
-    }
-
-    async processDataHandlerCommand(params) {
-        let AjaxDataHandler = null;
-        try {
-            AjaxDataHandler = await this.getDefaultModule('@typo3/backend/ajax-data-handler.js');
-        } catch {
-            AjaxDataHandler = null;
-        }
-
-        if (AjaxDataHandler?.process) {
-            return await AjaxDataHandler.process(params);
-        }
-
-        const url = TYPO3?.settings?.ajaxUrls?.record_process;
-        if (!url) {
-            throw new Error('TYPO3 record_process endpoint is not available.');
-        }
-
-        const fullUrl = new URL(url, window.location.origin);
-        this.appendNestedSearchParams(fullUrl.searchParams, params);
-
-        return this.fetchJson(fullUrl);
-    }
-
-    appendNestedSearchParams(searchParams, value, prefix = '') {
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-            Object.entries(value).forEach(([key, nestedValue]) => {
-                const parameterName = prefix ? `${prefix}[${key}]` : key;
-                this.appendNestedSearchParams(searchParams, nestedValue, parameterName);
-            });
-            return;
-        }
-
-        if (prefix) {
-            searchParams.set(prefix, String(value));
-        }
-    }
-
-    async fetchJson(url, options = {}) {
-        const response = await fetch(url.toString(), {
-            ...options,
-            method: options.method || 'GET',
-            credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                ...(options.headers || {})
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        return response.json();
     }
 
     /**
@@ -1159,10 +1105,10 @@ class GridViewActions extends LitElement {
                     this.deleteRecord(table, uid, btn);
                     break;
                 case 'copy':
-                    this.clipboardAction(table, uid, 'copy');
+                    ContextMenuActions.copy(table, uid);
                     break;
                 case 'cut':
-                    this.clipboardAction(table, uid, 'cut');
+                    ContextMenuActions.cut(table, uid);
                     break;
                 case 'info':
                     this.showInfo(table, uid);
@@ -1188,10 +1134,7 @@ class GridViewActions extends LitElement {
         btn.disabled = true;
 
         try {
-            const [{default: AjaxRequest}, {sudoModeInterceptor}] = await Promise.all([
-                import('@typo3/core/ajax/ajax-request.js'),
-                import('@typo3/backend/security/sudo-mode-interceptor.js')
-            ]);
+            const {sudoModeInterceptor} = await this.loadModule('@typo3/backend/security/sudo-mode-interceptor.js');
             const response = await new AjaxRequest(url)
                 .addMiddleware(sudoModeInterceptor)
                 .post({
@@ -1294,182 +1237,22 @@ class GridViewActions extends LitElement {
     }
     
     /**
-     * Delete a record with TYPO3 Modal confirmation
+     * Let Core own confirmation, deletion, notifications, and module refresh.
      */
-    async deleteRecord(table, uid, btn) {
-        const card = btn.closest('.gridview-card');
-        const title = card?.querySelector('.gridview-card__title')?.textContent?.trim() || uid;
-        
-        const confirmed = await this.confirmDelete(title);
-        if (!confirmed) return;
-        
-        await this.executeDelete(table, uid, card);
-    }
-    
-    /**
-     * Show delete confirmation dialog using TYPO3 Modal or native confirm
-     * @param {string} title - The record title to display
-     * @returns {Promise<boolean>} True if confirmed, false if cancelled
-     */
-    async confirmDelete(title) {
-        try {
-            const Modal = await this.getDefaultModule('@typo3/backend/modal.js');
-            return new Promise((resolve) => {
-                Modal.confirm(
-                    'Delete Record',
-                    `Are you sure you want to delete "${title}"?`,
-                    Modal.sizes.small,
-                    [
-                        {
-                            text: 'Cancel',
-                            active: true,
-                            btnClass: 'btn-default',
-                            trigger: (event, modal) => {
-                                modal.hideModal();
-                                resolve(false);
-                            }
-                        },
-                        {
-                            text: 'Delete',
-                            btnClass: 'btn-danger',
-                            trigger: (event, modal) => {
-                                modal.hideModal();
-                                resolve(true);
-                            }
-                        }
-                    ]
-                );
-            });
-        } catch {
-            return confirm(`Delete "${title}"?`);
-        }
-    }
-    
-    /**
-     * Execute the delete operation after confirmation.
-     *
-     * Uses TYPO3's AjaxDataHandler.process() which handles notifications
-     * and events, then reloads the page to ensure consistent state
-     * (record counts, pagination, empty tables).
-     */
-    async executeDelete(table, uid, card) {
-        if (!table || !uid) {
-            return;
-        }
+    deleteRecord(table, uid, btn) {
+        const record = btn.closest('.gridview-card, .compactview-row, .teaserview-card, .teaserview-translation-row');
+        const title = record?.dataset.recordTitle
+            || record?.querySelector('.gridview-card__title, .compactview-row__title-link, .teaserview-card__title, .teaserview-translation-row__title')?.textContent?.trim()
+            || uid;
 
-        const wrapper = card?.closest('.gridview-card-wrapper') || card;
-        if (wrapper) {
-            wrapper.style.transition = 'all 0.2s';
-            wrapper.style.opacity = '0';
-            wrapper.style.transform = 'scale(0.9)';
-        }
-
-        try {
-            const data = await this.processDataHandlerCommand({
-                cmd: {
-                    [table]: {
-                        [uid]: {
-                            delete: 1
-                        }
-                    }
-                }
-            });
-
-            if (data?.hasErrors) {
-                this.restoreActionWrapper(wrapper);
-                this.showAjaxMessages('Delete failed', data.messages);
-                return;
-            }
-
-            this.refreshPageTreeIfNeeded(table);
-            window.location.reload();
-        } catch (err) {
-            console.error('[GridView] Delete error:', err);
-            this.restoreActionWrapper(wrapper);
-            this.showNotification('Request failed', err.message || 'Request failed', 'error');
-        }
-    }
-
-    restoreActionWrapper(wrapper) {
-        if (!wrapper) {
-            return;
-        }
-
-        wrapper.style.opacity = '1';
-        wrapper.style.transform = '';
-    }
-
-    /**
-     * Clipboard action - copy or cut record to TYPO3 clipboard
-     */
-    async clipboardAction(table, uid, mode) {
-        const url = TYPO3?.settings?.ajaxUrls?.clipboard_process;
-        if (!table || !uid || !['copy', 'cut'].includes(mode)) {
-            return;
-        }
-
-        if (!url) {
-            this.clipboardFallback(table, uid, mode);
-            return;
-        }
-        
-        const fullUrl = new URL(url, window.location.origin);
-        fullUrl.searchParams.set(`CB[el][${table}|${uid}]`, '1');
-        fullUrl.searchParams.set('CB[setCopyMode]', mode === 'copy' ? '1' : '0');
-        
-        try {
-            const data = await this.fetchJson(fullUrl);
-            if (data?.hasErrors) {
-                this.showAjaxMessages('Clipboard action failed', data.messages);
-                return;
-            }
-
-            this.showNotification(
-                mode === 'copy' ? 'Copied to clipboard' : 'Cut to clipboard',
-                `Record ${uid} from ${table}`,
-                'success'
-            );
-
-            this.updateClipboardIcons(table, uid, mode);
-
-            const clipboardPanel = document.querySelector('typo3-backend-clipboard-panel');
-            if (clipboardPanel) {
-                clipboardPanel.dispatchEvent(new Event('typo3:clipboard:update'));
-            }
-        } catch (err) {
-            console.error('[GridView] Clipboard error:', err);
-            this.showNotification('Clipboard action failed', err.message || 'Request failed', 'error');
-        }
-    }
-    
-    /**
-     * Update clipboard icons after copy/cut action
-     * Changes icon to "release" variant and updates other cards
-     */
-    updateClipboardIcons(table, uid, mode) {
-        document.querySelectorAll('[data-gridview-action="copy"], [data-gridview-action="cut"]').forEach(el => {
-            const action = el.dataset.gridviewAction;
-            const iconEl = el.querySelector('.icon, typo3-backend-icon');
-            if (iconEl) {
-                const defaultIcon = action === 'copy' ? 'actions-edit-copy' : 'actions-edit-cut';
-                this.replaceIcon(iconEl, defaultIcon);
-            }
-            el.classList.remove('is-clipboard-active');
-        });
-        
-        document.querySelectorAll(`[data-gridview-action="${mode}"]`).forEach(el => {
-            if (el.dataset.table !== table || el.dataset.uid !== String(uid)) {
-                return;
-            }
-            const iconEl = el.querySelector('.icon, typo3-backend-icon');
-            if (iconEl) {
-                const releaseIcon = mode === 'copy' ? 'actions-edit-copy-release' : 'actions-edit-cut-release';
-                this.replaceIcon(iconEl, releaseIcon);
-            }
-            el.classList.add('is-clipboard-active');
+        ContextMenuActions.deleteRecord(table, uid, {
+            title: 'Delete Record',
+            message: html`Are you sure you want to delete "${title}"?`,
+            buttonCloseText: 'Cancel',
+            buttonOkText: 'Delete'
         });
     }
-    
+
     /**
      * Parse server-rendered icon markup into a DOM node.
      * Uses DOMParser instead of innerHTML for safer HTML parsing.
@@ -1517,16 +1300,6 @@ class GridViewActions extends LitElement {
         icon.setAttribute('identifier', identifier);
         icon.setAttribute('size', 'small');
         return icon;
-    }
-    
-    /**
-     * Fallback for clipboard when AJAX URL is not available
-     */
-    clipboardFallback(table, uid, mode) {
-        const url = new URL(window.location.href);
-        url.searchParams.set(`CB[el][${table}|${uid}]`, '1');
-        url.searchParams.set('CB[setCopyMode]', mode === 'copy' ? '1' : '0');
-        window.location.href = url.toString();
     }
     
     /**

@@ -6,6 +6,8 @@
 Installation
 ============
 
+Requires TYPO3 14.3.6 or later in the v14 series and PHP 8.3–8.5.
+
 The extension is installed via Composer. If Composer cannot find the
 package on Packagist, add the GitHub repository as a VCS repository in
 your TYPO3 project's root :file:`composer.json`.
@@ -63,7 +65,7 @@ is loaded automatically in TYPO3 v14. It provides:
 
 -   All four view modes enabled (list, grid, compact, teaser)
 -   Default view mode: ``list``
--   Grid layout with 4 columns
+-   A responsive grid that adapts to the available width
 -   Pre-configured field mappings for ``pages``, ``tt_content``,
     ``fe_users``, and ``tx_news_domain_model_news``
 

@@ -160,8 +160,10 @@ Pagination matches TYPO3 Core List View behavior:
     :type: int
     :default: ``4``
 
-    Number of columns in the grid layout. Uses Bootstrap's
-    ``row-cols-xl-*`` classes. Valid range: 2--6.
+    Legacy integration setting read by ``GridConfigurationService::getColumnCount()``
+    for custom templates. Valid range: 2--6. The built-in Grid View uses responsive
+    CSS and does not read this setting; adjust a custom view's CSS to change its
+    column layout.
 
     ..  code-block:: typoscript
         :caption: Page TSconfig
@@ -326,22 +328,6 @@ Disable grid view for specific pages
 
     [page["uid"] == 123 || page["pid"] == 123]
         mod.web_list.viewMode.allowed = list
-    [end]
-
-Different column counts per page type
---------------------------------------
-
-..  code-block:: typoscript
-    :caption: Page TSconfig
-
-    # More columns for media folders
-    [page["doktype"] == 254]
-        mod.web_list.gridView.cols = 6
-    [end]
-
-    # Fewer columns for complex records
-    [page["module"] == "events"]
-        mod.web_list.gridView.cols = 3
     [end]
 
 .. _configuration-resolution:

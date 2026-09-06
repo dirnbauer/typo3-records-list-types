@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Controller\ContentElement;
 
+use Override;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Controller\ContentElement\ElementHistoryController as CoreElementHistoryController;
@@ -12,6 +13,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final class ElementHistoryController extends CoreElementHistoryController
 {
+    #[Override]
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
         $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);

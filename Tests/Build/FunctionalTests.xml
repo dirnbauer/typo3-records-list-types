@@ -20,8 +20,5 @@
         <include>
             <directory>../../Classes</directory>
         </include>
-        <exclude>
-            <directory>../../Classes/Domain/Model</directory>
-        </exclude>
     </source>
 </phpunit>

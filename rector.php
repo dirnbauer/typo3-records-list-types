@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Rector\CodeQuality\Rector\Class_\InlineConstructorDefaultToPropertyRector;
 use Rector\Config\RectorConfig;
 use Rector\Php83\Rector\ClassMethod\AddOverrideAttributeToOverriddenMethodsRector;
 use Ssch\TYPO3Rector\CodeQuality\General\ConvertImplicitVariablesToExplicitGlobalsRector;
@@ -30,7 +29,12 @@ return RectorConfig::configure()
     ])
     ->withRules([
         ConvertImplicitVariablesToExplicitGlobalsRector::class,
-        InlineConstructorDefaultToPropertyRector::class,
         AddOverrideAttributeToOverriddenMethodsRector::class,
+    ])
+    // Keep compact guard clauses and explicit boolean branches readable.
+    ->withSkip([
+        \Rector\EarlyReturn\Rector\If_\ChangeOrIfContinueToMultiContinueRector::class,
+        \Rector\EarlyReturn\Rector\Return_\ReturnBinaryOrToEarlyReturnRector::class,
+        \Rector\CodeQuality\Rector\If_\SimplifyIfReturnBoolRector::class,
     ])
     ->withImportNames(importShortClasses: false, removeUnusedImports: true);

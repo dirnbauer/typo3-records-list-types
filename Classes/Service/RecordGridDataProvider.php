@@ -9,7 +9,6 @@ use Doctrine\DBAL\ParameterType;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Imaging\IconFactory;
@@ -38,57 +37,6 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         private TcaSchemaFactory $tcaSchemaFactory,
         private Context $context,
     ) {}
-
-    /**
-     * Get records for a table formatted for Grid View display.
-     *
-     * @param string $table The database table name
-     * @param int $pageId The page ID to fetch records from
-     * @param int $limit Maximum number of records (0 = no limit)
-     * @param int $offset Starting offset for pagination
-     * @param string $searchTerm Search term to filter records
-     * @param string $sortField Field to sort by (empty = default TCA sorting)
-     * @param string $sortDirection Sort direction: 'asc' or 'desc'
-     * @return array<int, array<string, mixed>> Array of record data
-     */
-    public function getRecordsForTable(
-        string $table,
-        int $pageId,
-        int $limit = 0,
-        int $offset = 0,
-        string $searchTerm = '',
-        string $sortField = '',
-        string $sortDirection = 'asc',
-    ): array {
-        $tableConfig = $this->configurationService->getTableConfig($table, $pageId);
-        $queryBuilder = $this->createQueryBuilder($table, $pageId, $searchTerm, $sortField, $sortDirection);
-
-        // Apply pagination
-        if ($limit > 0) {
-            $queryBuilder->setMaxResults($limit);
-        }
-        if ($offset > 0) {
-            $queryBuilder->setFirstResult($offset);
-        }
-
-        $result = $queryBuilder->executeQuery();
-        $records = [];
-
-        while ($row = $result->fetchAssociative()) {
-            // Apply workspace overlay to get the correct version for the current
-            // workspace. The two-arg form reads the active workspace id itself.
-            BackendUtility::workspaceOL($table, $row, -99, true);
-
-            // workspaceOL returns false/null if record is deleted in workspace or should not be shown
-            if (!is_array($row)) {
-                continue;
-            }
-
-            $records[] = $this->enrichRecord($table, ArrayUtility::stringKeyArray($row), $tableConfig);
-        }
-
-        return $records;
-    }
 
     /**
      * Build the enriched record payload for a row already fetched elsewhere.
@@ -121,39 +69,6 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         }
 
         return false;
-    }
-
-    /**
-     * Get total count of records for a table.
-     *
-     * Uses TYPO3's WorkspaceRestriction for proper workspace support.
-     *
-     * @param string $table The database table name
-     * @param int $pageId The page ID
-     * @return int Total number of records
-     */
-    public function getRecordCount(string $table, int $pageId): int
-    {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
-
-        // Use TYPO3's standard restrictions for proper workspace handling
-        $queryBuilder->getRestrictions()
-            ->removeAll()
-            ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
-            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $this->getCurrentWorkspaceId()));
-
-        $queryBuilder
-            ->count('uid')
-            ->from($table)
-            ->where(
-                $queryBuilder->expr()->eq(
-                    'pid',
-                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER),
-                ),
-            );
-
-        $result = $queryBuilder->executeQuery()->fetchOne();
-        return is_int($result) || is_string($result) ? (int) $result : 0;
     }
 
     /**
@@ -203,115 +118,6 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
 
         return ['ctrl' => $ctrl, 'columns' => $columns];
-    }
-
-    /**
-     * Create a QueryBuilder for fetching records.
-     *
-     * Uses TYPO3's WorkspaceRestriction for proper workspace support.
-     *
-     * @param string $table The database table name
-     * @param int $pageId The page ID
-     * @param string $searchTerm Search term to filter records
-     * @param string $sortField Field to sort by (empty = default TCA sorting)
-     * @param string $sortDirection Sort direction: 'asc' or 'desc'
-     */
-    private function createQueryBuilder(
-        string $table,
-        int $pageId,
-        string $searchTerm = '',
-        string $sortField = '',
-        string $sortDirection = 'asc',
-    ): QueryBuilder {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
-
-        // Use TYPO3's standard restrictions for proper workspace handling.
-        // Remove all default restrictions and add only the ones we need.
-        $queryBuilder->getRestrictions()
-            ->removeAll()
-            ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
-            ->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, $this->getCurrentWorkspaceId()));
-
-        $queryBuilder
-            ->select('*')
-            ->from($table)
-            ->where(
-                $queryBuilder->expr()->eq(
-                    'pid',
-                    $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER),
-                ),
-            );
-
-        // Apply search term filter
-        if ($searchTerm !== '') {
-            $this->applySearchFilter($queryBuilder, $table, $searchTerm);
-        }
-
-        // Apply custom sorting or fall back to TCA default
-        if ($sortField !== '' && $this->isValidSortField($table, $sortField)) {
-            $direction = strtoupper($sortDirection) === 'DESC' ? 'DESC' : 'ASC';
-            $queryBuilder->orderBy($sortField, $direction);
-        } else {
-            // Default ordering by TCA default sortby or uid
-            $tca = $this->getTca($table);
-            $defaultSortByRaw = $tca['ctrl']['default_sortby'] ?? null;
-            $sortBy = is_string($defaultSortByRaw) ? $defaultSortByRaw : 'uid DESC';
-            $sortBy = str_replace('ORDER BY ', '', $sortBy);
-            $sortParts = GeneralUtility::trimExplode(',', $sortBy);
-
-            foreach ($sortParts as $sortPart) {
-                $parts = GeneralUtility::trimExplode(' ', $sortPart);
-                $field = $parts[0] ?? 'uid';
-                $direction = strtoupper($parts[1] ?? 'ASC');
-
-                if ($direction === 'DESC') {
-                    $queryBuilder->addOrderBy($field, 'DESC');
-                } else {
-                    $queryBuilder->addOrderBy($field, 'ASC');
-                }
-            }
-        }
-
-        return $queryBuilder;
-    }
-
-    /**
-     * Check if a field is valid for sorting.
-     *
-     * @param string $table The database table name
-     * @param string $field The field name to validate
-     * @return bool True if the field can be used for sorting
-     */
-    private function isValidSortField(string $table, string $field): bool
-    {
-        // Core system fields that always exist
-        $coreSystemFields = ['uid', 'pid'];
-        if (in_array($field, $coreSystemFields, true)) {
-            return true;
-        }
-
-        // Check TCA ctrl fields that might exist
-        $tca = $this->getTca($table);
-        $ctrl = $tca['ctrl'];
-
-        // Check if field is defined as a ctrl field (crdate, tstamp, sortby, etc.)
-        $ctrlFields = [
-            'crdate' => isset($ctrl['crdate']) && is_string($ctrl['crdate']) ? $ctrl['crdate'] : null,
-            'tstamp' => isset($ctrl['tstamp']) && is_string($ctrl['tstamp']) ? $ctrl['tstamp'] : null,
-            'sorting' => isset($ctrl['sortby']) && is_string($ctrl['sortby']) ? $ctrl['sortby'] : null,
-        ];
-
-        foreach ($ctrlFields as $alias => $actualField) {
-            if ($field === $alias && $actualField !== null) {
-                return true;
-            }
-            if ($field === $actualField) {
-                return true;
-            }
-        }
-
-        // Check if field exists in TCA columns
-        return isset($tca['columns'][$field]);
     }
 
     /**
@@ -482,63 +288,6 @@ final readonly class RecordGridDataProvider implements SingletonInterface
 
         // Plain string - return as-is
         return $label;
-    }
-
-    /**
-     * Apply search filter to the query builder.
-     *
-     * @param QueryBuilder $queryBuilder The query builder to modify
-     * @param string $table The database table name
-     * @param string $searchTerm The search term
-     */
-    private function applySearchFilter(QueryBuilder $queryBuilder, string $table, string $searchTerm): void
-    {
-        $tca = $this->getTca($table);
-        $ctrl = $tca['ctrl'];
-
-        // Get searchable fields from TCA ctrl.searchFields or fall back to label field
-        $searchFieldsString = is_string($ctrl['searchFields'] ?? null) ? $ctrl['searchFields'] : '';
-        if ($searchFieldsString === '') {
-            $searchFieldsString = is_string($ctrl['label'] ?? null) ? $ctrl['label'] : 'uid';
-        }
-
-        $searchFields = GeneralUtility::trimExplode(',', $searchFieldsString, true);
-
-        // Also search in uid if the search term is numeric
-        if (is_numeric($searchTerm)) {
-            $searchFields[] = 'uid';
-        }
-
-        // Build OR conditions for each search field
-        $searchConstraints = [];
-        $likeValue = '%' . $queryBuilder->escapeLikeWildcards($searchTerm) . '%';
-
-        foreach ($searchFields as $field) {
-            // Skip fields that don't exist in the table
-            if ($field !== 'uid' && !isset($tca['columns'][$field])) {
-                continue;
-            }
-
-            if ($field === 'uid' && is_numeric($searchTerm)) {
-                // For uid, do an exact match
-                $searchConstraints[] = $queryBuilder->expr()->eq(
-                    $field,
-                    $queryBuilder->createNamedParameter((int) $searchTerm, ParameterType::INTEGER),
-                );
-            } else {
-                // For text fields, use LIKE
-                $searchConstraints[] = $queryBuilder->expr()->like(
-                    $field,
-                    $queryBuilder->createNamedParameter($likeValue),
-                );
-            }
-        }
-
-        if ($searchConstraints !== []) {
-            $queryBuilder->andWhere(
-                $queryBuilder->expr()->or(...$searchConstraints),
-            );
-        }
     }
 
     /**
@@ -731,7 +480,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
             return $fallback;
         }
 
-        $translated = $langService->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:' . $key);
+        $translated = $langService->sL('records_list_types.messages:' . $key);
         return $translated !== '' ? $translated : $fallback;
     }
 

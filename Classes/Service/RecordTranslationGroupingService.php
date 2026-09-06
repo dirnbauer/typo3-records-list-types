@@ -83,7 +83,7 @@ final readonly class RecordTranslationGroupingService implements SingletonInterf
             );
         }
 
-        $translationLanguages = $this->getTranslationLanguages($tableName, $context);
+        $translationLanguages = $this->getTranslationLanguages($context);
 
         foreach ($defaultRecords as &$record) {
             $uidRaw = $record['uid'] ?? 0;
@@ -165,7 +165,7 @@ final readonly class RecordTranslationGroupingService implements SingletonInterf
     /**
      * @return array<int, array{id:int, title:string, flagIdentifier:string}>
      */
-    private function getTranslationLanguages(string $tableName, RecordViewEnrichmentContext $context): array
+    private function getTranslationLanguages(RecordViewEnrichmentContext $context): array
     {
         $backendUser = $this->getBackendUser();
         if (!$backendUser instanceof BackendUserAuthentication) {

@@ -1,0 +1,34 @@
+{
+    "name": "webconsulting/records-list-types-development",
+    "type": "project",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../..",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "webconsulting/records-list-types": "dev-main"
+                }
+            }
+        }
+    ],
+    "require": {
+        "webconsulting/records-list-types": "dev-main",
+        "typo3/cms-install": "^14.3.6",
+        "typo3/cms-frontend": "^14.3.6",
+        "typo3/cms-fluid-styled-content": "^14.3.6",
+        "typo3/cms-rte-ckeditor": "^14.3.6",
+        "typo3/cms-workspaces": "^14.3.6",
+        "typo3/cms-belog": "^14.3.6",
+        "typo3/cms-info": "^14.3.6",
+        "typo3/cms-setup": "^14.3.6",
+        "typo3/cms-tstemplate": "^14.3.6"
+    },
+    "config": {
+        "allow-plugins": {
+            "typo3/class-alias-loader": true,
+            "typo3/cms-composer-installers": true
+        }
+    }
+}

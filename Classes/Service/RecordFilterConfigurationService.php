@@ -113,7 +113,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             $ctrl['tstamp'] ?? null,
             $ctrl['sortby'] ?? null,
             $enableColumns['disabled'] ?? null,
-        ], static fn(mixed $value): bool => is_string($value)), true);
+        ], is_string(...)), true);
     }
 
     /**

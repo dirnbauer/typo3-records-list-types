@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Require TYPO3 14.3.6+ within v14 and refresh the lock file on PHP 8.3.
+- Reuse Core table visibility, table ordering, header buttons and bulk actions through a small `AlternativeDatabaseRecordList` adapter; remove reflection and duplicate record-list initialization.
+- Delegate copy, cut, delete and move requests to Core JavaScript APIs; remove the nonexistent clipboard AJAX endpoint and duplicate modal/request code.
+- Replace stale maintenance reports and duplicated README content with the current RST manual and a reproducible local development guide.
+
+### Fixed
+
+- Alternative views enforce the Core page-access guard and table visibility rules, including explicitly requested tables, wildcard hiding and per-table overrides.
+- Preserve scalar Page TSconfig options for Core table actions, including download and column-selector visibility.
+- Fix keyboard reordering: stop duplicate grab/drop handling and initialize the drag context before calculating compatible positions.
+- Preference tests authenticate a real backend user instead of skipping persistence checks.
+
+### Removed
+
+- Unused `GridViewQueryListener` and `GridViewRecordActionsListener` caches and the `RecordActionsViewHelper` that only read the unpopulated cache. Custom templates should use the documented record payload and `RecordActionDropdown` partial; Core query events remain supported.
+- Unused `RecordGridDataProvider::getRecordsForTable()` and `getRecordCount()` query paths, including the obsolete `ctrl.searchFields` parser. Record queries run through Core `DatabaseRecordList`; row enrichment remains available through `buildRecordDataFromRow()`.
+- Heuristic middleware warnings and their diagnostic service. They did not establish whether rendering failed; normal Core error handling and the view selector remain available.
+- Coverage exclusions for nonexistent model files and removed helpers.
+
 ## 1.0.7 - 2026-07-25
 
 ### Fixed

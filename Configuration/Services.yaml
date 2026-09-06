@@ -6,8 +6,6 @@ services:
 
   Webconsulting\RecordsListTypes\:
     resource: '../Classes/*'
-    exclude:
-      - '../Classes/Domain/Model/*'
 
   # Public extension points: resolvable via the container for custom view
   # types and third-party integrations.
@@ -22,6 +20,10 @@ services:
 
   Webconsulting\RecordsListTypes\Service\RecordViewEnrichmentService:
     public: true
+
+  Webconsulting\RecordsListTypes\RecordList\AlternativeDatabaseRecordList:
+    public: true
+    shared: false
 
   # Controllers: XCLASSes are resolved through GeneralUtility::makeInstance(),
   # which delegates to the container only for public services.

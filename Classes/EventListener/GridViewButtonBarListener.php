@@ -20,6 +20,7 @@ use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use Webconsulting\RecordsListTypes\Constants;
+use Webconsulting\RecordsListTypes\Service\RecordListRequestParameterService;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
@@ -39,14 +40,12 @@ final readonly class GridViewButtonBarListener
         private UriBuilder $uriBuilder,
         private PageRenderer $pageRenderer,
         private ComponentFactory $componentFactory,
+        private RecordListRequestParameterService $requestParameterService,
     ) {}
 
     public function __invoke(ModifyButtonBarEvent $event): void
     {
-        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
-        if (!$request instanceof ServerRequestInterface) {
-            return;
-        }
+        $request = $event->getRequest();
 
         // Only act on the Records module
         if (!$this->isRecordsModule($request)) {
@@ -85,14 +84,6 @@ final readonly class GridViewButtonBarListener
             $request,
             $pageId,
         );
-
-        // Add button to the right side, in group 5
-        if (!isset($buttons[ButtonBar::BUTTON_POSITION_RIGHT])) {
-            $buttons[ButtonBar::BUTTON_POSITION_RIGHT] = [];
-        }
-        if (!isset($buttons[ButtonBar::BUTTON_POSITION_RIGHT][5])) {
-            $buttons[ButtonBar::BUTTON_POSITION_RIGHT][5] = [];
-        }
 
         $buttons[ButtonBar::BUTTON_POSITION_RIGHT][5][] = $dropdownButton;
 
@@ -136,13 +127,7 @@ final readonly class GridViewButtonBarListener
                 'displayMode' => $modeId,
             ];
 
-            // Preserve other important parameters
-            $preserveParams = ['table', 'search_field', 'search_levels', 'showLimit', 'pointer', 'searchTerm'];
-            foreach ($preserveParams as $param) {
-                if (isset($queryParams[$param])) {
-                    $routeParams[$param] = $queryParams[$param];
-                }
-            }
+            $routeParams = array_replace($routeParams, $this->requestParameterService->getPreservedListParameters($request));
 
             try {
                 $url = (string) $this->uriBuilder->buildUriFromRoute(Constants::MODULE_ROUTE, $routeParams);

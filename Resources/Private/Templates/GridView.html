@@ -20,15 +20,6 @@
     </div>
 
     <f:comment>Middleware Warning (if applicable)</f:comment>
-    <f:if condition="{middlewareWarning}">
-        <div class="callout callout-warning">
-            <div class="callout-body">
-                <core:icon identifier="actions-exclamation-triangle" size="small" />
-                <span class="ms-2">{middlewareWarning}</span>
-                <a href="{forceListViewUrl}" class="btn btn-sm btn-default ms-2">Force List View</a>
-            </div>
-        </div>
-    </f:if>
 
     <f:comment>Render each table's records using native TYPO3 recordlist styling</f:comment>
     <f:if condition="{tableData}">

@@ -6,11 +6,11 @@ includes:
 parameters:
     level: max
     phpVersion: 80300
+    stubFiles:
+        - Build/PhpStan/DatabaseRecordList.stub
     paths:
         - Classes
         - Tests/Architecture
-    excludePaths:
-        - Classes/Domain/Model/*
     treatPhpDocTypesAsCertain: false
     typo3:
         requestGetAttributeMapping:
