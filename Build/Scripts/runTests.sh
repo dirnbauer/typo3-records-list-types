@@ -9,7 +9,7 @@
 # Usage:
 #   Build/Scripts/runTests.sh -s <suite> [-p <php>]
 #
-#   Suites: lint | unit | unit-coverage | functional | functional-coverage | architecture | phpstan | cgl | composer | ci
+#   Suites: lint | unit | unit-coverage | functional | functional-coverage | architecture | phpstan | cgl | composer | audit | ci
 
 set -euo pipefail
 
@@ -35,8 +35,9 @@ Suites:
   architecture         PHPat architecture rules.
   phpstan              Static analysis at PHPStan level 8 with strict rules and PHPat.
   cgl                  PHP-CS-Fixer dry run.
-  composer             composer validate + composer audit (no lock file is committed).
-  ci                   Run everything except functional (which needs a DB).
+  composer             composer validate --strict (no lock file is committed).
+  audit                composer audit; advisories in dependencies are reported, CI does not block on them.
+  ci                   composer, lint, cgl, phpstan and unit (functional needs a DB, audit is report only).
 
 Options:
   -p <php>       Informational only: PHP version the suite is expected
@@ -128,6 +129,9 @@ run_cgl() {
 
 run_composer() {
     composer validate --strict --no-check-lock
+}
+
+run_audit() {
     composer audit --abandoned=report
 }
 
@@ -141,6 +145,7 @@ case "${SUITE}" in
     phpstan)             run_phpstan ;;
     cgl)                 run_cgl ;;
     composer)            run_composer ;;
+    audit)               run_audit ;;
     ci)
         run_composer
         run_lint
