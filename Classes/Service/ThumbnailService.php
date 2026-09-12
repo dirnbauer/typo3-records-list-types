@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
-use Exception;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\FileReference;
@@ -62,7 +61,7 @@ final readonly class ThumbnailService implements SingletonInterface
             }
 
             return null;
-        } catch (Exception) {
+        } catch (\Exception) {
             // Log error but don't break rendering
             return null;
         }
@@ -96,7 +95,7 @@ final readonly class ThumbnailService implements SingletonInterface
             }
 
             return $images;
-        } catch (Exception) {
+        } catch (\Exception) {
             return [];
         }
     }
@@ -141,7 +140,7 @@ final readonly class ThumbnailService implements SingletonInterface
             );
 
             return $processedFile->getPublicUrl();
-        } catch (Exception) {
+        } catch (\Exception) {
             return null;
         }
     }
@@ -203,7 +202,7 @@ final readonly class ThumbnailService implements SingletonInterface
             }
 
             return null;
-        } catch (Exception) {
+        } catch (\Exception) {
             return null;
         }
     }

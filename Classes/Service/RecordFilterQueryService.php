@@ -12,7 +12,6 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
-use WeakMap;
 
 /**
  * Applies configured record filters to TYPO3 record-list query builders.
@@ -23,8 +22,8 @@ use WeakMap;
  */
 final class RecordFilterQueryService implements SingletonInterface
 {
-    /** @var WeakMap<QueryBuilder, true> */
-    private readonly WeakMap $appliedQueryBuilders;
+    /** @var \WeakMap<QueryBuilder, true> */
+    private readonly \WeakMap $appliedQueryBuilders;
 
     /**
      * Per-request cache of record uids matching a category filter,
@@ -41,7 +40,7 @@ final class RecordFilterQueryService implements SingletonInterface
         private readonly TcaSchemaFactory $tcaSchemaFactory,
         private readonly ConnectionPool $connectionPool,
     ) {
-        $this->appliedQueryBuilders = new WeakMap();
+        $this->appliedQueryBuilders = new \WeakMap();
     }
 
     public function applyActiveFilters(
@@ -184,7 +183,7 @@ final class RecordFilterQueryService implements SingletonInterface
         if ($searchTerm === '') {
             return true;
         }
-        if (is_numeric($searchTerm) && isset($row['uid']) && is_numeric($row['uid']) && (int) $row['uid'] === (int) $searchTerm) {
+        if (is_numeric($searchTerm) && isset($row['uid']) && is_numeric($row['uid']) && (int)$row['uid'] === (int)$searchTerm) {
             return true;
         }
 
@@ -197,10 +196,10 @@ final class RecordFilterQueryService implements SingletonInterface
             if (!is_scalar($fieldValue)) {
                 continue;
             }
-            if (is_numeric($searchTerm) && is_numeric($fieldValue) && (int) $fieldValue === (int) $searchTerm) {
+            if (is_numeric($searchTerm) && is_numeric($fieldValue) && (int)$fieldValue === (int)$searchTerm) {
                 return true;
             }
-            if (str_contains(mb_strtolower((string) $fieldValue), $search)) {
+            if (str_contains(mb_strtolower((string)$fieldValue), $search)) {
                 return true;
             }
         }
@@ -213,11 +212,11 @@ final class RecordFilterQueryService implements SingletonInterface
      */
     private function applyTextFilter(QueryBuilder $queryBuilder, string $table, array $filter, mixed $value): void
     {
-        if (!is_scalar($value) || trim((string) $value) === '') {
+        if (!is_scalar($value) || trim((string)$value) === '') {
             return;
         }
         $fields = is_array($filter['fields'] ?? null) ? $filter['fields'] : [];
-        $search = '%' . $queryBuilder->escapeLikeWildcards(trim((string) $value)) . '%';
+        $search = '%' . $queryBuilder->escapeLikeWildcards(trim((string)$value)) . '%';
         $constraints = [];
         foreach ($fields as $field) {
             if (!is_string($field) || !$this->configurationService->fieldExists($table, $field)) {
@@ -239,7 +238,7 @@ final class RecordFilterQueryService implements SingletonInterface
      */
     private function applyExactFilter(QueryBuilder $queryBuilder, string $table, array $filter, mixed $value): void
     {
-        if (!is_scalar($value) || (string) $value === '') {
+        if (!is_scalar($value) || (string)$value === '') {
             return;
         }
         $field = is_string($filter['field'] ?? null) ? $filter['field'] : '';
@@ -247,7 +246,7 @@ final class RecordFilterQueryService implements SingletonInterface
             return;
         }
         $parameterType = is_numeric($value) ? ParameterType::INTEGER : ParameterType::STRING;
-        $parameterValue = is_numeric($value) ? (int) $value : (string) $value;
+        $parameterValue = is_numeric($value) ? (int)$value : (string)$value;
         $queryBuilder->andWhere(
             $queryBuilder->expr()->eq(
                 $field,
@@ -268,8 +267,8 @@ final class RecordFilterQueryService implements SingletonInterface
         if ($field === '' || !$this->configurationService->fieldExists($table, $field)) {
             return;
         }
-        $from = is_scalar($value['from'] ?? null) ? trim((string) $value['from']) : '';
-        $to = is_scalar($value['to'] ?? null) ? trim((string) $value['to']) : '';
+        $from = is_scalar($value['from'] ?? null) ? trim((string)$value['from']) : '';
+        $to = is_scalar($value['to'] ?? null) ? trim((string)$value['to']) : '';
         if ($from === '' && $to === '') {
             return;
         }
@@ -341,12 +340,12 @@ final class RecordFilterQueryService implements SingletonInterface
      */
     private function rowMatchesTextFilter(string $table, array $filter, mixed $value, array $row): bool
     {
-        if (!is_scalar($value) || trim((string) $value) === '') {
+        if (!is_scalar($value) || trim((string)$value) === '') {
             return true;
         }
 
         $fields = is_array($filter['fields'] ?? null) ? $filter['fields'] : [];
-        $search = mb_strtolower(trim((string) $value));
+        $search = mb_strtolower(trim((string)$value));
         foreach ($fields as $field) {
             if (!is_string($field) || !$this->configurationService->fieldExists($table, $field)) {
                 continue;
@@ -355,7 +354,7 @@ final class RecordFilterQueryService implements SingletonInterface
             if (is_array($fieldValue)) {
                 $fieldValue = reset($fieldValue);
             }
-            if (is_scalar($fieldValue) && str_contains(mb_strtolower((string) $fieldValue), $search)) {
+            if (is_scalar($fieldValue) && str_contains(mb_strtolower((string)$fieldValue), $search)) {
                 return true;
             }
         }
@@ -369,7 +368,7 @@ final class RecordFilterQueryService implements SingletonInterface
      */
     private function rowMatchesExactFilter(string $table, array $filter, mixed $value, array $row): bool
     {
-        if (!is_scalar($value) || (string) $value === '') {
+        if (!is_scalar($value) || (string)$value === '') {
             return true;
         }
         $field = is_string($filter['field'] ?? null) ? $filter['field'] : '';
@@ -383,10 +382,10 @@ final class RecordFilterQueryService implements SingletonInterface
         }
 
         if (is_numeric($value)) {
-            return is_numeric($actualValue) && (int) $actualValue === (int) $value;
+            return is_numeric($actualValue) && (int)$actualValue === (int)$value;
         }
 
-        return is_scalar($actualValue) && (string) $actualValue === (string) $value;
+        return is_scalar($actualValue) && (string)$actualValue === (string)$value;
     }
 
     /**
@@ -402,8 +401,8 @@ final class RecordFilterQueryService implements SingletonInterface
         if ($field === '' || !$this->configurationService->fieldExists($table, $field)) {
             return true;
         }
-        $from = is_scalar($value['from'] ?? null) ? trim((string) $value['from']) : '';
-        $to = is_scalar($value['to'] ?? null) ? trim((string) $value['to']) : '';
+        $from = is_scalar($value['from'] ?? null) ? trim((string)$value['from']) : '';
+        $to = is_scalar($value['to'] ?? null) ? trim((string)$value['to']) : '';
         if ($from === '' && $to === '') {
             return true;
         }
@@ -418,8 +417,8 @@ final class RecordFilterQueryService implements SingletonInterface
 
         $parameterType = $this->dateParameterType($table, $field);
         $actual = $parameterType === ParameterType::STRING
-            ? (string) $actualValue
-            : (is_numeric($actualValue) ? (int) $actualValue : 0);
+            ? (string)$actualValue
+            : (is_numeric($actualValue) ? (int)$actualValue : 0);
 
         if ($from !== '') {
             $fromValue = $this->normalizeDateValue($table, $field, $from, false);
@@ -504,7 +503,7 @@ final class RecordFilterQueryService implements SingletonInterface
         $matchedUids = [];
         foreach ($result->fetchFirstColumn() as $uid) {
             if (is_numeric($uid)) {
-                $matchedUids[(int) $uid] = true;
+                $matchedUids[(int)$uid] = true;
             }
         }
 
@@ -521,7 +520,7 @@ final class RecordFilterQueryService implements SingletonInterface
      */
     private function rowMatchesGenericFilter(string $table, array $filter, mixed $value, array $row): bool
     {
-        if (!is_scalar($value) || trim((string) $value) === '') {
+        if (!is_scalar($value) || trim((string)$value) === '') {
             return true;
         }
 
@@ -548,11 +547,11 @@ final class RecordFilterQueryService implements SingletonInterface
         }
 
         $uids = [];
-        foreach (explode(',', (string) $value) as $uid) {
+        foreach (explode(',', (string)$value) as $uid) {
             if (!is_numeric($uid)) {
                 continue;
             }
-            $uid = (int) $uid;
+            $uid = (int)$uid;
             if ($uid > 0) {
                 $uids[] = $uid;
             }
@@ -625,13 +624,13 @@ final class RecordFilterQueryService implements SingletonInterface
     private function isActiveFilterValue(mixed $value): bool
     {
         if (is_scalar($value)) {
-            return trim((string) $value) !== '';
+            return trim((string)$value) !== '';
         }
         if (!is_array($value)) {
             return false;
         }
         foreach ($value as $nestedValue) {
-            if (is_scalar($nestedValue) && trim((string) $nestedValue) !== '') {
+            if (is_scalar($nestedValue) && trim((string)$nestedValue) !== '') {
                 return true;
             }
         }
@@ -642,7 +641,7 @@ final class RecordFilterQueryService implements SingletonInterface
     private function getCurrentWorkspaceId(): int
     {
         $workspaceId = $this->context->getPropertyFromAspect('workspace', 'id', 0);
-        return is_numeric($workspaceId) ? (int) $workspaceId : 0;
+        return is_numeric($workspaceId) ? (int)$workspaceId : 0;
     }
 
     private function isWorkspaceAwareTable(string $table): bool
@@ -660,8 +659,8 @@ final class RecordFilterQueryService implements SingletonInterface
         $uids = [];
         foreach (['uid', '_ORIG_uid'] as $field) {
             $uid = $row[$field] ?? null;
-            if (is_numeric($uid) && (int) $uid > 0) {
-                $uids[] = (int) $uid;
+            if (is_numeric($uid) && (int)$uid > 0) {
+                $uids[] = (int)$uid;
             }
         }
 

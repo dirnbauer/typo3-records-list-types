@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Tests\Functional\Service;
 
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
@@ -223,7 +222,7 @@ final class ViewModeResolverTest extends FunctionalTestCase
     #[Test]
     public function setUserPreferenceThrowsForInvalidMode(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionCode(1735600000);
 
         $this->subject->setUserPreference('nonexistent_mode');

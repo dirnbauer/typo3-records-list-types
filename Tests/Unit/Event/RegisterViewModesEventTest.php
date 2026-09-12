@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Tests\Unit\Event;
 
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
@@ -71,7 +70,7 @@ final class RegisterViewModesEventTest extends TestCase
     {
         $event = new RegisterViewModesEvent([]);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionCode(1735650000);
 
         $event->addViewMode('broken', [
@@ -84,7 +83,7 @@ final class RegisterViewModesEventTest extends TestCase
     {
         $event = new RegisterViewModesEvent([]);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionCode(1735650000);
 
         $event->addViewMode('broken', [
@@ -97,7 +96,7 @@ final class RegisterViewModesEventTest extends TestCase
     {
         $event = new RegisterViewModesEvent([]);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionCode(1735650000);
 
         $event->addViewMode('broken', []);

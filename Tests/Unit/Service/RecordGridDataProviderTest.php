@@ -28,13 +28,13 @@ final class RecordGridDataProviderTest extends TestCase
         $context = new Context();
         $context->setAspect('workspace', new WorkspaceAspect(0));
 
-        $tcaSchemaFactory = $this->createStub(TcaSchemaFactory::class);
+        $tcaSchemaFactory = self::createStub(TcaSchemaFactory::class);
 
         $this->subject = new RecordGridDataProvider(
-            $this->createStub(ConnectionPool::class),
-            $this->createStub(IconFactory::class),
+            self::createStub(ConnectionPool::class),
+            self::createStub(IconFactory::class),
             new GridConfigurationService($tcaSchemaFactory),
-            new ThumbnailService($this->createStub(FileRepository::class)),
+            new ThumbnailService(self::createStub(FileRepository::class)),
             $tcaSchemaFactory,
             $context,
         );

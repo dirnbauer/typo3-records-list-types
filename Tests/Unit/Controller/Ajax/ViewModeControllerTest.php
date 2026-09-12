@@ -8,7 +8,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use TYPO3\CMS\Core\EventDispatcher\NoopEventDispatcher;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use Webconsulting\RecordsListTypes\Controller\Ajax\ViewModeController;
@@ -27,11 +26,11 @@ final class ViewModeControllerTest extends TestCase
     public function setViewModeActionCatchesExceptionAndReturns500(): void
     {
         $loggerMock = $this->createMock(LoggerInterface::class);
-        $loggerMock->expects(self::once())->method('error');
+        $loggerMock->expects($this->once())->method('error');
 
-        $request = $this->createStub(ServerRequestInterface::class);
+        $request = self::createStub(ServerRequestInterface::class);
         $request->method('getParsedBody')
-            ->willThrowException(new RuntimeException('Test error'));
+            ->willThrowException(new \RuntimeException('Test error'));
 
         $controller = new ViewModeController(
             new ViewModeResolver(new NoopEventDispatcher()),
@@ -43,7 +42,7 @@ final class ViewModeControllerTest extends TestCase
         self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(500, $response->getStatusCode());
 
-        $body = json_decode((string) $response->getBody(), true);
+        $body = json_decode((string)$response->getBody(), true);
         self::assertFalse($body['success']);
         self::assertArrayHasKey('error', $body);
         self::assertStringContainsString('Failed to save', $body['error']);
@@ -53,11 +52,11 @@ final class ViewModeControllerTest extends TestCase
     public function getViewModeActionCatchesExceptionAndReturns500(): void
     {
         $loggerMock = $this->createMock(LoggerInterface::class);
-        $loggerMock->expects(self::once())->method('error');
+        $loggerMock->expects($this->once())->method('error');
 
-        $request = $this->createStub(ServerRequestInterface::class);
+        $request = self::createStub(ServerRequestInterface::class);
         $request->method('getQueryParams')
-            ->willThrowException(new RuntimeException('Request error'));
+            ->willThrowException(new \RuntimeException('Request error'));
 
         $controller = new ViewModeController(
             new ViewModeResolver(new NoopEventDispatcher()),
@@ -69,7 +68,7 @@ final class ViewModeControllerTest extends TestCase
         self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(500, $response->getStatusCode());
 
-        $body = json_decode((string) $response->getBody(), true);
+        $body = json_decode((string)$response->getBody(), true);
         self::assertFalse($body['success']);
         self::assertStringContainsString('Failed to retrieve', $body['error']);
     }
@@ -79,7 +78,7 @@ final class ViewModeControllerTest extends TestCase
     {
         $controller = new ViewModeController(
             new ViewModeResolver(new NoopEventDispatcher()),
-            $this->createStub(LoggerInterface::class),
+            self::createStub(LoggerInterface::class),
         );
 
         self::assertInstanceOf(ViewModeController::class, $controller);

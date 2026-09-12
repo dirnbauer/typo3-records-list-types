@@ -77,6 +77,9 @@ final class ViewTypeRegistry implements SingletonInterface
         ],
     ];
 
+    /** Shared base CSS loaded for all view types. */
+    private const string BASE_CSS = 'EXT:records_list_types/Resources/Public/Css/base.css';
+
     /**
      * Cached view types per page
      * @var array<int, array<string, array<string, mixed>>>
@@ -114,7 +117,7 @@ final class ViewTypeRegistry implements SingletonInterface
         );
 
         foreach ($tsTypes as $typeId => $config) {
-            $typeId = rtrim((string) $typeId, '.');
+            $typeId = rtrim((string)$typeId, '.');
             if (!is_array($config)) {
                 continue;
             }
@@ -249,9 +252,6 @@ final class ViewTypeRegistry implements SingletonInterface
         ];
     }
 
-    /** Shared base CSS loaded for all view types. */
-    private const string BASE_CSS = 'EXT:records_list_types/Resources/Public/Css/base.css';
-
     /**
      * Get CSS files for a view type.
      *
@@ -263,7 +263,7 @@ final class ViewTypeRegistry implements SingletonInterface
     {
         $config = $this->getViewType($typeId, $pageId);
         $cssRaw = $config['css'] ?? '';
-        $css = is_scalar($cssRaw) ? (string) $cssRaw : '';
+        $css = is_scalar($cssRaw) ? (string)$cssRaw : '';
 
         return $css !== ''
             ? [self::BASE_CSS, $css]
@@ -286,8 +286,8 @@ final class ViewTypeRegistry implements SingletonInterface
         $js = $config['js'] ?? null;
         if (!in_array($js, [null, '', []], true)) {
             $custom = is_array($js)
-                ? array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $js)
-                : (is_scalar($js) ? [(string) $js] : []);
+                ? array_map(static fn(mixed $v): string => is_scalar($v) ? (string)$v : '', $js)
+                : (is_scalar($js) ? [(string)$js] : []);
             $modules = array_merge($modules, $custom);
         }
 
@@ -312,11 +312,11 @@ final class ViewTypeRegistry implements SingletonInterface
         if (!in_array($displayColumns, [null, '', []], true)) {
             if (is_array($displayColumns)) {
                 $columns = array_values(array_filter(
-                    array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $displayColumns),
+                    array_map(static fn(mixed $v): string => is_scalar($v) ? (string)$v : '', $displayColumns),
                     static fn(string $column): bool => $column !== '',
                 ));
             } else {
-                $columns = GeneralUtility::trimExplode(',', is_scalar($displayColumns) ? (string) $displayColumns : '', true);
+                $columns = GeneralUtility::trimExplode(',', is_scalar($displayColumns) ? (string)$displayColumns : '', true);
             }
         }
 

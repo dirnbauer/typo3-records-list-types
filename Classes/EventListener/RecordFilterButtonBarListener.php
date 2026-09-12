@@ -94,7 +94,7 @@ final readonly class RecordFilterButtonBarListener
             $params[RecordFilterStateService::SHOW_PARAMETER] = '1';
         }
 
-        return (string) $request->getUri()->withQuery(http_build_query($params));
+        return (string)$request->getUri()->withQuery(http_build_query($params));
     }
 
     private function hasFilterPanelContent(string $table, int $pageId): bool
@@ -127,7 +127,7 @@ final readonly class RecordFilterButtonBarListener
     {
         $params = $this->stateService->getMergedParameters($request);
         $id = $params['id'] ?? null;
-        return is_numeric($id) ? (int) $id : 0;
+        return is_numeric($id) ? (int)$id : 0;
     }
 
     private function getLanguageService(): ?LanguageService

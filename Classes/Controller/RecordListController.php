@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Controller;
 
 use Doctrine\DBAL\ParameterType;
-use Exception;
-use JsonException;
 use Override;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -158,7 +156,7 @@ final class RecordListController extends CoreRecordListController
             $normalized[$table] = [];
             foreach ($config as $key => $value) {
                 if (is_scalar($value)) {
-                    $normalized[$table][(string) $key] = (string) $value;
+                    $normalized[$table][(string)$key] = (string)$value;
                 }
             }
         }
@@ -178,7 +176,7 @@ final class RecordListController extends CoreRecordListController
      *
      * We replicate the parent's initialization to ensure buttons and context are set up.
      */
-    #[Override]
+    #[\Override]
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
         $this->currentRequest = $request;
@@ -266,7 +264,7 @@ final class RecordListController extends CoreRecordListController
         }
 
         // Search settings
-        $this->allowSearch = !(bool) ($this->modTSconfig['disableSearchBox'] ?? false);
+        $this->allowSearch = !(bool)($this->modTSconfig['disableSearchBox'] ?? false);
         if ($this->searchTerm !== '') {
             $this->allowSearch = true;
             $this->moduleData->set('searchBox', true);
@@ -275,18 +273,18 @@ final class RecordListController extends CoreRecordListController
         $searchLevelDefault = 0;
         if (is_array($searchLevelConfig)) {
             $rawDefault = $searchLevelConfig['default'] ?? 0;
-            $searchLevelDefault = is_numeric($rawDefault) ? (int) $rawDefault : 0;
+            $searchLevelDefault = is_numeric($rawDefault) ? (int)$rawDefault : 0;
         }
         $searchLevels = ArrayUtility::intValue($requestParams['search_levels'] ?? null, $searchLevelDefault);
 
         $dbList = $this->createDatabaseRecordList($request);
 
         // Initialize clipboard
-        $clipboard = $this->initializeClipboard($request, (bool) $this->moduleData->get('clipBoard'));
+        $clipboard = $this->initializeClipboard($request, (bool)$this->moduleData->get('clipBoard'));
         $dbList->clipObj = $clipboard;
 
         // Store clipboard state for renderViewContent()
-        $this->clipboardEnabled = (bool) $this->moduleData->get('clipBoard');
+        $this->clipboardEnabled = (bool)$this->moduleData->get('clipBoard');
 
         // Dispatch additional content event
         $additionalRecordListEvent = new RenderAdditionalContentToRecordListEvent($request);
@@ -323,19 +321,19 @@ final class RecordListController extends CoreRecordListController
 
         // Search box - use full searchLevels (grid/compact now support search properly)
         $searchBoxHtml = '';
-        if ($this->allowSearch && $this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('searchBox')) {
+        if ($this->allowSearch && $this->moduleData instanceof ModuleData && (bool)$this->moduleData->get('searchBox')) {
             $searchBoxHtml = $this->renderSearchBox($request, $dbList, $this->searchTerm, $searchLevels);
         }
 
         // Clipboard
         $clipboardHtml = '';
-        if ($this->moduleData instanceof ModuleData && (bool) $this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
-            $clipboardHtml = '<hr class="spacer"><typo3-backend-clipboard-panel return-url="' . htmlspecialchars((string) $dbList->listURL()) . '"></typo3-backend-clipboard-panel>';
+        if ($this->moduleData instanceof ModuleData && (bool)$this->moduleData->get('clipBoard') && ($customContent !== '' || $clipboard->hasElements())) {
+            $clipboardHtml = '<hr class="spacer"><typo3-backend-clipboard-panel return-url="' . htmlspecialchars((string)$dbList->listURL()) . '"></typo3-backend-clipboard-panel>';
         }
 
         // Set page title
         $view->setTitle(
-            (string) ($languageService->translate('title', 'backend.modules.list') ?? ''),
+            (string)($languageService->translate('title', 'backend.modules.list') ?? ''),
             $title,
         );
 
@@ -370,7 +368,7 @@ final class RecordListController extends CoreRecordListController
      * This ensures the view mode is preserved when submitting a search and that
      * the search actually goes to the grid view controller, not the core list view.
      */
-    #[Override]
+    #[\Override]
     protected function renderSearchBox(
         ServerRequestInterface $request,
         DatabaseRecordList $dbList,
@@ -401,10 +399,10 @@ final class RecordListController extends CoreRecordListController
         }
 
         try {
-            $baseUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $searchParams);
-        } catch (Exception) {
+            $baseUrl = (string)$this->uriBuilder->buildUriFromRoute('records', $searchParams);
+        } catch (\Exception) {
             // Fallback to dbList URL if route building fails
-            $baseUrl = (string) $dbList->listURL('', '-1', 'pointer,searchTerm,displayMode');
+            $baseUrl = (string)$dbList->listURL('', '-1', 'pointer,searchTerm,displayMode');
             $separator = str_contains($baseUrl, '?') ? '&' : '?';
             $baseUrl .= $separator . 'displayMode=' . urlencode($viewMode);
         }
@@ -452,8 +450,8 @@ final class RecordListController extends CoreRecordListController
 
         // Parse request parameters once at the action boundary.
         $requestParams = ArrayUtility::mergedRequestParameters($request);
-        $sortParams = (array) ($requestParams['sort'] ?? []);
-        $sortingModeParams = (array) ($requestParams['sortingMode'] ?? []);
+        $sortParams = (array)($requestParams['sort'] ?? []);
+        $sortingModeParams = (array)($requestParams['sortingMode'] ?? []);
 
         // Display columns configuration from ViewTypeRegistry
         $columnsConfig = $this->viewTypeRegistry->getDisplayColumnsConfig($viewMode, $pageId);
@@ -558,21 +556,21 @@ final class RecordListController extends CoreRecordListController
                     'displayMode' => $viewMode,
                 ];
                 $singleTableUrlParams = array_replace($singleTableUrlParams, $this->requestParameterService->getPreservedListParameters($request));
-                $singleTableUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $singleTableUrlParams);
+                $singleTableUrl = (string)$this->uriBuilder->buildUriFromRoute('records', $singleTableUrlParams);
                 $clearTableUrlParams = [
                     'id' => $pageId,
                     'displayMode' => $viewMode,
                 ];
                 $clearTableUrlParams = array_replace($clearTableUrlParams, $this->requestParameterService->getPreservedListParameters($request));
                 unset($clearTableUrlParams['table']);
-                $clearTableUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
-            } catch (Exception) {
+                $clearTableUrl = (string)$this->uriBuilder->buildUriFromRoute('records', $clearTableUrlParams);
+            } catch (\Exception) {
             }
 
             // Display columns (from ViewTypeRegistry config)
             $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
             $columnResolver = $this->displayColumnResolver;
-            if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
+            if ((bool)($columnsConfig['fromTCA'] ?? false)) {
                 $displayColumns = $columnResolver->getDisplayColumns($tableName, ArrayUtility::stringKeyArray($this->modTSconfig));
             } elseif ($columnsArray !== []) {
                 $displayColumns = $columnResolver->getSpecificDisplayColumns($tableName, $columnsArray);
@@ -672,7 +670,7 @@ final class RecordListController extends CoreRecordListController
             $lastRecordUid = '';
             if ($enrichedRecords !== []) {
                 $lastUidVal = $enrichedRecords[array_key_last($enrichedRecords)]['uid'] ?? 0;
-                $lastRecordUid = is_scalar($lastUidVal) ? (string) $lastUidVal : '';
+                $lastRecordUid = is_scalar($lastUidVal) ? (string)$lastUidVal : '';
             }
 
             // Drag-and-drop reordering
@@ -682,7 +680,7 @@ final class RecordListController extends CoreRecordListController
             $displayColumnFields = array_map(static fn(array $col): string => $col['field'], $displayColumns);
             $displayColumnFields = array_values(array_filter($displayColumnFields, static fn(string $f): bool => $f !== ''));
             $recordUids = array_map(
-                static fn(array $record): int => is_numeric($record['uid'] ?? null) ? (int) $record['uid'] : 0,
+                static fn(array $record): int => is_numeric($record['uid'] ?? null) ? (int)$record['uid'] : 0,
                 $enrichedRecords,
             );
             $recordUids = array_values(array_filter($recordUids, static fn(int $uid): bool => $uid > 0));
@@ -844,8 +842,8 @@ final class RecordListController extends CoreRecordListController
         $dbList->calcPerms = $this->pageContext->pagePermissions;
         $dbList->returnUrl = $this->returnUrl;
         $dbList->showClipboardActions = true;
-        $dbList->disableSingleTableView = (bool) ($this->modTSconfig['disableSingleTableView'] ?? false);
-        $dbList->listOnlyInSingleTableMode = (bool) ($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
+        $dbList->disableSingleTableView = (bool)($this->modTSconfig['disableSingleTableView'] ?? false);
+        $dbList->listOnlyInSingleTableMode = (bool)($this->modTSconfig['listOnlyInSingleTableView'] ?? false);
         $dbList->hideTables = ArrayUtility::stringValue($this->modTSconfig['hideTables'] ?? null);
         $dbList->hideTranslations = ArrayUtility::stringValue($this->modTSconfig['hideTranslations'] ?? null);
         $dbList->tableTSconfigOverTCA = $this->getTableTsConfigOverTca();
@@ -947,7 +945,7 @@ final class RecordListController extends CoreRecordListController
                     $records[] = $recordData;
                 }
             }
-        } catch (Exception) {
+        } catch (\Exception) {
             // Log error but don't fail - return empty results
             // This can happen if the table doesn't exist or user lacks permissions
         }
@@ -974,7 +972,7 @@ final class RecordListController extends CoreRecordListController
     {
         $workspaceId = $this->context
             ->getPropertyFromAspect('workspace', 'id', 0);
-        return is_numeric($workspaceId) ? (int) $workspaceId : 0;
+        return is_numeric($workspaceId) ? (int)$workspaceId : 0;
     }
 
     /**
@@ -1005,8 +1003,8 @@ final class RecordListController extends CoreRecordListController
             $qb = $dbList->getQueryBuilder($tableName, ['uid'], false, 0, 0);
             $this->recordFilterQueryService->applyActiveFilters($qb, $tableName, $pageId, $request);
             $count = $qb->count('*')->executeQuery()->fetchOne();
-            return is_numeric($count) ? (int) $count : 0;
-        } catch (Exception) {
+            return is_numeric($count) ? (int)$count : 0;
+        } catch (\Exception) {
             return 0;
         }
     }
@@ -1049,9 +1047,9 @@ final class RecordListController extends CoreRecordListController
                 ['id' => $pageId, 'displayMode' => $viewMode, 'table' => $tableName],
                 $this->requestParameterService->getPreservedListParameters($request),
             );
-            $returnUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $returnUrlParams);
-        } catch (Exception) {
-            $returnUrl = (string) $request->getUri();
+            $returnUrl = (string)$this->uriBuilder->buildUriFromRoute('records', $returnUrlParams);
+        } catch (\Exception) {
+            $returnUrl = (string)$request->getUri();
         }
 
         // Edit columns action - only edit the currently displayed columns
@@ -1182,7 +1180,7 @@ final class RecordListController extends CoreRecordListController
                 $items[] = [
                     'field' => $fieldName,
                     'label' => $field['label'] ?? $fieldName,
-                    'url' => (string) $this->uriBuilder->buildUriFromRoute('records', $sortParams),
+                    'url' => (string)$this->uriBuilder->buildUriFromRoute('records', $sortParams),
                     'isActive' => $fieldName === $currentSortField,
                 ];
             }
@@ -1193,13 +1191,13 @@ final class RecordListController extends CoreRecordListController
                 'sortIconIdentifier' => $currentSortDirection === 'desc' ? 'actions-sort-amount-down' : 'actions-sort-amount-up',
                 'ascLabel' => $ascLabel,
                 'descLabel' => $descLabel,
-                'ascUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $ascParams),
-                'descUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $descParams),
+                'ascUrl' => (string)$this->uriBuilder->buildUriFromRoute('records', $ascParams),
+                'descUrl' => (string)$this->uriBuilder->buildUriFromRoute('records', $descParams),
                 'isAscActive' => $currentSortDirection === 'asc',
                 'isDescActive' => $currentSortDirection === 'desc',
                 'items' => $items,
             ];
-        } catch (Exception) {
+        } catch (\Exception) {
             return null;
         }
     }
@@ -1258,10 +1256,10 @@ final class RecordListController extends CoreRecordListController
                     'label' => $manualLabel,
                     'title' => $manualTitle,
                     'active' => $currentMode === 'manual',
-                    'url' => (string) $this->uriBuilder->buildUriFromRoute('records', $manualParams),
+                    'url' => (string)$this->uriBuilder->buildUriFromRoute('records', $manualParams),
                     'stateLabel' => $currentDirection === 'desc' ? $descLabel : $ascLabel,
-                    'ascUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $ascParams),
-                    'descUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $descParams),
+                    'ascUrl' => (string)$this->uriBuilder->buildUriFromRoute('records', $ascParams),
+                    'descUrl' => (string)$this->uriBuilder->buildUriFromRoute('records', $descParams),
                     'ascLabel' => $ascLabel,
                     'descLabel' => $descLabel,
                     'ascActive' => $currentDirection === 'asc',
@@ -1271,10 +1269,10 @@ final class RecordListController extends CoreRecordListController
                     'label' => $fieldLabel,
                     'title' => $fieldTitle,
                     'active' => $currentMode === 'field',
-                    'url' => (string) $this->uriBuilder->buildUriFromRoute('records', $fieldParams),
+                    'url' => (string)$this->uriBuilder->buildUriFromRoute('records', $fieldParams),
                 ],
             ];
-        } catch (Exception) {
+        } catch (\Exception) {
             return null;
         }
     }
@@ -1322,14 +1320,14 @@ final class RecordListController extends CoreRecordListController
         $multiEditColumnsOnly = '';
         $multiEditReturnUrl = '';
         if ($canMultiEdit) {
-            $multiEditLabel = (string) ($lang->translate('editThisColumn', 'core.mod_web_list', [$label]) ?? '');
+            $multiEditLabel = (string)($lang->translate('editThisColumn', 'core.mod_web_list', [$label]) ?? '');
             if ($multiEditLabel === '') {
-                $multiEditLabel = (string) ($lang->translate('action.editColumn', 'records_list_types.messages', ['label' => $label]) ?? '');
+                $multiEditLabel = (string)($lang->translate('action.editColumn', 'records_list_types.messages', ['label' => $label]) ?? '');
             }
             $multiEditColumnsOnly = json_encode([$field], JSON_THROW_ON_ERROR);
             try {
-                $multiEditReturnUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $baseParams);
-            } catch (Exception) {
+                $multiEditReturnUrl = (string)$this->uriBuilder->buildUriFromRoute('records', $baseParams);
+            } catch (\Exception) {
                 $multiEditReturnUrl = '';
             }
         }
@@ -1345,8 +1343,8 @@ final class RecordListController extends CoreRecordListController
                 'iconIdentifier' => $isActiveField
                     ? ($isDescActive ? 'actions-sort-amount-down' : 'actions-sort-amount-up')
                     : 'empty-empty',
-                'ascUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $ascParams),
-                'descUrl' => (string) $this->uriBuilder->buildUriFromRoute('records', $descParams),
+                'ascUrl' => (string)$this->uriBuilder->buildUriFromRoute('records', $ascParams),
+                'descUrl' => (string)$this->uriBuilder->buildUriFromRoute('records', $descParams),
                 'ascLabel' => $ascLabel,
                 'descLabel' => $descLabel,
                 'isAscActive' => $isAscActive,
@@ -1356,7 +1354,7 @@ final class RecordListController extends CoreRecordListController
                 'multiEditColumnsOnly' => $multiEditColumnsOnly,
                 'multiEditReturnUrl' => $multiEditReturnUrl,
             ];
-        } catch (Exception) {
+        } catch (\Exception) {
             return [
                 'label' => $label,
                 'hasSortUrls' => false,
@@ -1426,14 +1424,14 @@ final class RecordListController extends CoreRecordListController
         $baseParams = array_replace($baseParams, $this->requestParameterService->getPreservedListParameters($request));
 
         try {
-            $returnUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $baseParams);
-        } catch (Exception) {
+            $returnUrl = (string)$this->uriBuilder->buildUriFromRoute('records', $baseParams);
+        } catch (\Exception) {
             $returnUrl = '';
         }
 
         try {
             $columnsOnly = json_encode($editableFields, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
+        } catch (\JsonException) {
             return null;
         }
 
@@ -1479,7 +1477,7 @@ final class RecordListController extends CoreRecordListController
         $columns = $tcaForTable['columns'];
         $columnConfig = is_array($columns[$field] ?? null) ? $columns[$field] : [];
         $config = is_array($columnConfig['config'] ?? null) ? $columnConfig['config'] : [];
-        return !(bool) ($config['readOnly'] ?? false);
+        return !(bool)($config['readOnly'] ?? false);
     }
 
     /**
@@ -1641,7 +1639,6 @@ final class RecordListController extends CoreRecordListController
         return $this->iconFactory->mapRecordTypeToIconIdentifier($tableName, $row, $this->tcaSchemaFactory->get($tableName));
     }
 
-
     /**
      * Get the number of items per page for a view mode.
      *
@@ -1664,13 +1661,13 @@ final class RecordListController extends CoreRecordListController
             ['mod.', 'web_list.', 'viewMode.', 'types.', $viewMode . '.', 'itemsPerPage'],
         );
         if ($perType !== null && is_numeric($perType)) {
-            return max(0, (int) $perType);
+            return max(0, (int)$perType);
         }
 
         // 2. Global TSconfig
         $global = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'itemsPerPage']);
         if ($global !== null && is_numeric($global)) {
-            return max(0, (int) $global);
+            return max(0, (int)$global);
         }
 
         // 3. Built-in defaults
@@ -1697,13 +1694,13 @@ final class RecordListController extends CoreRecordListController
         // Check extension-specific setting first
         $extLimit = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'itemsLimitPerTable']);
         if ($extLimit !== null && is_numeric($extLimit)) {
-            return max(1, (int) $extLimit);
+            return max(1, (int)$extLimit);
         }
 
         // Fall back to TYPO3 Core's itemsLimitPerTable
         $coreLimit = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'itemsLimitPerTable']);
         if ($coreLimit !== null && is_numeric($coreLimit)) {
-            return max(1, (int) $coreLimit);
+            return max(1, (int)$coreLimit);
         }
 
         return 20;
@@ -1755,8 +1752,8 @@ final class RecordListController extends CoreRecordListController
 
         $currentUrl = '';
         try {
-            $currentUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $urlParams);
-        } catch (Exception) {
+            $currentUrl = (string)$this->uriBuilder->buildUriFromRoute('records', $urlParams);
+        } catch (\Exception) {
             // Ignore
         }
 
@@ -1785,7 +1782,7 @@ final class RecordListController extends CoreRecordListController
      *
      * @param array<int|string, mixed> $siteLanguages Site languages (same shape as parent)
      */
-    #[Override]
+    #[\Override]
     protected function renderPageTranslations(DatabaseRecordList $dbList, array $siteLanguages): string
     {
         $request = $this->currentRequest;
@@ -1805,7 +1802,7 @@ final class RecordListController extends CoreRecordListController
             if ($custom !== '') {
                 return $custom;
             }
-        } catch (Exception) {
+        } catch (\Exception) {
             // fall through to parent renderer
         }
 
@@ -1839,7 +1836,7 @@ final class RecordListController extends CoreRecordListController
         $columnsConfig = $this->viewTypeRegistry->getDisplayColumnsConfig($viewMode, $pageId);
         $columnsArray = is_array($columnsConfig['columns'] ?? null) ? $columnsConfig['columns'] : [];
         $columnResolver = $this->displayColumnResolver;
-        if ((bool) ($columnsConfig['fromTCA'] ?? false)) {
+        if ((bool)($columnsConfig['fromTCA'] ?? false)) {
             $displayColumns = $columnResolver->getDisplayColumns($tableName, ArrayUtility::stringKeyArray($this->modTSconfig));
         } elseif ($columnsArray !== []) {
             $displayColumns = $columnResolver->getSpecificDisplayColumns($tableName, $columnsArray);
@@ -2012,7 +2009,7 @@ final class RecordListController extends CoreRecordListController
                 continue;
             }
             $languageIdRaw = $row['sys_language_uid'] ?? 0;
-            $languageId = is_numeric($languageIdRaw) ? (int) $languageIdRaw : 0;
+            $languageId = is_numeric($languageIdRaw) ? (int)$languageIdRaw : 0;
             if (!$backendUser->checkLanguageAccess($languageId)) {
                 continue;
             }
@@ -2026,7 +2023,7 @@ final class RecordListController extends CoreRecordListController
 
             if ($useWorkspaceReduction) {
                 $uidRaw = $typedRow['uid'] ?? 0;
-                $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+                $uid = is_numeric($uidRaw) ? (int)$uidRaw : 0;
                 $identity = $this->recordSortingService->getWorkspaceRecordIdentity($typedRow, $uid);
                 $recordsByIdentity[$identity] = $recordData;
             } else {

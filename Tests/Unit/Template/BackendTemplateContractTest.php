@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Tests\Unit\Template;
 
-use FilesystemIterator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 
 final class BackendTemplateContractTest extends TestCase
 {
@@ -20,12 +16,12 @@ final class BackendTemplateContractTest extends TestCase
     {
         $basePath = dirname(__DIR__, 3) . '/Resources/Private';
         $templates = [];
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($basePath, FilesystemIterator::SKIP_DOTS),
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($basePath, \FilesystemIterator::SKIP_DOTS),
         );
 
         foreach ($iterator as $file) {
-            \assert($file instanceof SplFileInfo);
+            assert($file instanceof \SplFileInfo);
             if ($file->getExtension() !== 'html') {
                 continue;
             }
@@ -42,7 +38,7 @@ final class BackendTemplateContractTest extends TestCase
     public function backendTemplatesDoNotUseFrontendContentAreaRendering(): void
     {
         foreach ($this->getBackendTemplates() as $relativePath => $templatePath) {
-            $template = (string) file_get_contents($templatePath);
+            $template = (string)file_get_contents($templatePath);
 
             self::assertStringNotContainsString('f:render.contentArea', $template, $relativePath);
             self::assertStringNotContainsString('f:mark.contentArea', $template, $relativePath);
@@ -67,7 +63,7 @@ final class BackendTemplateContractTest extends TestCase
         ];
 
         foreach ($recordTemplates as $relativePath) {
-            $template = (string) file_get_contents($templateBase . '/' . $relativePath);
+            $template = (string)file_get_contents($templateBase . '/' . $relativePath);
 
             self::assertStringContainsString(
                 'typo3-backend-contextual-record-edit-trigger',
@@ -81,7 +77,7 @@ final class BackendTemplateContractTest extends TestCase
     public function visibilityTogglesCarryStateAwareAccessibleNames(): void
     {
         foreach ($this->getBackendTemplates() as $relativePath => $templatePath) {
-            $template = (string) file_get_contents($templatePath);
+            $template = (string)file_get_contents($templatePath);
 
             self::assertSame(
                 substr_count($template, 'data-gridview-action="show"'),
@@ -100,7 +96,7 @@ final class BackendTemplateContractTest extends TestCase
     #[Test]
     public function sortingModeToggleExposesThePressedState(): void
     {
-        $template = (string) file_get_contents(dirname(__DIR__, 3) . '/Resources/Private/Partials/SortingModeToggle.html');
+        $template = (string)file_get_contents(dirname(__DIR__, 3) . '/Resources/Private/Partials/SortingModeToggle.html');
 
         self::assertStringContainsString('aria-pressed="true"', $template);
         self::assertStringContainsString('aria-pressed="false"', $template);
@@ -111,7 +107,7 @@ final class BackendTemplateContractTest extends TestCase
     public function iconOnlyRecordActionsHaveAccessibleNames(): void
     {
         foreach ($this->getBackendTemplates() as $relativePath => $templatePath) {
-            $template = (string) file_get_contents($templatePath);
+            $template = (string)file_get_contents($templatePath);
             preg_match_all('/<(?:button|a|typo3-backend-contextual-record-edit-trigger|typo3-backend-localization-button)\b[^>]*data-gridview-action="(?:delete|info)"[^>]*>/s', $template, $matches);
             foreach ($matches[0] as $element) {
                 if (str_contains($element, 'dropdown-item')) {

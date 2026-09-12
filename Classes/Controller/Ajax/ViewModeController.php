@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Controller\Ajax;
 
-use Exception;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -34,7 +33,6 @@ final readonly class ViewModeController
      *     "pageId": 123,
      *     "table": "tt_content"
      * }
-     *
      */
     public function setViewModeAction(ServerRequestInterface $request): ResponseInterface
     {
@@ -62,7 +60,7 @@ final readonly class ViewModeController
                 'table' => $tableName,
                 'message' => 'View mode preference saved.',
             ]);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->logger->error('Failed to save view mode preference', [
                 'exception' => $e,
                 'message' => $e->getMessage(),
@@ -76,7 +74,6 @@ final readonly class ViewModeController
 
     /**
      * Get the user's current view mode preference.
-     *
      */
     public function getViewModeAction(ServerRequestInterface $request): ResponseInterface
     {
@@ -97,7 +94,7 @@ final readonly class ViewModeController
                 'forcedMode' => $forcedMode,
                 'isForced' => $forcedMode !== null,
             ]);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->logger->error('Failed to get view mode preference', [
                 'exception' => $e,
                 'message' => $e->getMessage(),

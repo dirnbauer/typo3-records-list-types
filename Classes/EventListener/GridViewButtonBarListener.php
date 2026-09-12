@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\EventListener;
 
-use Exception;
 use Psr\Http\Message\ServerRequestInterface;
-use RuntimeException;
 use TYPO3\CMS\Backend\Module\ModuleInterface;
 use TYPO3\CMS\Backend\Routing\Route;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
@@ -130,11 +128,11 @@ final readonly class GridViewButtonBarListener
             $routeParams = array_replace($routeParams, $this->requestParameterService->getPreservedListParameters($request));
 
             try {
-                $url = (string) $this->uriBuilder->buildUriFromRoute(Constants::MODULE_ROUTE, $routeParams);
-            } catch (Exception) {
+                $url = (string)$this->uriBuilder->buildUriFromRoute(Constants::MODULE_ROUTE, $routeParams);
+            } catch (\Exception) {
                 $params = $queryParams;
                 $params['displayMode'] = $modeId;
-                $url = (string) $request->getUri()->withQuery(http_build_query($params));
+                $url = (string)$request->getUri()->withQuery(http_build_query($params));
             }
 
             $dropdownItem = $this->componentFactory->createDropDownRadio()
@@ -156,7 +154,7 @@ final readonly class GridViewButtonBarListener
     {
         $lang = $GLOBALS['LANG'] ?? null;
         if (!$lang instanceof LanguageService) {
-            throw new RuntimeException('LanguageService not available', 1735600100);
+            throw new \RuntimeException('LanguageService not available', 1735600100);
         }
         return $lang;
     }
@@ -206,13 +204,13 @@ final readonly class GridViewButtonBarListener
     {
         $idParam = ArrayUtility::mergedRequestParameters($request)['id'] ?? null;
         if ($idParam !== null) {
-            return is_numeric($idParam) ? (int) $idParam : 0;
+            return is_numeric($idParam) ? (int)$idParam : 0;
         }
 
         $routeParams = $request->getAttribute('routing');
         if (is_array($routeParams) && isset($routeParams['id'])) {
             $idValue = $routeParams['id'];
-            return is_numeric($idValue) ? (int) $idValue : 0;
+            return is_numeric($idValue) ? (int)$idValue : 0;
         }
 
         return 0;

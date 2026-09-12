@@ -8,8 +8,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
-use stdClass;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\FileReference;
@@ -29,7 +27,7 @@ final class ThumbnailServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->fileRepositoryMock = $this->createStub(FileRepository::class);
+        $this->fileRepositoryMock = self::createStub(FileRepository::class);
 
         $this->subject = new ThumbnailService(
             $this->fileRepositoryMock,
@@ -51,7 +49,7 @@ final class ThumbnailServiceTest extends TestCase
     #[DataProvider('imageMimeTypeProvider')]
     public function isImageFileReturnsTrueForImageMimeTypes(string $mimeType): void
     {
-        $fileMock = $this->createStub(FileInterface::class);
+        $fileMock = self::createStub(FileInterface::class);
         $fileMock->method('getMimeType')->willReturn($mimeType);
 
         self::assertTrue($this->subject->isImageFile($fileMock));
@@ -77,7 +75,7 @@ final class ThumbnailServiceTest extends TestCase
     #[DataProvider('nonImageMimeTypeProvider')]
     public function isImageFileReturnsFalseForNonImageMimeTypes(string $mimeType): void
     {
-        $fileMock = $this->createStub(FileInterface::class);
+        $fileMock = self::createStub(FileInterface::class);
         $fileMock->method('getMimeType')->willReturn($mimeType);
 
         self::assertFalse($this->subject->isImageFile($fileMock));
@@ -108,7 +106,7 @@ final class ThumbnailServiceTest extends TestCase
     {
         $fileRepositoryMock = $this->createMock(FileRepository::class);
         $fileRepositoryMock
-            ->expects(self::once())
+            ->expects($this->once())
             ->method('findByRelation')
             ->with('tt_content', 'image', 1)
             ->willReturn([]);
@@ -121,10 +119,10 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getFirstImageReturnsFileWhenImageReferenceExists(): void
     {
-        $fileMock = $this->createStub(File::class);
+        $fileMock = self::createStub(File::class);
         $fileMock->method('getMimeType')->willReturn('image/jpeg');
 
-        $fileRefMock = $this->createStub(FileReference::class);
+        $fileRefMock = self::createStub(FileReference::class);
         $fileRefMock->method('getOriginalFile')->willReturn($fileMock);
 
         $this->fileRepositoryMock
@@ -139,10 +137,10 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getFirstImageReturnsNullWhenReferenceIsNotImage(): void
     {
-        $fileMock = $this->createStub(File::class);
+        $fileMock = self::createStub(File::class);
         $fileMock->method('getMimeType')->willReturn('application/pdf');
 
-        $fileRefMock = $this->createStub(FileReference::class);
+        $fileRefMock = self::createStub(FileReference::class);
         $fileRefMock->method('getOriginalFile')->willReturn($fileMock);
 
         $this->fileRepositoryMock
@@ -157,7 +155,7 @@ final class ThumbnailServiceTest extends TestCase
     {
         $this->fileRepositoryMock
             ->method('findByRelation')
-            ->willThrowException(new RuntimeException('DB error'));
+            ->willThrowException(new \RuntimeException('DB error'));
 
         self::assertNull($this->subject->getFirstImage('tt_content', 1, 'image'));
     }
@@ -168,7 +166,7 @@ final class ThumbnailServiceTest extends TestCase
         // Simulate a non-FileReference object in the array
         $this->fileRepositoryMock
             ->method('findByRelation')
-            ->willReturn([new stdClass()]);
+            ->willReturn([new \stdClass()]);
 
         self::assertNull($this->subject->getFirstImage('tt_content', 1, 'image'));
     }
@@ -190,16 +188,16 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getAllImagesReturnsOnlyImageFiles(): void
     {
-        $imageMock = $this->createStub(File::class);
+        $imageMock = self::createStub(File::class);
         $imageMock->method('getMimeType')->willReturn('image/png');
 
-        $pdfMock = $this->createStub(File::class);
+        $pdfMock = self::createStub(File::class);
         $pdfMock->method('getMimeType')->willReturn('application/pdf');
 
-        $imageRef = $this->createStub(FileReference::class);
+        $imageRef = self::createStub(FileReference::class);
         $imageRef->method('getOriginalFile')->willReturn($imageMock);
 
-        $pdfRef = $this->createStub(FileReference::class);
+        $pdfRef = self::createStub(FileReference::class);
         $pdfRef->method('getOriginalFile')->willReturn($pdfMock);
 
         $this->fileRepositoryMock
@@ -215,16 +213,16 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getAllImagesReturnsMultipleImages(): void
     {
-        $img1 = $this->createStub(File::class);
+        $img1 = self::createStub(File::class);
         $img1->method('getMimeType')->willReturn('image/jpeg');
 
-        $img2 = $this->createStub(File::class);
+        $img2 = self::createStub(File::class);
         $img2->method('getMimeType')->willReturn('image/webp');
 
-        $ref1 = $this->createStub(FileReference::class);
+        $ref1 = self::createStub(FileReference::class);
         $ref1->method('getOriginalFile')->willReturn($img1);
 
-        $ref2 = $this->createStub(FileReference::class);
+        $ref2 = self::createStub(FileReference::class);
         $ref2->method('getOriginalFile')->willReturn($img2);
 
         $this->fileRepositoryMock
@@ -241,7 +239,7 @@ final class ThumbnailServiceTest extends TestCase
     {
         $this->fileRepositoryMock
             ->method('findByRelation')
-            ->willThrowException(new RuntimeException('DB error'));
+            ->willThrowException(new \RuntimeException('DB error'));
 
         self::assertSame([], $this->subject->getAllImages('tt_content', 1, 'image'));
     }
@@ -253,11 +251,11 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getThumbnailUrlReturnsUrlFromProcessedFile(): void
     {
-        $processedMock = $this->createStub(ProcessedFile::class);
+        $processedMock = self::createStub(ProcessedFile::class);
         $processedMock->method('getPublicUrl')->willReturn('/fileadmin/_processed_/test.jpg');
 
         // process() exists on File, not FileInterface
-        $fileMock = $this->createStub(File::class);
+        $fileMock = self::createStub(File::class);
         $fileMock->method('process')
             ->willReturn($processedMock);
 
@@ -269,11 +267,11 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getThumbnailUrlUsesCustomDimensions(): void
     {
-        $processedMock = $this->createStub(ProcessedFile::class);
+        $processedMock = self::createStub(ProcessedFile::class);
         $processedMock->method('getPublicUrl')->willReturn('/test.jpg');
 
         $fileMock = $this->createMock(File::class);
-        $fileMock->expects(self::once())
+        $fileMock->expects($this->once())
             ->method('process')
             ->with(
                 ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
@@ -287,9 +285,9 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getThumbnailUrlReturnsNullOnException(): void
     {
-        $fileMock = $this->createStub(File::class);
+        $fileMock = self::createStub(File::class);
         $fileMock->method('process')
-            ->willThrowException(new RuntimeException('Processing failed'));
+            ->willThrowException(new \RuntimeException('Processing failed'));
 
         self::assertNull($this->subject->getThumbnailUrl($fileMock));
     }
@@ -315,14 +313,14 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getThumbnailDataReturnsExistsWithFileAndUrl(): void
     {
-        $processedMock = $this->createStub(ProcessedFile::class);
+        $processedMock = self::createStub(ProcessedFile::class);
         $processedMock->method('getPublicUrl')->willReturn('/test.jpg');
 
-        $fileMock = $this->createStub(File::class);
+        $fileMock = self::createStub(File::class);
         $fileMock->method('getMimeType')->willReturn('image/jpeg');
         $fileMock->method('process')->willReturn($processedMock);
 
-        $fileRefMock = $this->createStub(FileReference::class);
+        $fileRefMock = self::createStub(FileReference::class);
         $fileRefMock->method('getOriginalFile')->willReturn($fileMock);
 
         $this->fileRepositoryMock
@@ -353,10 +351,10 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getFirstFileReferenceReturnsReferenceForImageFile(): void
     {
-        $fileMock = $this->createStub(File::class);
+        $fileMock = self::createStub(File::class);
         $fileMock->method('getMimeType')->willReturn('image/jpeg');
 
-        $fileRefMock = $this->createStub(FileReference::class);
+        $fileRefMock = self::createStub(FileReference::class);
         $fileRefMock->method('getOriginalFile')->willReturn($fileMock);
 
         $this->fileRepositoryMock
@@ -371,10 +369,10 @@ final class ThumbnailServiceTest extends TestCase
     #[Test]
     public function getFirstFileReferenceReturnsNullForNonImageFile(): void
     {
-        $fileMock = $this->createStub(File::class);
+        $fileMock = self::createStub(File::class);
         $fileMock->method('getMimeType')->willReturn('application/pdf');
 
-        $fileRefMock = $this->createStub(FileReference::class);
+        $fileRefMock = self::createStub(FileReference::class);
         $fileRefMock->method('getOriginalFile')->willReturn($fileMock);
 
         $this->fileRepositoryMock
@@ -389,7 +387,7 @@ final class ThumbnailServiceTest extends TestCase
     {
         $this->fileRepositoryMock
             ->method('findByRelation')
-            ->willThrowException(new RuntimeException('DB error'));
+            ->willThrowException(new \RuntimeException('DB error'));
 
         self::assertNull($this->subject->getFirstFileReference('tt_content', 1, 'image'));
     }

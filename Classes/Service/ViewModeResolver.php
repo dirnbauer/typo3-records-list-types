@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
-use InvalidArgumentException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
@@ -166,7 +165,7 @@ final class ViewModeResolver implements SingletonInterface
             ['mod.', 'web_list.', 'viewMode.', 'types.'],
         );
         foreach ($customModes as $modeId => $config) {
-            $modeId = rtrim((string) $modeId, '.');
+            $modeId = rtrim((string)$modeId, '.');
             if (is_array($config) && !isset($modes[$modeId])) {
                 $labelVal = $config['label'] ?? $modeId;
                 $iconVal = $config['icon'] ?? 'actions-viewmode-list';
@@ -247,7 +246,7 @@ final class ViewModeResolver implements SingletonInterface
     {
         if (!$this->isValidMode($mode, $pageId)) {
             $modes = $this->getViewModes($pageId);
-            throw new InvalidArgumentException(
+            throw new \InvalidArgumentException(
                 sprintf('Invalid view mode "%s". Allowed: %s', $mode, implode(', ', array_keys($modes))),
                 1735600000,
             );

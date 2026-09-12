@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
-use Exception;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
@@ -73,7 +72,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
 
                 $displayRaw = $rawValue;
                 if ($type === 'boolean' && $this->displayValueFormatter->shouldInvertBooleanDisplay($field, $tcaColumns)) {
-                    $displayRaw = ((bool) $rawValue) ? 0 : 1;
+                    $displayRaw = ((bool)$rawValue) ? 0 : 1;
                 }
                 $isLabelField = $column['isLabelField'] ?? false;
 
@@ -136,7 +135,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
             /** @var array<string, mixed> $rawRecord */
             $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
             $langUidRaw = $rawRecord[$languageField] ?? 0;
-            $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
+            $langUid = is_numeric($langUidRaw) ? (int)$langUidRaw : 0;
 
             $record['sysLanguageUid'] = $langUid;
             $record['languageFlagIdentifier'] = '';
@@ -226,8 +225,8 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
                 ->getLanguageField()->getName();
             $transOrigField = $schema->getCapability(TcaSchemaCapability::Language)
                 ->getTranslationOriginPointerField()->getName();
-            $languageId = is_numeric($row[$languageField] ?? null) ? (int) $row[$languageField] : 0;
-            $parentPointer = is_numeric($row[$transOrigField] ?? null) ? (int) $row[$transOrigField] : 0;
+            $languageId = is_numeric($row[$languageField] ?? null) ? (int)$row[$languageField] : 0;
+            $parentPointer = is_numeric($row[$transOrigField] ?? null) ? (int)$row[$transOrigField] : 0;
         }
 
         if ($backendUser->isAdmin()) {
@@ -259,7 +258,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
         $canEdit = $tableModify && $pageEdit && $recordAccess && $editLockOk && !$isDeletePlaceholder;
 
         $userTsConfig = $backendUser->getTSConfig();
-        $disableDelete = (bool) trim(ArrayUtility::stringValue(
+        $disableDelete = (bool)trim(ArrayUtility::stringValue(
             ArrayUtility::valuePath($userTsConfig, ['options.', 'disableDelete.', $tableName])
                 ?? ArrayUtility::valuePath($userTsConfig, ['options.', 'disableDelete']),
         ));
@@ -290,7 +289,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
             return $record;
         }
 
-        $uid = (int) $uidRaw;
+        $uid = (int)$uidRaw;
         if ($uid <= 0) {
             return $record;
         }
@@ -298,7 +297,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
         $returnUrl = $this->buildContextualEditReturnUrl($record, $context);
 
         try {
-            $record['editUrl'] = (string) $this->uriBuilder->buildUriFromRoute('record_edit', [
+            $record['editUrl'] = (string)$this->uriBuilder->buildUriFromRoute('record_edit', [
                 'edit' => [
                     $tableNameRaw => [
                         $uid => 'edit',
@@ -307,7 +306,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
                 'module' => 'records',
                 'returnUrl' => $returnUrl,
             ]);
-            $record['contextualEditUrl'] = (string) $this->uriBuilder->buildUriFromRoute('record_edit_contextual', [
+            $record['contextualEditUrl'] = (string)$this->uriBuilder->buildUriFromRoute('record_edit_contextual', [
                 'edit' => [
                     $tableNameRaw => [
                         $uid => 'edit',
@@ -316,7 +315,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
                 'module' => 'records',
                 'returnUrl' => $returnUrl,
             ]);
-        } catch (Exception) {
+        } catch (\Exception) {
             $record['editUrl'] = '';
             $record['contextualEditUrl'] = '';
         }
@@ -342,7 +341,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
         }
 
         $pidRaw = $row['pid'] ?? 0;
-        $pid = is_numeric($pidRaw) ? (int) $pidRaw : 0;
+        $pid = is_numeric($pidRaw) ? (int)$pidRaw : 0;
 
         if ($pid === $context->pageContext->pageId) {
             return $context->pageContext->pagePermissions;
@@ -380,12 +379,12 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
         $pageHasEditLock = false;
         if ($pageEditLockField !== '') {
             $pageRecord = $context->pageContext->pageRecord ?? [];
-            $pageHasEditLock = (bool) ($pageRecord[$pageEditLockField] ?? false);
+            $pageHasEditLock = (bool)($pageRecord[$pageEditLockField] ?? false);
         }
 
         if ($tableName === 'pages') {
             $ownEditLockField = $pageEditLockField;
-            if ($ownEditLockField !== '' && (bool) ($row[$ownEditLockField] ?? false)) {
+            if ($ownEditLockField !== '' && (bool)($row[$ownEditLockField] ?? false)) {
                 return false;
             }
 
@@ -397,7 +396,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
         }
         $tableCtrl = $this->tcaConfigurationService->getTcaForTable($tableName)['ctrl'];
         $tableEditLockField = is_string($tableCtrl['editlock'] ?? null) ? $tableCtrl['editlock'] : '';
-        if ($tableEditLockField !== '' && (bool) ($row[$tableEditLockField] ?? false)) {
+        if ($tableEditLockField !== '' && (bool)($row[$tableEditLockField] ?? false)) {
             return false;
         }
 
@@ -417,8 +416,8 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
             return false;
         }
         $uidRaw = $row['uid'] ?? 0;
-        $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
-        $currentId = is_numeric($backendUser->user['uid'] ?? null) ? (int) $backendUser->user['uid'] : 0;
+        $uid = is_numeric($uidRaw) ? (int)$uidRaw : 0;
+        $currentId = is_numeric($backendUser->user['uid'] ?? null) ? (int)$backendUser->user['uid'] : 0;
 
         return $uid > 0 && $uid === $currentId;
     }
@@ -430,7 +429,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
     {
         $stateRaw = $row['t3ver_state'] ?? 0;
 
-        return (is_numeric($stateRaw) ? (int) $stateRaw : 0) === 2;
+        return (is_numeric($stateRaw) ? (int)$stateRaw : 0) === 2;
     }
 
     /**
@@ -453,8 +452,8 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
         }
 
         try {
-            return (string) $this->uriBuilder->buildUriFromRoute('records', $params);
-        } catch (Exception) {
+            return (string)$this->uriBuilder->buildUriFromRoute('records', $params);
+        } catch (\Exception) {
             return '';
         }
     }

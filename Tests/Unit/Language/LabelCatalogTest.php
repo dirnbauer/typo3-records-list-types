@@ -4,15 +4,9 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Tests\Unit\Language;
 
-use FilesystemIterator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use RuntimeException;
-use SimpleXMLElement;
-use SplFileInfo;
 
 /**
  * Guards the label catalog: every referenced key exists, every unit carries
@@ -56,8 +50,8 @@ final class LabelCatalogTest extends TestCase
     {
         $xml = $this->loadXml(self::SOURCE_FILE);
 
-        self::assertSame('2.0', (string) $xml['version']);
-        self::assertSame('en', (string) $xml['srcLang']);
+        self::assertSame('2.0', (string)$xml['version']);
+        self::assertSame('en', (string)$xml['srcLang']);
         self::assertNull($xml['trgLang'] ?? null, 'The source catalog must not declare a target language.');
         self::assertCount(1, $xml->xpath('/x:xliff/x:file') ?: []);
     }
@@ -70,7 +64,7 @@ final class LabelCatalogTest extends TestCase
         $file = 'Resources/Private/Language/' . $language . '.locallang.xlf';
         $targetUnits = $this->loadUnits($file);
 
-        self::assertSame($language, (string) $this->loadXml($file)['trgLang']);
+        self::assertSame($language, (string)$this->loadXml($file)['trgLang']);
         self::assertSame(array_keys($sourceUnits), array_keys($targetUnits), $file . ' must contain the same unit ids in the same order as the source.');
         foreach ($targetUnits as $id => $unit) {
             self::assertSame($sourceUnits[$id]['source'], $unit['source'], $file . ': source text of "' . $id . '" differs from locallang.xlf.');
@@ -115,7 +109,7 @@ final class LabelCatalogTest extends TestCase
             $xml = $this->loadXml($file);
             $fileNotes = $xml->xpath('/x:xliff/x:file/x:notes/x:note') ?: [];
             self::assertNotSame([], $fileNotes, $file . ' must carry a file-level review note.');
-            self::assertStringContainsString('Machine draft', (string) $fileNotes[0]);
+            self::assertStringContainsString('Machine draft', (string)$fileNotes[0]);
             foreach ($this->loadUnits($file) as $id => $unit) {
                 self::assertSame('translated', $unit['state'], $file . ': draft unit "' . $id . '" must not claim a reviewed state.');
             }
@@ -152,7 +146,7 @@ final class LabelCatalogTest extends TestCase
     public function templatesContainNoHardCodedEnglish(): void
     {
         foreach ($this->getFiles('Resources/Private', 'html') as $relativePath => $path) {
-            $template = (string) file_get_contents($path);
+            $template = (string)file_get_contents($path);
 
             self::assertStringNotContainsString('LLL:EXT:', $template, $relativePath . ' must reference labels through translation domains.');
             self::assertStringNotContainsString('extensionName:', $template, $relativePath . ' must reference labels through translation domains.');
@@ -169,7 +163,7 @@ final class LabelCatalogTest extends TestCase
         $units = $this->loadUnits(self::SOURCE_FILE);
 
         foreach ($this->getFiles('Resources/Public/JavaScript', 'js') as $relativePath => $path) {
-            $script = (string) file_get_contents($path);
+            $script = (string)file_get_contents($path);
 
             self::assertDoesNotMatchRegularExpression('/showNotification\(\s*[\'"]/', $script, $relativePath . ' passes a literal to showNotification().');
 
@@ -189,11 +183,11 @@ final class LabelCatalogTest extends TestCase
     {
         $registered = [];
         foreach (['Classes/Controller/RecordListController.php', 'Classes/Controller/ContentElement/ElementHistoryController.php'] as $file) {
-            $php = (string) file_get_contents($this->root() . '/' . $file);
+            $php = (string)file_get_contents($this->root() . '/' . $file);
             preg_match_all('/addInlineLanguageLabelFile\([^)]*,\s*\'([a-zA-Z0-9]+\.)\'\)/', $php, $matches);
             $registered = array_merge($registered, $matches[1]);
         }
-        preg_match_all('/foreach \(\[([^\]]+)\] as \$labelPrefix\)/', (string) file_get_contents($this->root() . '/Classes/Controller/RecordListController.php'), $loop);
+        preg_match_all('/foreach \(\[([^\]]+)\] as \$labelPrefix\)/', (string)file_get_contents($this->root() . '/Classes/Controller/RecordListController.php'), $loop);
         self::assertNotSame([], $loop[1], 'RecordListController must register the JavaScript label prefixes.');
         preg_match_all('/\'([a-zA-Z0-9]+\.)\'/', $loop[1][0], $loopPrefixes);
         $registered = array_values(array_unique(array_merge($registered, $loopPrefixes[1])));
@@ -204,12 +198,12 @@ final class LabelCatalogTest extends TestCase
         }
 
         foreach ($this->getFiles('Resources/Public/JavaScript', 'js') as $relativePath => $path) {
-            preg_match_all('/this\.(?:lang|label)\(\'([A-Za-z0-9_.]+)\'/', (string) file_get_contents($path), $matches);
+            preg_match_all('/this\.(?:lang|label)\(\'([A-Za-z0-9_.]+)\'/', (string)file_get_contents($path), $matches);
             foreach (array_unique($matches[1]) as $key) {
                 if (in_array($key, self::CORE_JAVASCRIPT_KEYS, true)) {
                     continue;
                 }
-                $prefix = substr($key, 0, (int) strpos($key, '.') + 1);
+                $prefix = substr($key, 0, (int)strpos($key, '.') + 1);
                 self::assertContains($prefix, $registered, $relativePath . ': prefix "' . $prefix . '" of "' . $key . '" is not exported to TYPO3.lang.');
             }
         }
@@ -236,7 +230,7 @@ final class LabelCatalogTest extends TestCase
 
         $referenced = [];
         foreach ($files as $relativePath => $path) {
-            $content = (string) file_get_contents($path);
+            $content = (string)file_get_contents($path);
             foreach ($patterns as $pattern) {
                 preg_match_all($pattern, $content, $matches);
                 foreach ($matches[1] as $key) {
@@ -261,28 +255,28 @@ final class LabelCatalogTest extends TestCase
         foreach ($xml->xpath('//x:unit') ?: [] as $unit) {
             $unit->registerXPathNamespace('x', self::XLIFF_NAMESPACE);
             $segment = ($unit->xpath('./x:segment') ?: [null])[0];
-            if (!$segment instanceof SimpleXMLElement) {
-                throw new RuntimeException('Unit without segment in ' . $file, 1757700001);
+            if (!$segment instanceof \SimpleXMLElement) {
+                throw new \RuntimeException('Unit without segment in ' . $file, 1757700001);
             }
             $segment->registerXPathNamespace('x', self::XLIFF_NAMESPACE);
             $note = $unit->xpath('./x:notes/x:note') ?: [];
-            $units[(string) $unit['id']] = [
-                'source' => (string) (($segment->xpath('./x:source') ?: [''])[0]),
-                'target' => (string) (($segment->xpath('./x:target') ?: [''])[0]),
-                'note' => $note === [] ? '' : (string) $note[0],
-                'state' => (string) ($segment['state'] ?? ''),
-                'deprecated' => (string) ($segment['subState'] ?? '') === 'deprecated',
+            $units[(string)$unit['id']] = [
+                'source' => (string)(($segment->xpath('./x:source') ?: [''])[0]),
+                'target' => (string)(($segment->xpath('./x:target') ?: [''])[0]),
+                'note' => $note === [] ? '' : (string)$note[0],
+                'state' => (string)($segment['state'] ?? ''),
+                'deprecated' => (string)($segment['subState'] ?? '') === 'deprecated',
             ];
         }
 
         return $units;
     }
 
-    private function loadXml(string $file): SimpleXMLElement
+    private function loadXml(string $file): \SimpleXMLElement
     {
         $xml = simplexml_load_file($this->root() . '/' . $file);
         if ($xml === false) {
-            throw new RuntimeException('Unable to parse ' . $file, 1757700002);
+            throw new \RuntimeException('Unable to parse ' . $file, 1757700002);
         }
         $xml->registerXPathNamespace('x', self::XLIFF_NAMESPACE);
 
@@ -296,9 +290,9 @@ final class LabelCatalogTest extends TestCase
     {
         $base = $this->root() . '/' . $directory;
         $files = [];
-        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base, FilesystemIterator::SKIP_DOTS));
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($base, \FilesystemIterator::SKIP_DOTS));
         foreach ($iterator as $file) {
-            \assert($file instanceof SplFileInfo);
+            assert($file instanceof \SplFileInfo);
             if ($file->getExtension() === $extension) {
                 $files[$directory . '/' . str_replace($base . '/', '', $file->getPathname())] = $file->getPathname();
             }

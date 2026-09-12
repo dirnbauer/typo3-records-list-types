@@ -23,16 +23,16 @@ final class RecordDisplayValueFormatter
 
         switch ($type) {
             case 'boolean':
-                return (bool) $value ? 'yes' : 'no';
+                return (bool)$value ? 'yes' : 'no';
 
             case 'datetime':
                 if (is_numeric($value) && $value > 0) {
-                    return date('d.m.Y H:i', (int) $value);
+                    return date('d.m.Y H:i', (int)$value);
                 }
-                return is_scalar($value) ? (string) $value : '';
+                return is_scalar($value) ? (string)$value : '';
 
             case 'number':
-                return is_scalar($value) ? (string) $value : '';
+                return is_scalar($value) ? (string)$value : '';
 
             case 'select':
                 return $this->formatSelectValue($value, $field, $tcaColumns, $translateLabel);
@@ -41,10 +41,10 @@ final class RecordDisplayValueFormatter
                 if (is_numeric($value)) {
                     return $value > 0 ? $value . ' item(s)' : '';
                 }
-                return is_scalar($value) ? (string) $value : '';
+                return is_scalar($value) ? (string)$value : '';
 
             default:
-                $textInput = is_scalar($value) ? (string) $value : '';
+                $textInput = is_scalar($value) ? (string)$value : '';
                 $text = strip_tags(html_entity_decode($textInput));
                 $text = preg_replace('/\s+/', ' ', $text) ?? $text;
                 return trim($text);
@@ -61,13 +61,13 @@ final class RecordDisplayValueFormatter
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
         $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
 
-        if (isset($config['invertStateDisplay']) && (bool) $config['invertStateDisplay']) {
+        if (isset($config['invertStateDisplay']) && (bool)$config['invertStateDisplay']) {
             return true;
         }
 
         $items = is_array($config['items'] ?? null) ? $config['items'] : [];
         foreach ($items as $item) {
-            if (is_array($item) && isset($item['invertStateDisplay']) && (bool) $item['invertStateDisplay']) {
+            if (is_array($item) && isset($item['invertStateDisplay']) && (bool)$item['invertStateDisplay']) {
                 return true;
             }
         }
@@ -88,14 +88,14 @@ final class RecordDisplayValueFormatter
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
         $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
         $items = is_array($config['items'] ?? null) ? $config['items'] : [];
-        $valueStr = is_scalar($value) ? (string) $value : '';
+        $valueStr = is_scalar($value) ? (string)$value : '';
 
         foreach ($items as $item) {
             if (!is_array($item)) {
                 continue;
             }
             $itemValue = $item['value'] ?? $item[1] ?? null;
-            $itemValueStr = is_scalar($itemValue) ? (string) $itemValue : '';
+            $itemValueStr = is_scalar($itemValue) ? (string)$itemValue : '';
             if ($itemValueStr !== $valueStr) {
                 continue;
             }

@@ -80,7 +80,7 @@ final class RecordListRequestParameterService
         $pointer = ArrayUtility::mergedRequestParameters($request)['pointer'] ?? [];
         if (is_array($pointer) && isset($pointer[$tableName])) {
             $value = $pointer[$tableName];
-            return is_numeric($value) ? max(1, (int) $value) : 1;
+            return is_numeric($value) ? max(1, (int)$value) : 1;
         }
 
         return 1;

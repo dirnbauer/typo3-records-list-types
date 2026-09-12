@@ -102,7 +102,7 @@ final class RecordFilterStateServiceTest extends TestCase
         ], $moduleData);
 
         $backendUser = $this->createMock(BackendUserAuthentication::class);
-        $backendUser->expects(self::once())
+        $backendUser->expects($this->once())
             ->method('pushModuleData')
             ->with(
                 'records',

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
-use Stringable;
-
 final class RecordSortingService
 {
     /**
@@ -44,8 +42,8 @@ final class RecordSortingService
     public function getWorkspaceRecordIdentity(array $row, int $fallbackUid): string
     {
         $liveUidRaw = $row['t3ver_oid'] ?? 0;
-        $liveUid = is_numeric($liveUidRaw) ? (int) $liveUidRaw : 0;
-        return (string) ($liveUid > 0 ? $liveUid : $fallbackUid);
+        $liveUid = is_numeric($liveUidRaw) ? (int)$liveUidRaw : 0;
+        return (string)($liveUid > 0 ? $liveUid : $fallbackUid);
     }
 
     private static function compareSortableValues(mixed $left, mixed $right): int
@@ -60,7 +58,7 @@ final class RecordSortingService
             return -1;
         }
         if (is_numeric($left) && is_numeric($right)) {
-            return (float) $left <=> (float) $right;
+            return (float)$left <=> (float)$right;
         }
 
         $leftString = self::sortableValueAsString($left);
@@ -84,10 +82,10 @@ final class RecordSortingService
             return $value ? '1' : '0';
         }
         if (is_int($value) || is_float($value) || is_string($value)) {
-            return (string) $value;
+            return (string)$value;
         }
-        if ($value instanceof Stringable) {
-            return (string) $value;
+        if ($value instanceof \Stringable) {
+            return (string)$value;
         }
 
         return null;

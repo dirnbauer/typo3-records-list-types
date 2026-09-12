@@ -49,6 +49,6 @@ final readonly class RecordFilterQueryListener
     private function getStringParameter(array $params, string $key): string
     {
         $value = $params[$key] ?? '';
-        return is_scalar($value) ? trim((string) $value) : '';
+        return is_scalar($value) ? trim((string)$value) : '';
     }
 }

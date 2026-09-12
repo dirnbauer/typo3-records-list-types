@@ -18,15 +18,14 @@ use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
  */
 final class GridConfigurationService implements SingletonInterface
 {
-    public function __construct(
-        private readonly TcaSchemaFactory $tcaSchemaFactory,
-    ) {}
+    /** Default number of columns in the grid. */
+    private const int DEFAULT_COLS = 4;
 
     /** @var array<string, array{titleField: ?string, descriptionField: ?string, imageField: ?string, preview: bool, hiddenField: string}> Runtime cache for table configurations */
     private array $tableConfigCache = [];
-
-    /** Default number of columns in the grid. */
-    private const int DEFAULT_COLS = 4;
+    public function __construct(
+        private readonly TcaSchemaFactory $tcaSchemaFactory,
+    ) {}
 
     /**
      * Get the configuration for a specific table.
@@ -236,7 +235,7 @@ final class GridConfigurationService implements SingletonInterface
         $tables = [];
         foreach (array_keys($tableConfigs) as $key) {
             // TSconfig array keys have trailing dots
-            $tableName = rtrim((string) $key, '.');
+            $tableName = rtrim((string)$key, '.');
             if ($tableName !== '') {
                 $tables[] = $tableName;
             }

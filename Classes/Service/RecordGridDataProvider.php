@@ -78,7 +78,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
     private function getCurrentWorkspaceId(): int
     {
         $workspaceId = $this->context->getPropertyFromAspect('workspace', 'id', 0);
-        return is_numeric($workspaceId) ? (int) $workspaceId : 0;
+        return is_numeric($workspaceId) ? (int)$workspaceId : 0;
     }
 
     /**
@@ -227,7 +227,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
 
             // Skip large text fields (not useful for sorting)
             $configRows = $config['rows'] ?? 1;
-            if ($type === 'text' && (is_numeric($configRows) ? (int) $configRows : 1) > 3) {
+            if ($type === 'text' && (is_numeric($configRows) ? (int)$configRows : 1) > 3) {
                 continue;
             }
 
@@ -301,7 +301,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
     private function enrichRecord(string $table, array $row, array $tableConfig): array
     {
         $uidRaw = $row['uid'] ?? 0;
-        $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+        $uid = is_numeric($uidRaw) ? (int)$uidRaw : 0;
 
         // Get title
         $titleField = is_string($tableConfig['titleField'] ?? null) ? $tableConfig['titleField'] : 'uid';
@@ -309,7 +309,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         if (is_array($title)) {
             $title = reset($title);
         }
-        $title = is_scalar($title) ? (string) $title : '[No title]';
+        $title = is_scalar($title) ? (string)$title : '[No title]';
 
         // Get description
         $description = null;
@@ -320,7 +320,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
                 $description = reset($description);
             }
             // Strip HTML and limit length
-            $description = strip_tags(is_scalar($description) ? (string) $description : '');
+            $description = strip_tags(is_scalar($description) ? (string)$description : '');
         }
 
         // Get thumbnail
@@ -344,7 +344,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         $tca = $this->getTca($table);
         $enableColumns = is_array($tca['ctrl']['enablecolumns'] ?? null) ? $tca['ctrl']['enablecolumns'] : [];
         $hiddenField = is_string($enableColumns['disabled'] ?? null) ? $enableColumns['disabled'] : null;
-        $hidden = ($hiddenField !== null) && isset($row[$hiddenField]) && (bool) $row[$hiddenField];
+        $hidden = ($hiddenField !== null) && isset($row[$hiddenField]) && (bool)$row[$hiddenField];
 
         // Detect workspace state for visual indicators
         $workspaceState = $this->getWorkspaceState($row);
@@ -352,7 +352,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
 
         return [
             'uid' => $uid,
-            'pid' => (isset($row['pid']) && is_numeric($row['pid'])) ? (int) $row['pid'] : 0,
+            'pid' => (isset($row['pid']) && is_numeric($row['pid'])) ? (int)$row['pid'] : 0,
             'tableName' => $table,
             'reorderGroup' => $this->getReorderGroup($table, $row),
             'title' => $title,
@@ -387,7 +387,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         }
 
         $colPosRaw = $row['colPos'] ?? 0;
-        $colPos = is_numeric($colPosRaw) ? (int) $colPosRaw : 0;
+        $colPos = is_numeric($colPosRaw) ? (int)$colPosRaw : 0;
 
         return 'colPos:' . $colPos;
     }
@@ -420,7 +420,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         // TYPO3 v14 only maps 1, 2 and 4. The legacy t3ver_state = 3
         // ("move placeholder") was removed in v11.
         $t3verStateRaw = $row['t3ver_state'] ?? 0;
-        $t3verState = is_numeric($t3verStateRaw) ? (int) $t3verStateRaw : 0;
+        $t3verState = is_numeric($t3verStateRaw) ? (int)$t3verStateRaw : 0;
 
         return match ($t3verState) {
             1 => 'new',
@@ -439,7 +439,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
     private function isChangedInWorkspace(array $row): bool
     {
         $t3verOidRaw = $row['t3ver_oid'] ?? 0;
-        $t3verOid = is_numeric($t3verOidRaw) ? (int) $t3verOidRaw : 0;
+        $t3verOid = is_numeric($t3verOidRaw) ? (int)$t3verOidRaw : 0;
         return $t3verOid > 0;
     }
 
@@ -547,7 +547,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
             }
 
             $parentUidRaw = $row[$transOrigPointerField] ?? 0;
-            $parentUid = is_numeric($parentUidRaw) ? (int) $parentUidRaw : 0;
+            $parentUid = is_numeric($parentUidRaw) ? (int)$parentUidRaw : 0;
             if ($parentUid <= 0) {
                 continue;
             }

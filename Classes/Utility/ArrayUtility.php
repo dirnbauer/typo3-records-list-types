@@ -60,7 +60,7 @@ final class ArrayUtility
     {
         $result = [];
         foreach ($source as $key => $value) {
-            $result[(string) $key] = $value;
+            $result[(string)$key] = $value;
         }
 
         return $result;
@@ -68,12 +68,12 @@ final class ArrayUtility
 
     public static function stringValue(mixed $value, string $default = ''): string
     {
-        return is_scalar($value) ? (string) $value : $default;
+        return is_scalar($value) ? (string)$value : $default;
     }
 
     public static function intValue(mixed $value, int $default = 0): int
     {
-        return is_numeric($value) ? (int) $value : $default;
+        return is_numeric($value) ? (int)$value : $default;
     }
 
     /**

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
-use Exception;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 
@@ -88,8 +87,8 @@ final readonly class RecordFilterViewDataFactory
     private function buildRouteUrl(array $parameters): string
     {
         try {
-            return (string) $this->uriBuilder->buildUriFromRoute('records', $parameters);
-        } catch (Exception) {
+            return (string)$this->uriBuilder->buildUriFromRoute('records', $parameters);
+        } catch (\Exception) {
             return '';
         }
     }
@@ -102,11 +101,11 @@ final readonly class RecordFilterViewDataFactory
     {
         $fields = [];
         foreach ($parameters as $key => $value) {
-            $name = $prefix === '' ? (string) $key : $prefix . '[' . $key . ']';
+            $name = $prefix === '' ? (string)$key : $prefix . '[' . $key . ']';
             if (is_array($value)) {
                 $nestedParameters = [];
                 foreach ($value as $nestedKey => $nestedValue) {
-                    $nestedParameters[(string) $nestedKey] = $nestedValue;
+                    $nestedParameters[(string)$nestedKey] = $nestedValue;
                 }
                 $fields = array_merge($fields, $this->flattenParameters($nestedParameters, $name));
                 continue;
@@ -116,7 +115,7 @@ final readonly class RecordFilterViewDataFactory
             }
             $fields[] = [
                 'name' => $name,
-                'value' => (string) $value,
+                'value' => (string)$value,
             ];
         }
 

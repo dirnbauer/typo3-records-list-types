@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Event;
 
-use InvalidArgumentException;
-
 /**
  * PSR-14 Event to register custom view modes for the Records module.
  *
@@ -83,7 +81,7 @@ final class RegisterViewModesEvent
     public function addViewMode(string $id, array $config): void
     {
         if (!isset($config['label']) || !isset($config['icon'])) {
-            throw new InvalidArgumentException(
+            throw new \InvalidArgumentException(
                 sprintf('View mode "%s" must have "label" and "icon" defined', $id),
                 1735650000,
             );

@@ -47,9 +47,9 @@ final readonly class RecordTranslationGroupingService implements SingletonInterf
         foreach ($records as $record) {
             $rawRecord = is_array($record['rawRecord'] ?? null) ? $record['rawRecord'] : [];
             $langUidRaw = $rawRecord[$languageField] ?? 0;
-            $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
+            $langUid = is_numeric($langUidRaw) ? (int)$langUidRaw : 0;
             $parentPointerRaw = $rawRecord[$transOrigPointerField] ?? 0;
-            $parentPointer = is_numeric($parentPointerRaw) ? (int) $parentPointerRaw : 0;
+            $parentPointer = is_numeric($parentPointerRaw) ? (int)$parentPointerRaw : 0;
 
             if ($langUid === 0 || $langUid === -1) {
                 $record['translations'] = [];
@@ -66,7 +66,7 @@ final readonly class RecordTranslationGroupingService implements SingletonInterf
             static function (array $r): int {
                 $uidRaw = $r['uid'] ?? 0;
 
-                return is_numeric($uidRaw) ? (int) $uidRaw : 0;
+                return is_numeric($uidRaw) ? (int)$uidRaw : 0;
             },
             $defaultRecords,
         );
@@ -87,7 +87,7 @@ final readonly class RecordTranslationGroupingService implements SingletonInterf
 
         foreach ($defaultRecords as &$record) {
             $uidRaw = $record['uid'] ?? 0;
-            $uid = is_numeric($uidRaw) ? (int) $uidRaw : 0;
+            $uid = is_numeric($uidRaw) ? (int)$uidRaw : 0;
             $translated = $translatedByParent[$uid] ?? [];
             $record['translations'] = $this->buildTranslationSlots(
                 $tableName,
@@ -133,7 +133,7 @@ final readonly class RecordTranslationGroupingService implements SingletonInterf
             foreach ($translations as $translation) {
                 $rawRecord = is_array($translation['rawRecord'] ?? null) ? $translation['rawRecord'] : [];
                 $langUidRaw = $rawRecord[$languageField] ?? 0;
-                $langUid = is_numeric($langUidRaw) ? (int) $langUidRaw : 0;
+                $langUid = is_numeric($langUidRaw) ? (int)$langUidRaw : 0;
 
                 $translation['sysLanguageUid'] = $langUid;
                 $translation['languageFlagIdentifier'] = '';
@@ -156,7 +156,7 @@ final readonly class RecordTranslationGroupingService implements SingletonInterf
                 );
                 $perLang[$langUid] = $translation;
             }
-            $enriched[(int) $parentUid] = $perLang;
+            $enriched[(int)$parentUid] = $perLang;
         }
 
         return $enriched;

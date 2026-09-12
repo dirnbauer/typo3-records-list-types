@@ -61,7 +61,7 @@ final readonly class RecordFilterStateService
     {
         $params = $this->getMergedParameters($request);
         $table = $params['table'] ?? null;
-        return is_scalar($table) ? trim((string) $table) : '';
+        return is_scalar($table) ? trim((string)$table) : '';
     }
 
     /**
@@ -82,14 +82,14 @@ final readonly class RecordFilterStateService
     public function hasActiveValuesForTable(ServerRequestInterface $request, string $table): bool
     {
         foreach ($this->getActiveValuesForTable($request, $table) as $value) {
-            if (is_scalar($value) && trim((string) $value) !== '') {
+            if (is_scalar($value) && trim((string)$value) !== '') {
                 return true;
             }
             if (!is_array($value)) {
                 continue;
             }
             foreach ($value as $nestedValue) {
-                if (is_scalar($nestedValue) && trim((string) $nestedValue) !== '') {
+                if (is_scalar($nestedValue) && trim((string)$nestedValue) !== '') {
                     return true;
                 }
             }
@@ -109,12 +109,12 @@ final readonly class RecordFilterStateService
         foreach ($filters as &$filter) {
             $id = is_string($filter['id'] ?? null) ? $filter['id'] : '';
             $value = $values[$id] ?? null;
-            $filter['value'] = is_scalar($value) ? (string) $value : '';
+            $filter['value'] = is_scalar($value) ? (string)$value : '';
             if (is_array($value)) {
                 $from = $value['from'] ?? '';
                 $to = $value['to'] ?? '';
-                $filter['fromValue'] = is_scalar($from) ? (string) $from : '';
-                $filter['toValue'] = is_scalar($to) ? (string) $to : '';
+                $filter['fromValue'] = is_scalar($from) ? (string)$from : '';
+                $filter['toValue'] = is_scalar($to) ? (string)$to : '';
             } else {
                 $filter['fromValue'] = '';
                 $filter['toValue'] = '';
@@ -123,7 +123,7 @@ final readonly class RecordFilterStateService
             if ($options !== []) {
                 $filter['selectedOption'] = $this->findSelectedOption($options, $filter['value']);
                 if (is_scalar($filter['selectedOption']['value'] ?? null)) {
-                    $filter['value'] = (string) $filter['selectedOption']['value'];
+                    $filter['value'] = (string)$filter['selectedOption']['value'];
                 }
             }
         }
@@ -163,10 +163,10 @@ final readonly class RecordFilterStateService
             if ($optionValue === '') {
                 $fallback = $option;
             }
-            if (is_scalar($optionValue) && (string) $optionValue === $value) {
+            if (is_scalar($optionValue) && (string)$optionValue === $value) {
                 return $option;
             }
-            if (is_scalar($optionValue) && $this->optionValueContainsUid((string) $optionValue, $value)) {
+            if (is_scalar($optionValue) && $this->optionValueContainsUid((string)$optionValue, $value)) {
                 return $option;
             }
         }
@@ -180,7 +180,7 @@ final readonly class RecordFilterStateService
             return false;
         }
 
-        return in_array((string) (int) $value, explode(',', $optionValue), true);
+        return in_array((string)(int)$value, explode(',', $optionValue), true);
     }
 
     private function isTruthy(mixed $value): bool
@@ -189,7 +189,7 @@ final readonly class RecordFilterStateService
             return false;
         }
 
-        return !in_array((string) $value, ['0', 'false', 'off', ''], true);
+        return !in_array((string)$value, ['0', 'false', 'off', ''], true);
     }
 
     /**

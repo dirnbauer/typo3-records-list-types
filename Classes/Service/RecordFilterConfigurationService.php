@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
-use Throwable;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
@@ -198,10 +197,10 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             if (!is_numeric($uid)) {
                 continue;
             }
-            $uid = (int) $uid;
-            $languageUid = is_numeric($row['sys_language_uid'] ?? null) ? (int) $row['sys_language_uid'] : 0;
-            $parentUid = is_numeric($row['l10n_parent'] ?? null) ? (int) $row['l10n_parent'] : 0;
-            $label = is_scalar($title) && trim((string) $title) !== '' ? trim((string) $title) : (string) $uid;
+            $uid = (int)$uid;
+            $languageUid = is_numeric($row['sys_language_uid'] ?? null) ? (int)$row['sys_language_uid'] : 0;
+            $parentUid = is_numeric($row['l10n_parent'] ?? null) ? (int)$row['l10n_parent'] : 0;
+            $label = is_scalar($title) && trim((string)$title) !== '' ? trim((string)$title) : (string)$uid;
             if ($languageUid > 0 && $parentUid > 0) {
                 $translationsByParent[$parentUid][] = [
                     'uid' => $uid,
@@ -278,7 +277,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
     {
         $configured = $tableConfig['fields'] ?? $globalConfig['fields'] ?? null;
         if (is_scalar($configured)) {
-            $fields = GeneralUtility::trimExplode(',', (string) $configured, true);
+            $fields = GeneralUtility::trimExplode(',', (string)$configured, true);
             if (in_array('none', $fields, true)) {
                 return [];
             }
@@ -288,7 +287,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
         }
 
         $defaults = $tableConfig['autoDefaults'] ?? $globalConfig['autoDefaults'] ?? 'title';
-        return is_scalar($defaults) ? GeneralUtility::trimExplode(',', (string) $defaults, true) : ['title'];
+        return is_scalar($defaults) ? GeneralUtility::trimExplode(',', (string)$defaults, true) : ['title'];
     }
 
     /**
@@ -341,8 +340,8 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
      */
     private function buildTextFilter(string $table, string $filterId, array $filterConfig): ?array
     {
-        $fieldsRaw = is_scalar($filterConfig['fields'] ?? null) ? (string) $filterConfig['fields'] : '';
-        $fieldRaw = is_scalar($filterConfig['field'] ?? null) ? (string) $filterConfig['field'] : '';
+        $fieldsRaw = is_scalar($filterConfig['fields'] ?? null) ? (string)$filterConfig['fields'] : '';
+        $fieldRaw = is_scalar($filterConfig['field'] ?? null) ? (string)$filterConfig['field'] : '';
         $fields = $fieldsRaw !== ''
             ? $this->resolveFields($table, $fieldsRaw)
             : $this->resolveFields($table, $fieldRaw !== '' ? $fieldRaw : 'label');
@@ -464,7 +463,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
      */
     private function resolveConfiguredField(string $table, array $filterConfig, string $fallbackAlias): string
     {
-        $fieldRaw = is_scalar($filterConfig['field'] ?? null) ? (string) $filterConfig['field'] : '';
+        $fieldRaw = is_scalar($filterConfig['field'] ?? null) ? (string)$filterConfig['field'] : '';
         $field = $fieldRaw !== '' ? $this->resolveFieldAlias($table, $fieldRaw) : $this->resolveFieldAlias($table, $fallbackAlias);
         return $field !== '' && $this->fieldExists($table, $field) ? $field : '';
     }
@@ -533,7 +532,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
         if (!is_scalar($value)) {
             return false;
         }
-        return !in_array(strtolower((string) $value), ['0', 'false', 'no', 'off', ''], true);
+        return !in_array(strtolower((string)$value), ['0', 'false', 'no', 'off', ''], true);
     }
 
     /**
@@ -583,7 +582,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
 
         try {
             return $this->tcaSchemaFactory->get($table)->hasField($field);
-        } catch (Throwable) {
+        } catch (\Throwable) {
             return false;
         }
     }
@@ -597,7 +596,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
         try {
             $schema = $this->tcaSchemaFactory->get($table);
             return $schema->hasField($field) ? $schema->getField($field)->getLabel() : '';
-        } catch (Throwable) {
+        } catch (\Throwable) {
             return '';
         }
     }
@@ -616,7 +615,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
 
         try {
             $schema = $this->tcaSchemaFactory->get($table);
-        } catch (Throwable) {
+        } catch (\Throwable) {
             return '';
         }
 
@@ -665,7 +664,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
                 array_unshift($fallbackFields, 'category');
                 continue;
             }
-            $fallbackFields[] = (string) $fieldName;
+            $fallbackFields[] = (string)$fieldName;
         }
 
         return $fallbackFields[0] ?? '';
@@ -715,8 +714,8 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
                 continue;
             }
             $options[] = [
-                'value' => (string) $value,
-                'label' => $this->translateLabel((string) $label, (string) $value),
+                'value' => (string)$value,
+                'label' => $this->translateLabel((string)$label, (string)$value),
             ];
         }
 

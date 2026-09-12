@@ -8,8 +8,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ServerRequestInterface;
-use ReflectionClass;
-use ReflectionMethod;
 use TYPO3\CMS\Backend\Clipboard\Clipboard;
 use TYPO3\CMS\Backend\Context\PageContext;
 use TYPO3\CMS\Backend\Context\PageContextFactory;
@@ -86,7 +84,7 @@ final class RecordListControllerTest extends FunctionalTestCase
         $params = $this->parseQueryParams($formAction);
 
         self::assertStringContainsString('/record', $formAction);
-        self::assertSame('1', (string) ($params['id'] ?? ''));
+        self::assertSame('1', (string)($params['id'] ?? ''));
         self::assertSame('grid', $params['displayMode'] ?? null);
         self::assertSame('tt_content', $params['table'] ?? null);
         self::assertSame('0', $params['recordFilters']['tt_content']['hidden'] ?? null);
@@ -130,11 +128,11 @@ final class RecordListControllerTest extends FunctionalTestCase
         self::assertNotSame('', $record['contextualEditUrl']);
 
         $editParams = $this->parseQueryParams($record['editUrl']);
-        $returnParams = $this->parseQueryParams((string) ($editParams['returnUrl'] ?? ''));
+        $returnParams = $this->parseQueryParams((string)($editParams['returnUrl'] ?? ''));
 
         self::assertSame('edit', $editParams['edit']['tt_content'][42] ?? null);
         self::assertSame('records', $editParams['module'] ?? null);
-        self::assertSame('1', (string) ($returnParams['id'] ?? ''));
+        self::assertSame('1', (string)($returnParams['id'] ?? ''));
         self::assertSame('compact', $returnParams['displayMode'] ?? null);
         self::assertSame('tt_content', $returnParams['table'] ?? null);
         self::assertSame('0', $returnParams['recordFilters']['tt_content']['hidden'] ?? null);
@@ -146,7 +144,7 @@ final class RecordListControllerTest extends FunctionalTestCase
     {
         $controller = $this->createControllerForPage(1);
         $this->setControllerProperty($controller, 'modTSconfig', $tsConfig);
-        $method = new ReflectionMethod(RecordListController::class, 'getSearchableTables');
+        $method = new \ReflectionMethod(RecordListController::class, 'getSearchableTables');
 
         self::assertSame([], $method->invoke(
             $controller,
@@ -174,7 +172,7 @@ final class RecordListControllerTest extends FunctionalTestCase
         $GLOBALS['BE_USER']->groupData['tables_select'] = $allowedTables;
         $controller = $this->createControllerForPage(1);
         $this->setControllerProperty($controller, 'modTSconfig', []);
-        $method = new ReflectionMethod(RecordListController::class, 'getSearchableTables');
+        $method = new \ReflectionMethod(RecordListController::class, 'getSearchableTables');
 
         self::assertSame($expected, $method->invoke(
             $controller,
@@ -204,7 +202,7 @@ final class RecordListControllerTest extends FunctionalTestCase
         ]);
 
         $response = $this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'grid'));
-        $html = (string) $response->getBody();
+        $html = (string)$response->getBody();
         self::assertStringContainsString('Configured table actions', $html);
         self::assertStringNotContainsString('typo3-recordlist-record-download-button', $html);
         self::assertStringNotContainsString('typo3-backend-column-selector-button', $html);
@@ -240,7 +238,7 @@ final class RecordListControllerTest extends FunctionalTestCase
 
         $response = $this->get(RecordListController::class)->mainAction($request);
         self::assertSame($clipboardShown, str_contains(
-            (string) $response->getBody(),
+            (string)$response->getBody(),
             'data-multi-record-selection-action="copyMarked"',
         ));
     }
@@ -262,7 +260,7 @@ final class RecordListControllerTest extends FunctionalTestCase
         $response = $this->get(RecordListController::class)->mainAction($request);
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertStringContainsString('Rendered example record', (string) $response->getBody());
+        self::assertStringContainsString('Rendered example record', (string)$response->getBody());
     }
 
     #[Test]
@@ -279,7 +277,7 @@ final class RecordListControllerTest extends FunctionalTestCase
 
         $response = $this->get(RecordListController::class)->mainAction($request);
         self::assertSame(200, $response->getStatusCode());
-        self::assertStringNotContainsString('Confidential record on inaccessible page', (string) $response->getBody());
+        self::assertStringNotContainsString('Confidential record on inaccessible page', (string)$response->getBody());
     }
 
     #[Test]
@@ -288,7 +286,7 @@ final class RecordListControllerTest extends FunctionalTestCase
         $this->get(ConnectionPool::class)->getConnectionForTable('tt_content')->insert('tt_content', [
             'pid' => 1, 'header' => 'Hidden example record', 'CType' => 'text', 'hidden' => 1,
         ]);
-        $html = (string) $this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'grid'))->getBody();
+        $html = (string)$this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'grid'))->getBody();
 
         self::assertStringContainsString('title="Unhide record"', $html);
         self::assertStringContainsString('aria-label="Unhide record"', $html);
@@ -338,7 +336,7 @@ final class RecordListControllerTest extends FunctionalTestCase
 
     private function createPageContext(int $pageId): PageContext
     {
-        $site = $this->createStub(SiteInterface::class);
+        $site = self::createStub(SiteInterface::class);
         $site->method('getAvailableLanguages')->willReturn([]);
 
         return new PageContext(
@@ -363,7 +361,7 @@ final class RecordListControllerTest extends FunctionalTestCase
         string $searchWord,
         int $searchLevels,
     ): string {
-        $method = new ReflectionMethod(RecordListController::class, 'renderSearchBox');
+        $method = new \ReflectionMethod(RecordListController::class, 'renderSearchBox');
         $result = $method->invoke($controller, $request, $dbList, $searchWord, $searchLevels);
         self::assertIsString($result);
 
@@ -372,7 +370,7 @@ final class RecordListControllerTest extends FunctionalTestCase
 
     private function setControllerProperty(RecordListController $controller, string $propertyName, mixed $value): void
     {
-        $reflectionClass = new ReflectionClass($controller);
+        $reflectionClass = new \ReflectionClass($controller);
         while (!$reflectionClass->hasProperty($propertyName) && ($parent = $reflectionClass->getParentClass()) !== false) {
             $reflectionClass = $parent;
         }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\RecordList;
 
-use Override;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 
 /**
@@ -15,7 +14,7 @@ final class AlternativeDatabaseRecordList extends DatabaseRecordList
     /**
      * @return list<string>
      */
-    #[Override]
+    #[\Override]
     public function getTablesToRender(): array
     {
         return array_values(array_filter(parent::getTablesToRender(), is_string(...)));
@@ -24,7 +23,7 @@ final class AlternativeDatabaseRecordList extends DatabaseRecordList
     /**
      * @param array<mixed> $currentIdList
      */
-    #[Override]
+    #[\Override]
     public function renderMultiRecordSelectionActions(string $table, array $currentIdList): string
     {
         return parent::renderMultiRecordSelectionActions($table, $currentIdList);

@@ -30,7 +30,7 @@ final readonly class RecordFilterAdditionalContentListener
         }
 
         $params = $this->stateService->getMergedParameters($request);
-        $pageId = is_numeric($params['id'] ?? null) ? (int) $params['id'] : 0;
+        $pageId = is_numeric($params['id'] ?? null) ? (int)$params['id'] : 0;
         $table = $this->stateService->getSelectedTable($request);
         if ($table === '') {
             return;

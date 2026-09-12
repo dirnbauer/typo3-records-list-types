@@ -71,12 +71,12 @@ final class RecordFilterConfigurationServiceTest extends TestCase
     private function createSubject(TcaSchema $schema): RecordFilterConfigurationService
     {
         $schemaFactory = $this->createMock(TcaSchemaFactory::class);
-        $schemaFactory->expects(self::atLeastOnce())->method('has')->with('tx_demo')->willReturn(true);
-        $schemaFactory->expects(self::atLeastOnce())->method('get')->with('tx_demo')->willReturn($schema);
+        $schemaFactory->expects($this->atLeastOnce())->method('has')->with('tx_demo')->willReturn(true);
+        $schemaFactory->expects($this->atLeastOnce())->method('get')->with('tx_demo')->willReturn($schema);
 
         return new RecordFilterConfigurationService(
             $schemaFactory,
-            $this->createStub(ConnectionPool::class),
+            self::createStub(ConnectionPool::class),
         );
     }
 }
