@@ -216,7 +216,11 @@ final class RecordListController extends CoreRecordListController
         $backendUser = $this->getBackendUserAuthentication();
 
         $this->pageRenderer->addInlineLanguageLabelFile('EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf');
-        $this->pageRenderer->addInlineLanguageLabelFile('EXT:records_list_types/Resources/Private/Language/locallang.xlf', 'drag.');
+        // Labels used by GridViewActions.js; every prefix must exist in locallang.xlf
+        foreach (['drag.', 'action.', 'notification.', 'a11y.', 'pagination.', 'state.'] as $labelPrefix) {
+            $this->pageRenderer->addInlineLanguageLabelFile('EXT:records_list_types/Resources/Private/Language/locallang.xlf', $labelPrefix);
+        }
+        $this->pageRenderer->addInlineLanguageLabelFile('EXT:core/Resources/Private/Language/locallang_core.xlf', 'labels.no_title');
         $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/dispatch-modal-button.js');
         $this->pageRenderer->loadJavaScriptModule('@typo3/backend/element/contextual-record-edit-trigger.js');
 
@@ -1135,12 +1139,9 @@ final class RecordListController extends CoreRecordListController
 
         $lang = $this->getLanguageService();
 
-        $fieldModeLabelTranslated = $lang->sL('records_list_types.messages:sortingMode.field');
-        $fieldModeLabel = $fieldModeLabelTranslated !== '' ? $fieldModeLabelTranslated : 'By Column';
-        $ascLabelTranslated = $lang->sL('records_list_types.messages:sort.ascending');
-        $ascLabel = $ascLabelTranslated !== '' ? $ascLabelTranslated : 'Ascending';
-        $descLabelTranslated = $lang->sL('records_list_types.messages:sort.descending');
-        $descLabel = $descLabelTranslated !== '' ? $descLabelTranslated : 'Descending';
+        $fieldModeLabel = $lang->sL('records_list_types.messages:sortingMode.field');
+        $ascLabel = $lang->sL('records_list_types.messages:sort.ascending');
+        $descLabel = $lang->sL('records_list_types.messages:sort.descending');
 
         $currentFieldLabel = $fieldModeLabel;
         foreach ($sortableFields as $field) {
@@ -1218,20 +1219,13 @@ final class RecordListController extends CoreRecordListController
     ): ?array {
         $lang = $this->getLanguageService();
 
-        $manualLabelT = $lang->sL('records_list_types.messages:sortingMode.manual');
-        $manualLabel = $manualLabelT !== '' ? $manualLabelT : 'Manual Sorting';
-        $fieldLabelT = $lang->sL('records_list_types.messages:sortingMode.field');
-        $fieldLabel = $fieldLabelT !== '' ? $fieldLabelT : 'Field Sorting';
-        $manualTitleT = $lang->sL('records_list_types.messages:sortingMode.manual.title');
-        $manualTitle = $manualTitleT !== '' ? $manualTitleT : 'Enable drag-and-drop reordering';
-        $fieldTitleT = $lang->sL('records_list_types.messages:sortingMode.field.title');
-        $fieldTitle = $fieldTitleT !== '' ? $fieldTitleT : 'Sort by selected field';
-        $ascLabelT = $lang->sL('records_list_types.messages:sort.ascending');
-        $ascLabel = $ascLabelT !== '' ? $ascLabelT : 'Ascending';
-        $descLabelT = $lang->sL('records_list_types.messages:sort.descending');
-        $descLabel = $descLabelT !== '' ? $descLabelT : 'Descending';
-        $headingLabelT = $lang->sL('records_list_types.messages:sortingMode.label');
-        $headingLabel = $headingLabelT !== '' ? $headingLabelT : 'Order';
+        $manualLabel = $lang->sL('records_list_types.messages:sortingMode.manual');
+        $fieldLabel = $lang->sL('records_list_types.messages:sortingMode.field');
+        $manualTitle = $lang->sL('records_list_types.messages:sortingMode.manual.title');
+        $fieldTitle = $lang->sL('records_list_types.messages:sortingMode.field.title');
+        $ascLabel = $lang->sL('records_list_types.messages:sort.ascending');
+        $descLabel = $lang->sL('records_list_types.messages:sort.descending');
+        $headingLabel = $lang->sL('records_list_types.messages:sortingMode.label');
 
         $requestParameters = $this->requestParameterService;
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
@@ -1328,10 +1322,10 @@ final class RecordListController extends CoreRecordListController
         $multiEditColumnsOnly = '';
         $multiEditReturnUrl = '';
         if ($canMultiEdit) {
-            $rawLabel = $lang->sL('core.mod_web_list:editThisColumn');
-            $multiEditLabel = $rawLabel !== ''
-                ? sprintf($rawLabel, $label)
-                : sprintf('Edit "%s"', $label);
+            $multiEditLabel = (string) ($lang->translate('editThisColumn', 'core.mod_web_list', [$label]) ?? '');
+            if ($multiEditLabel === '') {
+                $multiEditLabel = (string) ($lang->translate('action.editColumn', 'records_list_types.messages', ['label' => $label]) ?? '');
+            }
             $multiEditColumnsOnly = json_encode([$field], JSON_THROW_ON_ERROR);
             try {
                 $multiEditReturnUrl = (string) $this->uriBuilder->buildUriFromRoute('records', $baseParams);

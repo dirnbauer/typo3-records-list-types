@@ -37,14 +37,14 @@ final class ViewTypeRegistry implements SingletonInterface
     /** Built-in view types with their default configuration. */
     private const array BUILTIN_TYPES = [
         'list' => [
-            'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.list',
+            'label' => 'records_list_types.messages:viewMode.list',
             'icon' => 'actions-viewmode-list',
             'description' => 'Standard table view',
             'builtin' => true,
             'handler' => 'list', // Special handling - delegates to parent controller
         ],
         'grid' => [
-            'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.grid',
+            'label' => 'records_list_types.messages:viewMode.grid',
             'icon' => 'actions-viewmode-tiles',
             'description' => 'Card-based grid view',
             'builtin' => true,
@@ -54,7 +54,7 @@ final class ViewTypeRegistry implements SingletonInterface
             'columnsFromTCA' => true,
         ],
         'compact' => [
-            'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.compact',
+            'label' => 'records_list_types.messages:viewMode.compact',
             'icon' => 'actions-menu',
             'description' => 'Compact single-line view',
             'builtin' => true,
@@ -64,7 +64,7 @@ final class ViewTypeRegistry implements SingletonInterface
             'columnsFromTCA' => true,
         ],
         'teaser' => [
-            'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.teaser',
+            'label' => 'records_list_types.messages:viewMode.teaser',
             'icon' => 'content-news',
             'description' => 'Teaser list with title, date, description',
             'builtin' => true,

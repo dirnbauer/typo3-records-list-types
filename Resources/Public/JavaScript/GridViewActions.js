@@ -116,19 +116,19 @@ class GridViewActions extends LitElement {
     }
 
     /**
-     * Resolve a backend label registered via addInlineLanguageLabelFile(),
-     * replacing %d/%s placeholders with the given arguments.
+     * Resolve a backend label registered via addInlineLanguageLabelFile()
+     * and substitute ICU-style {name} placeholders.
      * @param {string} key - Label key (e.g. "drag.position")
      * @param {string} fallback - Fallback text when the label is unavailable
-     * @param {...(string|number)} args - Placeholder replacements
+     * @param {Object<string, string|number>} [placeholders] - Values for {name} placeholders
      * @returns {string}
      */
-    lang(key, fallback, ...args) {
-        let label = window.TYPO3?.lang?.[key] || fallback;
-        for (const arg of args) {
-            label = label.replace(/%[ds]/, String(arg));
-        }
-        return label;
+    lang(key, fallback, placeholders = {}) {
+        const registered = window.TYPO3?.lang?.[key];
+        const label = typeof registered === 'string' && registered !== '' ? registered : fallback;
+        return label.replace(/\{(\w+)\}/g, (match, name) => (
+            Object.hasOwn(placeholders, name) ? String(placeholders[name]) : match
+        ));
     }
 
     // =========================================================================
@@ -565,8 +565,8 @@ class GridViewActions extends LitElement {
         card.setAttribute('aria-grabbed', 'true');
         
         // Announce to screen reader
-        const title = card.dataset.recordTitle || 'Item';
-        this.announce(`${title} ${this.lang('drag.grabbed', 'Grabbed. Use arrow keys to move.')}`);
+        const title = card.dataset.recordTitle || this.lang('labels.no_title', 'No title');
+        this.announce(this.lang('drag.grabbed', '{title} grabbed. Use the arrow keys to move it.', {title}));
     }
 
     /**
@@ -591,7 +591,7 @@ class GridViewActions extends LitElement {
                 endDropzone.classList.add('gridview-keyboard-target');
             }
             // Announce "end" position
-            this.announce(this.lang('drag.endPosition', 'End position (after last item)'));
+            this.announce(this.lang('drag.endPosition', 'End of the list (after the last record)'));
         } else {
             // Show drop indicator on target wrapper
             const targetWrapper = wrappers[newIndex];
@@ -604,7 +604,7 @@ class GridViewActions extends LitElement {
                 }
             }
             // Announce position
-            this.announce(this.lang('drag.position', 'Position %d of %d', newIndex + 1, wrappers.length));
+            this.announce(this.lang('drag.position', 'Position {position} of {total}', {position: newIndex + 1, total: wrappers.length}));
         }
     }
 
@@ -673,8 +673,8 @@ class GridViewActions extends LitElement {
         
         // Announce and execute move
         this.announce(announcePosition === 'end'
-            ? this.lang('drag.endPosition', 'End position (after last item)')
-            : this.lang('drag.moved', 'Item moved to position %d', announcePosition));
+            ? this.lang('drag.endPosition', 'End of the list (after the last record)')
+            : this.lang('drag.moved', 'Record moved to position {position}', {position: announcePosition}));
         this.executeMove(table, uid, moveTarget);
     }
 
@@ -689,7 +689,7 @@ class GridViewActions extends LitElement {
         
         this.keyboardCleanup();
         
-        this.announce(this.lang('drag.cancelled', 'Reorder cancelled'));
+        this.announce(this.lang('drag.cancelled', 'Reordering cancelled'));
         
         // Return focus to handle
         if (handle) {
@@ -1048,7 +1048,11 @@ class GridViewActions extends LitElement {
 
             if (data?.hasErrors) {
                 console.error('[GridView] DataHandler errors:', data.messages);
-                this.showNotification('Move failed', data.messages?.[0]?.message || 'Unknown error', 'error');
+                this.showNotification(
+                    this.lang('notification.moveFailed', 'Move failed'),
+                    data.messages?.[0]?.message || this.lang('notification.unknownError', 'Unknown error'),
+                    'error'
+                );
                 return;
             }
 
@@ -1057,7 +1061,11 @@ class GridViewActions extends LitElement {
             window.location.reload();
         } catch (err) {
             console.error('[GridView] Network error:', err);
-            this.showNotification('Move failed', err.message || 'Request failed', 'error');
+            this.showNotification(
+                this.lang('notification.moveFailed', 'Move failed'),
+                err.message || this.lang('notification.requestFailed', 'Request failed'),
+                'error'
+            );
         } finally {
             if (restoreCard && card) {
                 card.style.opacity = '';
@@ -1123,7 +1131,11 @@ class GridViewActions extends LitElement {
     async toggleHidden(table, uid, action, btn) {
         const url = TYPO3?.settings?.ajaxUrls?.record_toggle_visibility;
         if (!url) {
-            this.showNotification('Update failed', 'TYPO3 visibility endpoint is not available.', 'error');
+            this.showNotification(
+                this.lang('notification.updateFailed', 'Update failed'),
+                this.lang('notification.visibilityEndpointMissing', 'The TYPO3 endpoint for changing visibility is not available.'),
+                'error'
+            );
             return;
         }
 
@@ -1145,14 +1157,14 @@ class GridViewActions extends LitElement {
             const data = await response.resolve();
 
             if (data.hasErrors) {
-                this.showAjaxMessages('Update failed', data.messages);
+                this.showAjaxMessages(this.lang('notification.updateFailed', 'Update failed'), data.messages);
                 return;
             }
 
             this.refreshPageTreeIfNeeded(table);
             await this.updateVisibilityState(btn, action === 'hide');
         } catch (err) {
-            await this.showAjaxError('Update failed', err);
+            await this.showAjaxError(this.lang('notification.updateFailed', 'Update failed'), err);
         } finally {
             btn.disabled = false;
         }
@@ -1178,14 +1190,19 @@ class GridViewActions extends LitElement {
 
         const title = container.dataset.recordTitle
             || container.querySelector('.gridview-card__title, .compactview-row__title-link, .teaserview-card__title, .teaserview-translation-row__title')?.textContent?.trim()
-            || 'Record';
-        this.announce(`${title} ${hidden ? 'hidden' : 'visible'}`);
+            || this.lang('labels.no_title', 'No title');
+        this.announce(hidden
+            ? this.lang('a11y.recordHidden', '{title} is now hidden', {title})
+            : this.lang('a11y.recordVisible', '{title} is now visible', {title}));
     }
 
     updateVisibilityButton(btn, hidden) {
         btn.dataset.gridviewAction = hidden ? 'show' : 'hide';
-        btn.setAttribute('title', hidden ? 'Show record (currently hidden)' : 'Hide record (currently visible)');
-        btn.setAttribute('aria-label', hidden ? 'Show record' : 'Hide record');
+        const label = hidden
+            ? this.lang('action.unhide', 'Unhide record')
+            : this.lang('action.hide', 'Hide record');
+        btn.setAttribute('title', label);
+        btn.setAttribute('aria-label', label);
 
         btn.classList.toggle('gridview-action-sm--warning', hidden);
         btn.classList.toggle('gridview-action-sm--success', !hidden);
@@ -1226,7 +1243,7 @@ class GridViewActions extends LitElement {
         if (icon) {
             badge.appendChild(icon);
         }
-        badge.appendChild(document.createTextNode('Hidden'));
+        badge.appendChild(document.createTextNode(this.lang('state.hidden', 'Hidden')));
 
         const uidBadge = titleRow.querySelector('.teaserview-badge--uid');
         if (uidBadge?.nextSibling) {
@@ -1244,12 +1261,13 @@ class GridViewActions extends LitElement {
         const title = record?.dataset.recordTitle
             || record?.querySelector('.gridview-card__title, .compactview-row__title-link, .teaserview-card__title, .teaserview-translation-row__title')?.textContent?.trim()
             || uid;
+        const message = this.lang('action.delete.confirm', 'Are you sure you want to delete “{title}”?', {title});
 
         ContextMenuActions.deleteRecord(table, uid, {
-            title: 'Delete Record',
-            message: html`Are you sure you want to delete "${title}"?`,
-            buttonCloseText: 'Cancel',
-            buttonOkText: 'Delete'
+            title: this.lang('action.delete', 'Delete record'),
+            message: html`${message}`,
+            buttonCloseText: this.lang('action.cancel', 'Cancel'),
+            buttonOkText: this.lang('action.delete.confirmButton', 'Delete')
         });
     }
 
@@ -1339,7 +1357,7 @@ class GridViewActions extends LitElement {
             const historyUrl = new URL(moduleUrl, window.location.origin);
             historyUrl.searchParams.set('element', element);
             historyUrl.searchParams.set('returnUrl', returnUrl);
-            this.openHistoryModal(historyUrl, trigger?.title || trigger?.getAttribute('aria-label') || 'History');
+            this.openHistoryModal(historyUrl, trigger?.title || trigger?.getAttribute('aria-label') || this.lang('action.history', 'History'));
             return;
         }
 
@@ -1548,12 +1566,16 @@ class GridViewActions extends LitElement {
 
     showAjaxMessages(title, messages) {
         if (!Array.isArray(messages) || messages.length === 0) {
-            this.showNotification(title, 'Unknown error', 'error');
+            this.showNotification(title, this.lang('notification.unknownError', 'Unknown error'), 'error');
             return;
         }
 
         messages.forEach((message) => {
-            this.showNotification(message.title || title, message.message || 'Unknown error', 'error');
+            this.showNotification(
+                message.title || title,
+                message.message || this.lang('notification.unknownError', 'Unknown error'),
+                'error'
+            );
         });
     }
 
@@ -1564,12 +1586,12 @@ class GridViewActions extends LitElement {
                 this.showAjaxMessages(title, data.messages);
                 return;
             } catch (resolveError) {
-                this.showNotification(title, resolveError.message || 'Request failed', 'error');
+                this.showNotification(title, resolveError.message || this.lang('notification.requestFailed', 'Request failed'), 'error');
                 return;
             }
         }
 
-        this.showNotification(title, error?.message || 'Request failed', 'error');
+        this.showNotification(title, error?.message || this.lang('notification.requestFailed', 'Request failed'), 'error');
     }
 
 }

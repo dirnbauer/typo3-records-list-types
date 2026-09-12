@@ -65,7 +65,9 @@
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown rendered from structured data</f:comment>
                                 <f:if condition="{table.sortingDropdown}">
-                                    <f:render partial="SortingDropdown" arguments="{sortingDropdown: table.sortingDropdown}" />
+                                    <div class="btn-group" role="group" aria-label="{f:translate(key: 'records_list_types.messages:sorting')}">
+                                        <f:render partial="SortingDropdown" arguments="{sortingDropdown: table.sortingDropdown}" />
+                                    </div>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
@@ -142,7 +144,8 @@
                                             <f:if condition="{record.permissions.canEdit}">
                                                 <typo3-backend-contextual-record-edit-trigger
                                                     class="btn btn-outline-primary btn-sm"
-                                                    title="Edit"
+                                                    title="{f:translate(key: 'records_list_types.messages:action.edit')}"
+                                                    aria-label="{f:translate(key: 'records_list_types.messages:action.edit')}"
                                                     edit-url="{record.editUrl}"
                                                     url="{record.contextualEditUrl}">
                                                     <core:icon identifier="actions-open" size="small" />
@@ -151,7 +154,8 @@
                                             <f:if condition="{record.permissions.canDelete}">
                                                 <button type="button"
                                                         class="btn btn-outline-danger btn-sm"
-                                                        title="Delete"
+                                                        title="{f:translate(key: 'records_list_types.messages:action.delete')}"
+                                                        aria-label="{f:translate(key: 'records_list_types.messages:action.delete')}"
                                                         data-gridview-action="delete"
                                                         data-table="{record.tableName}"
                                                         data-uid="{record.uid}">
@@ -175,7 +179,7 @@
                             <div class="text-center py-2 border-top">
                                 <a href="{table.singleTableUrl}" class="btn btn-sm btn-default">
                                     <core:icon identifier="actions-caret-down" size="small" />
-                                    <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.expandTable" default="Expand table" />
+                                    <f:translate key="core.core:labels.expandTable" />
                                 </a>
                             </div>
                         </f:if>
@@ -193,7 +197,7 @@
                 <div class="callout-body">
                     <core:icon identifier="actions-info" size="small" />
                     <span class="ms-2">
-                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." />
+                        <f:translate key="records_list_types.messages:noRecords" />
                     </span>
                 </div>
             </div>

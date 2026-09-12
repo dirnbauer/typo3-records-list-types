@@ -50,8 +50,7 @@ final readonly class RecordFilterButtonBarListener
         $this->pageRenderer->loadJavaScriptModule('@webconsulting/records-list-types/RecordFilters.js');
 
         $lang = $this->getLanguageService();
-        $translatedLabel = $lang?->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.show') ?? '';
-        $label = $translatedLabel !== '' ? $translatedLabel : 'Show filters';
+        $label = $lang?->sL('records_list_types.messages:filter.show') ?? '';
         $toggle = $this->componentFactory->createDropDownToggle()
             ->setActive($this->stateService->shouldShow($request))
             ->setHref($this->buildToggleUrl($request))
@@ -59,7 +58,7 @@ final readonly class RecordFilterButtonBarListener
             ->setIcon($this->iconFactory->getIcon('actions-filter'));
 
         $buttons = $event->getButtons();
-        $translatedViewLabel = $lang?->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.view') ?? '';
+        $translatedViewLabel = $lang?->sL('core.core:labels.view') ?? '';
         $viewLabel = $translatedViewLabel !== '' ? $translatedViewLabel : 'View';
         $added = false;
         foreach ($buttons[ButtonBar::BUTTON_POSITION_RIGHT] ?? [] as &$group) {

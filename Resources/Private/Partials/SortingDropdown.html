@@ -3,7 +3,7 @@
       data-namespace-typo3-fluid="true">
 
 <f:if condition="{sortingDropdown}">
-    <button type="button" class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+    <button type="button" class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" {f:if(condition: segmented, then: 'aria-pressed="true"')}>
         <core:icon identifier="actions-filter" size="small" />
         <span class="gridview-sorting-toggle__text">{sortingDropdown.fieldModeLabel}</span>
         <span class="gridview-sorting-toggle__value">

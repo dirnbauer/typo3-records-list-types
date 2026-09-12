@@ -15,7 +15,8 @@
     <f:if condition="{record.permissions.canEdit}">
         <typo3-backend-contextual-record-edit-trigger
             class="btn btn-default"
-            title="{f:translate(key: 'action.edit', extensionName: 'RecordsListTypes')}"
+            title="{f:translate(key: 'records_list_types.messages:action.edit')}"
+            aria-label="{f:translate(key: 'records_list_types.messages:action.edit')}"
             edit-url="{record.editUrl}"
             url="{record.contextualEditUrl}">
             <core:icon identifier="actions-open" size="small" />
@@ -28,7 +29,8 @@
            data-gridview-action="info"
            data-table="{record.tableName}"
            data-uid="{record.uid}"
-           title="{f:translate(key: 'action.info', extensionName: 'RecordsListTypes')}">
+           title="{f:translate(key: 'records_list_types.messages:action.info')}"
+           aria-label="{f:translate(key: 'records_list_types.messages:action.info')}">
             <core:icon identifier="actions-document-info" size="small" />
         </a>
     </f:if>
@@ -41,7 +43,8 @@
                         data-gridview-action="show"
                         data-table="{record.tableName}"
                         data-uid="{record.uid}"
-                        title="{f:translate(key: 'action.unhide', extensionName: 'RecordsListTypes')}">
+                        title="{f:translate(key: 'records_list_types.messages:action.unhide')}"
+                        aria-label="{f:translate(key: 'records_list_types.messages:action.unhide')}">
                     <core:icon identifier="actions-edit-unhide" size="small" />
                 </button>
             </f:then>
@@ -51,7 +54,8 @@
                         data-gridview-action="hide"
                         data-table="{record.tableName}"
                         data-uid="{record.uid}"
-                        title="{f:translate(key: 'action.hide', extensionName: 'RecordsListTypes')}">
+                        title="{f:translate(key: 'records_list_types.messages:action.hide')}"
+                        aria-label="{f:translate(key: 'records_list_types.messages:action.hide')}">
                     <core:icon identifier="actions-edit-hide" size="small" />
                 </button>
             </f:else>

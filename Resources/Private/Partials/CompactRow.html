@@ -54,8 +54,8 @@
             </span>
         </f:if>
         <f:if condition="{record.isFreeTranslation}">
-            <span class="compactview-row__lang-chip compactview-row__lang-chip--free" title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free', default: 'FREE')}">
-                <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:translation.free" default="FREE" />
+            <span class="compactview-row__lang-chip compactview-row__lang-chip--free" title="{f:translate(key: 'records_list_types.messages:translation.free.title')}">
+                <f:translate key="records_list_types.messages:translation.free" />
                 <span>·</span>
                 {record.languageTitle}
             </span>
@@ -71,7 +71,7 @@
                             url="{record.contextualEditUrl}">
                             <f:if condition="{fieldData.formatted}">
                                 <f:then>{fieldData.formatted}</f:then>
-                                <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
                             </f:if>
                         </typo3-backend-contextual-record-edit-trigger>
                     </f:then>
@@ -79,7 +79,7 @@
                         <span class="compactview-row__title-link" title="{fieldData.formatted}">
                             <f:if condition="{fieldData.formatted}">
                                 <f:then>{fieldData.formatted}</f:then>
-                                <f:else><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:notAvailableAbbreviation" default="N/A" /></f:else>
+                                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
                             </f:if>
                         </span>
                     </f:else>
@@ -159,7 +159,8 @@
                 <f:then>
                     <button type="button"
                             class="cv-toggle cv-toggle--hidden"
-                            title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.show.detail', default: 'Show record (currently hidden)')}"
+                            title="{f:translate(key: 'records_list_types.messages:action.unhide')}"
+                            aria-label="{f:translate(key: 'records_list_types.messages:action.unhide')}"
                             data-gridview-action="show"
                             data-table="{record.tableName}"
                             data-uid="{record.uid}"
@@ -170,7 +171,8 @@
                 <f:else>
                     <button type="button"
                             class="cv-toggle cv-toggle--visible"
-                            title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.hide.detail', default: 'Hide record (currently visible)')}"
+                            title="{f:translate(key: 'records_list_types.messages:action.hide')}"
+                            aria-label="{f:translate(key: 'records_list_types.messages:action.hide')}"
                             data-gridview-action="hide"
                             data-table="{record.tableName}"
                             data-uid="{record.uid}"
@@ -187,7 +189,7 @@
         <f:if condition="{record.permissions.canEdit}">
             <typo3-backend-contextual-record-edit-trigger
                 class="cv-action cv-action--primary"
-                title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.edit', default: 'Edit record')}"
+                title="{f:translate(key: 'records_list_types.messages:action.edit')}"
                 edit-url="{record.editUrl}"
                 url="{record.contextualEditUrl}">
                 <core:icon identifier="actions-open" size="small" />
@@ -199,7 +201,8 @@
     <td class="compactview-td compactview-td--fixed-right compactview-td--action">
         <f:if condition="{record.permissions.canDelete}">
             <button type="button" class="cv-action cv-action--danger"
-                    title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.delete', default: 'Delete record')}"
+                    title="{f:translate(key: 'records_list_types.messages:action.delete')}"
+                    aria-label="{f:translate(key: 'records_list_types.messages:action.delete')}"
                     data-gridview-action="delete"
                     data-table="{record.tableName}"
                     data-uid="{record.uid}">

@@ -31,7 +31,9 @@
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
                                 <f:if condition="{table.sortingDropdown}">
-                                    <f:render partial="SortingDropdown" arguments="{dropdown: table.sortingDropdown}" />
+                                    <div class="btn-group" role="group" aria-label="{f:translate(key: 'records_list_types.messages:sorting')}">
+                                        <f:render partial="SortingDropdown" arguments="{sortingDropdown: table.sortingDropdown}" />
+                                    </div>
                                 </f:if>
 
                                 <f:if condition="{table.actionButtons.newRecordButton}">
@@ -59,7 +61,7 @@
                                     <span class="t3js-multi-record-selection-table-title">
                                         <f:render partial="TableHeading" arguments="{heading: table.tableHeading}" />
                                     </span>
-                                    <strong class="text-nowrap"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
+                                    <strong class="text-nowrap"><f:translate key="core.core:labels.selection" /></strong>
                                 </div>
                                 <div class="recordlist-heading-actions">
                                     <f:sanitize.html build="records-list-types-backend-fragments">{table.multiRecordSelectionActionsHtml}</f:sanitize.html>
@@ -96,7 +98,7 @@
                             <div class="text-center py-2 border-top">
                                 <a href="{table.singleTableUrl}" class="btn btn-sm btn-default">
                                     <core:icon identifier="actions-caret-down" size="small" />
-                                    <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.expandTable" default="Expand table" />
+                                    <f:translate key="core.core:labels.expandTable" />
                                 </a>
                             </div>
                         </f:if>
@@ -115,7 +117,7 @@
                 <div class="callout-body">
                     <core:icon identifier="actions-info" size="small" />
                     <span class="ms-2">
-                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." />
+                        <f:translate key="records_list_types.messages:noRecords" />
                     </span>
                 </div>
             </div>

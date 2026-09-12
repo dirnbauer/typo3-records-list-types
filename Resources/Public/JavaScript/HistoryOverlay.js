@@ -127,7 +127,7 @@ class HistoryOverlay {
             const pageTab = this.createTab(
                 'records-list-types-history-tab-page',
                 pagePanel.id,
-                this.label('historyOverlay.pageTab', 'Page and content history'),
+                this.label('historyOverlay.pageTab', 'Page history'),
                 false,
             );
             tabList.appendChild(pageTab);
@@ -191,7 +191,7 @@ class HistoryOverlay {
         const iframe = document.createElement('iframe');
         iframe.className = 'records-list-types-history-page-frame';
         iframe.src = this.createEmbeddedHistoryUrl(pageHistoryUrl);
-        iframe.title = this.label('historyOverlay.pageFrameTitle', 'Page and content history');
+        iframe.title = this.label('historyOverlay.pageTab', 'Page history');
 
         panel.appendChild(iframe);
 

@@ -14,6 +14,7 @@
                                     class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle"
                                     data-bs-toggle="dropdown"
                                     aria-expanded="false"
+                                    aria-pressed="true"
                                     title="{toggle.manual.title}">
                                 <core:icon identifier="actions-move" size="small" />
                                 <span class="gridview-sorting-toggle__text">{toggle.manual.label}</span>
@@ -36,6 +37,8 @@
                     <f:else>
                         <a href="{toggle.manual.url}"
                            class="btn btn-default btn-sm gridview-sorting-toggle__btn"
+                           role="button"
+                           aria-pressed="false"
                            title="{toggle.manual.title}">
                             <core:icon identifier="actions-move" size="small" />
                             <span class="gridview-sorting-toggle__text">{toggle.manual.label}</span>
@@ -46,12 +49,14 @@
                 <f:if condition="{toggle.field.active}">
                     <f:then>
                         <div class="btn-group gridview-sorting-toggle__group" role="group">
-                            <f:render partial="SortingDropdown" arguments="{sortingDropdown: sortingDropdown}" />
+                            <f:render partial="SortingDropdown" arguments="{sortingDropdown: sortingDropdown, segmented: 1}" />
                         </div>
                     </f:then>
                     <f:else>
                         <a href="{toggle.field.url}"
                            class="btn btn-default btn-sm gridview-sorting-toggle__btn"
+                           role="button"
+                           aria-pressed="false"
                            title="{toggle.field.title}">
                             <core:icon identifier="actions-filter" size="small" />
                             <span class="gridview-sorting-toggle__text">{toggle.field.label}</span>

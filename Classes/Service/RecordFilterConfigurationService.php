@@ -565,7 +565,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
 
     private function translate(string $key, string $fallback): string
     {
-        $translated = $this->getLanguageService()?->sL('LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:' . $key) ?? '';
+        $translated = $this->getLanguageService()?->sL('records_list_types.messages:' . $key) ?? '';
         return $translated !== '' ? $translated : $fallback;
     }
 

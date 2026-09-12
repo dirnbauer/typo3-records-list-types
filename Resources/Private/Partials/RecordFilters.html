@@ -7,7 +7,7 @@
         <div class="recordlist-filters-block__header">
             <h2 class="recordlist-filters-block__title" id="recordlist-filters-title-{filters.tableName}">
                 <core:icon identifier="actions-filter" size="small" />
-                <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.title" default="Filter" /></span>
+                <span><f:translate key="records_list_types.messages:filter.title" /></span>
             </h2>
         </div>
 
@@ -154,12 +154,12 @@
                                                type="date"
                                                name="recordFilters[{filters.tableName}][{filter.id}][from]"
                                                value="{filter.fromValue}"
-                                               aria-label="{filter.label} from" />
+                                               aria-label="{f:translate(key: 'records_list_types.messages:filter.range.from', arguments: {label: filter.label})}" />
                                         <input class="form-control form-control-sm"
                                                type="date"
                                                name="recordFilters[{filters.tableName}][{filter.id}][to]"
                                                value="{filter.toValue}"
-                                               aria-label="{filter.label} to" />
+                                               aria-label="{f:translate(key: 'records_list_types.messages:filter.range.to', arguments: {label: filter.label})}" />
                                     </div>
                                 </f:case>
 
@@ -171,11 +171,11 @@
                 <div class="recordlist-filters__actions">
                     <button class="btn btn-sm btn-primary" type="submit">
                         <core:icon identifier="actions-filter" size="small" />
-                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.apply" default="Apply filters" />
+                        <f:translate key="records_list_types.messages:filter.apply" />
                     </button>
                     <a class="btn btn-sm btn-default" href="{filters.resetUrl}#t3-table-{filters.tableName}">
                         <core:icon identifier="actions-close" size="small" />
-                        <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.reset" default="Reset" />
+                        <f:translate key="records_list_types.messages:filter.reset" />
                     </a>
                 </div>
             </form>

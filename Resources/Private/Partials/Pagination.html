@@ -5,23 +5,27 @@
 <f:comment>
     Pagination partial matching TYPO3 Core list view navigation.
     
-    Renders: Records X - Y | |< < | Page [input] of N | > >| | reload
+    Renders: Records X–Y of Z | |< < | Page [input] of N | > >| | reload
     
     Arguments:
     - paginator: DatabasePaginator (implements PaginatorInterface)
     - pagination: SlidingWindowPagination (implements PaginationInterface)
     - paginationUrl: Base URL for page links (pointer[table] is appended)
     - tableName: The database table name (used for per-table pointer parameter)
-    - position: 'top' or 'bottom' (for aria differentiation)
+    - position: 'top' or 'bottom' (distinguishes the two landmarks for assistive technology)
 </f:comment>
 
 <f:if condition="{paginator.numberOfPages} > 1">
-    <nav class="recordlist-pagination" aria-label="Table pagination ({position})">
+    <f:if condition="{position} == 'bottom'">
+        <f:then><f:variable name="regionLabel" value="{f:translate(key: 'records_list_types.messages:pagination.regionBottom')}" /></f:then>
+        <f:else><f:variable name="regionLabel" value="{f:translate(key: 'records_list_types.messages:pagination.regionTop')}" /></f:else>
+    </f:if>
+    <nav class="recordlist-pagination" aria-label="{regionLabel}">
         <ul class="pagination pagination-sm mb-0">
-            <f:comment>Range indicator: "Records 1 - 100"</f:comment>
+            <f:comment>Range indicator: "Records 1–100 of 250"</f:comment>
             <li class="page-item">
                 <span class="page-link">
-                    <f:format.printf arguments="{0: pagination.startRecordNumber, 1: pagination.endRecordNumber}"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:rangeIndicator" default="Records %1$d - %2$d" /></f:format.printf>
+                    <f:translate key="records_list_types.messages:pagination.records" arguments="{from: pagination.startRecordNumber, to: pagination.endRecordNumber, total: paginator.totalItems}" />
                 </span>
             </li>
 
@@ -30,8 +34,8 @@
                 <f:then>
                     <li class="page-item">
                         <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pagination.firstPageNumber}"
-                           title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:first')}"
-                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:first')}">
+                           title="{f:translate(key: 'core.common:first')}"
+                           aria-label="{f:translate(key: 'core.common:first')}">
                             <core:icon identifier="actions-view-paging-first" size="small" />
                         </a>
                     </li>
@@ -48,8 +52,8 @@
                 <f:then>
                     <li class="page-item">
                         <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pagination.previousPageNumber}"
-                           title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:previous')}"
-                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:previous')}">
+                           title="{f:translate(key: 'core.common:previous')}"
+                           aria-label="{f:translate(key: 'core.common:previous')}">
                             <core:icon identifier="actions-view-paging-previous" size="small" />
                         </a>
                     </li>
@@ -61,22 +65,26 @@
                 </f:else>
             </f:if>
 
-            <f:comment>Page input: "Page [input] of N"</f:comment>
+            <f:comment>
+                Page input: "Page [input] of N". The label is one translatable
+                sentence; the input control replaces the {page} placeholder so
+                the word order stays correct in every language.
+            </f:comment>
+            <f:variable name="pageInput">
+                <input type="number"
+                       class="recordlist-pagination-input"
+                       value="{paginator.currentPageNumber}"
+                       min="1"
+                       max="{paginator.numberOfPages}"
+                       size="3"
+                       data-pagination-input="true"
+                       data-pagination-url="{paginationUrl}"
+                       data-pagination-table="{tableName}"
+                       aria-label="{f:translate(key: 'core.common:page')}" />
+            </f:variable>
             <li class="page-item">
                 <span class="page-link recordlist-pagination-pages">
-                    <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:page" default="Page" />
-                    <input type="number"
-                           class="recordlist-pagination-input"
-                           value="{paginator.currentPageNumber}"
-                           min="1"
-                           max="{paginator.numberOfPages}"
-                           size="3"
-                           data-pagination-input="true"
-                           data-pagination-url="{paginationUrl}"
-                           data-pagination-table="{tableName}"
-                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:page', default: 'Page')}" />
-                    <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:pagination.of" default="of" />
-                    {paginator.numberOfPages}
+                    <f:format.raw><f:translate key="records_list_types.messages:pagination.pageOfTotal" arguments="{page: pageInput, total: paginator.numberOfPages}" /></f:format.raw>
                 </span>
             </li>
 
@@ -85,8 +93,8 @@
                 <f:then>
                     <li class="page-item">
                         <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pagination.nextPageNumber}"
-                           title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:next')}"
-                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:next')}">
+                           title="{f:translate(key: 'core.common:next')}"
+                           aria-label="{f:translate(key: 'core.common:next')}">
                             <core:icon identifier="actions-view-paging-next" size="small" />
                         </a>
                     </li>
@@ -103,8 +111,8 @@
                 <f:then>
                     <li class="page-item">
                         <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={pagination.lastPageNumber}"
-                           title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:last')}"
-                           aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:last')}">
+                           title="{f:translate(key: 'core.common:last')}"
+                           aria-label="{f:translate(key: 'core.common:last')}">
                             <core:icon identifier="actions-view-paging-last" size="small" />
                         </a>
                     </li>
@@ -119,8 +127,8 @@
             <f:comment>Reload button</f:comment>
             <li class="page-item">
                 <a class="page-link" href="{paginationUrl}&pointer[{tableName}]={paginator.currentPageNumber}"
-                   title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:reload')}"
-                   aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:reload')}">
+                   title="{f:translate(key: 'core.common:reload')}"
+                   aria-label="{f:translate(key: 'core.common:reload')}">
                     <core:icon identifier="actions-refresh" size="small" />
                 </a>
             </li>

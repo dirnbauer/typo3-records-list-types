@@ -66,7 +66,7 @@
                                     <span class="t3js-multi-record-selection-table-title">
                                         <f:render partial="TableHeading" arguments="{heading: table.tableHeading}" />
                                     </span>
-                                    <strong class="text-nowrap"><f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.selection" default="Selection" /></strong>
+                                    <strong class="text-nowrap"><f:translate key="core.core:labels.selection" /></strong>
                                 </div>
                                 <div class="recordlist-heading-actions">
                                     <f:sanitize.html build="records-list-types-backend-fragments">{table.multiRecordSelectionActionsHtml}</f:sanitize.html>
@@ -90,26 +90,26 @@
                                             <f:comment>Checkbox column with Check All / Uncheck All / Toggle dropdown (matches TYPO3 core DatabaseRecordList::renderCheckboxActions exactly)</f:comment>
                                             <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
                                                 <div class="btn-group dropdown">
-                                                    <button type="button" class="dropdown-toggle dropdown-toggle-link t3js-multi-record-selection-check-actions-toggle" data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false" aria-label="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.openSelectionOptions', default: 'Open selection options')}">
+                                                    <button type="button" class="dropdown-toggle dropdown-toggle-link t3js-multi-record-selection-check-actions-toggle" data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false" aria-label="{f:translate(key: 'core.core:labels.openSelectionOptions')}">
                                                         <core:icon identifier="actions-selection" size="small" />
                                                     </button>
                                                     <ul class="dropdown-menu t3js-multi-record-selection-check-actions">
                                                         <li>
-                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-all" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll', default: 'Check All')}">
+                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-all" title="{f:translate(key: 'core.core:labels.checkAll')}">
                                                                 <core:icon identifier="actions-selection-elements-all" size="small" />
-                                                                <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.checkAll" default="Check All" />
+                                                                <f:translate key="core.core:labels.checkAll" />
                                                             </button>
                                                         </li>
                                                         <li>
-                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-none" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll', default: 'Uncheck All')}">
+                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-none" title="{f:translate(key: 'core.core:labels.uncheckAll')}">
                                                                 <core:icon identifier="actions-selection-elements-none" size="small" />
-                                                                <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.uncheckAll" default="Uncheck All" />
+                                                                <f:translate key="core.core:labels.uncheckAll" />
                                                             </button>
                                                         </li>
                                                         <li>
-                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="toggle" title="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection', default: 'Toggle Selection')}">
+                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="toggle" title="{f:translate(key: 'core.core:labels.toggleSelection')}">
                                                                 <core:icon identifier="actions-selection-elements-invert" size="small" />
-                                                                <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleSelection" default="Toggle Selection" />
+                                                                <f:translate key="core.core:labels.toggleSelection" />
                                                             </button>
                                                         </li>
                                                     </ul>
@@ -164,7 +164,7 @@
                             <div class="text-center py-2 border-top">
                                 <a href="{table.singleTableUrl}" class="btn btn-sm btn-default">
                                     <core:icon identifier="actions-caret-down" size="small" />
-                                    <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.expandTable" default="Expand table" />
+                                    <f:translate key="core.core:labels.expandTable" />
                                 </a>
                             </div>
                         </f:if>
@@ -182,7 +182,7 @@
             <div class="callout callout-info">
                 <core:icon identifier="actions-info" size="small" />
                 <span class="ms-2">
-                    <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." />
+                    <f:translate key="records_list_types.messages:noRecords" />
                 </span>
             </div>
         </f:else>

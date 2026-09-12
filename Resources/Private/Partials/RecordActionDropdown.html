@@ -15,8 +15,8 @@
     <button type="button"
             class="{buttonClass} dropdown-toggle dropdown-toggle-no-chevron"
             popovertarget="rlt-actions-{record.tableName}-{record.uid}"
-            title="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.moreActions', default: 'More actions')}"
-            aria-label="{f:translate(key: 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.moreActions', default: 'More actions')}">
+            title="{f:translate(key: 'records_list_types.messages:action.moreActions')}"
+            aria-label="{f:translate(key: 'records_list_types.messages:action.moreActions')}">
         <core:icon identifier="actions-menu-alternative" size="small" />
     </button>
     <ul id="rlt-actions-{record.tableName}-{record.uid}" class="dropdown-menu dropdown-menu-end" popover>
@@ -27,7 +27,7 @@
                    data-table="{record.tableName}"
                    data-uid="{record.uid}">
                     <core:icon identifier="actions-document-info" size="small" />
-                    <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.info" default="Info" /></span>
+                    <span><f:translate key="records_list_types.messages:action.info" /></span>
                 </a>
             </li>
         </f:if>
@@ -38,7 +38,7 @@
                    data-table="{record.tableName}"
                    data-uid="{record.uid}">
                     <core:icon identifier="actions-document-history-open" size="small" />
-                    <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.history" default="History" /></span>
+                    <span><f:translate key="records_list_types.messages:action.history" /></span>
                 </a>
             </li>
         </f:if>
@@ -50,7 +50,7 @@
                    data-table="{record.tableName}"
                    data-uid="{record.uid}">
                     <core:icon identifier="actions-edit-copy" size="small" />
-                    <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.copy" default="Copy" /></span>
+                    <span><f:translate key="records_list_types.messages:action.copy" /></span>
                 </a>
             </li>
             <li>
@@ -59,7 +59,7 @@
                    data-table="{record.tableName}"
                    data-uid="{record.uid}">
                     <core:icon identifier="actions-edit-cut" size="small" />
-                    <span><f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:action.cut" default="Cut" /></span>
+                    <span><f:translate key="records_list_types.messages:action.cut" /></span>
                 </a>
             </li>
         </f:if>

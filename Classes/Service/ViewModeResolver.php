@@ -51,22 +51,22 @@ final class ViewModeResolver implements SingletonInterface
      */
     private const array DEFAULT_VIEW_MODES = [
         'list' => [
-            'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.list',
+            'label' => 'records_list_types.messages:viewMode.list',
             'icon' => 'actions-viewmode-list',
             'description' => 'Standard table view',
         ],
         'grid' => [
-            'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.grid',
+            'label' => 'records_list_types.messages:viewMode.grid',
             'icon' => 'actions-viewmode-tiles',
             'description' => 'Card-based grid view',
         ],
         'compact' => [
-            'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.compact',
+            'label' => 'records_list_types.messages:viewMode.compact',
             'icon' => 'actions-menu',
             'description' => 'Compact single-line view',
         ],
         'teaser' => [
-            'label' => 'LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:viewMode.teaser',
+            'label' => 'records_list_types.messages:viewMode.teaser',
             'icon' => 'content-news',
             'description' => 'Teaser list with title, date, description',
         ],
@@ -399,7 +399,7 @@ final class ViewModeResolver implements SingletonInterface
         $languageService = $this->getLanguageService();
         foreach ($allModes as $mode => $config) {
             $label = $config['label'];
-            if ($languageService instanceof LanguageService && str_starts_with($label, 'LLL:')) {
+            if ($languageService instanceof LanguageService && $this->isLabelReference($label)) {
                 $translated = $languageService->sL($label);
                 $label = $translated !== '' ? $translated : $mode;
             }
@@ -414,6 +414,16 @@ final class ViewModeResolver implements SingletonInterface
         }
 
         return $result;
+    }
+
+    /**
+     * Whether a view mode label is a translatable reference (LLL: path or
+     * TYPO3 14 translation domain) rather than a literal text.
+     */
+    private function isLabelReference(string $label): bool
+    {
+        return str_starts_with($label, 'LLL:')
+            || preg_match('/^[a-z0-9_]+(\.[a-z0-9_]+)+:[^\s]+$/', $label) === 1;
     }
 
     /**

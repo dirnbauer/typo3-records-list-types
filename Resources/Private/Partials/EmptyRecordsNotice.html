@@ -10,20 +10,20 @@
                 <f:then>
                     <f:if condition="{searchTerm}">
                         <f:then>
-                            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords.filteredAndSearch" default="No records match the current filters or search." />
+                            <f:translate key="records_list_types.messages:noRecords.filteredAndSearch" />
                         </f:then>
                         <f:else>
-                            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords.filtered" default="No records match the current filters." />
+                            <f:translate key="records_list_types.messages:noRecords.filtered" />
                         </f:else>
                     </f:if>
                 </f:then>
                 <f:else>
                     <f:if condition="{searchTerm}">
                         <f:then>
-                            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords.search" default="No records match the current search." />
+                            <f:translate key="records_list_types.messages:noRecords.search" />
                         </f:then>
                         <f:else>
-                            <f:translate key="LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:noRecords" default="No records found on this page." />
+                            <f:translate key="records_list_types.messages:noRecords" />
                         </f:else>
                     </f:if>
                 </f:else>
