@@ -282,6 +282,23 @@ final class RecordListControllerTest extends FunctionalTestCase
         self::assertStringNotContainsString('Confidential record on inaccessible page', (string) $response->getBody());
     }
 
+    #[Test]
+    public function rendersStateAwareLocalizedLabels(): void
+    {
+        $this->get(ConnectionPool::class)->getConnectionForTable('tt_content')->insert('tt_content', [
+            'pid' => 1, 'header' => 'Hidden example record', 'CType' => 'text', 'hidden' => 1,
+        ]);
+        $html = (string) $this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'grid'))->getBody();
+
+        self::assertStringContainsString('title="Unhide record"', $html);
+        self::assertStringContainsString('aria-label="Unhide record"', $html);
+        self::assertStringNotContainsString('(currently hidden)', $html);
+        self::assertStringContainsString('aria-pressed="true"', $html);
+        self::assertStringContainsString('(reorderable list)', $html);
+        self::assertStringContainsString('Drag and drop to reorder records', $html);
+        self::assertStringNotContainsString('records_list_types.messages:', $html, 'Every label must resolve through the translation domain.');
+    }
+
     public static function viewModeProvider(): iterable
     {
         foreach (['list', 'grid', 'compact', 'teaser'] as $mode) {
