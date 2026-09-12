@@ -551,7 +551,7 @@ File structure for a custom view type
     ├── Configuration/
     │   ├── Icons.php                      # Custom icon (optional)
     │   ├── JavaScriptModules.php          # ES module paths (if using js)
-    │   └── TsConfig/Page/mod.tsconfig    # View type TSconfig
+    │   └── page.tsconfig                  # View type TSconfig (loaded automatically)
     └── Resources/
         ├── Private/Backend/
         │   ├── Templates/KanbanView.html  # Main Fluid template

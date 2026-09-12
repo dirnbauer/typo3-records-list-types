@@ -9,6 +9,7 @@ use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
+use Webconsulting\RecordsListTypes\Utility\AllowedViewModesUtility;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
@@ -165,10 +166,7 @@ final class ViewTypeRegistry implements SingletonInterface
     {
         $allTypes = $this->getViewTypes($pageId);
 
-        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $allowedValue = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'allowed'])
-            ?? ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'allowedViews']);
-        $allowedIds = ArrayUtility::commaSeparatedList($allowedValue);
+        $allowedIds = AllowedViewModesUtility::fromPageTsConfig(BackendUtility::getPagesTSconfig($pageId));
         if ($allowedIds === []) {
             $allowedIds = array_keys($allTypes);
         }

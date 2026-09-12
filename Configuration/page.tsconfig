@@ -109,9 +109,6 @@ mod.web_list {
         # }
     }
 
-    # Legacy configuration (use viewMode instead)
-    allowedViews = list,grid,compact,teaser
-
     # =================================================================
     # Record Filters
     # =================================================================
@@ -193,8 +190,8 @@ mod.web_list {
                     type = boolean
                     field = istopnews
                     label = Top News
-                    falseLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.no
-                    trueLabel = LLL:EXT:records_list_types/Resources/Private/Language/locallang.xlf:filter.option.yes
+                    falseLabel = records_list_types.messages:filter.option.no
+                    trueLabel = records_list_types.messages:filter.option.yes
                 }
             }
             tx_news_domain_model_category {

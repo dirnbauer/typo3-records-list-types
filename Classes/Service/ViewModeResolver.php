@@ -13,6 +13,7 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\SingletonInterface;
 use Webconsulting\RecordsListTypes\Constants;
 use Webconsulting\RecordsListTypes\Event\RegisterViewModesEvent;
+use Webconsulting\RecordsListTypes\Utility\AllowedViewModesUtility;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
@@ -192,10 +193,7 @@ final class ViewModeResolver implements SingletonInterface
     {
         $allModes = $this->getViewModes($pageId);
 
-        $tsConfig = BackendUtility::getPagesTSconfig($pageId);
-        $allowedValue = ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'viewMode.', 'allowed'])
-            ?? ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'allowedViews']);
-        $configured = ArrayUtility::commaSeparatedList($allowedValue);
+        $configured = AllowedViewModesUtility::fromPageTsConfig(BackendUtility::getPagesTSconfig($pageId));
         if ($configured === []) {
             $configured = array_keys($allModes);
         }

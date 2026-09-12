@@ -50,6 +50,13 @@ View mode settings
         # Force list view only (hides toggle)
         mod.web_list.viewMode.allowed = list
 
+    ..  deprecated:: 1.1.0
+
+        The pre-1.0 key :typoscript:`mod.web_list.allowedViews` is still
+        read when :typoscript:`mod.web_list.viewMode.allowed` is not set,
+        but logs a deprecation once per request. It will be removed in
+        version 2.0.
+
 .. _configuration-view-mode-table:
 
 ..  confval:: mod.web_list.viewMode.table.<table>

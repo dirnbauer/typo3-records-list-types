@@ -7,6 +7,7 @@ namespace Webconsulting\RecordsListTypes\Service;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
+use Webconsulting\RecordsListTypes\Utility\AllowedViewModesUtility;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
@@ -80,9 +81,7 @@ final class GridConfigurationService implements SingletonInterface
         $tsConfig = BackendUtility::getPagesTSconfig($pageId);
         $gridViewConfig = ArrayUtility::arrayPath($tsConfig, ['mod.', 'web_list.', 'gridView.']);
 
-        $allowedViews = ArrayUtility::commaSeparatedList(
-            ArrayUtility::valuePath($tsConfig, ['mod.', 'web_list.', 'allowedViews']),
-        );
+        $allowedViews = AllowedViewModesUtility::fromPageTsConfig($tsConfig);
         if ($allowedViews === []) {
             $allowedViews = ['list', 'grid'];
         }
