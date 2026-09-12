@@ -18,15 +18,15 @@ AGENTS.md
 webconsulting-skills/
 
 # Dependencies, build output and generated files
-vendor/
-node_modules/
-composer.lock
-.Build/
-Build/Reports/
-var/
-public/
-packages/
-typo3temp/
+/vendor/
+/node_modules/
+/composer.lock
+/.Build/
+/Build/Reports/
+/var/
+/public/
+/packages/
+/typo3temp/
 
 # Tool caches
 *.cache
