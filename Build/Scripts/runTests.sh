@@ -9,7 +9,7 @@
 # Usage:
 #   Build/Scripts/runTests.sh -s <suite> [-p <php>]
 #
-#   Suites: unit | unit-coverage | functional | functional-coverage | architecture | phpstan | cgl | composer | ci
+#   Suites: lint | unit | unit-coverage | functional | functional-coverage | architecture | phpstan | cgl | composer | ci
 
 set -euo pipefail
 
@@ -27,14 +27,15 @@ usage() {
 Usage: Build/Scripts/runTests.sh -s <suite> [-p <php>]
 
 Suites:
+  lint                 PHP syntax check and XLIFF well-formedness.
   unit                 Unit test suite.
   unit-coverage        Unit test suite with Clover, HTML, and text coverage reports.
   functional           Functional test suite (needs a database via env vars).
   functional-coverage  Functional test suite with Clover, HTML, and text coverage reports.
   architecture         PHPat architecture rules.
-  phpstan              Static analysis at PHPStan level max.
+  phpstan              Static analysis at PHPStan level 8 with strict rules and PHPat.
   cgl                  PHP-CS-Fixer dry run.
-  composer             composer validate + composer audit.
+  composer             composer validate + composer audit (no lock file is committed).
   ci                   Run everything except functional (which needs a DB).
 
 Options:
@@ -71,6 +72,18 @@ ensure_coverage_driver() {
         echo "Coverage suites require Xdebug or PCOV. Enable a coverage driver or run the non-coverage suite." >&2
         exit 65
     fi
+}
+
+run_lint() {
+    local failed=0 output
+    while IFS= read -r -d '' file; do
+        if ! output=$(php -l "${file}" 2>&1); then
+            echo "${output}" >&2
+            failed=1
+        fi
+    done < <(find Classes Configuration Tests -name '*.php' -print0; printf '%s\0' ext_localconf.php rector.php .php-cs-fixer.dist.php)
+    xmllint --noout Resources/Private/Language/*.xlf
+    [[ "${failed}" -eq 0 ]]
 }
 
 run_unit() {
@@ -114,11 +127,12 @@ run_cgl() {
 }
 
 run_composer() {
-    composer validate --strict
-    composer audit --locked --abandoned=report
+    composer validate --strict --no-check-lock
+    composer audit --abandoned=report
 }
 
 case "${SUITE}" in
+    lint)                run_lint ;;
     unit)                run_unit ;;
     unit-coverage)       run_unit_coverage ;;
     functional)          run_functional ;;
@@ -129,6 +143,7 @@ case "${SUITE}" in
     composer)            run_composer ;;
     ci)
         run_composer
+        run_lint
         run_cgl
         # run_phpstan also evaluates the PHPat architecture rules.
         run_phpstan

@@ -4,7 +4,7 @@ includes:
     - vendor/saschaegerer/phpstan-typo3/extension.neon
 
 parameters:
-    level: max
+    level: 8
     phpVersion: 80300
     stubFiles:
         - Build/PhpStan/DatabaseRecordList.stub

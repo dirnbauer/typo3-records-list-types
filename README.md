@@ -1,33 +1,45 @@
 # Records List Types
 
-Grid, Compact, Teaser and custom Fluid views for the TYPO3 backend Records module.
-Editors can switch views per table, filter records, select columns and use native
-TYPO3 record actions. Search, translations, workspaces and pagination share the
-same record pipeline across alternative views.
+Grid, compact, teaser and custom Fluid views for the TYPO3 backend **Records**
+module. Editors pick a view per table, filter records, reorder by drag and drop
+and use the native record actions; search, translations, workspaces and
+pagination share one record pipeline across all views.
 
-Requires **TYPO3 14.3.6 or later in v14** and **PHP 8.3–8.5**.
+## What it is
+
+- **List view** stays the Core table; **Grid**, **Compact** and **Teaser** are
+  alternatives with thumbnails, dense rows or teaser cards.
+- **Custom views** are registered with Page TSconfig plus a Fluid template, or
+  through the `RegisterViewModesEvent` PSR-14 event.
+- **Record filters** for text, date range, visibility, select and category
+  fields, configured per table.
+- Labels ship as XLIFF 2.0 (English source, German reviewed, French, Spanish
+  and Italian machine drafts) and follow one terminology across all views.
+
+## Requirements
+
+- TYPO3 14.3.6 or later (v14 series)
+- PHP 8.3, 8.4 or 8.5
+- Composer mode
 
 ## Install
 
-Run in your TYPO3 project:
-
 ```bash
-composer require webconsulting/records-list-types:^1.0
+composer require webconsulting/records-list-types:^1.1
 vendor/bin/typo3 extension:setup -e records_list_types
 vendor/bin/typo3 cache:flush
 ```
 
-If the package is unavailable from your Composer repositories, add its VCS source:
+If Composer cannot find the package, add the VCS source first:
 
 ```bash
 composer config repositories.records-list-types vcs https://github.com/dirnbauer/typo3-records-list-types.git
 ```
 
-Open **Content → Records** and use the view dropdown in the module header.
-
 ## Configure
 
-The extension loads its Page TSconfig automatically. For example:
+The extension ships `Configuration/page.tsconfig`; override it in your site's
+Page TSconfig:
 
 ```typoscript
 mod.web_list.viewMode {
@@ -45,58 +57,47 @@ mod.web_list.gridView.table.tt_content {
 }
 ```
 
-Explicit view selection takes precedence over table preferences, table defaults,
-the user's global preference and the page default. Single-table views paginate;
-multi-table views show a preview with an “Expand table” link. Setting a view's
-`itemsPerPage = 0` disables pagination. The grid adapts its columns to the available
-width.
+Explicit view selection wins over table preferences, table defaults, the user's
+global preference and the page default. `mod.web_list.allowedViews` from
+pre-1.0 releases still works but is deprecated. Filters are documented in the
+[filter reference](Documentation/Configuration/Filters.rst).
 
-Use **View → Show filters** in a single-table view for configured text, date,
-visibility, select and category filters. See the [filter reference](Documentation/Configuration/Filters.rst)
-for presets, overrides and workspace behavior.
+## Use
 
-## Extend
+Open **Content → Records** and choose a view from the **View** dropdown in the
+module header. Single-table views paginate; multi-table views show a preview
+with an *Expand table* link. Use **View → Show filters** to open the filter
+panel, the sorting mode toggle to switch between manual ordering and sorting by
+column, and the drag handle (mouse or keyboard: Space, arrow keys, Escape) to
+reorder records.
 
-Register a custom view using Page TSconfig and a Fluid template, or use
-`RegisterViewModesEvent`. Start from `GenericView.html` and the documented view
-payload. Core query events apply through `DatabaseRecordList`; the alternative
-views build their own record actions from Core permissions and URLs.
-
-- [Configuration](Documentation/Configuration/Index.rst)
-- [Custom view types](Documentation/Developer/CustomViewTypes.rst)
-- [Extension points](Documentation/Developer/Extending.rst)
-- [Architecture](Documentation/Developer/Architecture.rst)
-- [Editor guide](Documentation/Usage/Index.rst)
-- [Workspace behavior](Documentation/Developer/Workspaces.rst)
-- [Known limitations](Documentation/KnownProblems/Index.rst)
-
-The RST manual in [Documentation](Documentation/Index.rst) is the canonical
-reference. Changes and removed APIs are recorded in [CHANGELOG.md](CHANGELOG.md).
-
-## Develop and test
-
-Install the extension's development dependencies in the repository root:
+## Develop
 
 ```bash
 composer install
-Build/Scripts/runTests.sh -s ci
+Build/Scripts/runTests.sh -s ci                                   # composer, lint, cgl, phpstan, unit
 typo3DatabaseDriver=pdo_sqlite Build/Scripts/runTests.sh -s functional
 ```
 
-The `ci` suite runs Composer validation and security audit, PHP-CS-Fixer,
-PHPStan at maximum level with strict rules and PHPat, and the unit tests.
-Functional tests boot TYPO3 with the extension installed. CI covers PHP 8.3,
-8.4 and 8.5, with an additional lane for the latest allowed PHPUnit.
+PHPStan runs at level 8 with strict rules and PHPat, PHP-CS-Fixer uses the
+TYPO3 coding standards, and CI covers PHP 8.3 and 8.4 (8.5 as an allowed
+failure) with functional tests on MariaDB 10.11. Labels live in
+`Resources/Private/Language/locallang.xlf`; reference them as
+`records_list_types.messages:key` in PHP and Fluid. The unit suite checks that
+every referenced key exists and that templates carry no hard-coded English.
 
-For the local backend and DDEV commands, see the
-[development setup](Documentation/Developer/Development.rst).
+## Docs
 
-## Limitations
+The RST manual in [Documentation](Documentation/Index.rst) is the canonical
+reference: [configuration](Documentation/Configuration/Index.rst),
+[custom view types](Documentation/Developer/CustomViewTypes.rst),
+[extension points](Documentation/Developer/Extending.rst),
+[architecture](Documentation/Developer/Architecture.rst),
+[editor guide](Documentation/Usage/Index.rst),
+[workspaces](Documentation/Developer/Workspaces.rst) and
+[known limitations](Documentation/KnownProblems/Index.rst). Changes are
+recorded in [CHANGELOG.md](CHANGELOG.md).
 
-- Drag-and-drop moves records within the currently displayed page of results.
-- Workspace thumbnails use the current physical file; TYPO3 does not version file
-  contents. Upload a new file when a draft needs a different image.
-- Keyboard drag-and-drop is implemented; dedicated screen-reader coverage is
-  limited. Report accessibility problems through the issue tracker.
+## License
 
 GPL-2.0-or-later · [Webconsulting](https://github.com/dirnbauer/typo3-records-list-types)
