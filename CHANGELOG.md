@@ -2,17 +2,44 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased
+## 1.1.0 - 2026-09-12
+
+Label and translation quality pass, small accessibility fixes, removal of dead
+configuration and a stricter quality baseline.
+
+### Added
+
+- French, Spanish and Italian label files as machine drafts (segment state `translated`). TYPO3 only uses them while `$GLOBALS['TYPO3_CONF_VARS']['LANG']['requireApprovedLocalizations']` is disabled; set the state to `final` after review.
+- Labels for texts that were hard-coded in English: JavaScript notifications and live-region announcements (`notification.*`, `a11y.*`), the delete confirmation, date range field names (`filter.range.from/to`), the reorderable list name (`a11y.reorderableList`), pagination landmarks and indicators (`pagination.regionTop/Bottom`, `pagination.records`, `pagination.pageOfTotal`), the Yes/No/Hidden badges, the card footer (`record.idLabel`, `record.onPage`), `translation.free.title`, `translation.edit` and `action.editColumn`.
+- `action.unhide` and `action.cancel`, `action.delete.confirm` and `action.delete.confirmButton`.
+- Unit tests that guard the catalog: every referenced key exists, every unit carries a translator note, target files mirror the source ids, only ICU placeholders are used, templates and JavaScript contain no hard-coded English, JavaScript fallbacks match the source text and every JavaScript prefix is exported to `TYPO3.lang`.
+- `Build/Scripts/runTests.sh -s lint` (PHP syntax check and XLIFF well-formedness).
 
 ### Changed
 
-- Require TYPO3 14.3.6+ within v14 and refresh the lock file on PHP 8.3.
+- One term per concept in English and German: *View* (`button.viewMode`, was "List Type"), *List view / Grid view / Compact view / Teaser view* (DE *Listenansicht / Rasteransicht / Kompaktansicht / Teaseransicht*), *Sorting mode* with *Manual* (was "Drag & Drop") and *By column*, *Hide record / Unhide record* (Core wording, replaces "Show record (currently hidden)"), *Free mode* (was "FREE"), *Translate to {language}*, *Page {page} of {total}* and *Records {from}–{to} of {total}*, *Element history / Page history*, *Filters / Show filters / Apply / Reset*, sentence case throughout.
+- The label catalog is XLIFF 2.0 with 2-space indentation, a `<note>` per unit and ICU MessageFormat placeholders only; `%d`/`%s` placeholders are gone. Every PHP, Fluid and TSconfig reference uses the TYPO3 14 translation domain `records_list_types.messages:key`; Core labels use `core.core`, `core.common` and `core.mod_web_list`.
+- Visibility toggles are state aware in every view and carry matching `aria-label`s; translation rows use the same action labels as records; the sorting mode toggle exposes `aria-pressed`; icon-only actions in the generic view have accessible names.
+- Untitled records show the Core label *No title* instead of "N/A" or "Untitled".
+- `GridViewActions.js`: `lang()` substitutes `{name}` placeholders; the controller exports the `drag.`, `action.`, `notification.`, `a11y.`, `pagination.` and `state.` prefixes and Core `labels.no_title` for JavaScript.
+- `image.previewOnly` reads "Preview only. The frontend may not show this image for this record type."
+- Quality baseline: PHPStan level 8 with strict rules and PHPat, PHP-CS-Fixer with the TYPO3 coding standards (`typo3/coding-standards`), CI with lint and Composer audit, CGL dry run, PHPStan, unit tests on PHP 8.3 and 8.4 (8.5 as allowed failure) and functional tests against MariaDB 10.11. The auto-commit job is gone; `composer.lock`, `public/index.php` and `Documentation/README.md` are no longer tracked.
+- README restructured (What it is, Requirements, Install, Configure, Use, Develop, Docs, License).
+- Require TYPO3 14.3.6+ within v14.
 - Reuse Core table visibility, table ordering, header buttons and bulk actions through a small `AlternativeDatabaseRecordList` adapter; remove reflection and duplicate record-list initialization.
 - Delegate copy, cut, delete and move requests to Core JavaScript APIs; remove the nonexistent clipboard AJAX endpoint and duplicate modal/request code.
 - Replace stale maintenance reports and duplicated README content with the current RST manual and a reproducible local development guide.
 
+### Deprecated
+
+- Page TSconfig `mod.web_list.allowedViews`: use `mod.web_list.viewMode.allowed`. The legacy key still works, logs one `E_USER_DEPRECATED` per request and will be removed in 2.0.
+- Label ids `action.show`, `action.show.detail` and `action.hide.detail`: use `action.unhide` and `action.hide`. The aliases stay in the catalog (`subState="deprecated"`) until 2.0.
+
 ### Fixed
 
+- `RecordActions.html` referenced the missing key `action.unhide`; the key exists now and the partial has accessible names on every action.
+- `GenericView.html` had untranslated `title="Edit"` and `title="Delete"`; `TeaserCard.html` rendered "Untitled" and "Hidden" in English only.
+- `GridViewActions.js` announced "hidden"/"visible" and showed "Move failed", "Update failed", "Unknown error" and "Request failed" in English regardless of the backend language.
 - Alternative views enforce the Core page-access guard and table visibility rules, including explicitly requested tables, wildcard hiding and per-table overrides.
 - Preserve scalar Page TSconfig options for Core table actions, including download and column-selector visibility.
 - Fix keyboard reordering: stop duplicate grab/drop handling and initialize the drag context before calculating compatible positions.
@@ -20,6 +47,8 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- `Configuration/TsConfig/Page/mod.tsconfig` (194 lines that TYPO3 never loaded) and the duplicate `allowedViews` line in `Configuration/page.tsconfig`.
+- Label ids `pagination.of` (sentence fragment) and `historyOverlay.pageFrameTitle` (duplicate of `historyOverlay.pageTab`).
 - Unused `GridViewQueryListener` and `GridViewRecordActionsListener` caches and the `RecordActionsViewHelper` that only read the unpopulated cache. Custom templates should use the documented record payload and `RecordActionDropdown` partial; Core query events remain supported.
 - Unused `RecordGridDataProvider::getRecordsForTable()` and `getRecordCount()` query paths, including the obsolete `ctrl.searchFields` parser. Record queries run through Core `DatabaseRecordList`; row enrichment remains available through `buildRecordDataFromRow()`.
 - Heuristic middleware warnings and their diagnostic service. They did not establish whether rendering failed; normal Core error handling and the view selector remain available.

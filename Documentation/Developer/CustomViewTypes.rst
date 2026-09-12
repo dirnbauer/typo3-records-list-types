@@ -598,7 +598,7 @@ template paths, CSS, JavaScript, and display-column settings.
         public function __invoke(RegisterViewModesEvent $event): void
         {
             $event->addViewMode('kanban', [
-                'label' => 'LLL:EXT:my_extension/Resources/Private/Language/locallang.xlf:viewMode.kanban',
+                'label' => 'my_extension.messages:viewMode.kanban',
                 'icon' => 'actions-view-table-columns',
                 'description' => 'Kanban board view',
             ]);
