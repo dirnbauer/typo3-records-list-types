@@ -1,276 +1,797 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
-    <file source-language="en" target-language="de" datatype="plaintext" original="messages" date="2024-12-31T12:00:00Z" product-name="records_list_types">
-        <header/>
-        <body>
-            <trans-unit id="viewMode.list" resname="viewMode.list">
-                <source>List View</source>
-                <target>Listenansicht</target>
-            </trans-unit>
-            <trans-unit id="viewMode.grid" resname="viewMode.grid">
-                <source>Grid View</source>
-                <target>Kachelansicht</target>
-            </trans-unit>
-            <trans-unit id="viewMode.compact" resname="viewMode.compact">
-                <source>Compact View</source>
-                <target>Kompaktansicht</target>
-            </trans-unit>
-            <trans-unit id="viewMode.teaser" resname="viewMode.teaser">
-                <source>Teaser List</source>
-                <target>Teaser-Liste</target>
-            </trans-unit>
-            <trans-unit id="button.viewMode" resname="button.viewMode">
-                <source>List Type</source>
-                <target>Listentyp</target>
-            </trans-unit>
-            <trans-unit id="noRecords" resname="noRecords">
-                <source>No records found on this page.</source>
-                <target>Keine Datensätze auf dieser Seite gefunden.</target>
-            </trans-unit>
-            <trans-unit id="noRecords.search" resname="noRecords.search">
-                <source>No records match the current search.</source>
-                <target>Keine Datensätze entsprechen der aktuellen Suche.</target>
-            </trans-unit>
-            <trans-unit id="noRecords.filtered" resname="noRecords.filtered">
-                <source>No records match the current filters.</source>
-                <target>Keine Datensätze entsprechen den aktuellen Filtern.</target>
-            </trans-unit>
-            <trans-unit id="noRecords.filteredAndSearch" resname="noRecords.filteredAndSearch">
-                <source>No records match the current filters or search.</source>
-                <target>Keine Datensätze entsprechen den aktuellen Filtern oder der Suche.</target>
-            </trans-unit>
-            <trans-unit id="action.edit" resname="action.edit">
-                <source>Edit record</source>
-                <target>Datensatz bearbeiten</target>
-            </trans-unit>
-            <trans-unit id="action.hide" resname="action.hide">
-                <source>Hide record</source>
-                <target>Datensatz ausblenden</target>
-            </trans-unit>
-            <trans-unit id="action.show" resname="action.show">
-                <source>Show record</source>
-                <target>Datensatz anzeigen</target>
-            </trans-unit>
-            <trans-unit id="action.delete" resname="action.delete">
-                <source>Delete record</source>
-                <target>Datensatz löschen</target>
-            </trans-unit>
-            <trans-unit id="action.show.detail" resname="action.show.detail">
-                <source>Show record (currently hidden)</source>
-                <target>Datensatz anzeigen (derzeit verborgen)</target>
-            </trans-unit>
-            <trans-unit id="action.hide.detail" resname="action.hide.detail">
-                <source>Hide record (currently visible)</source>
-                <target>Datensatz ausblenden (derzeit sichtbar)</target>
-            </trans-unit>
-            <trans-unit id="action.moreActions" resname="action.moreActions">
-                <source>More actions</source>
-                <target>Weitere Aktionen</target>
-            </trans-unit>
-            <trans-unit id="action.info" resname="action.info">
-                <source>Info</source>
-                <target>Info</target>
-            </trans-unit>
-            <trans-unit id="action.history" resname="action.history">
-                <source>History</source>
-                <target>Verlauf</target>
-            </trans-unit>
-            <trans-unit id="action.copy" resname="action.copy">
-                <source>Copy</source>
-                <target>Kopieren</target>
-            </trans-unit>
-            <trans-unit id="action.cut" resname="action.cut">
-                <source>Cut</source>
-                <target>Ausschneiden</target>
-            </trans-unit>
-            <trans-unit id="sorting" resname="sorting">
-                <source>Sorting</source>
-                <target>Sortierung</target>
-            </trans-unit>
-            <trans-unit id="sort.ascending" resname="sort.ascending">
-                <source>Sort ascending</source>
-                <target>Aufsteigend sortieren</target>
-            </trans-unit>
-            <trans-unit id="sort.descending" resname="sort.descending">
-                <source>Sort descending</source>
-                <target>Absteigend sortieren</target>
-            </trans-unit>
-            <trans-unit id="sortingMode.label" resname="sortingMode.label">
-                <source>Order</source>
-                <target>Reihenfolge</target>
-            </trans-unit>
-            <trans-unit id="sortingMode.manual" resname="sortingMode.manual">
-                <source>Drag &amp; Drop</source>
-                <target>Drag &amp; Drop</target>
-            </trans-unit>
-            <trans-unit id="sortingMode.field" resname="sortingMode.field">
-                <source>By Column</source>
-                <target>Nach Spalte</target>
-            </trans-unit>
-            <trans-unit id="sortingMode.manual.title" resname="sortingMode.manual.title">
-                <source>Drag and drop to reorder records</source>
-                <target>Per Drag-and-Drop umsortieren</target>
-            </trans-unit>
-            <trans-unit id="sortingMode.field.title" resname="sortingMode.field.title">
-                <source>Sort by a specific column</source>
-                <target>Nach einer Spalte sortieren</target>
-            </trans-unit>
-            
-            <!-- Drag and Drop Accessibility -->
-            <trans-unit id="drag.title" resname="drag.title">
-                <source>Drag to reorder</source>
-                <target>Ziehen zum Sortieren</target>
-            </trans-unit>
-            <trans-unit id="drag.ariaLabel" resname="drag.ariaLabel">
-                <source>Press Space to grab and reorder</source>
-                <target>Leertaste drücken zum Greifen und Sortieren</target>
-            </trans-unit>
-            <trans-unit id="drag.instructions" resname="drag.instructions">
-                <source>Press Space or Enter to grab item. Use arrow keys to move. Press Space or Enter to drop, Escape to cancel.</source>
-                <target>Leertaste oder Eingabe drücken zum Greifen. Pfeiltasten zum Bewegen. Leertaste oder Eingabe zum Ablegen, Escape zum Abbrechen.</target>
-            </trans-unit>
-            <trans-unit id="drag.grabbed" resname="drag.grabbed">
-                <source>Grabbed. Use arrow keys to move.</source>
-                <target>Gegriffen. Pfeiltasten zum Bewegen.</target>
-            </trans-unit>
-            <trans-unit id="drag.position" resname="drag.position">
-                <source>Position %d of %d</source>
-                <target>Position %d von %d</target>
-            </trans-unit>
-            <trans-unit id="drag.dropped" resname="drag.dropped">
-                <source>Dropped at position %d</source>
-                <target>Abgelegt an Position %d</target>
-            </trans-unit>
-            <trans-unit id="drag.cancelled" resname="drag.cancelled">
-                <source>Reorder cancelled</source>
-                <target>Sortierung abgebrochen</target>
-            </trans-unit>
-            <trans-unit id="drag.moved" resname="drag.moved">
-                <source>Item moved to position %d</source>
-                <target>Element an Position %d verschoben</target>
-            </trans-unit>
-            <trans-unit id="drag.dropHere" resname="drag.dropHere">
-                <source>Drop here</source>
-                <target>Hier ablegen</target>
-            </trans-unit>
-            <trans-unit id="drag.endPosition" resname="drag.endPosition">
-                <source>End position (after last item)</source>
-                <target>Endposition (nach letztem Element)</target>
-            </trans-unit>
-            
-            <!-- Pagination -->
-            <trans-unit id="pagination.of" resname="pagination.of">
-                <source>of</source>
-                <target>von</target>
-            </trans-unit>
-            
-            <!-- Image hint -->
-            <trans-unit id="image.previewOnly" resname="image.previewOnly">
-                <source>Preview only — may not appear on the frontend for this record type.</source>
-                <target>Nur Vorschau — wird möglicherweise nicht im Frontend für diesen Datensatztyp angezeigt.</target>
-            </trans-unit>
-            
-            <!-- Translations -->
-            <trans-unit id="translation.free" resname="translation.free">
-                <source>FREE</source>
-                <target>FREI</target>
-            </trans-unit>
-            <trans-unit id="translation.translated" resname="translation.translated">
-                <source>Translated</source>
-                <target>Übersetzt</target>
-            </trans-unit>
-            <trans-unit id="translation.untranslated" resname="translation.untranslated">
-                <source>Not translated</source>
-                <target>Nicht übersetzt</target>
-            </trans-unit>
-            <trans-unit id="translation.translateTo" resname="translation.translateTo">
-                <source>Translate to %s</source>
-                <target>Nach %s übersetzen</target>
-            </trans-unit>
-            <trans-unit id="translation.sectionLabel" resname="translation.sectionLabel">
-                <source>Translations</source>
-                <target>Übersetzungen</target>
-            </trans-unit>
-            <trans-unit id="translation.progress" resname="translation.progress">
-                <source>{translated, plural, =0 {None of {total} translated} one {# of {total} translated} other {# of {total} translated}}</source>
-                <target>{translated, plural, =0 {Keine von {total} übersetzt} one {# von {total} übersetzt} other {# von {total} übersetzt}}</target>
-            </trans-unit>
-            <trans-unit id="translation.allTranslated" resname="translation.allTranslated">
-                <source>All elements translated</source>
-                <target>Alle Elemente übersetzt</target>
-            </trans-unit>
-            <trans-unit id="workspace.state.title" resname="workspace.state.title">
-                <source>Workspace state</source>
-                <target>Workspace-Status</target>
-            </trans-unit>
-            <trans-unit id="workspace.state.unchanged" resname="workspace.state.unchanged">
-                <source>Unchanged</source>
-                <target>Unverändert</target>
-            </trans-unit>
-            <trans-unit id="workspace.state.new" resname="workspace.state.new">
-                <source>New</source>
-                <target>Neu</target>
-            </trans-unit>
-            <trans-unit id="workspace.state.changed" resname="workspace.state.changed">
-                <source>Changed</source>
-                <target>Geändert</target>
-            </trans-unit>
-            <trans-unit id="workspace.state.move" resname="workspace.state.move">
-                <source>Moved</source>
-                <target>Verschoben</target>
-            </trans-unit>
-            <trans-unit id="workspace.state.deleted" resname="workspace.state.deleted">
-                <source>Deleted</source>
-                <target>Gelöscht</target>
-            </trans-unit>
-            <trans-unit id="historyOverlay.elementTab" resname="historyOverlay.elementTab">
-                <source>Element history</source>
-                <target>Element-Verlauf</target>
-            </trans-unit>
-            <trans-unit id="historyOverlay.pageTab" resname="historyOverlay.pageTab">
-                <source>Page and content history</source>
-                <target>Seite und Inhaltselemente</target>
-            </trans-unit>
-            <trans-unit id="historyOverlay.pageFrameTitle" resname="historyOverlay.pageFrameTitle">
-                <source>Page and content history</source>
-                <target>Seite und Inhaltselemente</target>
-            </trans-unit>
-            <trans-unit id="filter.show" resname="filter.show">
-                <source>Show filters</source>
-                <target>Filter anzeigen</target>
-            </trans-unit>
-            <trans-unit id="filter.title" resname="filter.title">
-                <source>Filter</source>
-                <target>Filter</target>
-            </trans-unit>
-            <trans-unit id="filter.apply" resname="filter.apply">
-                <source>Apply filters</source>
-                <target>Filter anwenden</target>
-            </trans-unit>
-            <trans-unit id="filter.reset" resname="filter.reset">
-                <source>Reset</source>
-                <target>Zurücksetzen</target>
-            </trans-unit>
-            <trans-unit id="filter.option.any" resname="filter.option.any">
-                <source>Any</source>
-                <target>Alle</target>
-            </trans-unit>
-            <trans-unit id="filter.option.visible" resname="filter.option.visible">
-                <source>Visible</source>
-                <target>Sichtbar</target>
-            </trans-unit>
-            <trans-unit id="filter.option.hidden" resname="filter.option.hidden">
-                <source>Hidden</source>
-                <target>Verborgen</target>
-            </trans-unit>
-            <trans-unit id="filter.option.yes" resname="filter.option.yes">
-                <source>Yes</source>
-                <target>Ja</target>
-            </trans-unit>
-            <trans-unit id="filter.option.no" resname="filter.option.no">
-                <source>No</source>
-                <target>Nein</target>
-            </trans-unit>
-        </body>
-    </file>
+<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en" trgLang="de">
+  <file id="messages">
+    <unit id="viewMode.list">
+      <notes>
+        <note>Name of the built-in list view (the Core table) in the view switcher.</note>
+      </notes>
+      <segment state="final">
+        <source>List view</source>
+        <target>Listenansicht</target>
+      </segment>
+    </unit>
+    <unit id="viewMode.grid">
+      <notes>
+        <note>Name of the built-in card grid in the view switcher.</note>
+      </notes>
+      <segment state="final">
+        <source>Grid view</source>
+        <target>Rasteransicht</target>
+      </segment>
+    </unit>
+    <unit id="viewMode.compact">
+      <notes>
+        <note>Name of the built-in dense single-line view in the view switcher.</note>
+      </notes>
+      <segment state="final">
+        <source>Compact view</source>
+        <target>Kompaktansicht</target>
+      </segment>
+    </unit>
+    <unit id="viewMode.teaser">
+      <notes>
+        <note>Name of the built-in teaser card view in the view switcher.</note>
+      </notes>
+      <segment state="final">
+        <source>Teaser view</source>
+        <target>Teaseransicht</target>
+      </segment>
+    </unit>
+    <unit id="button.viewMode">
+      <notes>
+        <note>Label of the view switcher dropdown in the module header; the active view name is appended by TYPO3.</note>
+      </notes>
+      <segment state="final">
+        <source>View</source>
+        <target>Ansicht</target>
+      </segment>
+    </unit>
+    <unit id="noRecords">
+      <notes>
+        <note>Empty state when the page holds no records at all.</note>
+      </notes>
+      <segment state="final">
+        <source>No records found on this page.</source>
+        <target>Keine Datensätze auf dieser Seite gefunden.</target>
+      </segment>
+    </unit>
+    <unit id="noRecords.search">
+      <notes>
+        <note>Empty state when a search term matches nothing.</note>
+      </notes>
+      <segment state="final">
+        <source>No records match the current search.</source>
+        <target>Keine Datensätze entsprechen der aktuellen Suche.</target>
+      </segment>
+    </unit>
+    <unit id="noRecords.filtered">
+      <notes>
+        <note>Empty state when the active filters match nothing.</note>
+      </notes>
+      <segment state="final">
+        <source>No records match the current filters.</source>
+        <target>Keine Datensätze entsprechen den aktuellen Filtern.</target>
+      </segment>
+    </unit>
+    <unit id="noRecords.filteredAndSearch">
+      <notes>
+        <note>Empty state when filters and a search term are active and match nothing.</note>
+      </notes>
+      <segment state="final">
+        <source>No records match the current filters or search.</source>
+        <target>Keine Datensätze entsprechen den aktuellen Filtern oder der Suche.</target>
+      </segment>
+    </unit>
+    <unit id="action.edit">
+      <notes>
+        <note>Tooltip and accessible name of the edit button of a record.</note>
+      </notes>
+      <segment state="final">
+        <source>Edit record</source>
+        <target>Datensatz bearbeiten</target>
+      </segment>
+    </unit>
+    <unit id="action.hide">
+      <notes>
+        <note>Visibility toggle while the record is visible (TYPO3 Core wording).</note>
+      </notes>
+      <segment state="final">
+        <source>Hide record</source>
+        <target>Datensatz ausblenden</target>
+      </segment>
+    </unit>
+    <unit id="action.unhide">
+      <notes>
+        <note>Visibility toggle while the record is hidden (TYPO3 Core wording).</note>
+      </notes>
+      <segment state="final">
+        <source>Unhide record</source>
+        <target>Datensatz einblenden</target>
+      </segment>
+    </unit>
+    <unit id="action.delete">
+      <notes>
+        <note>Tooltip of the delete button and title of the delete confirmation dialog.</note>
+      </notes>
+      <segment state="final">
+        <source>Delete record</source>
+        <target>Datensatz löschen</target>
+      </segment>
+    </unit>
+    <unit id="action.delete.confirm">
+      <notes>
+        <note>Body of the delete confirmation dialog; {title} is the record title.</note>
+      </notes>
+      <segment state="final">
+        <source>Are you sure you want to delete “{title}”?</source>
+        <target>Soll „{title}“ wirklich gelöscht werden?</target>
+      </segment>
+    </unit>
+    <unit id="action.delete.confirmButton">
+      <notes>
+        <note>Confirming button of the delete dialog.</note>
+      </notes>
+      <segment state="final">
+        <source>Delete</source>
+        <target>Löschen</target>
+      </segment>
+    </unit>
+    <unit id="action.cancel">
+      <notes>
+        <note>Dismissing button of confirmation dialogs.</note>
+      </notes>
+      <segment state="final">
+        <source>Cancel</source>
+        <target>Abbrechen</target>
+      </segment>
+    </unit>
+    <unit id="action.moreActions">
+      <notes>
+        <note>Tooltip and accessible name of the overflow menu button of a record.</note>
+      </notes>
+      <segment state="final">
+        <source>More actions</source>
+        <target>Weitere Aktionen</target>
+      </segment>
+    </unit>
+    <unit id="action.info">
+      <notes>
+        <note>Overflow menu entry that opens the record information dialog.</note>
+      </notes>
+      <segment state="final">
+        <source>Info</source>
+        <target>Info</target>
+      </segment>
+    </unit>
+    <unit id="action.history">
+      <notes>
+        <note>Overflow menu entry and modal title of the record history.</note>
+      </notes>
+      <segment state="final">
+        <source>History</source>
+        <target>Verlauf</target>
+      </segment>
+    </unit>
+    <unit id="action.copy">
+      <notes>
+        <note>Overflow menu entry that copies the record to the clipboard.</note>
+      </notes>
+      <segment state="final">
+        <source>Copy</source>
+        <target>Kopieren</target>
+      </segment>
+    </unit>
+    <unit id="action.cut">
+      <notes>
+        <note>Overflow menu entry that cuts the record to the clipboard.</note>
+      </notes>
+      <segment state="final">
+        <source>Cut</source>
+        <target>Ausschneiden</target>
+      </segment>
+    </unit>
+    <unit id="action.editColumn">
+      <notes>
+        <note>Column header entry that edits one field of all listed records; {label} is the column label. Used when the Core label is unavailable.</note>
+      </notes>
+      <segment state="final">
+        <source>Edit the “{label}” field of the listed records</source>
+        <target>Feld „{label}“ der aufgelisteten Datensätze bearbeiten</target>
+      </segment>
+    </unit>
+    <unit id="action.show">
+      <notes>
+        <note>Deprecated since 1.1.0, use action.unhide instead. Kept as an alias for 1.x and removed in 2.0.</note>
+      </notes>
+      <segment state="final" subState="deprecated">
+        <source>Unhide record</source>
+        <target>Datensatz einblenden</target>
+      </segment>
+    </unit>
+    <unit id="action.show.detail">
+      <notes>
+        <note>Deprecated since 1.1.0, use action.unhide instead. Kept as an alias for 1.x and removed in 2.0.</note>
+      </notes>
+      <segment state="final" subState="deprecated">
+        <source>Unhide record</source>
+        <target>Datensatz einblenden</target>
+      </segment>
+    </unit>
+    <unit id="action.hide.detail">
+      <notes>
+        <note>Deprecated since 1.1.0, use action.hide instead. Kept as an alias for 1.x and removed in 2.0.</note>
+      </notes>
+      <segment state="final" subState="deprecated">
+        <source>Hide record</source>
+        <target>Datensatz ausblenden</target>
+      </segment>
+    </unit>
+    <unit id="sorting">
+      <notes>
+        <note>Accessible name of the sorting control group in a table header.</note>
+      </notes>
+      <segment state="final">
+        <source>Sorting</source>
+        <target>Sortierung</target>
+      </segment>
+    </unit>
+    <unit id="sort.ascending">
+      <notes>
+        <note>Menu entry that sorts the records in ascending order.</note>
+      </notes>
+      <segment state="final">
+        <source>Sort ascending</source>
+        <target>Aufsteigend sortieren</target>
+      </segment>
+    </unit>
+    <unit id="sort.descending">
+      <notes>
+        <note>Menu entry that sorts the records in descending order.</note>
+      </notes>
+      <segment state="final">
+        <source>Sort descending</source>
+        <target>Absteigend sortieren</target>
+      </segment>
+    </unit>
+    <unit id="sortingMode.label">
+      <notes>
+        <note>Heading of the segmented control that switches between manual and column sorting.</note>
+      </notes>
+      <segment state="final">
+        <source>Sorting mode</source>
+        <target>Sortiermodus</target>
+      </segment>
+    </unit>
+    <unit id="sortingMode.manual">
+      <notes>
+        <note>Segment for manual ordering by drag and drop.</note>
+      </notes>
+      <segment state="final">
+        <source>Manual</source>
+        <target>Manuell</target>
+      </segment>
+    </unit>
+    <unit id="sortingMode.manual.title">
+      <notes>
+        <note>Tooltip of the manual sorting segment.</note>
+      </notes>
+      <segment state="final">
+        <source>Drag and drop to reorder records</source>
+        <target>Datensätze per Drag-and-drop neu anordnen</target>
+      </segment>
+    </unit>
+    <unit id="sortingMode.field">
+      <notes>
+        <note>Segment for sorting by a column.</note>
+      </notes>
+      <segment state="final">
+        <source>By column</source>
+        <target>Nach Spalte</target>
+      </segment>
+    </unit>
+    <unit id="sortingMode.field.title">
+      <notes>
+        <note>Tooltip of the column sorting segment.</note>
+      </notes>
+      <segment state="final">
+        <source>Sort by column</source>
+        <target>Nach Spalte sortieren</target>
+      </segment>
+    </unit>
+    <unit id="drag.title">
+      <notes>
+        <note>Tooltip of the drag handle of a card.</note>
+      </notes>
+      <segment state="final">
+        <source>Drag to reorder</source>
+        <target>Ziehen, um neu anzuordnen</target>
+      </segment>
+    </unit>
+    <unit id="drag.ariaLabel">
+      <notes>
+        <note>Accessible name of the drag handle; {title} is the record title.</note>
+      </notes>
+      <segment state="final">
+        <source>Reorder {title}. Press Space to grab.</source>
+        <target>{title} neu anordnen. Leertaste drücken zum Greifen.</target>
+      </segment>
+    </unit>
+    <unit id="drag.instructions">
+      <notes>
+        <note>Hidden keyboard instructions referenced by aria-describedby of the reorderable list.</note>
+      </notes>
+      <segment state="final">
+        <source>Press Space or Enter to grab a record. Use the arrow keys to move it. Press Space or Enter to drop, Escape to cancel.</source>
+        <target>Leertaste oder Eingabetaste drücken, um einen Datensatz zu greifen. Mit den Pfeiltasten bewegen. Leertaste oder Eingabetaste zum Ablegen, Escape zum Abbrechen.</target>
+      </segment>
+    </unit>
+    <unit id="drag.grabbed">
+      <notes>
+        <note>Live region announcement after grabbing a record with the keyboard; {title} is the record title.</note>
+      </notes>
+      <segment state="final">
+        <source>{title} grabbed. Use the arrow keys to move it.</source>
+        <target>{title} gegriffen. Mit den Pfeiltasten bewegen.</target>
+      </segment>
+    </unit>
+    <unit id="drag.position">
+      <notes>
+        <note>Live region announcement while moving; {position} and {total} are numbers.</note>
+      </notes>
+      <segment state="final">
+        <source>Position {position} of {total}</source>
+        <target>Position {position} von {total}</target>
+      </segment>
+    </unit>
+    <unit id="drag.dropped">
+      <notes>
+        <note>Live region announcement after a drop; {position} is a number.</note>
+      </notes>
+      <segment state="final">
+        <source>Dropped at position {position}</source>
+        <target>An Position {position} abgelegt</target>
+      </segment>
+    </unit>
+    <unit id="drag.cancelled">
+      <notes>
+        <note>Live region announcement after cancelling a keyboard reorder.</note>
+      </notes>
+      <segment state="final">
+        <source>Reordering cancelled</source>
+        <target>Neuanordnung abgebrochen</target>
+      </segment>
+    </unit>
+    <unit id="drag.moved">
+      <notes>
+        <note>Live region announcement after a keyboard drop; {position} is a number.</note>
+      </notes>
+      <segment state="final">
+        <source>Record moved to position {position}</source>
+        <target>Datensatz an Position {position} verschoben</target>
+      </segment>
+    </unit>
+    <unit id="drag.dropHere">
+      <notes>
+        <note>Label of the drop zone after the last card.</note>
+      </notes>
+      <segment state="final">
+        <source>Drop here</source>
+        <target>Hier ablegen</target>
+      </segment>
+    </unit>
+    <unit id="drag.endPosition">
+      <notes>
+        <note>Live region announcement when the end drop zone is targeted.</note>
+      </notes>
+      <segment state="final">
+        <source>End of the list (after the last record)</source>
+        <target>Ende der Liste (nach dem letzten Datensatz)</target>
+      </segment>
+    </unit>
+    <unit id="a11y.reorderableList">
+      <notes>
+        <note>Accessible name of the drag-and-drop list; {table} is the table label.</note>
+      </notes>
+      <segment state="final">
+        <source>{table} (reorderable list)</source>
+        <target>{table} (sortierbare Liste)</target>
+      </segment>
+    </unit>
+    <unit id="a11y.recordHidden">
+      <notes>
+        <note>Live region announcement after hiding a record; {title} is the record title.</note>
+      </notes>
+      <segment state="final">
+        <source>{title} is now hidden</source>
+        <target>{title} ist jetzt ausgeblendet</target>
+      </segment>
+    </unit>
+    <unit id="a11y.recordVisible">
+      <notes>
+        <note>Live region announcement after unhiding a record; {title} is the record title.</note>
+      </notes>
+      <segment state="final">
+        <source>{title} is now visible</source>
+        <target>{title} ist jetzt sichtbar</target>
+      </segment>
+    </unit>
+    <unit id="notification.moveFailed">
+      <notes>
+        <note>Title of the error notification when reordering fails.</note>
+      </notes>
+      <segment state="final">
+        <source>Move failed</source>
+        <target>Verschieben fehlgeschlagen</target>
+      </segment>
+    </unit>
+    <unit id="notification.updateFailed">
+      <notes>
+        <note>Title of the error notification when a visibility change fails.</note>
+      </notes>
+      <segment state="final">
+        <source>Update failed</source>
+        <target>Aktualisierung fehlgeschlagen</target>
+      </segment>
+    </unit>
+    <unit id="notification.unknownError">
+      <notes>
+        <note>Notification body when the server returned no error message.</note>
+      </notes>
+      <segment state="final">
+        <source>Unknown error</source>
+        <target>Unbekannter Fehler</target>
+      </segment>
+    </unit>
+    <unit id="notification.requestFailed">
+      <notes>
+        <note>Notification body when the request did not reach the server.</note>
+      </notes>
+      <segment state="final">
+        <source>Request failed</source>
+        <target>Anfrage fehlgeschlagen</target>
+      </segment>
+    </unit>
+    <unit id="notification.visibilityEndpointMissing">
+      <notes>
+        <note>Notification body when the Core AJAX route for toggling visibility is not registered.</note>
+      </notes>
+      <segment state="final">
+        <source>The TYPO3 endpoint for changing visibility is not available.</source>
+        <target>Der TYPO3-Endpunkt zum Ändern der Sichtbarkeit ist nicht verfügbar.</target>
+      </segment>
+    </unit>
+    <unit id="pagination.regionTop">
+      <notes>
+        <note>Accessible name of the pagination landmark above the records.</note>
+      </notes>
+      <segment state="final">
+        <source>Pagination (top)</source>
+        <target>Seitennavigation (oben)</target>
+      </segment>
+    </unit>
+    <unit id="pagination.regionBottom">
+      <notes>
+        <note>Accessible name of the pagination landmark below the records.</note>
+      </notes>
+      <segment state="final">
+        <source>Pagination (bottom)</source>
+        <target>Seitennavigation (unten)</target>
+      </segment>
+    </unit>
+    <unit id="pagination.records">
+      <notes>
+        <note>Range indicator; {from}, {to} and {total} are record numbers.</note>
+      </notes>
+      <segment state="final">
+        <source>Records {from}–{to} of {total}</source>
+        <target>Datensätze {from}–{to} von {total}</target>
+      </segment>
+    </unit>
+    <unit id="pagination.pageOfTotal">
+      <notes>
+        <note>Page indicator; {page} is the current page number or the page input control, {total} the page count.</note>
+      </notes>
+      <segment state="final">
+        <source>Page {page} of {total}</source>
+        <target>Seite {page} von {total}</target>
+      </segment>
+    </unit>
+    <unit id="image.previewOnly">
+      <notes>
+        <note>Hint below a card thumbnail.</note>
+      </notes>
+      <segment state="final">
+        <source>Preview only. The frontend may not show this image for this record type.</source>
+        <target>Nur Vorschau. Das Frontend zeigt dieses Bild für diesen Datensatztyp möglicherweise nicht an.</target>
+      </segment>
+    </unit>
+    <unit id="translation.free">
+      <notes>
+        <note>Badge of a translation record that is not connected to a default-language record (TYPO3 free mode).</note>
+      </notes>
+      <segment state="final">
+        <source>Free mode</source>
+        <target>Freier Modus</target>
+      </segment>
+    </unit>
+    <unit id="translation.free.title">
+      <notes>
+        <note>Tooltip of the free-mode badge.</note>
+      </notes>
+      <segment state="final">
+        <source>Free-mode translation, not connected to a default-language record</source>
+        <target>Übersetzung im freien Modus, nicht mit einem Datensatz der Standardsprache verbunden</target>
+      </segment>
+    </unit>
+    <unit id="translation.translated">
+      <notes>
+        <note>State of a language slot that has a translation record.</note>
+      </notes>
+      <segment state="final">
+        <source>Translated</source>
+        <target>Übersetzt</target>
+      </segment>
+    </unit>
+    <unit id="translation.untranslated">
+      <notes>
+        <note>State of a language slot without a translation record.</note>
+      </notes>
+      <segment state="final">
+        <source>Not translated</source>
+        <target>Nicht übersetzt</target>
+      </segment>
+    </unit>
+    <unit id="translation.translateTo">
+      <notes>
+        <note>Tooltip of the localize button; {language} is the language title.</note>
+      </notes>
+      <segment state="final">
+        <source>Translate to {language}</source>
+        <target>Übersetzen nach {language}</target>
+      </segment>
+    </unit>
+    <unit id="translation.edit">
+      <notes>
+        <note>Tooltip of the edit link of an existing translation; {language} is the language title.</note>
+      </notes>
+      <segment state="final">
+        <source>Edit translation ({language})</source>
+        <target>Übersetzung bearbeiten ({language})</target>
+      </segment>
+    </unit>
+    <unit id="translation.sectionLabel">
+      <notes>
+        <note>Heading and accessible name of the translation strip of a card.</note>
+      </notes>
+      <segment state="final">
+        <source>Translations</source>
+        <target>Übersetzungen</target>
+      </segment>
+    </unit>
+    <unit id="translation.progress">
+      <notes>
+        <note>Translation progress badge; {translated} and {total} are counts (ICU plural).</note>
+      </notes>
+      <segment state="final">
+        <source>{translated, plural, =0 {None of {total} translated} one {# of {total} translated} other {# of {total} translated}}</source>
+        <target>{translated, plural, =0 {Keine von {total} übersetzt} one {# von {total} übersetzt} other {# von {total} übersetzt}}</target>
+      </segment>
+    </unit>
+    <unit id="translation.allTranslated">
+      <notes>
+        <note>Translation progress badge when every language slot is translated.</note>
+      </notes>
+      <segment state="final">
+        <source>All languages translated</source>
+        <target>Alle Sprachen übersetzt</target>
+      </segment>
+    </unit>
+    <unit id="state.hidden">
+      <notes>
+        <note>Badge and tooltip for a hidden record.</note>
+      </notes>
+      <segment state="final">
+        <source>Hidden</source>
+        <target>Ausgeblendet</target>
+      </segment>
+    </unit>
+    <unit id="state.visible">
+      <notes>
+        <note>Badge and tooltip for a visible record.</note>
+      </notes>
+      <segment state="final">
+        <source>Visible</source>
+        <target>Sichtbar</target>
+      </segment>
+    </unit>
+    <unit id="record.idLabel">
+      <notes>
+        <note>Prefix of the record identifier in the card footer.</note>
+      </notes>
+      <segment state="final">
+        <source>ID</source>
+        <target>ID</target>
+      </segment>
+    </unit>
+    <unit id="record.onPage">
+      <notes>
+        <note>Card footer hint naming the parent page; {pid} is the page identifier.</note>
+      </notes>
+      <segment state="final">
+        <source>on page {pid}</source>
+        <target>auf Seite {pid}</target>
+      </segment>
+    </unit>
+    <unit id="workspace.state.title">
+      <notes>
+        <note>Prefix of the workspace badge tooltip, followed by the state.</note>
+      </notes>
+      <segment state="final">
+        <source>Workspace state</source>
+        <target>Workspace-Status</target>
+      </segment>
+    </unit>
+    <unit id="workspace.state.unchanged">
+      <notes>
+        <note>Workspace state: the record equals the live version.</note>
+      </notes>
+      <segment state="final">
+        <source>Unchanged</source>
+        <target>Unverändert</target>
+      </segment>
+    </unit>
+    <unit id="workspace.state.new">
+      <notes>
+        <note>Workspace state: the record only exists in the workspace.</note>
+      </notes>
+      <segment state="final">
+        <source>New</source>
+        <target>Neu</target>
+      </segment>
+    </unit>
+    <unit id="workspace.state.changed">
+      <notes>
+        <note>Workspace state: the record was modified in the workspace.</note>
+      </notes>
+      <segment state="final">
+        <source>Changed</source>
+        <target>Geändert</target>
+      </segment>
+    </unit>
+    <unit id="workspace.state.move">
+      <notes>
+        <note>Workspace state: the record was moved in the workspace.</note>
+      </notes>
+      <segment state="final">
+        <source>Moved</source>
+        <target>Verschoben</target>
+      </segment>
+    </unit>
+    <unit id="workspace.state.deleted">
+      <notes>
+        <note>Workspace state: the record is marked for deletion in the workspace.</note>
+      </notes>
+      <segment state="final">
+        <source>Deleted</source>
+        <target>Gelöscht</target>
+      </segment>
+    </unit>
+    <unit id="historyOverlay.elementTab">
+      <notes>
+        <note>Tab of the record history modal that shows the history of the element itself.</note>
+      </notes>
+      <segment state="final">
+        <source>Element history</source>
+        <target>Elementverlauf</target>
+      </segment>
+    </unit>
+    <unit id="historyOverlay.pageTab">
+      <notes>
+        <note>Tab and frame title of the record history modal that shows the history of the parent page.</note>
+      </notes>
+      <segment state="final">
+        <source>Page history</source>
+        <target>Seitenverlauf</target>
+      </segment>
+    </unit>
+    <unit id="filter.show">
+      <notes>
+        <note>Entry in the View dropdown of the module header that toggles the filter panel.</note>
+      </notes>
+      <segment state="final">
+        <source>Show filters</source>
+        <target>Filter anzeigen</target>
+      </segment>
+    </unit>
+    <unit id="filter.title">
+      <notes>
+        <note>Heading of the filter panel.</note>
+      </notes>
+      <segment state="final">
+        <source>Filters</source>
+        <target>Filter</target>
+      </segment>
+    </unit>
+    <unit id="filter.apply">
+      <notes>
+        <note>Submit button of the filter panel.</note>
+      </notes>
+      <segment state="final">
+        <source>Apply</source>
+        <target>Anwenden</target>
+      </segment>
+    </unit>
+    <unit id="filter.reset">
+      <notes>
+        <note>Link that clears all filter values.</note>
+      </notes>
+      <segment state="final">
+        <source>Reset</source>
+        <target>Zurücksetzen</target>
+      </segment>
+    </unit>
+    <unit id="filter.option.any">
+      <notes>
+        <note>Neutral option of select filters that does not restrict the result.</note>
+      </notes>
+      <segment state="final">
+        <source>Any</source>
+        <target>Alle</target>
+      </segment>
+    </unit>
+    <unit id="filter.option.visible">
+      <notes>
+        <note>Visibility filter option for visible records.</note>
+      </notes>
+      <segment state="final">
+        <source>Visible</source>
+        <target>Sichtbar</target>
+      </segment>
+    </unit>
+    <unit id="filter.option.hidden">
+      <notes>
+        <note>Visibility filter option for hidden records.</note>
+      </notes>
+      <segment state="final">
+        <source>Hidden</source>
+        <target>Ausgeblendet</target>
+      </segment>
+    </unit>
+    <unit id="filter.option.yes">
+      <notes>
+        <note>Boolean filter option for a set checkbox.</note>
+      </notes>
+      <segment state="final">
+        <source>Yes</source>
+        <target>Ja</target>
+      </segment>
+    </unit>
+    <unit id="filter.option.no">
+      <notes>
+        <note>Boolean filter option for an unset checkbox.</note>
+      </notes>
+      <segment state="final">
+        <source>No</source>
+        <target>Nein</target>
+      </segment>
+    </unit>
+    <unit id="filter.range.from">
+      <notes>
+        <note>Accessible name of the start date input of a date range filter; {label} is the filter label.</note>
+      </notes>
+      <segment state="final">
+        <source>Start date for {label}</source>
+        <target>Startdatum für {label}</target>
+      </segment>
+    </unit>
+    <unit id="filter.range.to">
+      <notes>
+        <note>Accessible name of the end date input of a date range filter; {label} is the filter label.</note>
+      </notes>
+      <segment state="final">
+        <source>End date for {label}</source>
+        <target>Enddatum für {label}</target>
+      </segment>
+    </unit>
+  </file>
 </xliff>
