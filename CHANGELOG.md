@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.1.1 - 2026-09-12
+
+### Fixed
+
+- TYPO3 14.3.7 added an eleventh constructor argument (`RecordIdentityRenderer`) to
+  `TYPO3\CMS\Backend\Controller\RecordListController`. The subclass still passed ten, so the
+  Records module failed with an `ArgumentCountError` at dependency-injection time — for every
+  view, not only the ones this extension adds. The argument is accepted and passed through, and
+  `typo3/cms-*` now requires `^14.3.7`, which is also the security release for
+  TYPO3-CORE-SA-2026-022.
+
 ## 1.1.0 - 2026-09-12
 
 Label and translation quality pass, small accessibility fixes, removal of dead

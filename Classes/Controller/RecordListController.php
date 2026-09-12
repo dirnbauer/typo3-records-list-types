@@ -21,6 +21,7 @@ use TYPO3\CMS\Backend\Template\Components\Buttons\LanguageSelectorBuilder;
 use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Backend\View\RecordIdentityRenderer;
 use TYPO3\CMS\Backend\View\RecordSearchBoxComponent;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -98,6 +99,7 @@ final class RecordListController extends CoreRecordListController
         FlashMessageService $flashMessageService,
         PageContextFactory $pageContextFactory,
         LanguageSelectorBuilder $languageSelectorBuilder,
+        RecordIdentityRenderer $recordIdentityRenderer,
         private readonly ViewModeResolver $viewModeResolver,
         private readonly ViewTypeRegistry $viewTypeRegistry,
         private readonly GridConfigurationService $gridConfigurationService,
@@ -126,6 +128,7 @@ final class RecordListController extends CoreRecordListController
             $flashMessageService,
             $pageContextFactory,
             $languageSelectorBuilder,
+            $recordIdentityRenderer,
         );
     }
 

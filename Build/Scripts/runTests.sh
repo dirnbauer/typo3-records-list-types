@@ -101,7 +101,10 @@ run_unit_coverage() {
 }
 
 run_functional() {
-    php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml
+    # The testing framework needs database credentials from the environment; default to
+    # SQLite so a local run works without a database server (CI overrides with MariaDB).
+    typo3DatabaseDriver="${typo3DatabaseDriver:-pdo_sqlite}" \
+        php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml
 }
 
 run_functional_coverage() {

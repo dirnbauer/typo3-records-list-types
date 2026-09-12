@@ -17,9 +17,9 @@
     },
     "require": {
         "php": "^8.3",
-        "typo3/cms-backend": "^14.3.6",
-        "typo3/cms-core": "^14.3.6",
-        "typo3/cms-fluid": "^14.3.6"
+        "typo3/cms-backend": "^14.3.7",
+        "typo3/cms-core": "^14.3.7",
+        "typo3/cms-fluid": "^14.3.7"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.95.2",
@@ -45,7 +45,7 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "records_list_types",
-            "version": "1.1.0",
+            "version": "1.1.1",
             "Package": {
                 "providesPackages": {}
             },
