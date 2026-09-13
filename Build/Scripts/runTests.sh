@@ -83,7 +83,26 @@ run_lint() {
             failed=1
         fi
     done < <(find Classes Configuration Tests -name '*.php' -print0; printf '%s\0' ext_localconf.php rector.php .php-cs-fixer.dist.php)
-    xmllint --noout Resources/Private/Language/*.xlf
+    # XLIFF well-formedness. GitHub runners no longer ship xmllint, and PHP's
+    # DOM extension is always present here, so validate with PHP and keep the
+    # check identical locally and in CI.
+    if ! php -r '
+        $failed = 0;
+        foreach (glob("Resources/Private/Language/*.xlf") as $file) {
+            libxml_use_internal_errors(true);
+            $dom = new DOMDocument();
+            if (!$dom->load($file)) {
+                foreach (libxml_get_errors() as $error) {
+                    fwrite(STDERR, sprintf("%s:%d %s", $file, $error->line, $error->message));
+                }
+                libxml_clear_errors();
+                $failed = 1;
+            }
+        }
+        exit($failed);
+    '; then
+        failed=1
+    fi
     [[ "${failed}" -eq 0 ]]
 }
 
