@@ -72,15 +72,4 @@ final class ViewModeControllerTest extends TestCase
         self::assertFalse($body['success']);
         self::assertStringContainsString('Failed to retrieve', $body['error']);
     }
-
-    #[Test]
-    public function controllerAcceptsRequiredDependencies(): void
-    {
-        $controller = new ViewModeController(
-            new ViewModeResolver(new NoopEventDispatcher()),
-            self::createStub(LoggerInterface::class),
-        );
-
-        self::assertInstanceOf(ViewModeController::class, $controller);
-    }
 }

@@ -107,13 +107,13 @@ run_lint() {
 }
 
 run_unit() {
-    php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit --testsuite Unit
+    php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Build/phpunit/UnitTests.xml
 }
 
 run_unit_coverage() {
     ensure_coverage_driver
     mkdir -p var/log/coverage/unit-html
-    XDEBUG_MODE=coverage php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit --testsuite Unit \
+    XDEBUG_MODE=coverage php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Build/phpunit/UnitTests.xml \
         --coverage-clover var/log/unit-coverage.xml \
         --coverage-html var/log/coverage/unit-html \
         --coverage-text
@@ -123,13 +123,13 @@ run_functional() {
     # The testing framework needs database credentials from the environment; default to
     # SQLite so a local run works without a database server (CI overrides with MariaDB).
     typo3DatabaseDriver="${typo3DatabaseDriver:-pdo_sqlite}" \
-        php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml
+        php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Build/phpunit/FunctionalTests.xml
 }
 
 run_functional_coverage() {
     ensure_coverage_driver
     mkdir -p var/log/coverage/functional-html
-    XDEBUG_MODE=coverage php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Tests/Build/FunctionalTests.xml \
+    XDEBUG_MODE=coverage php -d memory_limit="${PHP_MEMORY_LIMIT}" vendor/bin/phpunit -c Build/phpunit/FunctionalTests.xml \
         --coverage-clover var/log/functional-coverage.xml \
         --coverage-html var/log/coverage/functional-html \
         --coverage-text

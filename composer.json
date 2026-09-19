@@ -1,7 +1,7 @@
 {
     "name": "webconsulting/records-list-types",
     "type": "typo3-cms-extension",
-    "description": "Records List Types: Grid, Compact, Teaser, custom views, and configurable record filters for the TYPO3 v14 backend Records module.",
+    "description": "Grid, compact, teaser and custom Fluid views plus configurable record filters for the TYPO3 v14 Records module.",
     "license": "GPL-2.0-or-later",
     "authors": [
         {
@@ -16,7 +16,7 @@
         "source": "https://github.com/dirnbauer/typo3-records-list-types"
     },
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "typo3/cms-backend": "^14.3.7",
         "typo3/cms-core": "^14.3.7",
         "typo3/cms-fluid": "^14.3.7"
@@ -25,8 +25,9 @@
         "friendsofphp/php-cs-fixer": "^3.95.2",
         "phpat/phpat": "^0.12.2",
         "phpstan/phpstan": "^2.1.55",
+        "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0.11",
-        "phpunit/phpunit": "^11.2.5 || ^12.1.2 || ^13.0.2",
+        "phpunit/phpunit": "^12.4 || ^13.0",
         "saschaegerer/phpstan-typo3": "^3.0",
         "ssch/typo3-rector": "^3.0",
         "typo3/coding-standards": "^0.9",
@@ -45,10 +46,7 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "records_list_types",
-            "version": "1.1.1",
-            "Package": {
-                "providesPackages": {}
-            },
+            "version": "1.2.0",
             "web-dir": "public"
         }
     },
@@ -59,7 +57,16 @@
             "typo3/cms-composer-installers": true
         },
         "platform": {
-            "php": "8.3.0"
+            "php": "8.4.0"
         }
+    },
+    "scripts": {
+        "ci": "Build/Scripts/runTests.sh -s ci",
+        "ci:cgl": "Build/Scripts/runTests.sh -s cgl",
+        "ci:cgl:fix": "php-cs-fixer fix --config=.php-cs-fixer.dist.php",
+        "ci:functional": "Build/Scripts/runTests.sh -s functional",
+        "ci:lint": "Build/Scripts/runTests.sh -s lint",
+        "ci:phpstan": "Build/Scripts/runTests.sh -s phpstan",
+        "ci:unit": "Build/Scripts/runTests.sh -s unit"
     }
 }

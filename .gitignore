@@ -11,11 +11,7 @@ Thumbs.db
 .cursor/
 .claude/
 .codex/
-.opencode/
-.agents/
-.agent/
 AGENTS.md
-webconsulting-skills/
 
 # Dependencies, build output and generated files
 /vendor/
@@ -27,6 +23,7 @@ webconsulting-skills/
 /public/
 /packages/
 /typo3temp/
+*.map
 
 # Tool caches
 *.cache

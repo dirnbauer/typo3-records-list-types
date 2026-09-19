@@ -73,10 +73,13 @@ final class RegisterViewModesEvent
      * Add a custom view mode.
      *
      * @param string $id Unique identifier for the view mode (e.g., 'kanban', 'timeline')
-     * @param array{label: string, icon: string, description?: string} $config Configuration:
-     *        - label: Display label (can be LLL: reference)
-     *        - icon: TYPO3 icon identifier (e.g., 'actions-viewmode-list')
+     * @param array{label?: string, icon?: string, description?: string} $config Configuration:
+     *        - label: Display label (a label reference or plain text), required
+     *        - icon: TYPO3 icon identifier (e.g., 'actions-viewmode-list'), required
      *        - description: Optional description text
+     *
+     * `label` and `icon` are optional in the type on purpose: listeners hand in
+     * arbitrary arrays and this method is the place that rejects incomplete ones.
      */
     public function addViewMode(string $id, array $config): void
     {

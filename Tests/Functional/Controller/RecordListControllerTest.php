@@ -13,6 +13,7 @@ use TYPO3\CMS\Backend\Context\PageContext;
 use TYPO3\CMS\Backend\Context\PageContextFactory;
 use TYPO3\CMS\Backend\Domain\Model\Language\PageLanguageInformation;
 use TYPO3\CMS\Backend\Module\ModuleData;
+use TYPO3\CMS\Backend\Module\ModuleInterface;
 use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\Router;
@@ -138,6 +139,9 @@ final class RecordListControllerTest extends FunctionalTestCase
         self::assertSame('0', $returnParams['recordFilters']['tt_content']['hidden'] ?? null);
     }
 
+    /**
+     * @param array<string, mixed> $tsConfig
+     */
     #[Test]
     #[DataProvider('tableVisibilityProvider')]
     public function explicitlyRequestedTableRespectsAccessAndVisibility(array $tsConfig, string $table): void
@@ -156,6 +160,9 @@ final class RecordListControllerTest extends FunctionalTestCase
         ));
     }
 
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
     public static function tableVisibilityProvider(): iterable
     {
         yield 'unknown table' => [[], 'missing_table'];
@@ -164,6 +171,9 @@ final class RecordListControllerTest extends FunctionalTestCase
         yield 'table override' => [['table' => ['tt_content' => ['hideTable' => '1']]], 'tt_content'];
     }
 
+    /**
+     * @param list<string> $expected
+     */
     #[Test]
     #[DataProvider('editorTableAccessProvider')]
     public function explicitlyRequestedTableRespectsEditorTablePermissions(string $allowedTables, array $expected): void
@@ -184,6 +194,9 @@ final class RecordListControllerTest extends FunctionalTestCase
         ));
     }
 
+    /**
+     * @return iterable<string, array{string, list<string>}>
+     */
     public static function editorTableAccessProvider(): iterable
     {
         yield 'allowed' => ['pages,tt_content', ['tt_content']];
@@ -230,7 +243,9 @@ final class RecordListControllerTest extends FunctionalTestCase
             'pid' => 1, 'header' => 'Clipboard example', 'CType' => 'text',
         ]);
         $request = $this->createBackendRequest(1, 'grid');
-        $request->getAttribute('moduleData')->set('clipBoard', $clipboardShown);
+        $moduleData = $request->getAttribute('moduleData');
+        self::assertInstanceOf(ModuleData::class, $moduleData);
+        $moduleData->set('clipBoard', $clipboardShown);
         $clipboard = GeneralUtility::makeInstance(Clipboard::class);
         $clipboard->initializeClipboard($request);
         $clipboard->setCmd(['setP' => 'tab_1']);
@@ -243,6 +258,9 @@ final class RecordListControllerTest extends FunctionalTestCase
         ));
     }
 
+    /**
+     * @return iterable<string, array{bool}>
+     */
     public static function clipboardVisibilityProvider(): iterable
     {
         yield 'visible clipboard with bulk pad' => [true];
@@ -273,7 +291,9 @@ final class RecordListControllerTest extends FunctionalTestCase
         $this->setUpBackendUser(2);
         $GLOBALS['BE_USER']->groupData['tables_select'] = 'pages,tt_content';
         $request = $this->createBackendRequest(3, $mode);
-        self::assertFalse($request->getAttribute('pageContext')->isAccessible());
+        $pageContext = $request->getAttribute('pageContext');
+        self::assertInstanceOf(PageContext::class, $pageContext);
+        self::assertFalse($pageContext->isAccessible());
 
         $response = $this->get(RecordListController::class)->mainAction($request);
         self::assertSame(200, $response->getStatusCode());
@@ -297,6 +317,9 @@ final class RecordListControllerTest extends FunctionalTestCase
         self::assertStringNotContainsString('records_list_types.messages:', $html, 'Every label must resolve through the translation domain.');
     }
 
+    /**
+     * @return iterable<string, array{string}>
+     */
     public static function viewModeProvider(): iterable
     {
         foreach (['list', 'grid', 'compact', 'teaser'] as $mode) {
@@ -307,7 +330,9 @@ final class RecordListControllerTest extends FunctionalTestCase
     private function createBackendRequest(int $pageId, string $mode): ServerRequestInterface
     {
         $module = $this->get(ModuleProvider::class)->getModule('records');
+        self::assertInstanceOf(ModuleInterface::class, $module);
         $route = $this->get(Router::class)->getRoute('records');
+        self::assertNotNull($route);
         $route->setOption('_identifier', 'records');
         $request = (new ServerRequest('https://example.test/typo3/module/content/records', 'GET', serverParams: [
             'HTTP_HOST' => 'example.test', 'SCRIPT_NAME' => '/index.php',
@@ -395,8 +420,12 @@ final class RecordListControllerTest extends FunctionalTestCase
         $query = parse_url($url, PHP_URL_QUERY);
         self::assertIsString($query, 'URL does not contain a query string: ' . $url);
 
+        parse_str($query, $parsed);
         $params = [];
-        parse_str($query, $params);
+        foreach ($parsed as $key => $value) {
+            $params[(string)$key] = $value;
+        }
+
         return $params;
     }
 }

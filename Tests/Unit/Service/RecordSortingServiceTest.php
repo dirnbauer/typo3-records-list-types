@@ -85,9 +85,9 @@ final class RecordSortingServiceTest extends TestCase
      */
     private function extractRawUids(array $records): array
     {
-        return array_map(
+        return array_values(array_map(
             static fn(array $record): int => (int)($record['rawRecord']['uid'] ?? 0),
             $records,
-        );
+        ));
     }
 }
