@@ -12,6 +12,7 @@ use TYPO3\CMS\Core\Schema\Field\FieldCollection;
 use TYPO3\CMS\Core\Schema\TcaSchema;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use Webconsulting\RecordsListTypes\Service\RecordFilterConfigurationService;
+use Webconsulting\RecordsListTypes\Service\TcaTableConfigurationService;
 
 final class RecordFilterConfigurationServiceTest extends TestCase
 {
@@ -77,6 +78,7 @@ final class RecordFilterConfigurationServiceTest extends TestCase
         return new RecordFilterConfigurationService(
             $schemaFactory,
             self::createStub(ConnectionPool::class),
+            new TcaTableConfigurationService(),
         );
     }
 }

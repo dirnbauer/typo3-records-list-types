@@ -38,7 +38,7 @@ use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 final class ViewModeResolver implements SingletonInterface
 {
     /**
-     * Default view modes. Additional modes can be registered via:
+     * Additional modes can be registered via:
      * - RegisterViewModesEvent (PSR-14 event)
      * - TSconfig: mod.web_list.viewMode.types.{id} { label, icon, description }
      *
@@ -49,29 +49,6 @@ final class ViewModeResolver implements SingletonInterface
      * - actions-menu (hamburger menu)
      * - content-news (news icon)
      */
-    private const array DEFAULT_VIEW_MODES = [
-        'list' => [
-            'label' => 'records_list_types.messages:viewMode.list',
-            'icon' => 'actions-viewmode-list',
-            'description' => 'Standard table view',
-        ],
-        'grid' => [
-            'label' => 'records_list_types.messages:viewMode.grid',
-            'icon' => 'actions-viewmode-tiles',
-            'description' => 'Card-based grid view',
-        ],
-        'compact' => [
-            'label' => 'records_list_types.messages:viewMode.compact',
-            'icon' => 'actions-menu',
-            'description' => 'Compact single-line view',
-        ],
-        'teaser' => [
-            'label' => 'records_list_types.messages:viewMode.teaser',
-            'icon' => 'content-news',
-            'description' => 'Teaser list with title, date, description',
-        ],
-    ];
-
     private const string TABLE_USER_CONFIG_KEY = 'records_view_mode_table';
 
     /**
@@ -151,8 +128,15 @@ final class ViewModeResolver implements SingletonInterface
             return $this->viewModes;
         }
 
-        // Start with default modes
-        $modes = self::DEFAULT_VIEW_MODES;
+        // Start with the built-in modes, which ViewTypeRegistry owns.
+        $modes = array_map(
+            static fn(array $type): array => [
+                'label' => $type['label'],
+                'icon' => $type['icon'],
+                'description' => $type['description'],
+            ],
+            ViewTypeRegistry::BUILTIN_TYPES,
+        );
 
         // Allow extensions to register custom modes via PSR-14 event
         $event = new RegisterViewModesEvent($modes);

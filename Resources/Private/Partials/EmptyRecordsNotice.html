@@ -2,34 +2,15 @@
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
-<div class="callout callout-info m-3">
-    <div class="callout-body">
-        <core:icon identifier="actions-info" size="small" />
-        <span class="ms-2">
-            <f:if condition="{table.hasActiveFilters}">
-                <f:then>
-                    <f:if condition="{searchTerm}">
-                        <f:then>
-                            <f:translate key="records_list_types.messages:noRecords.filteredAndSearch" />
-                        </f:then>
-                        <f:else>
-                            <f:translate key="records_list_types.messages:noRecords.filtered" />
-                        </f:else>
-                    </f:if>
-                </f:then>
-                <f:else>
-                    <f:if condition="{searchTerm}">
-                        <f:then>
-                            <f:translate key="records_list_types.messages:noRecords.search" />
-                        </f:then>
-                        <f:else>
-                            <f:translate key="records_list_types.messages:noRecords" />
-                        </f:else>
-                    </f:if>
-                </f:else>
-            </f:if>
-        </span>
-    </div>
+<div class="recordlist-empty">
+    <core:icon identifier="actions-info" size="medium" />
+    <p class="recordlist-empty__message">{table.emptyState.message}</p>
+    <f:if condition="{table.emptyState.resetUrl}">
+        <a class="btn btn-default btn-sm" href="{table.emptyState.resetUrl}#t3-table-{table.tableName}">
+            <core:icon identifier="actions-close" size="small" />
+            {table.emptyState.resetLabel}
+        </a>
+    </f:if>
 </div>
 
 </html>

@@ -15,6 +15,7 @@ use TYPO3\CMS\Core\Resource\FileRepository;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use Webconsulting\RecordsListTypes\Service\GridConfigurationService;
 use Webconsulting\RecordsListTypes\Service\RecordGridDataProvider;
+use Webconsulting\RecordsListTypes\Service\TcaTableConfigurationService;
 use Webconsulting\RecordsListTypes\Service\ThumbnailService;
 
 final class RecordGridDataProviderTest extends TestCase
@@ -37,9 +38,13 @@ final class RecordGridDataProviderTest extends TestCase
             new ThumbnailService(self::createStub(FileRepository::class)),
             $tcaSchemaFactory,
             $context,
+            new TcaTableConfigurationService(),
         );
     }
 
+    /**
+     * @param array<int, array<string, mixed>> $records
+     */
     #[Test]
     #[DataProvider('recordsContainThumbnailsDataProvider')]
     public function recordsContainThumbnailsDetectsThumbnailUrls(array $records, bool $expected): void

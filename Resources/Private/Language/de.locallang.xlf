@@ -199,6 +199,24 @@
         <target>Feld „{label}“ der aufgelisteten Datensätze bearbeiten</target>
       </segment>
     </unit>
+    <unit id="sort.ascending">
+      <notes>
+        <note>Menu entry that sorts the records in ascending order.</note>
+      </notes>
+      <segment state="final">
+        <source>Sort ascending</source>
+        <target>Aufsteigend sortieren</target>
+      </segment>
+    </unit>
+    <unit id="sort.descending">
+      <notes>
+        <note>Menu entry that sorts the records in descending order.</note>
+      </notes>
+      <segment state="final">
+        <source>Sort descending</source>
+        <target>Absteigend sortieren</target>
+      </segment>
+    </unit>
     <unit id="action.show">
       <notes>
         <note>Deprecated since 1.1.0, use action.unhide instead. Kept as an alias for 1.x and removed in 2.0.</note>
@@ -224,33 +242,6 @@
       <segment state="final" subState="deprecated">
         <source>Hide record</source>
         <target>Datensatz ausblenden</target>
-      </segment>
-    </unit>
-    <unit id="sorting">
-      <notes>
-        <note>Accessible name of the sorting control group in a table header.</note>
-      </notes>
-      <segment state="final">
-        <source>Sorting</source>
-        <target>Sortierung</target>
-      </segment>
-    </unit>
-    <unit id="sort.ascending">
-      <notes>
-        <note>Menu entry that sorts the records in ascending order.</note>
-      </notes>
-      <segment state="final">
-        <source>Sort ascending</source>
-        <target>Aufsteigend sortieren</target>
-      </segment>
-    </unit>
-    <unit id="sort.descending">
-      <notes>
-        <note>Menu entry that sorts the records in descending order.</note>
-      </notes>
-      <segment state="final">
-        <source>Sort descending</source>
-        <target>Absteigend sortieren</target>
       </segment>
     </unit>
     <unit id="sortingMode.label">
@@ -304,7 +295,7 @@
       </notes>
       <segment state="final">
         <source>Drag to reorder</source>
-        <target>Ziehen, um neu anzuordnen</target>
+        <target>Zum Sortieren ziehen</target>
       </segment>
     </unit>
     <unit id="drag.ariaLabel">
@@ -341,15 +332,6 @@
       <segment state="final">
         <source>Position {position} of {total}</source>
         <target>Position {position} von {total}</target>
-      </segment>
-    </unit>
-    <unit id="drag.dropped">
-      <notes>
-        <note>Live region announcement after a drop; {position} is a number.</note>
-      </notes>
-      <segment state="final">
-        <source>Dropped at position {position}</source>
-        <target>An Position {position} abgelegt</target>
       </segment>
     </unit>
     <unit id="drag.cancelled">
@@ -521,15 +503,6 @@
       <segment state="final">
         <source>Free-mode translation, not connected to a default-language record</source>
         <target>Übersetzung im freien Modus, nicht mit einem Datensatz der Standardsprache verbunden</target>
-      </segment>
-    </unit>
-    <unit id="translation.translated">
-      <notes>
-        <note>State of a language slot that has a translation record.</note>
-      </notes>
-      <segment state="final">
-        <source>Translated</source>
-        <target>Übersetzt</target>
       </segment>
     </unit>
     <unit id="translation.untranslated">
@@ -739,24 +712,6 @@
         <target>Alle</target>
       </segment>
     </unit>
-    <unit id="filter.option.visible">
-      <notes>
-        <note>Visibility filter option for visible records.</note>
-      </notes>
-      <segment state="final">
-        <source>Visible</source>
-        <target>Sichtbar</target>
-      </segment>
-    </unit>
-    <unit id="filter.option.hidden">
-      <notes>
-        <note>Visibility filter option for hidden records.</note>
-      </notes>
-      <segment state="final">
-        <source>Hidden</source>
-        <target>Ausgeblendet</target>
-      </segment>
-    </unit>
     <unit id="filter.option.yes">
       <notes>
         <note>Boolean filter option for a set checkbox.</note>
@@ -791,6 +746,87 @@
       <segment state="final">
         <source>End date for {label}</source>
         <target>Enddatum für {label}</target>
+      </segment>
+    </unit>
+    <unit id="record.pageLabel">
+      <notes>
+        <note>Column header for the "pid" system field (the page a record lives on).</note>
+      </notes>
+      <segment state="final">
+        <source>Page</source>
+        <target>Seite</target>
+      </segment>
+    </unit>
+    <unit id="noRecords.resetAll">
+      <notes>
+        <note>Button in the empty state that clears the active filters and the search term.</note>
+      </notes>
+      <segment state="final">
+        <source>Reset filters and search</source>
+        <target>Filter und Suche zurücksetzen</target>
+      </segment>
+    </unit>
+    <unit id="table.expand">
+      <notes>
+        <note>Tooltip on the table heading link that narrows the list down to one table.</note>
+      </notes>
+      <segment state="final">
+        <source>List only this table</source>
+        <target>Nur diese Tabelle anzeigen</target>
+      </segment>
+    </unit>
+    <unit id="table.collapse">
+      <notes>
+        <note>Tooltip on the table heading link that returns to the list of all tables.</note>
+      </notes>
+      <segment state="final">
+        <source>List all tables</source>
+        <target>Alle Tabellen anzeigen</target>
+      </segment>
+    </unit>
+    <unit id="viewMode.list.description">
+      <notes>
+        <note>Tooltip of the list view entry in the view switcher.</note>
+      </notes>
+      <segment state="final">
+        <source>Standard table view</source>
+        <target>Standard-Tabellenansicht</target>
+      </segment>
+    </unit>
+    <unit id="viewMode.grid.description">
+      <notes>
+        <note>Tooltip of the grid view entry in the view switcher.</note>
+      </notes>
+      <segment state="final">
+        <source>Card-based grid view</source>
+        <target>Kartenraster</target>
+      </segment>
+    </unit>
+    <unit id="viewMode.compact.description">
+      <notes>
+        <note>Tooltip of the compact view entry in the view switcher.</note>
+      </notes>
+      <segment state="final">
+        <source>Compact single-line view</source>
+        <target>Kompakte Zeilenansicht</target>
+      </segment>
+    </unit>
+    <unit id="viewMode.teaser.description">
+      <notes>
+        <note>Tooltip of the teaser view entry in the view switcher.</note>
+      </notes>
+      <segment state="final">
+        <source>Teaser list with title, date and description</source>
+        <target>Teaserliste mit Titel, Datum und Beschreibung</target>
+      </segment>
+    </unit>
+    <unit id="action.editColumns">
+      <notes>
+        <note>Button that opens the shown columns of the selected records in FormEngine.</note>
+      </notes>
+      <segment state="final">
+        <source>Edit the shown columns</source>
+        <target>Angezeigte Spalten bearbeiten</target>
       </segment>
     </unit>
   </file>

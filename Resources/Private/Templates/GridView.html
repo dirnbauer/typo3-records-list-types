@@ -120,7 +120,7 @@
                             </f:if>
                         </div>
                         <f:if condition="!{table.records}">
-                            <f:render partial="EmptyRecordsNotice" arguments="{table: table, searchTerm: searchTerm}" />
+                            <f:render partial="EmptyRecordsNotice" arguments="{table: table}" />
                         </f:if>
 
                         <f:comment>Expand table button - multi-table mode with more records</f:comment>

@@ -35,19 +35,23 @@ use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
  */
 final class ViewTypeRegistry implements SingletonInterface
 {
-    /** Built-in view types with their default configuration. */
-    private const array BUILTIN_TYPES = [
+    /**
+     * Built-in view types with their default configuration. Shared with
+     * {@see ViewModeResolver}, which needs the same label, icon and
+     * description for the view switcher.
+     */
+    public const array BUILTIN_TYPES = [
         'list' => [
             'label' => 'records_list_types.messages:viewMode.list',
             'icon' => 'actions-viewmode-list',
-            'description' => 'Standard table view',
+            'description' => 'records_list_types.messages:viewMode.list.description',
             'builtin' => true,
             'handler' => 'list', // Special handling - delegates to parent controller
         ],
         'grid' => [
             'label' => 'records_list_types.messages:viewMode.grid',
             'icon' => 'actions-viewmode-tiles',
-            'description' => 'Card-based grid view',
+            'description' => 'records_list_types.messages:viewMode.grid.description',
             'builtin' => true,
             'template' => 'GridView',
             'partial' => 'Card',
@@ -57,7 +61,7 @@ final class ViewTypeRegistry implements SingletonInterface
         'compact' => [
             'label' => 'records_list_types.messages:viewMode.compact',
             'icon' => 'actions-menu',
-            'description' => 'Compact single-line view',
+            'description' => 'records_list_types.messages:viewMode.compact.description',
             'builtin' => true,
             'template' => 'CompactView',
             'partial' => 'CompactRow',
@@ -67,7 +71,7 @@ final class ViewTypeRegistry implements SingletonInterface
         'teaser' => [
             'label' => 'records_list_types.messages:viewMode.teaser',
             'icon' => 'content-news',
-            'description' => 'Teaser list with title, date, description',
+            'description' => 'records_list_types.messages:viewMode.teaser.description',
             'builtin' => true,
             'template' => 'TeaserView',
             'partial' => 'TeaserCard',

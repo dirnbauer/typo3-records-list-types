@@ -29,6 +29,8 @@ use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
  */
 final readonly class RecordGridDataProvider implements SingletonInterface
 {
+    private const int MAX_SORT_LABEL_LENGTH = 40;
+
     public function __construct(
         private ConnectionPool $connectionPool,
         private IconFactory $iconFactory,
@@ -36,6 +38,7 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         private ThumbnailService $thumbnailService,
         private TcaSchemaFactory $tcaSchemaFactory,
         private Context $context,
+        private TcaTableConfigurationService $tcaConfigurationService,
     ) {}
 
     /**
@@ -91,14 +94,6 @@ final readonly class RecordGridDataProvider implements SingletonInterface
     }
 
     /**
-     * Get TCA configuration for a table with proper typing.
-     *
-     * NOTE: `TcaSchema::getRawConfiguration()` returns the *ctrl* section
-     * only (see `TcaSchemaBuilder::build()` — it stores
-     * `$schemaDefinition['ctrl']` as `$schemaConfiguration`). The factory
-     * does not expose the full `{ctrl, columns, …}` structure, so we read
-     * it from `$GLOBALS['TCA']` which is the canonical source.
-     *
      * @return array{ctrl: array<string, mixed>, columns: array<string, array<string, mixed>>}
      */
     private function getTca(string $table): array
@@ -106,18 +101,8 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         if (!$this->tcaSchemaFactory->has($table)) {
             return ['ctrl' => [], 'columns' => []];
         }
-        /** @var array<string, mixed> $allTca */
-        $allTca = is_array($GLOBALS['TCA'] ?? null) ? $GLOBALS['TCA'] : [];
-        $tca = $allTca[$table] ?? [];
-        if (!is_array($tca)) {
-            return ['ctrl' => [], 'columns' => []];
-        }
-        /** @var array<string, mixed> $ctrl */
-        $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
-        /** @var array<string, array<string, mixed>> $columns */
-        $columns = is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
 
-        return ['ctrl' => $ctrl, 'columns' => $columns];
+        return $this->tcaConfigurationService->getTcaForTable($table);
     }
 
     /**
@@ -132,7 +117,6 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         $tca = $this->getTca($table);
         $ctrl = $tca['ctrl'];
         $tcaColumns = $tca['columns'];
-        $langService = $this->getLanguageService();
 
         // Excluded fields (workspace, versioning, internal fields)
         $excludedFields = [
@@ -148,55 +132,27 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         // Add system fields first
         $fields[] = [
             'field' => 'uid',
-            'label' => 'UID',
+            'label' => $this->tcaConfigurationService->getFieldLabel('uid', $tcaColumns, $ctrl),
         ];
 
         // Add label field (title)
         $labelField = is_string($ctrl['label'] ?? null) ? $ctrl['label'] : '';
         if ($labelField !== '' && isset($tcaColumns[$labelField])) {
-            $colConfig = $tcaColumns[$labelField];
-            $label = is_string($colConfig['label'] ?? null) ? $colConfig['label'] : $labelField;
-            $label = $this->translateLabel($label, $labelField);
             $fields[] = [
                 'field' => $labelField,
-                'label' => $label,
+                'label' => $this->tcaConfigurationService->getFieldLabel($labelField, $tcaColumns, $ctrl),
             ];
         }
 
-        // Add creation date (use actual field name from TCA)
-        $crdateField = is_string($ctrl['crdate'] ?? null) ? $ctrl['crdate'] : '';
-        if ($crdateField !== '') {
-            $translatedLabel = $langService instanceof LanguageService
-                ? $langService->sL('core.general:LGL.creationDate')
-                : '';
-            $fields[] = [
-                'field' => $crdateField,
-                'label' => $translatedLabel !== '' ? $translatedLabel : 'Created',
-            ];
-        }
-
-        // Add modification date (use actual field name from TCA)
-        $tstampField = is_string($ctrl['tstamp'] ?? null) ? $ctrl['tstamp'] : '';
-        if ($tstampField !== '') {
-            $translatedLabel = $langService instanceof LanguageService
-                ? $langService->sL('core.general:LGL.timestamp')
-                : '';
-            $fields[] = [
-                'field' => $tstampField,
-                'label' => $translatedLabel !== '' ? $translatedLabel : 'Modified',
-            ];
-        }
-
-        // Add sorting field if available
-        $sortbyField = is_string($ctrl['sortby'] ?? null) ? $ctrl['sortby'] : '';
-        if ($sortbyField !== '') {
-            $translatedLabel = $langService instanceof LanguageService
-                ? $langService->sL('core.general:LGL.sorting')
-                : '';
-            $fields[] = [
-                'field' => $sortbyField,
-                'label' => $translatedLabel !== '' ? $translatedLabel : 'Sorting',
-            ];
+        // Add creation date, modification date and the manual sorting column
+        foreach (['crdate', 'tstamp', 'sortby'] as $ctrlKey) {
+            $systemField = is_string($ctrl[$ctrlKey] ?? null) ? $ctrl[$ctrlKey] : '';
+            if ($systemField !== '') {
+                $fields[] = [
+                    'field' => $systemField,
+                    'label' => $this->tcaConfigurationService->getFieldLabel($systemField, $tcaColumns, $ctrl),
+                ];
+            }
         }
 
         // Add other TCA columns that are suitable for sorting
@@ -231,13 +187,11 @@ final readonly class RecordGridDataProvider implements SingletonInterface
                 continue;
             }
 
-            // Get field label and translate it
-            $label = is_string($fieldConfig['label'] ?? null) ? $fieldConfig['label'] : $fieldName;
-            $label = $this->translateLabel($label, $fieldName);
+            $label = $this->tcaConfigurationService->getFieldLabel($fieldName, $tcaColumns, $ctrl);
 
-            // Limit label length
-            if (strlen($label) > 40) {
-                $label = substr($label, 0, 37) . '...';
+            // Keep the dropdown readable; German labels in particular run long.
+            if (mb_strlen($label) > self::MAX_SORT_LABEL_LENGTH) {
+                $label = mb_substr($label, 0, self::MAX_SORT_LABEL_LENGTH - 1) . "\u{2026}";
             }
 
             $fields[] = [
@@ -247,47 +201,6 @@ final readonly class RecordGridDataProvider implements SingletonInterface
         }
 
         return $fields;
-    }
-
-    /**
-     * Translate a TCA label.
-     *
-     * Handles both traditional LLL: format and TYPO3 v12+ translation domain format
-     * (e.g., 'frontend.db.tt_content:header').
-     *
-     * @param string $label The label to translate
-     * @param string $fallback Fallback value if translation fails
-     * @return string The translated label
-     */
-    private function translateLabel(string $label, string $fallback = ''): string
-    {
-        // Empty label - return fallback
-        if ($label === '') {
-            return $fallback !== '' ? $fallback : $label;
-        }
-
-        $langService = $this->getLanguageService();
-
-        // Traditional LLL: format
-        if (str_starts_with($label, 'LLL:')) {
-            if ($langService instanceof LanguageService) {
-                $translated = $langService->sL($label);
-                return $translated !== '' ? $translated : ($fallback !== '' ? $fallback : $label);
-            }
-            return $fallback !== '' ? $fallback : $label;
-        }
-
-        // TYPO3 v12+ translation domain format (contains a colon but doesn't start with LLL:)
-        if (str_contains($label, ':')) {
-            if ($langService instanceof LanguageService) {
-                $translated = $langService->sL($label);
-                return $translated !== '' ? $translated : ($fallback !== '' ? $fallback : $label);
-            }
-            return $fallback !== '' ? $fallback : $label;
-        }
-
-        // Plain string - return as-is
-        return $label;
     }
 
     /**
@@ -305,11 +218,13 @@ final readonly class RecordGridDataProvider implements SingletonInterface
 
         // Get title
         $titleField = is_string($tableConfig['titleField'] ?? null) ? $tableConfig['titleField'] : 'uid';
-        $title = $row[$titleField] ?? '[No title]';
+        $title = $row[$titleField] ?? '';
         if (is_array($title)) {
             $title = reset($title);
         }
-        $title = is_scalar($title) ? (string)$title : '[No title]';
+        // Left empty on purpose: the templates render core's localized
+        // "No title" placeholder for records without a usable label.
+        $title = is_scalar($title) ? trim((string)$title) : '';
 
         // Get description
         $description = null;

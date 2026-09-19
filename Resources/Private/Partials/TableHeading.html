@@ -4,7 +4,7 @@
 
 <f:if condition="{heading.linkUrl}">
     <f:then>
-        <a href="{heading.linkUrl}">
+        <a href="{heading.linkUrl}" title="{heading.linkTitle}" aria-label="{heading.linkTitle}">
             {heading.label} (<span>{heading.recordCount}</span>)
             <span class="ms-1"><core:icon identifier="{heading.iconIdentifier}" size="small" /></span>
         </a>

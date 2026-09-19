@@ -31,7 +31,7 @@
                             <div class="recordlist-heading-actions">
                                 <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
                                 <f:if condition="{table.sortingDropdown}">
-                                    <div class="btn-group" role="group" aria-label="{f:translate(key: 'records_list_types.messages:sorting')}">
+                                    <div class="btn-group" role="group" aria-label="{f:translate(key: 'records_list_types.messages:sortingMode.label')}">
                                         <f:render partial="SortingDropdown" arguments="{sortingDropdown: table.sortingDropdown}" />
                                     </div>
                                 </f:if>
@@ -90,7 +90,7 @@
                             </f:for>
                         </div>
                         <f:if condition="!{table.records}">
-                            <f:render partial="EmptyRecordsNotice" arguments="{table: table, searchTerm: searchTerm}" />
+                            <f:render partial="EmptyRecordsNotice" arguments="{table: table}" />
                         </f:if>
 
                         <f:comment>Expand table button - multi-table mode with more records</f:comment>

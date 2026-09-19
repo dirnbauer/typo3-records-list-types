@@ -25,6 +25,19 @@ final class LabelCatalogTest extends TestCase
     private const array CORE_JAVASCRIPT_KEYS = ['labels.no_title'];
 
     /**
+     * Length guard for the labels that sit inside compact controls — buttons,
+     * badges, toggles, column headers. Anything longer in English is prose
+     * (notifications, instructions, empty states) and may wrap freely.
+     */
+    private const int COMPACT_LABEL_SOURCE_LENGTH = 24;
+
+    /** German runs longer than English; beyond this a compact control clips. */
+    private const float GERMAN_LENGTH_FACTOR = 2.0;
+
+    /** Very short sources ("ID", "Any") need headroom the factor cannot give. */
+    private const int SHORT_LABEL_BUDGET = 32;
+
+    /**
      * @return iterable<string, array{string}>
      */
     public static function catalogFileProvider(): iterable
@@ -53,7 +66,7 @@ final class LabelCatalogTest extends TestCase
         self::assertSame('2.0', (string)$xml['version']);
         self::assertSame('en', (string)$xml['srcLang']);
         self::assertNull($xml['trgLang'] ?? null, 'The source catalog must not declare a target language.');
-        self::assertCount(1, $xml->xpath('/x:xliff/x:file') ?: []);
+        self::assertCount(1, $this->xpath($xml, '/x:xliff/x:file'));
     }
 
     #[Test]
@@ -107,7 +120,7 @@ final class LabelCatalogTest extends TestCase
         foreach (self::MACHINE_DRAFT_LANGUAGES as $language) {
             $file = 'Resources/Private/Language/' . $language . '.locallang.xlf';
             $xml = $this->loadXml($file);
-            $fileNotes = $xml->xpath('/x:xliff/x:file/x:notes/x:note') ?: [];
+            $fileNotes = $this->xpath($xml, '/x:xliff/x:file/x:notes/x:note');
             self::assertNotSame([], $fileNotes, $file . ' must carry a file-level review note.');
             self::assertStringContainsString('Machine draft', (string)$fileNotes[0]);
             foreach ($this->loadUnits($file) as $id => $unit) {
@@ -209,6 +222,155 @@ final class LabelCatalogTest extends TestCase
         }
     }
 
+    #[Test]
+    public function referencedCoreLabelsExistInTheCoreCatalogs(): void
+    {
+        $missing = [];
+        foreach ($this->collectCoreReferences() as $reference => $locations) {
+            [$domain, $key] = explode(':', $reference, 2);
+            $file = $this->resolveCoreCatalog($domain);
+            if ($file === null) {
+                $missing[] = $reference . ' (unknown domain; ' . implode(', ', $locations) . ')';
+                continue;
+            }
+            if (!in_array($key, $this->loadCoreUnitIds($file), true)) {
+                $missing[] = $reference . ' (' . implode(', ', $locations) . ')';
+            }
+        }
+
+        self::assertSame([], $missing, 'LanguageService::sL() echoes unresolved references back, so these would reach the UI as raw keys.');
+    }
+
+    #[Test]
+    #[DataProvider('targetLanguageProvider')]
+    public function translationsKeepEveryPlaceholderOfTheSource(string $language): void
+    {
+        $sourceUnits = $this->loadUnits(self::SOURCE_FILE);
+        $file = 'Resources/Private/Language/' . $language . '.locallang.xlf';
+
+        foreach ($this->loadUnits($file) as $id => $unit) {
+            self::assertSame(
+                $this->placeholders($sourceUnits[$id]['source']),
+                $this->placeholders($unit['target']),
+                $file . ': unit "' . $id . '" does not use the same placeholders as the source.',
+            );
+        }
+    }
+
+    #[Test]
+    #[DataProvider('catalogFileProvider')]
+    public function everyPluralExpressionDeclaresAnOtherBranch(string $file): void
+    {
+        foreach ($this->loadUnits($file) as $id => $unit) {
+            foreach ([$unit['source'], $unit['target']] as $text) {
+                if (!str_contains($text, ', plural,') && !str_contains($text, ', select,')) {
+                    continue;
+                }
+                self::assertMatchesRegularExpression('/\bother\s*\{/', $text, $file . ': unit "' . $id . '" has no "other" branch.');
+            }
+        }
+    }
+
+    #[Test]
+    public function germanLabelsStayWithinTheBudgetOfTheirEnglishSource(): void
+    {
+        $sourceUnits = $this->loadUnits(self::SOURCE_FILE);
+        $overflowing = [];
+
+        foreach ($this->loadUnits('Resources/Private/Language/de.locallang.xlf') as $id => $unit) {
+            $source = mb_strlen($sourceUnits[$id]['source']);
+            if ($source > self::COMPACT_LABEL_SOURCE_LENGTH) {
+                continue;
+            }
+            $target = mb_strlen($unit['target']);
+            $budget = max(self::SHORT_LABEL_BUDGET, (int)ceil($source * self::GERMAN_LENGTH_FACTOR));
+            if ($target > $budget) {
+                $overflowing[] = $id . ': ' . $target . ' > ' . $budget . ' characters';
+            }
+        }
+
+        self::assertSame([], $overflowing, 'These German labels overflow the buttons, badges and column headers they sit in.');
+    }
+
+    #[Test]
+    public function everyConceptUsesExactlyOneLabel(): void
+    {
+        $byText = [];
+        foreach ($this->loadUnits(self::SOURCE_FILE) as $id => $unit) {
+            if ($unit['deprecated']) {
+                continue;
+            }
+            $byText[mb_strtolower($unit['source'])][] = $id;
+        }
+
+        $duplicates = array_filter($byText, static fn(array $ids): bool => count($ids) > 1);
+        $reported = array_map(
+            static fn(string $text, array $ids): string => '"' . $text . '" => ' . implode(', ', $ids),
+            array_keys($duplicates),
+            $duplicates,
+        );
+
+        self::assertSame([], $reported, 'Two label keys carry the same English text; keep one term per concept.');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function placeholders(string $text): array
+    {
+        preg_match_all('/\{([A-Za-z0-9_]+)[,}]/', $text, $matches);
+        $names = array_values(array_unique($matches[1]));
+        sort($names);
+
+        return $names;
+    }
+
+    /**
+     * @return array<string, list<string>> "domain:key" => locations
+     */
+    private function collectCoreReferences(): array
+    {
+        $references = [];
+        $files = array_merge(
+            $this->getFiles('Classes', 'php'),
+            $this->getFiles('Resources/Private', 'html'),
+            $this->getFiles('Resources/Public/JavaScript', 'js'),
+        );
+
+        foreach ($files as $relativePath => $path) {
+            $content = (string)preg_replace('#/\*.*?\*/#s', '', (string)file_get_contents($path));
+            preg_match_all('/\b(core\.[a-z_]+(?:\.[a-z_]+)*:[A-Za-z0-9_.]+)/', $content, $matches);
+            foreach ($matches[1] as $reference) {
+                $references[$reference][] = $relativePath;
+            }
+        }
+
+        return array_map(static fn(array $locations): array => array_values(array_unique($locations)), $references);
+    }
+
+    private function resolveCoreCatalog(string $domain): ?string
+    {
+        $name = substr($domain, strlen('core.'));
+        $base = $this->root() . '/vendor/typo3/cms-core/Resources/Private/Language/';
+        foreach ([$name . '.xlf', 'locallang_' . $name . '.xlf'] as $candidate) {
+            if (is_file($base . $candidate)) {
+                return $base . $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function loadCoreUnitIds(string $file): array
+    {
+        preg_match_all('/<trans-unit id="([^"]+)"/', (string)file_get_contents($file), $matches);
+
+        return $matches[1];
+    }
+
     /**
      * @return array<string, list<string>> key => locations
      */
@@ -252,17 +414,17 @@ final class LabelCatalogTest extends TestCase
     {
         $xml = $this->loadXml($file);
         $units = [];
-        foreach ($xml->xpath('//x:unit') ?: [] as $unit) {
+        foreach ($this->xpath($xml, '//x:unit') as $unit) {
             $unit->registerXPathNamespace('x', self::XLIFF_NAMESPACE);
-            $segment = ($unit->xpath('./x:segment') ?: [null])[0];
+            $segment = $this->xpath($unit, './x:segment')[0] ?? null;
             if (!$segment instanceof \SimpleXMLElement) {
                 throw new \RuntimeException('Unit without segment in ' . $file, 1757700001);
             }
             $segment->registerXPathNamespace('x', self::XLIFF_NAMESPACE);
-            $note = $unit->xpath('./x:notes/x:note') ?: [];
+            $note = $this->xpath($unit, './x:notes/x:note');
             $units[(string)$unit['id']] = [
-                'source' => (string)(($segment->xpath('./x:source') ?: [''])[0]),
-                'target' => (string)(($segment->xpath('./x:target') ?: [''])[0]),
+                'source' => (string)($this->xpath($segment, './x:source')[0] ?? ''),
+                'target' => (string)($this->xpath($segment, './x:target')[0] ?? ''),
                 'note' => $note === [] ? '' : (string)$note[0],
                 'state' => (string)($segment['state'] ?? ''),
                 'deprecated' => (string)($segment['subState'] ?? '') === 'deprecated',
@@ -270,6 +432,20 @@ final class LabelCatalogTest extends TestCase
         }
 
         return $units;
+    }
+
+    /**
+     * `SimpleXMLElement::xpath()` returns false on a malformed expression;
+     * normalize that away so every caller can just iterate.
+     *
+     * @return list<\SimpleXMLElement>
+     */
+    private function xpath(\SimpleXMLElement $node, string $path): array
+    {
+        $node->registerXPathNamespace('x', self::XLIFF_NAMESPACE);
+        $result = $node->xpath($path);
+
+        return is_array($result) ? array_values($result) : [];
     }
 
     private function loadXml(string $file): \SimpleXMLElement

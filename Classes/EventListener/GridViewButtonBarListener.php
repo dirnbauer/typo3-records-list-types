@@ -138,6 +138,7 @@ final readonly class GridViewButtonBarListener
             $dropdownItem = $this->componentFactory->createDropDownRadio()
                 ->setActive($currentMode === $modeId)
                 ->setLabel($modeConfig['label'])
+                ->setTitle($lang->sL($modeConfig['description']))
                 ->setHref($url)
                 ->setIcon($this->iconFactory->getIcon($modeConfig['icon'], IconSize::SMALL));
 

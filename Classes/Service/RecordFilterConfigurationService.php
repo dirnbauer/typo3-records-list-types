@@ -22,6 +22,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
     public function __construct(
         private TcaSchemaFactory $tcaSchemaFactory,
         private ConnectionPool $connectionPool,
+        private TcaTableConfigurationService $tcaConfigurationService,
     ) {}
 
     public function isEnabled(int $pageId): bool
@@ -128,41 +129,9 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
 
     public function getFieldLabel(string $table, string $field): string
     {
-        if ($field === 'uid') {
-            return 'UID';
-        }
-        if ($field === 'pid') {
-            return 'Page';
-        }
+        $tca = $this->tcaConfigurationService->getTcaForTable($table);
 
-        $schemaLabel = $this->getSchemaFieldLabel($table, $field);
-        if ($schemaLabel !== '') {
-            return $this->translateLabel($schemaLabel, $field);
-        }
-
-        $column = $this->getFieldConfig($table, $field);
-        $label = is_string($column['label'] ?? null) ? $column['label'] : '';
-        if ($label !== '') {
-            return $this->translateLabel($label, $field);
-        }
-
-        $tca = $this->getTca($table);
-        $ctrl = is_array($tca['ctrl'] ?? null) ? $tca['ctrl'] : [];
-        $enableColumns = is_array($ctrl['enablecolumns'] ?? null) ? $ctrl['enablecolumns'] : [];
-        if ($field === ($enableColumns['disabled'] ?? null)) {
-            $translated = $this->getLanguageService()?->sL('core.general:LGL.hidden') ?? '';
-            return $translated !== '' ? $translated : 'Hidden';
-        }
-        if ($field === ($ctrl['crdate'] ?? null)) {
-            $translated = $this->getLanguageService()?->sL('core.general:LGL.creationDate') ?? '';
-            return $translated !== '' ? $translated : 'Created';
-        }
-        if ($field === ($ctrl['tstamp'] ?? null)) {
-            $translated = $this->getLanguageService()?->sL('core.general:LGL.timestamp') ?? '';
-            return $translated !== '' ? $translated : 'Modified';
-        }
-
-        return $field;
+        return $this->tcaConfigurationService->getFieldLabel($field, $tca['columns'], $tca['ctrl']);
     }
 
     /**
@@ -376,8 +345,8 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             'field' => $field,
             'options' => [
                 ['value' => '', 'label' => $this->resolveOptionLabel($filterConfig, 'anyLabel', $this->translate('filter.option.any', 'Any'))],
-                ['value' => '0', 'label' => $this->resolveOptionLabel($filterConfig, 'falseLabel', $this->translate('filter.option.visible', 'Visible'))],
-                ['value' => '1', 'label' => $this->resolveOptionLabel($filterConfig, 'trueLabel', $this->translate('filter.option.hidden', 'Hidden'))],
+                ['value' => '0', 'label' => $this->resolveOptionLabel($filterConfig, 'falseLabel', $this->translate('state.visible', 'Visible'))],
+                ['value' => '1', 'label' => $this->resolveOptionLabel($filterConfig, 'trueLabel', $this->translate('state.hidden', 'Hidden'))],
             ],
         ];
     }
@@ -555,11 +524,7 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
 
     private function translateLabel(string $label, string $fallback): string
     {
-        if (str_starts_with($label, 'LLL:') || str_contains($label, ':')) {
-            $translated = $this->getLanguageService()?->sL($label) ?? '';
-            return $translated !== '' ? $translated : $fallback;
-        }
-        return $label;
+        return $this->tcaConfigurationService->translateTcaLabel($label, $fallback);
     }
 
     private function translate(string $key, string $fallback): string
@@ -584,20 +549,6 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             return $this->tcaSchemaFactory->get($table)->hasField($field);
         } catch (\Throwable) {
             return false;
-        }
-    }
-
-    private function getSchemaFieldLabel(string $table, string $field): string
-    {
-        if (!$this->tcaSchemaFactory->has($table)) {
-            return '';
-        }
-
-        try {
-            $schema = $this->tcaSchemaFactory->get($table);
-            return $schema->hasField($field) ? $schema->getField($field)->getLabel() : '';
-        } catch (\Throwable) {
-            return '';
         }
     }
 

@@ -9,9 +9,55 @@ use TYPO3\CMS\Core\SingletonInterface;
 
 /**
  * Resolves normalized TCA ctrl/columns configuration for record-list views.
+ *
+ * This is the single place where a TCA field is turned into a human readable,
+ * localized column label. Both the grid/compact/teaser column lists and the
+ * sorting dropdown go through {@see self::getFieldLabel()}.
  */
 final class TcaTableConfigurationService implements SingletonInterface
 {
+    /**
+     * Label references for columns that TYPO3 adds to every schema.
+     *
+     * The two identifier columns use this extension's own short labels so that
+     * a card footer badge, a column header and the sorting dropdown all say the
+     * same word; core's `labels.uid` ("Unique ID") is Info-panel wording.
+     *
+     * @var array<string, string>
+     */
+    private const SYSTEM_FIELD_LABELS = [
+        'uid' => 'records_list_types.messages:record.idLabel',
+        'pid' => 'records_list_types.messages:record.pageLabel',
+        'crdate' => 'core.general:LGL.creationDate',
+        'tstamp' => 'core.general:LGL.timestamp',
+    ];
+
+    /**
+     * Label references for columns a table declares through `ctrl`. The key is
+     * the `ctrl` path, the value the label reference.
+     *
+     * @var array<string, string>
+     */
+    private const CTRL_FIELD_LABELS = [
+        'sortby' => 'core.core:labels.sorting',
+        'crdate' => 'core.general:LGL.creationDate',
+        'tstamp' => 'core.general:LGL.timestamp',
+        'languageField' => 'core.general:LGL.language',
+        'transOrigPointerField' => 'core.general:LGL.l18n_parent',
+    ];
+
+    /**
+     * Label references for the `ctrl.enablecolumns` fields.
+     *
+     * @var array<string, string>
+     */
+    private const ENABLE_COLUMN_LABELS = [
+        'disabled' => 'core.general:LGL.hidden',
+        'starttime' => 'core.general:LGL.starttime',
+        'endtime' => 'core.general:LGL.endtime',
+        'fe_group' => 'core.general:LGL.fe_group',
+    ];
+
     /**
      * @return array{ctrl: array<string, mixed>, columns: array<string, array<string, mixed>>}
      */
@@ -37,71 +83,81 @@ final class TcaTableConfigurationService implements SingletonInterface
      */
     public function getFieldLabel(string $field, array $tcaColumns, array $ctrl): string
     {
+        // A table may rename a system column (tt_address labels `hidden` as
+        // "Enabled"), so its own label wins — but only when it carries meaning.
+        // TYPO3 v14 adds system columns to every schema with the bare field
+        // name as their label, and that must not end up on screen.
         $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
-        if (isset($fieldDef['label'])) {
-            $labelRawVal = $fieldDef['label'];
-            $label = is_string($labelRawVal) ? $labelRawVal : '';
-
-            return $this->translateTcaLabel($label, $field);
+        $rawLabel = is_string($fieldDef['label'] ?? null) ? $fieldDef['label'] : '';
+        if ($rawLabel !== '' && strcasecmp($rawLabel, $field) !== 0) {
+            $ownLabel = $this->translateTcaLabel($rawLabel);
+            if ($ownLabel !== '') {
+                return $ownLabel;
+            }
         }
 
-        $systemLabels = [
-            'uid' => 'UID',
-            'pid' => 'Page',
-        ];
-
-        if (isset($systemLabels[$field])) {
-            return $systemLabels[$field];
-        }
-
-        $langService = $this->getLanguageService();
-        if (!$langService instanceof LanguageService) {
-            return $field;
-        }
-
-        if ($field === ($ctrl['crdate'] ?? null) || $field === 'crdate') {
-            $translated = $langService->sL('core.general:LGL.creationDate');
-
-            return $translated !== '' ? $translated : 'Created';
-        }
-        if ($field === ($ctrl['tstamp'] ?? null) || $field === 'tstamp') {
-            $translated = $langService->sL('core.general:LGL.timestamp');
-
-            return $translated !== '' ? $translated : 'Modified';
-        }
-        if ($field === ($ctrl['sortby'] ?? null)) {
-            $translated = $langService->sL('core.general:LGL.sorting');
-
-            return $translated !== '' ? $translated : 'Sorting';
-        }
-
-        $enableCols = is_array($ctrl['enablecolumns'] ?? null) ? $ctrl['enablecolumns'] : [];
-        $disabledField = $enableCols['disabled'] ?? null;
-        if ($field === $disabledField) {
-            $translated = $langService->sL('core.general:LGL.hidden');
-
-            return $translated !== '' ? $translated : 'Hidden';
+        $reference = $this->resolveSystemLabelReference($field, $ctrl);
+        if ($reference !== null) {
+            $translated = $this->translateTcaLabel($reference);
+            if ($translated !== '') {
+                return $translated;
+            }
         }
 
         return $field;
     }
 
+    /**
+     * Translate a TCA label reference (`LLL:EXT:…` or a v14 `domain:key`).
+     *
+     * `LanguageService::sL()` echoes its input back when a reference cannot be
+     * resolved, which is how a reference to a label that does not exist used to
+     * reach the UI verbatim. An unchanged reference counts as unresolved.
+     */
     public function translateTcaLabel(string $label, string $fallback = ''): string
     {
         if ($label === '') {
-            return $fallback !== '' ? $fallback : $label;
+            return $fallback;
         }
 
-        if (str_starts_with($label, 'LLL:') || str_contains($label, ':')) {
-            $langService = $this->getLanguageService();
-            if ($langService instanceof LanguageService) {
-                $translated = $langService->sL($label);
+        if (!$this->isLabelReference($label)) {
+            return $label;
+        }
 
-                return $translated !== '' ? $translated : ($fallback !== '' ? $fallback : $label);
+        $langService = $this->getLanguageService();
+        $translated = $langService instanceof LanguageService ? $langService->sL($label) : '';
+        if ($translated === '' || $translated === $label) {
+            return $fallback;
+        }
+
+        return $translated;
+    }
+
+    /**
+     * @param array<string, mixed> $ctrl
+     */
+    private function resolveSystemLabelReference(string $field, array $ctrl): ?string
+    {
+        foreach (self::CTRL_FIELD_LABELS as $ctrlKey => $reference) {
+            if ($field !== '' && ($ctrl[$ctrlKey] ?? null) === $field) {
+                return $reference;
             }
         }
 
-        return $label;
+        $enableColumns = is_array($ctrl['enablecolumns'] ?? null) ? $ctrl['enablecolumns'] : [];
+        foreach (self::ENABLE_COLUMN_LABELS as $enableKey => $reference) {
+            if ($field !== '' && ($enableColumns[$enableKey] ?? null) === $field) {
+                return $reference;
+            }
+        }
+
+        return self::SYSTEM_FIELD_LABELS[$field] ?? null;
+    }
+
+    private function isLabelReference(string $label): bool
+    {
+        return str_starts_with($label, 'LLL:')
+            || preg_match('/^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*:[A-Za-z0-9_.\-]+$/', $label) === 1;
     }
 
     /**
@@ -110,7 +166,7 @@ final class TcaTableConfigurationService implements SingletonInterface
      */
     public function getFieldType(string $field, array $tcaColumns, array $ctrl): string
     {
-        if (in_array($field, ['crdate', 'tstamp'], true)) {
+        if (in_array($field, ['crdate', 'tstamp', $ctrl['crdate'] ?? null, $ctrl['tstamp'] ?? null], true)) {
             return 'datetime';
         }
 

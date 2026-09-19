@@ -38,7 +38,8 @@ final readonly class RecordFilterViewDataFactory
             'warnings' => $this->configurationService->getWarningsForTable($table, $pageId),
             'hiddenFields' => $this->buildHiddenFields($request, $pageId, $table, $viewMode),
             'formActionUrl' => $this->buildRouteUrl(['id' => $pageId, 'displayMode' => $viewMode, 'table' => $table]),
-            'resetUrl' => $this->buildResetUrl($request, $pageId, $table, $viewMode),
+            'resetUrl' => $this->buildRouteUrl($this->buildBaseParameters($request, $pageId, $table, $viewMode)),
+            'clearUrl' => $this->buildRouteUrl($this->buildBaseParameters($request, $pageId, $table, $viewMode, keepSearch: false)),
         ];
     }
 
@@ -47,6 +48,22 @@ final readonly class RecordFilterViewDataFactory
      */
     private function buildHiddenFields(ServerRequestInterface $request, int $pageId, string $table, string $viewMode): array
     {
+        return $this->flattenParameters($this->buildBaseParameters($request, $pageId, $table, $viewMode));
+    }
+
+    /**
+     * The list state that survives applying, resetting or clearing filters:
+     * page, view mode, table, filter panel visibility, search and sorting.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildBaseParameters(
+        ServerRequestInterface $request,
+        int $pageId,
+        string $table,
+        string $viewMode,
+        bool $keepSearch = true,
+    ): array {
         $params = $this->stateService->getMergedParameters($request);
         $preserved = [
             'id' => $pageId,
@@ -54,31 +71,14 @@ final readonly class RecordFilterViewDataFactory
             'table' => $table,
             RecordFilterStateService::SHOW_PARAMETER => '1',
         ];
-        foreach (['searchTerm', 'search_levels', 'sort', 'sortingMode'] as $key) {
+        $keys = $keepSearch ? ['searchTerm', 'search_levels', 'sort', 'sortingMode'] : ['sort', 'sortingMode'];
+        foreach ($keys as $key) {
             if (isset($params[$key]) && $params[$key] !== '') {
                 $preserved[$key] = $params[$key];
             }
         }
 
-        return $this->flattenParameters($preserved);
-    }
-
-    private function buildResetUrl(ServerRequestInterface $request, int $pageId, string $table, string $viewMode): string
-    {
-        $params = $this->stateService->getMergedParameters($request);
-        $routeParams = [
-            'id' => $pageId,
-            'displayMode' => $viewMode,
-            'table' => $table,
-            RecordFilterStateService::SHOW_PARAMETER => '1',
-        ];
-        foreach (['searchTerm', 'search_levels', 'sort', 'sortingMode'] as $key) {
-            if (isset($params[$key]) && $params[$key] !== '') {
-                $routeParams[$key] = $params[$key];
-            }
-        }
-
-        return $this->buildRouteUrl($routeParams);
+        return $preserved;
     }
 
     /**

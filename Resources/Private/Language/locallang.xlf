@@ -177,6 +177,22 @@
         <source>Edit the “{label}” field of the listed records</source>
       </segment>
     </unit>
+    <unit id="sort.ascending">
+      <notes>
+        <note>Menu entry that sorts the records in ascending order.</note>
+      </notes>
+      <segment>
+        <source>Sort ascending</source>
+      </segment>
+    </unit>
+    <unit id="sort.descending">
+      <notes>
+        <note>Menu entry that sorts the records in descending order.</note>
+      </notes>
+      <segment>
+        <source>Sort descending</source>
+      </segment>
+    </unit>
     <unit id="action.show">
       <notes>
         <note>Deprecated since 1.1.0, use action.unhide instead. Kept as an alias for 1.x and removed in 2.0.</note>
@@ -199,30 +215,6 @@
       </notes>
       <segment subState="deprecated">
         <source>Hide record</source>
-      </segment>
-    </unit>
-    <unit id="sorting">
-      <notes>
-        <note>Accessible name of the sorting control group in a table header.</note>
-      </notes>
-      <segment>
-        <source>Sorting</source>
-      </segment>
-    </unit>
-    <unit id="sort.ascending">
-      <notes>
-        <note>Menu entry that sorts the records in ascending order.</note>
-      </notes>
-      <segment>
-        <source>Sort ascending</source>
-      </segment>
-    </unit>
-    <unit id="sort.descending">
-      <notes>
-        <note>Menu entry that sorts the records in descending order.</note>
-      </notes>
-      <segment>
-        <source>Sort descending</source>
       </segment>
     </unit>
     <unit id="sortingMode.label">
@@ -303,14 +295,6 @@
       </notes>
       <segment>
         <source>Position {position} of {total}</source>
-      </segment>
-    </unit>
-    <unit id="drag.dropped">
-      <notes>
-        <note>Live region announcement after a drop; {position} is a number.</note>
-      </notes>
-      <segment>
-        <source>Dropped at position {position}</source>
       </segment>
     </unit>
     <unit id="drag.cancelled">
@@ -463,14 +447,6 @@
       </notes>
       <segment>
         <source>Free-mode translation, not connected to a default-language record</source>
-      </segment>
-    </unit>
-    <unit id="translation.translated">
-      <notes>
-        <note>State of a language slot that has a translation record.</note>
-      </notes>
-      <segment>
-        <source>Translated</source>
       </segment>
     </unit>
     <unit id="translation.untranslated">
@@ -657,22 +633,6 @@
         <source>Any</source>
       </segment>
     </unit>
-    <unit id="filter.option.visible">
-      <notes>
-        <note>Visibility filter option for visible records.</note>
-      </notes>
-      <segment>
-        <source>Visible</source>
-      </segment>
-    </unit>
-    <unit id="filter.option.hidden">
-      <notes>
-        <note>Visibility filter option for hidden records.</note>
-      </notes>
-      <segment>
-        <source>Hidden</source>
-      </segment>
-    </unit>
     <unit id="filter.option.yes">
       <notes>
         <note>Boolean filter option for a set checkbox.</note>
@@ -703,6 +663,78 @@
       </notes>
       <segment>
         <source>End date for {label}</source>
+      </segment>
+    </unit>
+    <unit id="record.pageLabel">
+      <notes>
+        <note>Column header for the "pid" system field (the page a record lives on).</note>
+      </notes>
+      <segment>
+        <source>Page</source>
+      </segment>
+    </unit>
+    <unit id="noRecords.resetAll">
+      <notes>
+        <note>Button in the empty state that clears the active filters and the search term.</note>
+      </notes>
+      <segment>
+        <source>Reset filters and search</source>
+      </segment>
+    </unit>
+    <unit id="table.expand">
+      <notes>
+        <note>Tooltip on the table heading link that narrows the list down to one table.</note>
+      </notes>
+      <segment>
+        <source>List only this table</source>
+      </segment>
+    </unit>
+    <unit id="table.collapse">
+      <notes>
+        <note>Tooltip on the table heading link that returns to the list of all tables.</note>
+      </notes>
+      <segment>
+        <source>List all tables</source>
+      </segment>
+    </unit>
+    <unit id="viewMode.list.description">
+      <notes>
+        <note>Tooltip of the list view entry in the view switcher.</note>
+      </notes>
+      <segment>
+        <source>Standard table view</source>
+      </segment>
+    </unit>
+    <unit id="viewMode.grid.description">
+      <notes>
+        <note>Tooltip of the grid view entry in the view switcher.</note>
+      </notes>
+      <segment>
+        <source>Card-based grid view</source>
+      </segment>
+    </unit>
+    <unit id="viewMode.compact.description">
+      <notes>
+        <note>Tooltip of the compact view entry in the view switcher.</note>
+      </notes>
+      <segment>
+        <source>Compact single-line view</source>
+      </segment>
+    </unit>
+    <unit id="viewMode.teaser.description">
+      <notes>
+        <note>Tooltip of the teaser view entry in the view switcher.</note>
+      </notes>
+      <segment>
+        <source>Teaser list with title, date and description</source>
+      </segment>
+    </unit>
+    <unit id="action.editColumns">
+      <notes>
+        <note>Button that opens the shown columns of the selected records in FormEngine.</note>
+      </notes>
+      <segment>
+        <source>Edit the shown columns</source>
       </segment>
     </unit>
   </file>

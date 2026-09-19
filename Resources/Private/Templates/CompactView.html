@@ -82,6 +82,8 @@
                             <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
 
+                        <f:if condition="{table.records}">
+                        <f:then>
                         <div class="compactview-table-wrapper has-clipboard" data-scroll-container>
                             <table class="compactview-table">
                                 <thead class="compactview-thead">
@@ -155,8 +157,10 @@
                                 </tbody>
                             </table>
                         </div>
-                        <f:if condition="!{table.records}">
-                            <f:render partial="EmptyRecordsNotice" arguments="{table: table, searchTerm: searchTerm}" />
+                        </f:then>
+                        <f:else>
+                            <f:render partial="EmptyRecordsNotice" arguments="{table: table}" />
+                        </f:else>
                         </f:if>
 
                         <f:comment>Expand table button - multi-table mode with more records</f:comment>

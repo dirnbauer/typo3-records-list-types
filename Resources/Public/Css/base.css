@@ -649,3 +649,35 @@ typo3-backend-contextual-record-edit-trigger:hover {
     background: color-mix(in srgb, currentColor 6%, transparent);
     color: inherit;
 }
+
+/* =============================================================================
+   7. Empty state
+   =============================================================================
+   Shown instead of a records container when a table has nothing to list. The
+   panel stays inside the record list card, so it only needs vertical rhythm,
+   a muted tone and — when the editor narrowed the list down themselves — a way
+   back to the unfiltered view. */
+.recordlist-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--typo3-spacing, 1rem);
+    padding: calc(var(--typo3-spacing, 1rem) * 2.5) var(--typo3-spacing, 1rem);
+    text-align: center;
+    color: var(--typo3-text-color-variant, #6b7280);
+}
+
+.recordlist-empty typo3-backend-icon {
+    opacity: .55;
+}
+
+.recordlist-empty__message {
+    margin: 0;
+    max-width: 48ch;
+    font-size: var(--typo3-font-size-small, .875rem);
+}
+
+.recordlist-empty .btn:focus-visible {
+    outline: 2px solid var(--typo3-state-default-primary-color, #3b82f6);
+    outline-offset: 2px;
+}
