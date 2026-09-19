@@ -29,7 +29,8 @@ Services
 
     *   -   :php:`ViewModeResolver`
         -   Determines active view mode based on request params >
-            user prefs > TSconfig
+            user prefs > TSconfig. The built-in modes come from
+            :php:`ViewTypeRegistry::BUILTIN_TYPES`.
 
     *   -   :php:`GridConfigurationService`
         -   Parses TSconfig for per-table field mappings, caches results
@@ -49,6 +50,15 @@ Services
 
     *   -   :php:`RecordFilterViewDataFactory`
         -   Builds Fluid-ready filter panel data
+
+    *   -   :php:`TcaTableConfigurationService`
+        -   The single place that turns a TCA field into a localized column
+            label, and the only one that knows how TYPO3 labels system
+            columns such as ``crdate``, ``tstamp``, ``pid`` or ``sortby``
+
+    *   -   :php:`ListSortingViewFactory`
+        -   Builds the sorting-mode toggle, the field-sorting dropdown, the
+            sortable column headers and the bulk-edit header
 
     *   -   :php:`ThumbnailService`
         -   Generates backend thumbnails using TYPO3's ProcessedFile API
@@ -235,3 +245,38 @@ Copy, cut, and delete delegate to Core's :js:`ContextMenuActions`. Record
 action dropdowns use the native HTML Popover API and TYPO3 dropdown styles,
 so menus can open above scrolling containers without custom positioning
 JavaScript.
+
+.. _architecture-labels:
+
+Labels
+======
+
+All catalogs are XLIFF 2.0 under :file:`Resources/Private/Language/`, with
+:file:`locallang.xlf` as the English source and locale-prefixed target files
+for German, French, Spanish and Italian. References use the TYPO3 v14 domain
+syntax (``records_list_types.messages:<key>``), never ``LLL:EXT:``.
+
+Two rules decide where a label comes from:
+
+Core owns its data model
+    Column labels for system fields use core references
+    (``core.general:LGL.creationDate``, ``core.core:labels.sorting``, …), so a
+    column header reads the same here as in the Core list view and the record
+    info panel. Those strings follow the installed core language packs; install
+    the language pack for a backend language to see them translated.
+
+This extension owns its own chrome
+    Everything the extension renders itself -- the view switcher, sorting
+    controls, filter panel, pagination, empty states, drag-and-drop
+    announcements, workspace badges -- comes from this extension's catalog, so
+    it is translated in all five languages regardless of which core language
+    packs are installed.
+
+:php:`TcaTableConfigurationService::translateTcaLabel()` is the only place that
+resolves a label reference. It exists because
+:php:`LanguageService::sL()` returns its input unchanged when a reference
+cannot be resolved: a missing key would otherwise be printed verbatim instead
+of falling back. :file:`Tests/Unit/Language/LabelCatalogTest.php` fails the
+build when a referenced core label does not exist, when a target file drops a
+placeholder, when two keys carry the same English text, or when a German label
+outgrows the control it sits in.

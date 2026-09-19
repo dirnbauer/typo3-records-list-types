@@ -2,6 +2,68 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.2.0 - 2026-09-19
+
+Translation and UI pass over every view in English and German, one canonical TCA
+label resolver, and a smaller controller.
+
+### Added
+
+- `record.pageLabel`, `noRecords.resetAll`, `table.expand`, `table.collapse`,
+  `action.editColumns` and a description for each built-in view mode
+  (`viewMode.*.description`) — in English, German, French, Spanish and Italian.
+- Empty state with an action: when filters or a search term produced the empty
+  list, a "Reset filters and search" button clears both and returns to the
+  unfiltered view.
+- The table heading link that switches between one table and all tables now
+  carries an accessible name ("List only this table" / "List all tables").
+- The view switcher entries show their description as a tooltip. The option was
+  documented but never rendered.
+- `LabelCatalogTest` guards: referenced core labels must exist in the core
+  catalogs, translations must keep every placeholder of their source, plural and
+  select expressions must declare an `other` branch, German labels in compact
+  controls must stay within a length budget, and no two keys may carry the same
+  English text.
+
+### Fixed
+
+- Column labels for system fields reached the UI raw: `core.general:LGL.sorting`
+  does not exist in TYPO3, and `LanguageService::sL()` echoes an unresolved
+  reference back instead of returning an empty string, so grid cards and the
+  sorting dropdown showed the key itself. `crdate`, `tstamp` and `pid` showed
+  their bare field name for the same reason — TYPO3 v14 adds those columns to
+  every schema with the field name as label.
+- Records without a usable title rendered the English literal `[No title]`
+  instead of core's localized "No title" placeholder.
+- The compact view rendered its full column header row above an empty table.
+
+### Changed
+
+- One canonical TCA label resolver: `TcaTableConfigurationService::getFieldLabel()`
+  is now the single place that turns a field into a column label. The near-copies
+  in `RecordGridDataProvider` and `RecordFilterConfigurationService` are gone, and
+  an unresolved reference no longer reaches the screen.
+- Core owns the wording of its own data model, so system columns use
+  `core.general:LGL.*` and `core.core:labels.sorting`. Everything this extension
+  renders itself keeps its own catalog, which ships all five languages regardless
+  of which core language packs are installed.
+- One term per concept: the sortable column headers and the sorting dropdown both
+  use `sort.ascending`/`sort.descending`, the identifier column and the card
+  footer both say "ID", the sorting button group uses `sortingMode.label`, and the
+  two "edit the shown columns" buttons share `action.editColumns`.
+- `ViewModeResolver` no longer keeps its own copy of the built-in view modes; it
+  derives them from `ViewTypeRegistry::BUILTIN_TYPES`.
+- The sorting-mode toggle, the field-sorting dropdown, the sortable column headers
+  and the bulk-edit header moved out of the controller into
+  `Service\ListSortingViewFactory` (RecordListController 2039 → 1595 lines).
+
+### Removed
+
+- `sorting`, `filter.option.visible` and `filter.option.hidden` — duplicates of
+  `sortingMode.label`, `state.visible` and `state.hidden`.
+- `drag.dropped` and `translation.translated`, which nothing referenced.
+- `Tests/Unit/ConstantsTest.php`, which compared constants with their own literals.
+
 ## 1.1.1 - 2026-09-12
 
 ### Fixed

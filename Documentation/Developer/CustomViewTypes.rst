@@ -577,8 +577,10 @@ PSR-14 registration hook
 
 If building a TYPO3 extension, use PSR-14 to add, remove, or rename view
 mode entries before TSconfig is merged. The event API accepts the view
-mode identity data (label, icon, description). Use Page TSconfig for
-template paths, CSS, JavaScript, and display-column settings.
+mode identity data (label, icon, description). ``label`` and ``description``
+accept a label reference as well as plain text; the description becomes the
+tooltip of the entry in the view switcher. Use Page TSconfig for template
+paths, CSS, JavaScript, and display-column settings.
 
 ..  code-block:: php
     :caption: Classes/EventListener/RegisterCustomViewListener.php
@@ -600,7 +602,7 @@ template paths, CSS, JavaScript, and display-column settings.
             $event->addViewMode('kanban', [
                 'label' => 'my_extension.messages:viewMode.kanban',
                 'icon' => 'actions-view-table-columns',
-                'description' => 'Kanban board view',
+                'description' => 'my_extension.messages:viewMode.kanban.description',
             ]);
         }
     }
