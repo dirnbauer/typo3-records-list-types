@@ -328,7 +328,7 @@ final class RecordFilterStateServiceTest extends TestCase
      */
     private function createRequest(array $queryParams, ?ModuleData $moduleData = null): ServerRequest
     {
-        $request = (new ServerRequest(new Uri('https://example.test/typo3/module/content/records'), 'GET'))
+        $request = new ServerRequest(new Uri('https://example.test/typo3/module/content/records'), 'GET')
             ->withQueryParams($queryParams);
 
         if ($moduleData instanceof ModuleData) {

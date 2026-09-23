@@ -123,31 +123,31 @@ final class BackendFragmentSanitizerBuilder extends DefaultSanitizerBuilder
         ];
 
         return $behavior->withTags(
-            (new Tag('svg', Tag::ALLOW_CHILDREN))->addAttrs(...$svgAttrs),
-            (new Tag('use'))->addAttrs(...$useAttrs),
-            (new Tag('path'))->addAttrs(...$pathAttrs),
-            (new Tag('g', Tag::ALLOW_CHILDREN))->addAttrs(...$shapeAttrs),
-            (new Tag('defs', Tag::ALLOW_CHILDREN))->addAttrs(...$this->globalAttrs),
-            (new Tag('symbol', Tag::ALLOW_CHILDREN))->addAttrs(...$svgAttrs),
-            (new Tag('title', Tag::ALLOW_CHILDREN))->addAttrs(...$this->globalAttrs),
-            (new Tag('circle'))->addAttrs(...$shapeAttrs),
-            (new Tag('rect'))->addAttrs(...$shapeAttrs),
-            (new Tag('line'))->addAttrs(...$shapeAttrs),
-            (new Tag('polygon'))->addAttrs(...$shapeAttrs),
-            (new Tag('polyline'))->addAttrs(...$shapeAttrs),
-            (new Tag('ellipse'))->addAttrs(...$shapeAttrs),
-            (new Tag('button', Tag::ALLOW_CHILDREN))->addAttrs(...$buttonAttrs),
-            (new Tag('input'))->addAttrs(...$inputAttrs),
-            (new Tag('a', Tag::ALLOW_CHILDREN))->addAttrs(...$anchorAttrs),
-            (new Tag('typo3-backend-contextual-record-edit-trigger', Tag::ALLOW_CHILDREN))->addAttrs(...$contextualTriggerAttrs),
+            new Tag('svg', Tag::ALLOW_CHILDREN)->addAttrs(...$svgAttrs),
+            new Tag('use')->addAttrs(...$useAttrs),
+            new Tag('path')->addAttrs(...$pathAttrs),
+            new Tag('g', Tag::ALLOW_CHILDREN)->addAttrs(...$shapeAttrs),
+            new Tag('defs', Tag::ALLOW_CHILDREN)->addAttrs(...$this->globalAttrs),
+            new Tag('symbol', Tag::ALLOW_CHILDREN)->addAttrs(...$svgAttrs),
+            new Tag('title', Tag::ALLOW_CHILDREN)->addAttrs(...$this->globalAttrs),
+            new Tag('circle')->addAttrs(...$shapeAttrs),
+            new Tag('rect')->addAttrs(...$shapeAttrs),
+            new Tag('line')->addAttrs(...$shapeAttrs),
+            new Tag('polygon')->addAttrs(...$shapeAttrs),
+            new Tag('polyline')->addAttrs(...$shapeAttrs),
+            new Tag('ellipse')->addAttrs(...$shapeAttrs),
+            new Tag('button', Tag::ALLOW_CHILDREN)->addAttrs(...$buttonAttrs),
+            new Tag('input')->addAttrs(...$inputAttrs),
+            new Tag('a', Tag::ALLOW_CHILDREN)->addAttrs(...$anchorAttrs),
+            new Tag('typo3-backend-contextual-record-edit-trigger', Tag::ALLOW_CHILDREN)->addAttrs(...$contextualTriggerAttrs),
             // TYPO3 GenericButton renders these custom elements with an icon
             // span + label text inside (`<...><span>…svg…</span>Label</...>`),
             // so they must allow children -- otherwise the sanitizer's
             // REMOVE_UNEXPECTED_CHILDREN flag wipes the icon and label.
-            (new Tag('typo3-recordlist-record-download-button', Tag::ALLOW_CHILDREN))->addAttrs(...$downloadButtonAttrs),
-            (new Tag('typo3-backend-new-page-wizard-button', Tag::ALLOW_CHILDREN))->addAttrs(...$newPageWizardAttrs),
-            (new Tag('typo3-backend-column-selector-button', Tag::ALLOW_CHILDREN))->addAttrs(...$columnSelectorAttrs),
-            (new Tag('typo3-backend-clipboard-panel'))->addAttrs(...$clipboardPanelAttrs),
+            new Tag('typo3-recordlist-record-download-button', Tag::ALLOW_CHILDREN)->addAttrs(...$downloadButtonAttrs),
+            new Tag('typo3-backend-new-page-wizard-button', Tag::ALLOW_CHILDREN)->addAttrs(...$newPageWizardAttrs),
+            new Tag('typo3-backend-column-selector-button', Tag::ALLOW_CHILDREN)->addAttrs(...$columnSelectorAttrs),
+            new Tag('typo3-backend-clipboard-panel')->addAttrs(...$clipboardPanelAttrs),
         );
     }
 }
