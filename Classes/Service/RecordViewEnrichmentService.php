@@ -8,11 +8,11 @@ use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
+use Webconsulting\RecordsListTypes\RecordList\AlternativeDatabaseRecordList;
 use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
 
 /**
@@ -21,6 +21,12 @@ use Webconsulting\RecordsListTypes\Utility\ArrayUtility;
  */
 final readonly class RecordViewEnrichmentService implements SingletonInterface
 {
+    /** Characters of a text field a card or row shows; CSS clamps it further. */
+    private const int TEXT_PREVIEW_LENGTH = 300;
+
+    /** Characters of any other value, as in the list view. */
+    private const int VALUE_PREVIEW_LENGTH = 100;
+
     public function __construct(
         private TcaTableConfigurationService $tcaConfigurationService,
         private RecordDisplayValueFormatter $displayValueFormatter,
@@ -46,6 +52,94 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
     }
 
     /**
+     * Adds the markup the list view renders for a record to every record and
+     * every translated slot: the icon with its state overlays and context
+     * menu, the control panel and the lock message.
+     *
+     * @param array<int, array<string, mixed>> $records
+     * @return array<int, array<string, mixed>>
+     */
+    public function enrichRecordsWithCoreMarkup(
+        array $records,
+        string $tableName,
+        AlternativeDatabaseRecordList $recordList,
+    ): array {
+        $enriched = [];
+        foreach ($records as $index => $record) {
+            $record = $this->withCoreMarkup($record, $tableName, $recordList);
+            $translations = $record['translations'] ?? null;
+            if (is_array($translations)) {
+                $slots = [];
+                foreach ($translations as $slotIndex => $slot) {
+                    $slots[$slotIndex] = is_array($slot) && ($slot['state'] ?? '') === 'translated'
+                        ? $this->withCoreMarkup(ArrayUtility::stringKeyArray($slot), $tableName, $recordList)
+                        : $slot;
+                }
+                $record['translations'] = $slots;
+            }
+            $enriched[$index] = $record;
+        }
+
+        return $enriched;
+    }
+
+    /**
+     * Gives every translated slot its own display values, so a view can show
+     * the translated field values below the original ones.
+     *
+     * @param array<int, array<string, mixed>> $records
+     * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
+     * @return array<int, array<string, mixed>>
+     */
+    public function enrichTranslationsWithDisplayValues(
+        array $records,
+        array $displayColumns,
+        string $tableName,
+        RecordViewEnrichmentContext $context,
+    ): array {
+        foreach ($records as $index => $record) {
+            $translations = $record['translations'] ?? null;
+            if (!is_array($translations) || $translations === []) {
+                continue;
+            }
+            $slots = [];
+            foreach ($translations as $slotIndex => $slot) {
+                if (is_array($slot) && ($slot['state'] ?? '') === 'translated') {
+                    $slot = $this->enrichRecordsWithDisplayValues(
+                        [ArrayUtility::stringKeyArray($slot)],
+                        $displayColumns,
+                        $tableName,
+                        $context,
+                    )[0];
+                }
+                $slots[$slotIndex] = $slot;
+            }
+            $records[$index]['translations'] = $slots;
+        }
+
+        return $records;
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     * @return array<string, mixed>
+     */
+    private function withCoreMarkup(array $record, string $tableName, AlternativeDatabaseRecordList $recordList): array
+    {
+        $row = is_array($record['rawRecord'] ?? null) ? ArrayUtility::stringKeyArray($record['rawRecord']) : [];
+        if ($row === []) {
+            return $record;
+        }
+
+        $record['iconHtml'] = $recordList->renderRecordIcon($tableName, $row);
+        $record['controlsHtml'] = $recordList->renderRecordControls($tableName, $row);
+        $record['lockMessage'] = $recordList->getRecordLockMessage($tableName, $row);
+        $record['isDeletePlaceholder'] = $recordList->isDeletePlaceholder($tableName, $row);
+
+        return $record;
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $records
      * @param array<int, array{field: string, label: string, type: string, isLabelField: bool}> $displayColumns
      * @return array<int, array<string, mixed>>
@@ -56,9 +150,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
         string $tableName,
         RecordViewEnrichmentContext $context,
     ): array {
-        $tcaForTable = $this->tcaConfigurationService->getTcaForTable($tableName);
-        $tcaColumns = $tcaForTable['columns'];
-        $langService = $this->getLanguageService();
+        $tcaColumns = $this->tcaConfigurationService->getTcaForTable($tableName)['columns'];
 
         foreach ($records as &$record) {
             $displayValues = [];
@@ -74,7 +166,7 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
                 if ($type === 'boolean' && $this->displayValueFormatter->shouldInvertBooleanDisplay($field, $tcaColumns)) {
                     $displayRaw = ((bool)$rawValue) ? 0 : 1;
                 }
-                $isLabelField = $column['isLabelField'] ?? false;
+                $isLabelField = $column['isLabelField'];
 
                 $displayValues[$field] = [
                     'field' => $field,
@@ -82,17 +174,16 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
                     'type' => $type,
                     'isLabelField' => $isLabelField,
                     'raw' => $displayRaw,
-                    'formatted' => $isLabelField
-                        ? BackendUtility::getRecordTitle($tableName, $rawRecord, false, true)
-                        : $this->displayValueFormatter->formatFieldValue(
-                            $displayRaw,
-                            $type,
+                    'formatted' => match (true) {
+                        $isLabelField => BackendUtility::getRecordTitle($tableName, $rawRecord, false, true),
+                        $type === 'boolean' => '',
+                        default => $this->displayValueFormatter->formatFieldValue(
+                            $tableName,
                             $field,
-                            $tcaColumns,
-                            static fn(string $label): string => $langService instanceof LanguageService
-                                ? $langService->sL($label)
-                                : $label,
+                            $rawRecord,
+                            $type === 'text' ? self::TEXT_PREVIEW_LENGTH : self::VALUE_PREVIEW_LENGTH,
                         ),
+                    },
                     'isEmpty' => in_array($rawValue, [null, '', 0, '0'], true),
                 ];
             }
@@ -463,12 +554,5 @@ final readonly class RecordViewEnrichmentService implements SingletonInterface
         $user = $GLOBALS['BE_USER'] ?? null;
 
         return $user instanceof BackendUserAuthentication ? $user : null;
-    }
-
-    private function getLanguageService(): ?LanguageService
-    {
-        $lang = $GLOBALS['LANG'] ?? null;
-
-        return $lang instanceof LanguageService ? $lang : null;
     }
 }

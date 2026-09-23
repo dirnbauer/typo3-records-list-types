@@ -19,6 +19,7 @@ use TYPO3\CMS\Backend\RecordList\DatabaseRecordList;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\Buttons\LanguageSelectorBuilder;
 use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
+use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\RecordIdentityRenderer;
@@ -32,7 +33,10 @@ use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Messaging\FlashMessageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Pagination\SlidingWindowPagination;
+use TYPO3\CMS\Core\Schema\Capability\TcaSchemaCapability;
 use TYPO3\CMS\Core\Schema\TcaSchemaFactory;
+use TYPO3\CMS\Core\Type\ContextualFeedbackSeverity;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\View\ViewFactoryData;
 use TYPO3\CMS\Core\View\ViewFactoryInterface;
@@ -339,6 +343,9 @@ final class RecordListController extends CoreRecordListController
             (string)($languageService->translate('title', 'backend.modules.list') ?? ''),
             $title,
         );
+        if ($customContent === '') {
+            $this->addNoRecordsFlashMessage($view, $this->table);
+        }
 
         // Add page breadcrumb
         if ($this->pageContext->pageRecord !== null) {
@@ -354,6 +361,9 @@ final class RecordListController extends CoreRecordListController
         $view->assignMultiple([
             'pageId' => $this->pageContext->pageId,
             'pageTitle' => $title,
+            'recordIdentity' => $this->pageContext->pageRecord !== null
+                ? $this->recordIdentityRenderer->render('pages', $this->pageContext->pageRecord)
+                : '',
             'isPageEditable' => $this->isPageEditable(),
             'additionalContentTop' => $additionalRecordListEvent->getAdditionalContentAbove(),
             'pageTranslationsHtml' => $pageTranslationsHtml,
@@ -364,6 +374,28 @@ final class RecordListController extends CoreRecordListController
         ]);
 
         return $view->renderResponse('RecordList');
+    }
+
+    /**
+     * Core's DocHeader, plus a bookmark that opens the same view again.
+     */
+    #[\Override]
+    protected function getDocHeaderButtons(ModuleTemplate $view, Clipboard $clipboard, ServerRequestInterface $request, DatabaseRecordList $dbList): void
+    {
+        parent::getDocHeaderButtons($view, $clipboard, $request, $dbList);
+        if (!$dbList instanceof AlternativeDatabaseRecordList) {
+            return;
+        }
+
+        $arguments = ['id' => $this->pageContext->pageId, 'displayMode' => $this->currentViewMode];
+        $queryParams = $request->getQueryParams();
+        foreach (['table', 'searchTerm', 'search_levels'] as $name) {
+            $value = $queryParams[$name] ?? null;
+            if (is_scalar($value) && (string)$value !== '') {
+                $arguments[$name] = (string)$value;
+            }
+        }
+        $view->getDocHeaderComponent()->setShortcutContext('records', $this->getShortcutTitle($arguments), $arguments);
     }
 
     /**
@@ -498,13 +530,13 @@ final class RecordListController extends CoreRecordListController
             $isSingleTableMode = ($table !== '');
             $isSearching = ($searchTerm !== '');
             $hasActiveFilters = $this->recordFilterStateService->hasActiveValuesForTable($request, $tableName);
-            $totalRecordCount = $this->getRecordCountUsingDbList($tableName, $pageId, '', 0, $request);
+            // Count with exactly the constraints of the record query below, so
+            // the pagination never promises more records than the list holds.
+            $querySearchLevels = ($isSearching || $isSingleTableMode) ? $searchLevels : 0;
+            $recordCount = $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $querySearchLevels, $request);
 
             // Single-table mode paginates fully; multi-table mode shows a
             // limited per-table preview with an "Expand table" link instead.
-            $recordCount = $isSearching
-                ? $this->getRecordCountUsingDbList($tableName, $pageId, $searchTerm, $searchLevels, $request)
-                : $totalRecordCount;
             if ($isSingleTableMode) {
                 $itemsPerPage = $this->getItemsPerPage($viewMode, $pageId);
                 $currentPointer = $this->requestParameterService->getCurrentPointer($request, $tableName);
@@ -517,8 +549,8 @@ final class RecordListController extends CoreRecordListController
                 $request,
                 $tableName,
                 $pageId,
-                ($isSearching || $isSingleTableMode) ? $searchTerm : '',
-                ($isSearching || $isSingleTableMode) ? $searchLevels : 0,
+                $searchTerm,
+                $querySearchLevels,
                 $itemsPerPage,
                 $offset,
                 $sortField,
@@ -598,29 +630,30 @@ final class RecordListController extends CoreRecordListController
                 $enrichmentContext,
             );
 
-            // Assign a per-GROUP zebra class here so every row a template
-            // renders (parent + all its translation slots) ends up with the
-            // same `groupClass`. Doing it in PHP removes Fluid's inline
-            // expression / boolean edge cases that were silently dropping
-            // the class client-side.
-            $groupIndex = 0;
-            foreach ($enrichedRecords as &$recordRef) {
-                $groupIndex++;
-                $groupClass = ($groupIndex % 2 === 0)
-                    ? 'compactview-row--group-even'
-                    : 'compactview-row--group-odd';
-                $recordRef['groupClass'] = $groupClass;
-                if (is_array($recordRef['translations'] ?? null)) {
-                    /** @var array<int, array<string, mixed>> $translations */
-                    $translations = $recordRef['translations'];
-                    foreach ($translations as &$translationRef) {
-                        $translationRef['groupClass'] = $groupClass;
-                    }
-                    unset($translationRef);
-                    $recordRef['translations'] = $translations;
-                }
-            }
-            unset($recordRef);
+            $enrichedRecords = $this->viewEnrichmentService->enrichTranslationsWithDisplayValues(
+                $enrichedRecords,
+                $displayColumns,
+                $tableName,
+                $enrichmentContext,
+            );
+
+            // The icon with its context menu and the control panel come from
+            // Core, so every view offers exactly the actions of the list view.
+            $controlsRecordList = $this->createControlsRecordList(
+                $request,
+                $dbList->clipObj,
+                $tableName,
+                $pageId,
+                $searchTerm,
+                $querySearchLevels,
+                $sortingMode === 'manual' && $sortDirection === 'asc' ? '' : $sortField,
+            );
+            $controlsRecordList->prepareManualSorting($tableName, $this->getDefaultLanguageRows($enrichedRecords));
+            $enrichedRecords = $this->viewEnrichmentService->enrichRecordsWithCoreMarkup(
+                $enrichedRecords,
+                $tableName,
+                $controlsRecordList,
+            );
 
             // Sorting dropdown / toggle data
             $sortableFields = $this->recordGridDataProvider->getSortableFields($tableName);
@@ -700,6 +733,9 @@ final class RecordListController extends CoreRecordListController
             $tableData[] = [
                 'tableName' => $tableName,
                 'tableIdentifier' => $tableName,
+                'isCollapsed' => !$isSingleTableMode && $this->isTableCollapsed($tableName),
+                'isLanguageAware' => $this->recordGridDataProvider->isLanguageAwareTable($tableName),
+                'messages' => $this->buildTableMessages($tableName),
                 'tableHeading' => $this->buildTableHeading($tableName, $recordCount, $isSingleTableMode, $singleTableUrl, $clearTableUrl, $dbList->disableSingleTableView),
                 'tableLabel' => $this->getTableLabel($tableName),
                 'tableIcon' => $this->getTableIcon($tableName),
@@ -720,7 +756,7 @@ final class RecordListController extends CoreRecordListController
                 'bulkEditHeader' => $bulkEditHeader,
                 'singleTableUrl' => $singleTableUrl,
                 'clearTableUrl' => $clearTableUrl,
-                'formActionUrl' => $singleTableUrl,
+                'formActionUrl' => $isSingleTableMode ? $singleTableUrl : $clearTableUrl,
                 'displayColumns' => $displayColumns,
                 'isFiltered' => $isSingleTableMode && $table === $tableName,
                 'canReorder' => $canReorder,
@@ -865,6 +901,7 @@ final class RecordListController extends CoreRecordListController
         if (is_array($tableDisplayOrder)) {
             $dbList->setTableDisplayOrder($tableDisplayOrder);
         }
+        $dbList->setOverrideUrlParameters($this->getListStateParameters($request), $request);
         return $dbList;
     }
 
@@ -1014,16 +1051,10 @@ final class RecordListController extends CoreRecordListController
     }
 
     /**
-     * Render the multi-record-selection action buttons for a table.
+     * The action bar Core shows while records are selected (edit, edit
+     * columns, delete, clipboard). A view that shows other columns than the
+     * list view additionally gets "Edit the shown columns".
      *
-     * Generates the hidden action bar that appears when records are
-     * selected via checkboxes. Uses TYPO3's Multi Record Selection API.
-     *
-     * @param string $tableName The database table
-     * @param int $pageId The current page ID
-     * @param string $viewMode The current view mode
-     * @param ServerRequestInterface $request The current request
-     * @return string Rendered HTML for the action buttons row
      * @param list<int> $currentRecordUids UIDs of currently rendered records
      * @param list<string> $displayColumnFields Field names of the currently displayed columns
      */
@@ -1040,41 +1071,141 @@ final class RecordListController extends CoreRecordListController
         $dbList->clipObj = $clipboard;
         $buttons = $dbList->renderMultiRecordSelectionActions($tableName, $currentRecordUids);
 
-        if ($displayColumnFields === []) {
+        $listViewColumns = array_values(array_filter(
+            $dbList->getColumnsToRender($tableName, false),
+            is_string(...),
+        ));
+        if ($displayColumnFields === []
+            || array_diff($displayColumnFields, $listViewColumns) === []
+            || !str_contains($buttons, 'data-multi-record-selection-action="edit"')
+        ) {
             return $buttons;
         }
-        $languageService = $this->getLanguageService();
 
-        $returnUrl = '';
         try {
-            $returnUrlParams = array_replace(
+            $returnUrl = (string)$this->uriBuilder->buildUriFromRoute('records', array_replace(
                 ['id' => $pageId, 'displayMode' => $viewMode, 'table' => $tableName],
                 $this->requestParameterService->getPreservedListParameters($request),
-            );
-            $returnUrl = (string)$this->uriBuilder->buildUriFromRoute('records', $returnUrlParams);
+            ));
         } catch (\Exception) {
             $returnUrl = (string)$request->getUri();
         }
 
-        // Edit columns action - only edit the currently displayed columns
+        $label = htmlspecialchars($this->getLanguageService()->sL('records_list_types.messages:action.editColumns'));
         $editColumnsConfig = GeneralUtility::jsonEncodeForHtmlAttribute([
             'idField' => 'uid',
             'tableName' => $tableName,
             'returnUrl' => $returnUrl,
             'columnsOnly' => $displayColumnFields,
-        ], true);
-        $editColumnsButton = '<button type="button" class="btn btn-sm btn-default"'
+        ]);
+
+        return $buttons . PHP_EOL
+            . '<button type="button" class="btn btn-sm btn-default" title="' . $label . '"'
             . ' data-multi-record-selection-action="edit"'
             . ' data-multi-record-selection-action-config="' . $editColumnsConfig . '">'
             . $this->iconFactory->getIcon('actions-document-open', IconSize::SMALL)->render()
-            . ' ' . htmlspecialchars($languageService->sL('records_list_types.messages:action.editColumns'))
+            . ' ' . $label
             . '</button>';
+    }
 
-        if ($buttons === '') {
-            return $editColumnsButton;
+    /**
+     * A record list for one table that renders the per-record markup of the
+     * list view. An empty sort field means records are listed in ascending
+     * manual order, the only case in which Core offers "Move up/down".
+     */
+    private function createControlsRecordList(
+        ServerRequestInterface $request,
+        Clipboard $clipboard,
+        string $tableName,
+        int $pageId,
+        string $searchTerm,
+        int $searchLevels,
+        string $sortField,
+    ): AlternativeDatabaseRecordList {
+        $recordList = $this->createDatabaseRecordListForTable($tableName, $pageId, $searchTerm, $searchLevels, $request);
+        $recordList->clipObj = $clipboard;
+        $recordList->sortField = $sortField;
+
+        return $recordList;
+    }
+
+    /**
+     * Raw rows of the default-language records in the listed order; free-mode
+     * translations are listed after them and never take part in manual sorting.
+     *
+     * @param array<int, array<string, mixed>> $records
+     * @return list<array<string, mixed>>
+     */
+    private function getDefaultLanguageRows(array $records): array
+    {
+        $rows = [];
+        foreach ($records as $record) {
+            if (($record['isFreeTranslation'] ?? false) === true || !is_array($record['rawRecord'] ?? null)) {
+                continue;
+            }
+            $rows[] = ArrayUtility::stringKeyArray($record['rawRecord']);
         }
 
-        return $buttons . PHP_EOL . $editColumnsButton;
+        return $rows;
+    }
+
+    /**
+     * Collapsed tables are stored by recordlist.js in the module data, the
+     * same place the list view reads them from.
+     */
+    private function isTableCollapsed(string $tableIdentifier): bool
+    {
+        $collapsedTables = $this->moduleData?->get('collapsedTables');
+
+        return is_array($collapsedTables) && (bool)($collapsedTables[$tableIdentifier] ?? false);
+    }
+
+    /**
+     * The notices the list view shows above a table that cannot be versioned
+     * in the current workspace.
+     *
+     * @return list<array{message: string, severity: string, icon: string}>
+     */
+    private function buildTableMessages(string $tableName): array
+    {
+        $backendUser = $this->getBackendUserAuthentication();
+        if ($backendUser->workspace === 0
+            || !ExtensionManagementUtility::isLoaded('workspaces')
+            || !$this->tcaSchemaFactory->has($tableName)
+            || $this->tcaSchemaFactory->get($tableName)->hasCapability(TcaSchemaCapability::Workspace)
+        ) {
+            return [];
+        }
+
+        [$key, $severity] = $backendUser->workspaceAllowsLiveEditingInTable($tableName)
+            ? ['core.core:labels.editingLiveRecordsWarning', ContextualFeedbackSeverity::WARNING]
+            : ['core.core:labels.notEditableInWorkspace', ContextualFeedbackSeverity::INFO];
+
+        return [[
+            'message' => $this->getLanguageService()->sL($key),
+            'severity' => $severity->getCssClass(),
+            'icon' => $severity->getIconIdentifier(),
+        ]];
+    }
+
+    /**
+     * Parameters every link built by Core's record list keeps, so edit, delete,
+     * move and clipboard actions return to the same view, filters and sorting.
+     *
+     * @return array<string, mixed>
+     */
+    private function getListStateParameters(ServerRequestInterface $request): array
+    {
+        $parameters = ['displayMode' => $this->currentViewMode];
+        foreach ($this->requestParameterService->getPreservedListParameters($request) as $name => $value) {
+            if (in_array($name, ['filters', 'recordFilters', 'sort', 'sortingMode'], true)
+                || ($name === 'pointer' && is_array($value))
+            ) {
+                $parameters[$name] = $value;
+            }
+        }
+
+        return $parameters;
     }
 
     /**
@@ -1110,7 +1241,7 @@ final class RecordListController extends CoreRecordListController
 
         $heading['linkUrl'] = $isSingleTableMode ? $clearTableUrl : $singleTableUrl;
         $heading['linkTitle'] = $lang->sL(
-            'records_list_types.messages:' . ($isSingleTableMode ? 'table.collapse' : 'table.expand'),
+            'core.mod_web_list:' . ($isSingleTableMode ? 'contractView' : 'expandView'),
         );
         $heading['iconIdentifier'] = $isSingleTableMode ? 'actions-view-table-collapse' : 'actions-view-table-expand';
 
@@ -1422,6 +1553,16 @@ final class RecordListController extends CoreRecordListController
         }
         unset($record);
 
+        // The list view renders this section with showOnlyTranslatedRecords,
+        // which also drops the clipboard actions of page translations.
+        $controlsRecordList = $this->createControlsRecordList($request, $dbList->clipObj, $tableName, $pageId, '', 0, '');
+        $controlsRecordList->showOnlyTranslatedRecords(true);
+        $enrichedRecords = $this->viewEnrichmentService->enrichRecordsWithCoreMarkup(
+            $enrichedRecords,
+            $tableName,
+            $controlsRecordList,
+        );
+
         $recordCount = count($enrichedRecords);
         $headingLabel = $this->tcaConfigurationService->translateTcaLabel('core.core:pageTranslation', 'Page Translations');
 
@@ -1442,6 +1583,9 @@ final class RecordListController extends CoreRecordListController
         $tableData = [[
             'tableName' => $tableName,
             'tableIdentifier' => 'pages_translated',
+            'isCollapsed' => $this->isTableCollapsed('pages_translated'),
+            'isLanguageAware' => true,
+            'messages' => $this->buildTableMessages($tableName),
             'tableHeading' => [
                 'label' => $headingLabel,
                 'recordCount' => $recordCount,
@@ -1504,18 +1648,7 @@ final class RecordListController extends CoreRecordListController
             'isPageTranslationsList' => true,
         ]);
 
-        $html = $view->render($templatePaths['template']);
-
-        // Make DOM ids and selection identifiers unique so the main `pages`
-        // list (when present) and the translated-pages list can coexist on
-        // the same screen without duplicate ids.
-        $html = str_replace(
-            ['id="t3-table-pages"', 'id="recordlist-pages"', 't3-table-pages'],
-            ['id="t3-table-pages-translated"', 'id="recordlist-pages-translated"', 't3-table-pages-translated'],
-            $html,
-        );
-
-        return '<div class="records-list-types-page-translations">' . $html . '</div>';
+        return $view->render($templatePaths['template']);
     }
 
     /**

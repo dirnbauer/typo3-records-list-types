@@ -1,0 +1,49 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Record title. Editors who may edit the record open it in the contextual
+    editor (TYPO3 v14 sheet, FormEngine as fallback). Like the list view it
+    shows a lock when another user edits the record and strikes through
+    records deleted in the current workspace.
+
+    Arguments: record, class (optional CSS class of the link)
+</f:comment>
+
+<f:if condition="{record.lockMessage}">
+    <span class="rlt-lock" tabindex="0" title="{record.lockMessage}" aria-label="{record.lockMessage}">
+        <core:icon identifier="status-user-backend" size="small" overlay="overlay-edit" />
+    </span>
+</f:if>
+<f:if condition="{record.isDeletePlaceholder}">
+    <f:then>
+        <del class="rlt-title-deleted" title="{f:translate(key: 'backend.messages:row.deletePlaceholder.title')}">
+            <f:if condition="{record.title}">
+                <f:then>{record.title}</f:then>
+                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
+            </f:if>
+        </del>
+    </f:then>
+    <f:else if="{record.permissions.canEdit}">
+        <typo3-backend-contextual-record-edit-trigger
+            class="{class}"
+            url="{record.contextualEditUrl}"
+            edit-url="{record.editUrl}">
+            <f:if condition="{record.title}">
+                <f:then>{record.title}</f:then>
+                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
+            </f:if>
+        </typo3-backend-contextual-record-edit-trigger>
+    </f:else>
+    <f:else>
+        <span class="{class}">
+            <f:if condition="{record.title}">
+                <f:then>{record.title}</f:then>
+                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
+            </f:if>
+        </span>
+    </f:else>
+</f:if>
+
+</html>

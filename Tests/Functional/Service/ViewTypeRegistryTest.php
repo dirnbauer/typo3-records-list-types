@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Webconsulting\RecordsListTypes\Tests\Functional\Service;
 
 use PHPUnit\Framework\Attributes\Test;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 use Webconsulting\RecordsListTypes\Service\ViewTypeRegistry;
 
@@ -223,6 +224,22 @@ final class ViewTypeRegistryTest extends FunctionalTestCase
         self::assertCount(2, $files);
         self::assertStringContainsString('base.css', $files[0]);
         self::assertStringContainsString('teaser-view.css', $files[1]);
+    }
+
+    #[Test]
+    public function aTypeRenderingABuiltinTemplateGetsItsStylesheet(): void
+    {
+        $this->get(ConnectionPool::class)->getConnectionForTable('pages')->update('pages', [
+            'TSconfig' => "mod.web_list.viewMode.types.addresses.template = CompactView\n"
+                . 'mod.web_list.viewMode.types.addresses.css = EXT:my_ext/Resources/Public/Css/addresses.css',
+        ], ['uid' => 1]);
+        $this->subject->clearCache();
+
+        self::assertSame([
+            'EXT:records_list_types/Resources/Public/Css/base.css',
+            'EXT:records_list_types/Resources/Public/Css/compact-view.css',
+            'EXT:my_ext/Resources/Public/Css/addresses.css',
+        ], $this->subject->getCssFiles('addresses', 1));
     }
 
     #[Test]

@@ -247,11 +247,18 @@ final class ViewModeResolver implements SingletonInterface
             if (!is_array($tablePreferences)) {
                 $tablePreferences = [];
             }
+            if (($tablePreferences[$tableName] ?? null) === $mode) {
+                return;
+            }
             $tablePreferences[$tableName] = $mode;
             $backendUser->uc[self::TABLE_USER_CONFIG_KEY] = $tablePreferences;
         } else {
+            if (($backendUser->uc[Constants::USER_CONFIG_KEY] ?? null) === $mode) {
+                return;
+            }
             $backendUser->uc[Constants::USER_CONFIG_KEY] = $mode;
         }
+        // Every link of a view carries displayMode; only a change is written.
         $backendUser->writeUC();
     }
 

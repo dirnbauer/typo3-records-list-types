@@ -56,7 +56,7 @@ final class RecordListControllerTest extends FunctionalTestCase
         $this->setControllerProperty($controller, 'table', 'tt_content');
         $this->setControllerProperty($controller, 'modTSconfig', []);
 
-        $request = (new ServerRequest('https://example.test/typo3/module/records'))
+        $request = new ServerRequest('https://example.test/typo3/module/records')
             ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE)
             ->withQueryParams([
                 'id' => 1,
@@ -98,7 +98,7 @@ final class RecordListControllerTest extends FunctionalTestCase
     public function enrichRecordWithEditUrlsKeepsCustomViewReturnUrlContext(): void
     {
         $pageContext = $this->createPageContext(1);
-        $request = (new ServerRequest('https://example.test/typo3/module/records'))
+        $request = new ServerRequest('https://example.test/typo3/module/records')
             ->withQueryParams([
                 'id' => 1,
                 'displayMode' => 'compact',
@@ -308,13 +308,107 @@ final class RecordListControllerTest extends FunctionalTestCase
         ]);
         $html = (string)$this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'grid'))->getBody();
 
-        self::assertStringContainsString('title="Unhide record"', $html);
-        self::assertStringContainsString('aria-label="Unhide record"', $html);
-        self::assertStringNotContainsString('(currently hidden)', $html);
-        self::assertStringContainsString('aria-pressed="true"', $html);
+        self::assertStringContainsString('data-datahandler-status="hidden"', $html, 'Core\'s visibility button must know the record is hidden.');
+        self::assertStringContainsString('data-rlt-hidden-badge', $html, 'The hidden state must be readable as text, not only as an icon overlay.');
+        self::assertStringContainsString('aria-current="true"', $html);
         self::assertStringContainsString('(reorderable list)', $html);
         self::assertStringContainsString('Drag and drop to reorder records', $html);
+        self::assertStringContainsString('aria-label="Select “Hidden example record”"', $html);
         self::assertStringNotContainsString('records_list_types.messages:', $html, 'Every label must resolve through the translation domain.');
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function alternativeViewProvider(): iterable
+    {
+        foreach (['grid', 'compact', 'teaser'] as $mode) {
+            yield $mode => [$mode];
+        }
+    }
+
+    #[Test]
+    #[DataProvider('alternativeViewProvider')]
+    public function everyViewRendersTheMarkupOfTheListView(string $mode): void
+    {
+        $this->get(ConnectionPool::class)->getConnectionForTable('tt_content')->insert('tt_content', [
+            'pid' => 1, 'header' => 'Core markup example', 'CType' => 'text',
+        ]);
+        $html = (string)$this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, $mode))->getBody();
+
+        self::assertStringContainsString('class="recordidentity"', $html, 'The page identity below the title is part of the Records module.');
+        self::assertStringContainsString('data-contextmenu-trigger="click"', $html, 'The record icon opens the context menu.');
+        self::assertStringContainsString('data-contextmenu-table="tt_content"', $html);
+        self::assertStringContainsString('data-datahandler-action="visibility"', $html, 'Records carry Core\'s control panel.');
+        self::assertMatchesRegularExpression('/<button[^>]+popovertarget="actions_tt_content_\d+"/', $html, 'The overflow menu opens as a popover.');
+        self::assertMatchesRegularExpression('/<ul[^>]+id="actions_tt_content_\d+"[^>]+popover/', $html);
+        self::assertStringNotContainsString('data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false">', $html);
+    }
+
+    #[Test]
+    public function coreLinksKeepTheViewAndItsState(): void
+    {
+        $this->get(ConnectionPool::class)->getConnectionForTable('tt_content')->insert('tt_content', [
+            'pid' => 1, 'header' => 'Return URL example', 'CType' => 'text',
+        ]);
+        $html = (string)$this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'teaser'))->getBody();
+
+        preg_match('/<ul[^>]+id="actions_tt_content_\d+"[^>]*>.*?<\/ul>/s', $html, $menu);
+        self::assertNotSame([], $menu);
+        self::assertStringContainsString('displayMode%3Dteaser', $menu[0], 'History and clipboard links must return to the teaser view.');
+    }
+
+    #[Test]
+    public function manualOrderOffersCoreMoveButtons(): void
+    {
+        $this->insertOrderedContentElements();
+
+        $html = (string)$this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'grid'))->getBody();
+        self::assertStringContainsString('actions-move-up', $html, 'Move up is the pointer alternative to dragging a card.');
+        self::assertStringContainsString('actions-move-down', $html);
+    }
+
+    #[Test]
+    public function columnOrderOffersNoMoveButtons(): void
+    {
+        $this->insertOrderedContentElements();
+
+        $html = (string)$this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'grid', [
+            'sortingMode' => ['tt_content' => 'field'],
+            'sort' => ['tt_content' => ['field' => 'header', 'direction' => 'asc']],
+        ]))->getBody();
+        self::assertStringNotContainsString('actions-move-up', $html, 'Moving by position contradicts a column sort.');
+    }
+
+    private function insertOrderedContentElements(): void
+    {
+        $connection = $this->get(ConnectionPool::class)->getConnectionForTable('tt_content');
+        foreach (['First', 'Second', 'Third'] as $index => $header) {
+            $connection->insert('tt_content', ['pid' => 1, 'header' => $header, 'CType' => 'text', 'sorting' => ($index + 1) * 256]);
+        }
+    }
+
+    #[Test]
+    public function collapsedTablesStayCollapsed(): void
+    {
+        $this->get(ConnectionPool::class)->getConnectionForTable('tt_content')->insert('tt_content', [
+            'pid' => 1, 'header' => 'Collapsed example', 'CType' => 'text',
+        ]);
+        $request = $this->createBackendRequest(1, 'grid', [], '');
+        $moduleData = $request->getAttribute('moduleData');
+        self::assertInstanceOf(ModuleData::class, $moduleData);
+        $moduleData->set('collapsedTables', ['tt_content' => 1]);
+
+        $html = (string)$this->get(RecordListController::class)->mainAction($request)->getBody();
+        self::assertMatchesRegularExpression('/<div class="collapse"\s+data-state="collapsed"\s+id="recordlist-tt_content"/', $html);
+    }
+
+    #[Test]
+    public function aPageWithoutRecordsShowsCoresMessage(): void
+    {
+        $html = (string)$this->get(RecordListController::class)->mainAction($this->createBackendRequest(1, 'grid', [], ''))->getBody();
+
+        self::assertStringContainsString('There are no records on this page.', $html);
     }
 
     /**
@@ -327,18 +421,21 @@ final class RecordListControllerTest extends FunctionalTestCase
         }
     }
 
-    private function createBackendRequest(int $pageId, string $mode): ServerRequestInterface
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    private function createBackendRequest(int $pageId, string $mode, array $parameters = [], string $table = 'tt_content'): ServerRequestInterface
     {
         $module = $this->get(ModuleProvider::class)->getModule('records');
         self::assertInstanceOf(ModuleInterface::class, $module);
         $route = $this->get(Router::class)->getRoute('records');
         self::assertNotNull($route);
         $route->setOption('_identifier', 'records');
-        $request = (new ServerRequest('https://example.test/typo3/module/content/records', 'GET', serverParams: [
+        $request = new ServerRequest('https://example.test/typo3/module/content/records', 'GET', serverParams: [
             'HTTP_HOST' => 'example.test', 'SCRIPT_NAME' => '/index.php',
             'SCRIPT_FILENAME' => $this->instancePath . '/public/index.php', 'HTTPS' => 'on',
-        ]))
-            ->withQueryParams(['id' => $pageId, 'table' => 'tt_content', 'displayMode' => $mode])
+        ])
+            ->withQueryParams(array_filter(['id' => $pageId, 'table' => $table, 'displayMode' => $mode] + $parameters, static fn(mixed $value): bool => $value !== ''))
             ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE)
             ->withAttribute('site', new NullSite())
             ->withAttribute('module', $module)

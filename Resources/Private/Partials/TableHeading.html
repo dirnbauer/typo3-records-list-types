@@ -2,11 +2,20 @@
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
+<f:comment>
+    Table title and record count, linked like in the list view to the
+    single-table view and back. The link keeps its visible text in the
+    accessible name and adds what it does.
+
+    Arguments: heading {label, recordCount, linkUrl, linkTitle, iconIdentifier}
+</f:comment>
+
 <f:if condition="{heading.linkUrl}">
     <f:then>
-        <a href="{heading.linkUrl}" title="{heading.linkTitle}" aria-label="{heading.linkTitle}">
+        <a href="{heading.linkUrl}" title="{heading.linkTitle}">
             {heading.label} (<span>{heading.recordCount}</span>)
-            <span class="ms-1"><core:icon identifier="{heading.iconIdentifier}" size="small" /></span>
+            <core:icon identifier="{heading.iconIdentifier}" size="small" />
+            <span class="visually-hidden">{heading.linkTitle}</span>
         </a>
     </f:then>
     <f:else>

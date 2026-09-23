@@ -3,162 +3,96 @@
       data-namespace-typo3-fluid="true">
 
 <f:comment>
-    Compact view translation row.
+    One translation slot below its record in the compact view: an existing
+    translation is a full row, indented like in the list view, with its own
+    controls; a missing one offers Core's localization wizard.
 
-    Renders a single translation slot below the parent row. The row mirrors
-    the parent's fixed left / scrollable / fixed right column layout so
-    borders, sticky columns and drop shadows stay aligned.
-
-    Required arguments:
-    - record:      parent (default-language) record
-    - translation: translation slot (state = translated | untranslated)
-    - tableConfig: table config (for hiddenField on hide/show buttons)
+    Arguments: record (the default-language record), translation, table
 </f:comment>
 
-<tr class="compactview-row compactview-row--translation compactview-row--translation-{translation.state} {translation.groupClass}{f:if(condition: translation.hidden, then: ' compactview-row--hidden')}{f:if(condition: translation.workspaceState, then: ' compactview-row--ws-{translation.workspaceState}')}"
-    data-table="{record.tableName}"
-    data-parent-uid="{record.uid}"
-    data-language-id="{translation.languageId}">
-
-    <f:if condition="{multiSelectEnabled}">
-        <f:comment>Empty selection cell (translations are edited via their parent)</f:comment>
-        <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox"></td>
-    </f:if>
-
-    <f:comment>
-        Icon column uses the exact same markup as the parent row. The
-        parent's record icon repeats here (dimmed via CSS) so the column
-        no longer reads as an empty gap. A tree-connector line is drawn
-        as a ::before pseudo on the cell.
-    </f:comment>
-    <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
-        <span class="compactview-row__icon">
-            <core:icon identifier="{record.iconIdentifier}" size="small" />
-        </span>
-    </td>
-
-    <f:comment>UID column: UID for live translations, em-dash for placeholders</f:comment>
-    <td class="compactview-td compactview-td--fixed-left compactview-td--uid">
-        <f:if condition="{translation.state} == 'translated'">
-            <f:then>
-                <span class="compactview-row__uid">{translation.uid}</span>
-            </f:then>
-            <f:else>
-                <span class="compactview-row__uid compactview-row__uid--muted">—</span>
-            </f:else>
-        </f:if>
-    </td>
-
-    <f:comment>Title column — flag first (language is identifiable at a glance),
-        then the translated title or a "Not translated" placeholder.</f:comment>
-    <td class="compactview-td compactview-td--fixed-left compactview-td--title">
-        <span class="compactview-row__lang-flag" title="{translation.languageTitle}" aria-label="{translation.languageTitle}">
-            <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
-        </span>
-        <f:if condition="{translation.state} == 'translated'">
-            <f:then>
-                <f:if condition="{translation.permissions.canEdit}">
-                    <f:then>
-                        <typo3-backend-contextual-record-edit-trigger
-                            class="compactview-row__title-link"
-                            title="{translation.title}"
-                            edit-url="{translation.editUrl}"
-                            url="{translation.contextualEditUrl}">
-                            <f:if condition="{translation.title}">
-                                <f:then>{translation.title}</f:then>
-                                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
+<f:if condition="{translation.state} == 'translated'">
+    <f:then>
+        <tr class="t3js-entity rlt-row rlt-row--translation{f:if(condition: translation.hidden, then: ' rlt-row--hidden')}"
+            data-table="{record.tableName}"
+            data-uid="{translation.uid}"
+            data-l10nparent="{record.uid}">
+            <f:if condition="{table.multiSelectEnabled}"><td class="col-checkbox"></td></f:if>
+            <td class="col-icon">
+                <span class="indent indent-inline-block" style="--indent-level: 1"></span>
+                <f:render partial="Record/Icon" arguments="{record: translation}" />
+            </td>
+            <f:for each="{table.sortableColumnHeaders}" as="header">
+                <f:switch expression="{header.type}">
+                    <f:case value="uid">
+                        <td class="col-uid">{translation.uid}</td>
+                    </f:case>
+                    <f:case value="title">
+                        <td class="col-title col-responsive">
+                            <f:render partial="Record/Title" arguments="{record: translation}" />
+                            <f:render partial="Record/States" arguments="{record: translation}" />
+                        </td>
+                        <td class="col-control"><f:render partial="Record/Controls" arguments="{record: translation}" /></td>
+                        <td class="col-localization">
+                            <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+                            {translation.languageTitle}
+                        </td>
+                    </f:case>
+                    <f:defaultCase>
+                        <f:variable name="fieldData" value="{translation.displayValues.{header.field}}" />
+                        <td class="col-{header.type}" data-field="{header.field}">
+                            <f:if condition="{fieldData}">
+                                <f:render partial="Record/FieldValue" arguments="{fieldData: fieldData}" />
                             </f:if>
-                        </typo3-backend-contextual-record-edit-trigger>
-                    </f:then>
-                    <f:else>
-                        <span class="compactview-row__title-link" title="{translation.title}">
-                            <f:if condition="{translation.title}">
-                                <f:then>{translation.title}</f:then>
-                                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
+                        </td>
+                    </f:defaultCase>
+                </f:switch>
+            </f:for>
+        </tr>
+    </f:then>
+    <f:else>
+        <tr class="rlt-row rlt-row--translation rlt-row--missing"
+            data-table="{record.tableName}"
+            data-l10nparent="{record.uid}"
+            data-language-id="{translation.languageId}">
+            <f:if condition="{table.multiSelectEnabled}"><td class="col-checkbox"></td></f:if>
+            <td class="col-icon">
+                <span class="indent indent-inline-block" style="--indent-level: 1"></span>
+                <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+            </td>
+            <f:for each="{table.sortableColumnHeaders}" as="header">
+                <f:switch expression="{header.type}">
+                    <f:case value="uid">
+                        <td class="col-uid"></td>
+                    </f:case>
+                    <f:case value="title">
+                        <td class="col-title col-responsive">
+                            <span class="rlt-value-empty"><f:translate key="records_list_types.messages:translation.untranslated" /></span>
+                        </td>
+                        <td class="col-control">
+                            <f:if condition="{translation.permissions.canLocalize}">
+                                <typo3-backend-localization-button
+                                    class="btn btn-default"
+                                    record-type="{translation.parentTable}"
+                                    record-uid="{translation.parentUid}"
+                                    target-language="{translation.languageId}"
+                                    title="{f:translate(key: 'records_list_types.messages:translation.translateTo', arguments: {language: translation.languageTitle})}">
+                                    <core:icon identifier="actions-localize" size="small" />
+                                    <span class="visually-hidden"><f:translate key="records_list_types.messages:translation.translateTo" arguments="{language: translation.languageTitle}" /></span>
+                                </typo3-backend-localization-button>
                             </f:if>
-                        </span>
-                    </f:else>
-                </f:if>
-            </f:then>
-            <f:else>
-                <span class="compactview-row__title-placeholder">
-                    <f:translate key="records_list_types.messages:translation.untranslated" />
-                </span>
-            </f:else>
-        </f:if>
-    </td>
-
-    <f:comment>Scrollable middle: one empty cell per non-label display value so column widths line up</f:comment>
-    <f:for each="{record.displayValues}" as="fieldData">
-        <f:if condition="!{fieldData.isLabelField}">
-            <td class="compactview-td"></td>
-        </f:if>
-    </f:for>
-
-    <f:comment>Spacer</f:comment>
-    <td class="compactview-td compactview-td--spacer" aria-hidden="true" role="presentation"></td>
-
-    <f:comment>Status column — visibility toggle only when user may flip it</f:comment>
-    <td class="compactview-td compactview-td--fixed-right compactview-td--status">
-        <f:if condition="{translation.state} == 'translated' && {translation.permissions.canToggleVisibility}">
-            <f:if condition="{translation.hidden}">
-                <f:then>
-                    <button type="button" class="cv-toggle cv-toggle--hidden"
-                            title="{f:translate(key: 'records_list_types.messages:action.unhide')}"
-                            aria-label="{f:translate(key: 'records_list_types.messages:action.unhide')}"
-                            data-gridview-action="show"
-                            data-table="{record.tableName}"
-                            data-uid="{translation.uid}"
-                            data-hidden-field="{tableConfig.hiddenField}">
-                        <core:icon identifier="actions-toggle-off" size="small" />
-                    </button>
-                </f:then>
-                <f:else>
-                    <button type="button" class="cv-toggle cv-toggle--visible"
-                            title="{f:translate(key: 'records_list_types.messages:action.hide')}"
-                            aria-label="{f:translate(key: 'records_list_types.messages:action.hide')}"
-                            data-gridview-action="hide"
-                            data-table="{record.tableName}"
-                            data-uid="{translation.uid}"
-                            data-hidden-field="{tableConfig.hiddenField}">
-                        <core:icon identifier="actions-toggle-on" size="small" />
-                    </button>
-                </f:else>
-            </f:if>
-        </f:if>
-    </td>
-
-    <f:comment>Primary action: edit for translated, localize wizard for untranslated</f:comment>
-    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
-        <f:if condition="{translation.state} == 'translated'">
-            <f:then>
-                <f:if condition="{translation.permissions.canEdit}">
-                    <typo3-backend-contextual-record-edit-trigger
-                        class="cv-action cv-action--primary"
-                        title="{f:translate(key: 'records_list_types.messages:translation.edit', arguments: {language: translation.languageTitle})}"
-                        edit-url="{translation.editUrl}"
-                        url="{translation.contextualEditUrl}">
-                        <core:icon identifier="actions-open" size="small" />
-                    </typo3-backend-contextual-record-edit-trigger>
-                </f:if>
-            </f:then>
-            <f:else>
-                <f:if condition="{translation.permissions.canLocalize}">
-                    <typo3-backend-localization-button
-                        class="cv-action cv-action--create"
-                        record-type="{record.tableName}"
-                        record-uid="{record.uid}"
-                        target-language="{translation.languageId}"
-                        title="{f:translate(key: 'records_list_types.messages:translation.translateTo', arguments: {language: translation.languageTitle})}">
-                        <core:icon identifier="actions-plus" size="small" />
-                    </typo3-backend-localization-button>
-                </f:if>
-            </f:else>
-        </f:if>
-    </td>
-
-    <td class="compactview-td compactview-td--fixed-right compactview-td--action"></td>
-    <td class="compactview-td compactview-td--fixed-right compactview-td--action"></td>
-</tr>
+                        </td>
+                        <td class="col-localization">
+                            <core:icon identifier="{translation.languageFlagIdentifier}" size="small" />
+                            {translation.languageTitle}
+                        </td>
+                    </f:case>
+                    <f:defaultCase>
+                        <td class="col-{header.type}"></td>
+                    </f:defaultCase>
+                </f:switch>
+            </f:for>
+        </tr>
+    </f:else>
+</f:if>
 
 </html>

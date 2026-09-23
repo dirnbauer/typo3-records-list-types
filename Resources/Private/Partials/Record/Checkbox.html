@@ -1,0 +1,21 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Selection checkbox of a record, as in the list view, with an accessible
+    name: Core's checkbox has none.
+</f:comment>
+
+<f:variable name="recordTitle" value="{record.title}" />
+<f:if condition="!{record.title}">
+    <f:variable name="recordTitle" value="{f:translate(key: 'core.core:labels.no_title')}" />
+</f:if>
+<span class="form-check form-check-type-toggle">
+    <input class="form-check-input t3js-multi-record-selection-check"
+           type="checkbox"
+           name="CBC[{record.tableName}|{record.uid}]"
+           value="1"
+           aria-label="{f:translate(key: 'records_list_types.messages:a11y.selectRecord', arguments: {title: recordTitle})}" />
+</span>
+
+</html>

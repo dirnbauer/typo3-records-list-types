@@ -85,6 +85,16 @@ final class ViewTypeRegistry implements SingletonInterface
     private const string BASE_CSS = 'EXT:records_list_types/Resources/Public/Css/base.css';
 
     /**
+     * Stylesheets of the built-in templates. A view type that renders one of
+     * them gets its stylesheet without naming it in TSconfig.
+     */
+    private const array TEMPLATE_CSS = [
+        'GridView' => 'EXT:records_list_types/Resources/Public/Css/grid-view.css',
+        'CompactView' => 'EXT:records_list_types/Resources/Public/Css/compact-view.css',
+        'TeaserView' => 'EXT:records_list_types/Resources/Public/Css/teaser-view.css',
+    ];
+
+    /**
      * Cached view types per page
      * @var array<int, array<string, array<string, mixed>>>
      */
@@ -216,15 +226,14 @@ final class ViewTypeRegistry implements SingletonInterface
     {
         $config = $this->getViewType($typeId, $pageId);
 
-        if ($config === null) {
-            // Fallback to grid
-            $config = self::BUILTIN_TYPES['grid'];
-        }
+        // Fallback to grid
+        $config ??= self::BUILTIN_TYPES['grid'];
 
-        // Default paths
+        // Default paths. The built-in templates use no layout; a custom view
+        // brings its own layoutRootPath when it needs one.
         $templatePaths = ['EXT:records_list_types/Resources/Private/Templates/'];
         $partialPaths = ['EXT:records_list_types/Resources/Private/Partials/'];
-        $layoutPaths = ['EXT:records_list_types/Resources/Private/Layouts/'];
+        $layoutPaths = [];
 
         // Add custom paths from TSconfig if specified. Fluid resolves paths
         // in reverse array order (last entry wins), so custom paths must be
@@ -257,21 +266,26 @@ final class ViewTypeRegistry implements SingletonInterface
     }
 
     /**
-     * Get CSS files for a view type.
+     * Get CSS files for a view type: base.css, the stylesheet of the built-in
+     * template it renders, then its own.
      *
-     * Always includes base.css first, followed by the view-specific CSS.
-     *
-     * @return array<int, string>
+     * @return list<string>
      */
     public function getCssFiles(string $typeId, int $pageId): array
     {
-        $config = $this->getViewType($typeId, $pageId);
-        $cssRaw = $config['css'] ?? '';
-        $css = is_scalar($cssRaw) ? (string)$cssRaw : '';
+        $config = $this->getViewType($typeId, $pageId) ?? [];
+        $files = [self::BASE_CSS];
 
-        return $css !== ''
-            ? [self::BASE_CSS, $css]
-            : [self::BASE_CSS];
+        $template = $config['template'] ?? null;
+        if (is_string($template) && isset(self::TEMPLATE_CSS[$template])) {
+            $files[] = self::TEMPLATE_CSS[$template];
+        }
+        $css = $config['css'] ?? '';
+        if (is_string($css) && $css !== '') {
+            $files[] = $css;
+        }
+
+        return array_values(array_unique($files));
     }
 
     /**

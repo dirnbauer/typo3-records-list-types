@@ -1,197 +1,67 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
-      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
-<records-list-types-actions>
+<f:comment>
+    Compact view: Core's record table in a denser form, with the record ID,
+    one line per record and the translations of a record right below it,
+    including the languages it still lacks. Columns follow the list view:
+    selection, icon, title, controls, localization, then the fields.
+</f:comment>
+
+<records-list-types-actions class="rlt-view rlt-view--compact">
 <div class="recordlist-compactview-container">
-
-    <f:if condition="{tableData}">
-        <f:then>
-            <f:for each="{tableData}" as="table">
-                <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
-                <div class="recordlist" id="t3-table-{table.tableName}"
-                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
-                    <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
-                    <input type="hidden" name="cmd_table" value="{table.tableName}" />
-                    <input type="hidden" name="cmd" />
-                    <f:comment>Table header - matches native List View styling exactly</f:comment>
-                    <div class="recordlist-heading{f:if(condition: table.multiSelectEnabled, then: ' multi-record-selection-panel')}">
-                        <div class="recordlist-heading-row">
-                            <f:comment>Title section with table name link - identical to core</f:comment>
-                            <div class="recordlist-heading-title">
-                                <f:render partial="TableHeading" arguments="{heading: table.tableHeading}" />
-                            </div>
-
-                            <f:comment>Actions section - matches core structure exactly</f:comment>
-                            <div class="recordlist-heading-actions">
-                                <f:comment>Native "Edit shown columns" bulk-edit button (uses TYPO3's t3js-record-edit-multiple hook)</f:comment>
-                                <f:if condition="{table.bulkEditHeader}">
-                                    <button type="button"
-                                            class="btn btn-default t3js-record-edit-multiple"
-                                            title="{table.bulkEditHeader.label}"
-                                            aria-label="{table.bulkEditHeader.label}"
-                                            data-return-url="{table.bulkEditHeader.returnUrl}"
-                                            data-columns-only="{table.bulkEditHeader.columnsOnly}">
-                                        <core:icon identifier="actions-document-open" size="small" />
-                                    </button>
-                                </f:if>
-
-                                <f:comment>New record button</f:comment>
-                                <f:if condition="{table.actionButtons.newRecordButton}">
-                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
-                                </f:if>
-                                
-                                <f:comment>Download/Export button</f:comment>
-                                <f:if condition="{table.actionButtons.downloadButton}">
-                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.downloadButton}</f:sanitize.html>
-                                </f:if>
-                                
-                                <f:comment>Column selector button (web component)</f:comment>
-                                <f:if condition="{table.actionButtons.columnSelectorButton}">
-                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
-                                </f:if>
-
-                                <f:comment>Collapse/Expand button</f:comment>
-                                <f:if condition="{table.actionButtons.collapseButton}">
-                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.collapseButton}</f:sanitize.html>
-                                </f:if>
-                            </div>
-                        </div>
-
-                        <f:comment>Multi Record Selection action bar (hidden, shown by JS when records selected)</f:comment>
-                        <f:if condition="{table.multiSelectEnabled} && {table.multiRecordSelectionActionsHtml}">
-                            <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
-                                <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
-                                    <span class="t3js-multi-record-selection-table-title">
-                                        <f:render partial="TableHeading" arguments="{heading: table.tableHeading}" />
-                                    </span>
-                                    <strong class="text-nowrap"><f:translate key="core.core:labels.selection" /></strong>
-                                </div>
-                                <div class="recordlist-heading-actions">
-                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.multiRecordSelectionActionsHtml}</f:sanitize.html>
-                                </div>
-                            </div>
-                        </f:if>
-                    </div>
-
-                    <f:comment>Records table with sortable column headers (like core list view)</f:comment>
-                    <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
-                        <f:comment>Pagination - only in single table mode</f:comment>
-                        <f:if condition="{currentTable}">
-                            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
-                        </f:if>
-
-                        <f:if condition="{table.records}">
-                        <f:then>
-                        <div class="compactview-table-wrapper has-clipboard" data-scroll-container>
-                            <table class="compactview-table">
-                                <thead class="compactview-thead">
-                                    <tr>
-                                        <f:if condition="{table.multiSelectEnabled}">
-                                            <f:comment>Checkbox column with Check All / Uncheck All / Toggle dropdown (matches TYPO3 core DatabaseRecordList::renderCheckboxActions exactly)</f:comment>
-                                            <th class="compactview-th compactview-th--fixed-left compactview-th--checkbox">
-                                                <div class="btn-group dropdown">
-                                                    <button type="button" class="dropdown-toggle dropdown-toggle-link t3js-multi-record-selection-check-actions-toggle" data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false" aria-label="{f:translate(key: 'core.core:labels.openSelectionOptions')}">
-                                                        <core:icon identifier="actions-selection" size="small" />
-                                                    </button>
-                                                    <ul class="dropdown-menu t3js-multi-record-selection-check-actions">
-                                                        <li>
-                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-all" title="{f:translate(key: 'core.core:labels.checkAll')}">
-                                                                <core:icon identifier="actions-selection-elements-all" size="small" />
-                                                                <f:translate key="core.core:labels.checkAll" />
-                                                            </button>
-                                                        </li>
-                                                        <li>
-                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="check-none" title="{f:translate(key: 'core.core:labels.uncheckAll')}">
-                                                                <core:icon identifier="actions-selection-elements-none" size="small" />
-                                                                <f:translate key="core.core:labels.uncheckAll" />
-                                                            </button>
-                                                        </li>
-                                                        <li>
-                                                            <button type="button" class="dropdown-item" disabled data-multi-record-selection-check-action="toggle" title="{f:translate(key: 'core.core:labels.toggleSelection')}">
-                                                                <core:icon identifier="actions-selection-elements-invert" size="small" />
-                                                                <f:translate key="core.core:labels.toggleSelection" />
-                                                            </button>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </th>
+    <f:for each="{tableData}" as="table">
+        <f:render partial="Table/Section" arguments="{table: table, currentTable: currentTable}" contentAs="body">
+            <div class="table-fit rlt-compact">
+                <table data-table="{table.tableName}" class="table table-striped table-hover table-sm rlt-compact-table">
+                    <thead>
+                        <tr>
+                            <f:if condition="{table.multiSelectEnabled}">
+                                <th class="col-checkbox" scope="col"><f:render partial="Table/SelectionToggle" arguments="{id: 'rlt-selection-{table.tableIdentifier}'}" /></th>
+                            </f:if>
+                            <th class="col-icon" scope="col"><span class="visually-hidden"><f:translate key="records_list_types.messages:column.recordType" /></span></th>
+                            <f:for each="{table.sortableColumnHeaders}" as="header">
+                                <th class="col-{header.type}" scope="col"{f:if(condition: header.header.isAscActive, then: ' aria-sort="ascending"')}{f:if(condition: header.header.isDescActive, then: ' aria-sort="descending"')}>
+                                    <f:render partial="SortableColumnHeader" arguments="{header: header.header, id: 'rlt-column-{table.tableIdentifier}-{header.field}'}" />
+                                </th>
+                                <f:if condition="{header.type} == 'title'">
+                                    <th class="col-control" scope="col">
+                                        <f:if condition="{table.bulkEditHeader}">
+                                            <f:then>
+                                                <button type="button"
+                                                        class="btn btn-default t3js-record-edit-multiple"
+                                                        title="{table.bulkEditHeader.label}"
+                                                        aria-label="{table.bulkEditHeader.label}"
+                                                        data-return-url="{table.bulkEditHeader.returnUrl}"
+                                                        data-columns-only="{table.bulkEditHeader.columnsOnly}">
+                                                    <core:icon identifier="actions-document-open" size="small" />
+                                                </button>
+                                            </f:then>
+                                            <f:else>
+                                                <span class="visually-hidden"><f:translate key="core.core:labels._CONTROL_" /></span>
+                                            </f:else>
                                         </f:if>
-
-                                        <f:comment>Icon column (no sorting)</f:comment>
-                                        <th class="compactview-th compactview-th--fixed-left compactview-th--icon"></th>
-                                        
-                                        <f:comment>Sortable column headers rendered by PHP using TYPO3 API</f:comment>
-                                        <f:for each="{table.sortableColumnHeaders}" as="header">
-                                            <th class="compactview-th{f:if(condition: header.isFixed, then: ' compactview-th--fixed-left')} compactview-th--{header.type}">
-                                                <f:render partial="SortableColumnHeader" arguments="{header: header.header}" />
-                                            </th>
-                                        </f:for>
-                                        
-                                        <f:comment>Spacer column - absorbs remaining width so right columns stay at the edge</f:comment>
-                                        <th class="compactview-th compactview-th--spacer" aria-hidden="true" role="presentation"></th>
-
-                                        <f:comment>Fixed right columns: Status, Edit, Delete, More</f:comment>
-                                        <th class="compactview-th compactview-th--fixed-right compactview-th--status"></th>
-                                        <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
-                                        <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
-                                        <th class="compactview-th compactview-th--fixed-right compactview-th--action"></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="compactview-tbody" {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-row-selection=\"true\"')}>
-                                    <f:for each="{table.records}" as="record">
-                                        <f:comment>
-                                            Zebra runs per GROUP — parent + translations share one
-                                            stripe. `groupClass` is pre-computed in PHP and attached
-                                            to both the record and every one of its translation slots
-                                            so templates just pass it through as-is.
-                                        </f:comment>
-                                        <f:render partial="CompactRow" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, displayColumns: table.displayColumns, multiSelectEnabled: table.multiSelectEnabled}" />
-                                        <f:if condition="{record.translations}">
-                                            <f:for each="{record.translations}" as="translation">
-                                                <f:render partial="TranslationRowCompact" arguments="{record: record, translation: translation, tableConfig: table.tableConfig, multiSelectEnabled: table.multiSelectEnabled}" />
-                                            </f:for>
-                                        </f:if>
-                                    </f:for>
-                                </tbody>
-                            </table>
-                        </div>
-                        </f:then>
-                        <f:else>
-                            <f:render partial="EmptyRecordsNotice" arguments="{table: table}" />
-                        </f:else>
-                        </f:if>
-
-                        <f:comment>Expand table button - multi-table mode with more records</f:comment>
-                        <f:if condition="!{currentTable} && {table.hasMore}">
-                            <div class="text-center py-2 border-top">
-                                <a href="{table.singleTableUrl}" class="btn btn-sm btn-default">
-                                    <core:icon identifier="actions-caret-down" size="small" />
-                                    <f:translate key="core.core:labels.expandTable" />
-                                </a>
-                            </div>
-                        </f:if>
-
-                        <f:comment>Pagination - only in single table mode</f:comment>
-                        <f:if condition="{currentTable}">
-                            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
-                        </f:if>
-                    </div>
-                    </form>
-                </div>
-            </f:for>
-        </f:then>
-        <f:else>
-            <div class="callout callout-info">
-                <core:icon identifier="actions-info" size="small" />
-                <span class="ms-2">
-                    <f:translate key="records_list_types.messages:noRecords" />
-                </span>
+                                    </th>
+                                    <f:if condition="{table.isLanguageAware}">
+                                        <th class="col-localization" scope="col"><i><f:translate key="core.core:labels._LOCALIZATION_" /></i></th>
+                                    </f:if>
+                                </f:if>
+                            </f:for>
+                        </tr>
+                    </thead>
+                    <tbody data-multi-record-selection-row-selection="true">
+                        <f:for each="{table.records}" as="record">
+                            <f:render partial="CompactRow" arguments="{record: record, table: table}" />
+                            <f:for each="{record.translations}" as="translation">
+                                <f:render partial="TranslationRowCompact" arguments="{record: record, translation: translation, table: table}" />
+                            </f:for>
+                        </f:for>
+                    </tbody>
+                </table>
             </div>
-        </f:else>
-    </f:if>
-
+        </f:render>
+    </f:for>
 </div>
 </records-list-types-actions>
 

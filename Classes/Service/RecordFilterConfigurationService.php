@@ -318,11 +318,16 @@ final readonly class RecordFilterConfigurationService implements SingletonInterf
             return null;
         }
 
+        $label = $this->resolveFilterLabel($filterConfig, $this->getFieldLabel($table, $fields[0]));
+        // Name the fields the input searches unless the label already does.
+        $fieldList = implode(', ', array_map(fn(string $field): string => $this->getFieldLabel($table, $field), $fields));
+
         return [
             'id' => $filterId,
             'type' => 'text',
-            'label' => $this->resolveFilterLabel($filterConfig, $this->getFieldLabel($table, $fields[0])),
+            'label' => $label,
             'fields' => $fields,
+            'fieldList' => $fieldList !== $label ? $fieldList : '',
             'placeholder' => is_string($filterConfig['placeholder'] ?? null) ? $filterConfig['placeholder'] : '',
         ];
     }

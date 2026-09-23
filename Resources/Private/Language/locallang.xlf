@@ -321,14 +321,6 @@
         <source>Drop here</source>
       </segment>
     </unit>
-    <unit id="drag.endPosition">
-      <notes>
-        <note>Live region announcement when the end drop zone is targeted.</note>
-      </notes>
-      <segment>
-        <source>End of the list (after the last record)</source>
-      </segment>
-    </unit>
     <unit id="a11y.reorderableList">
       <notes>
         <note>Accessible name of the drag-and-drop list; {table} is the table label.</note>
@@ -351,6 +343,30 @@
       </notes>
       <segment>
         <source>{title} is now visible</source>
+      </segment>
+    </unit>
+    <unit id="a11y.selectRecord">
+      <notes>
+        <note>Accessible name of the checkbox that selects one record for the bulk actions. {title} is the record title.</note>
+      </notes>
+      <segment>
+        <source>Select “{title}”</source>
+      </segment>
+    </unit>
+    <unit id="column.recordType">
+      <notes>
+        <note>Accessible name of the table column that shows the record icon; screen readers only.</note>
+      </notes>
+      <segment>
+        <source>Record type</source>
+      </segment>
+    </unit>
+    <unit id="field.empty">
+      <notes>
+        <note>Read by screen readers for a field without a value; sighted users see a dash.</note>
+      </notes>
+      <segment>
+        <source>No value</source>
       </segment>
     </unit>
     <unit id="notification.moveFailed">
@@ -383,14 +399,6 @@
       </notes>
       <segment>
         <source>Request failed</source>
-      </segment>
-    </unit>
-    <unit id="notification.visibilityEndpointMissing">
-      <notes>
-        <note>Notification body when the Core AJAX route for toggling visibility is not registered.</note>
-      </notes>
-      <segment>
-        <source>The TYPO3 endpoint for changing visibility is not available.</source>
       </segment>
     </unit>
     <unit id="pagination.regionTop">
@@ -463,14 +471,6 @@
       </notes>
       <segment>
         <source>Translate to {language}</source>
-      </segment>
-    </unit>
-    <unit id="translation.edit">
-      <notes>
-        <note>Tooltip of the edit link of an existing translation; {language} is the language title.</note>
-      </notes>
-      <segment>
-        <source>Edit translation ({language})</source>
       </segment>
     </unit>
     <unit id="translation.sectionLabel">
@@ -577,22 +577,6 @@
         <source>Deleted</source>
       </segment>
     </unit>
-    <unit id="historyOverlay.elementTab">
-      <notes>
-        <note>Tab of the record history modal that shows the history of the element itself.</note>
-      </notes>
-      <segment>
-        <source>Element history</source>
-      </segment>
-    </unit>
-    <unit id="historyOverlay.pageTab">
-      <notes>
-        <note>Tab and frame title of the record history modal that shows the history of the parent page.</note>
-      </notes>
-      <segment>
-        <source>Page history</source>
-      </segment>
-    </unit>
     <unit id="filter.show">
       <notes>
         <note>Entry in the View dropdown of the module header that toggles the filter panel.</note>
@@ -623,6 +607,14 @@
       </notes>
       <segment>
         <source>Reset</source>
+      </segment>
+    </unit>
+    <unit id="filter.searchedFields">
+      <notes>
+        <note>Hint below a text filter naming the fields it searches. {fields} is a comma-separated list of field labels.</note>
+      </notes>
+      <segment>
+        <source>Searches {fields}</source>
       </segment>
     </unit>
     <unit id="filter.option.any">
@@ -679,22 +671,6 @@
       </notes>
       <segment>
         <source>Reset filters and search</source>
-      </segment>
-    </unit>
-    <unit id="table.expand">
-      <notes>
-        <note>Tooltip on the table heading link that narrows the list down to one table.</note>
-      </notes>
-      <segment>
-        <source>List only this table</source>
-      </segment>
-    </unit>
-    <unit id="table.collapse">
-      <notes>
-        <note>Tooltip on the table heading link that returns to the list of all tables.</note>
-      </notes>
-      <segment>
-        <source>List all tables</source>
       </segment>
     </unit>
     <unit id="viewMode.list.description">

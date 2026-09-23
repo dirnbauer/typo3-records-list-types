@@ -2,30 +2,37 @@
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
+<f:comment>
+    Sorting by column: direction and the column to sort by.
+
+    Arguments: sortingDropdown, id (unique id of the menu), current (1 inside the sorting mode group)
+</f:comment>
+
 <f:if condition="{sortingDropdown}">
-    <button type="button" class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" {f:if(condition: segmented, then: 'aria-pressed="true"')}>
-        <core:icon identifier="actions-filter" size="small" />
-        <span class="gridview-sorting-toggle__text">{sortingDropdown.fieldModeLabel}</span>
-        <span class="gridview-sorting-toggle__value">
-            <core:icon identifier="{sortingDropdown.sortIconIdentifier}" size="small" />
-            <span>{sortingDropdown.currentFieldLabel}</span>
-        </span>
+    <button type="button"
+            class="btn btn-default dropdown-toggle{f:if(condition: current, then: ' active')}"
+            popovertarget="{id}"
+            {f:if(condition: current, then: 'aria-current="true"')}>
+        <core:icon identifier="{sortingDropdown.sortIconIdentifier}" size="small" />
+        {sortingDropdown.fieldModeLabel}<f:if condition="{sortingDropdown.currentFieldLabel}">: {sortingDropdown.currentFieldLabel}</f:if>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu" id="{id}" popover>
         <li>
-            <a class="dropdown-item{f:if(condition: sortingDropdown.isAscActive, then: ' active')}" href="{sortingDropdown.ascUrl}">
-                <core:icon identifier="actions-sort-amount-up" size="small" /> {sortingDropdown.ascLabel}
+            <a class="dropdown-item{f:if(condition: sortingDropdown.isAscActive, then: ' active')}" href="{sortingDropdown.ascUrl}"{f:if(condition: sortingDropdown.isAscActive, then: ' aria-current="true"')}>
+                <core:icon identifier="actions-sort-amount-up" size="small" />
+                {sortingDropdown.ascLabel}
             </a>
         </li>
         <li>
-            <a class="dropdown-item{f:if(condition: sortingDropdown.isDescActive, then: ' active')}" href="{sortingDropdown.descUrl}">
-                <core:icon identifier="actions-sort-amount-down" size="small" /> {sortingDropdown.descLabel}
+            <a class="dropdown-item{f:if(condition: sortingDropdown.isDescActive, then: ' active')}" href="{sortingDropdown.descUrl}"{f:if(condition: sortingDropdown.isDescActive, then: ' aria-current="true"')}>
+                <core:icon identifier="actions-sort-amount-down" size="small" />
+                {sortingDropdown.descLabel}
             </a>
         </li>
-        <li><hr class="dropdown-divider"></li>
+        <li><hr class="dropdown-divider" aria-hidden="true"></li>
         <f:for each="{sortingDropdown.items}" as="item">
             <li>
-                <a class="dropdown-item{f:if(condition: item.isActive, then: ' active')}" href="{item.url}">
+                <a class="dropdown-item{f:if(condition: item.isActive, then: ' active')}" href="{item.url}"{f:if(condition: item.isActive, then: ' aria-current="true"')}>
                     {item.label}
                 </a>
             </li>

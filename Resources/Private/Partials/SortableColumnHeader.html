@@ -2,23 +2,30 @@
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
+<f:comment>
+    Sortable column header of the compact view, as in the list view: sort
+    ascending or descending and, in the single-table view, edit this column
+    of all listed records.
+
+    Arguments: header, id (unique id of the menu)
+</f:comment>
+
 <f:if condition="{header.hasSortUrls}">
     <f:then>
         <div class="dropdown dropdown-static">
             <button
                 class="dropdown-toggle dropdown-toggle-link"
                 type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
+                popovertarget="{id}"
             >
                 {header.label}
-                <div class="{f:if(condition: header.isActiveField, then: 'text-primary')}">
+                <span class="{f:if(condition: header.isActiveField, then: 'text-primary')}">
                     <core:icon identifier="{header.iconIdentifier}" size="small" />
-                </div>
+                </span>
             </button>
-            <ul class="dropdown-menu">
+            <ul class="dropdown-menu" id="{id}" popover>
                 <li>
-                    <a class="dropdown-item" href="{header.ascUrl}" title="{header.ascLabel}">
+                    <a class="dropdown-item" href="{header.ascUrl}"{f:if(condition: header.isAscActive, then: ' aria-current="true"')}>
                         <span class="dropdown-item-columns">
                             <span class="dropdown-item-column dropdown-item-column-icon text-primary">
                                 <f:if condition="{header.isAscActive}">
@@ -32,7 +39,7 @@
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="{header.descUrl}" title="{header.descLabel}">
+                    <a class="dropdown-item" href="{header.descUrl}"{f:if(condition: header.isDescActive, then: ' aria-current="true"')}>
                         <span class="dropdown-item-columns">
                             <span class="dropdown-item-column dropdown-item-column-icon text-primary">
                                 <f:if condition="{header.isDescActive}">

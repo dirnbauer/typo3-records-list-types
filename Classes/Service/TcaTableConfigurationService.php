@@ -25,7 +25,7 @@ final class TcaTableConfigurationService implements SingletonInterface
      *
      * @var array<string, string>
      */
-    private const SYSTEM_FIELD_LABELS = [
+    private const array SYSTEM_FIELD_LABELS = [
         'uid' => 'records_list_types.messages:record.idLabel',
         'pid' => 'records_list_types.messages:record.pageLabel',
         'crdate' => 'core.general:LGL.creationDate',
@@ -38,7 +38,7 @@ final class TcaTableConfigurationService implements SingletonInterface
      *
      * @var array<string, string>
      */
-    private const CTRL_FIELD_LABELS = [
+    private const array CTRL_FIELD_LABELS = [
         'sortby' => 'core.core:labels.sorting',
         'crdate' => 'core.general:LGL.creationDate',
         'tstamp' => 'core.general:LGL.timestamp',
@@ -51,7 +51,7 @@ final class TcaTableConfigurationService implements SingletonInterface
      *
      * @var array<string, string>
      */
-    private const ENABLE_COLUMN_LABELS = [
+    private const array ENABLE_COLUMN_LABELS = [
         'disabled' => 'core.general:LGL.hidden',
         'starttime' => 'core.general:LGL.starttime',
         'endtime' => 'core.general:LGL.endtime',
@@ -180,13 +180,17 @@ final class TcaTableConfigurationService implements SingletonInterface
         $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
         $typeVal = $config['type'] ?? '';
         $type = is_string($typeVal) ? $typeVal : '';
+        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
 
         return match ($type) {
-            'check' => 'boolean',
+            // A check field with several items stores a bit mask, not yes/no.
+            'check' => count($items) > 1 ? 'select' : 'boolean',
             'datetime' => 'datetime',
             'number' => 'number',
+            'email' => 'email',
+            'link' => 'link',
             'select', 'radio' => 'select',
-            'inline', 'file' => 'relation',
+            'inline', 'file', 'group', 'category' => 'relation',
             default => 'text',
         };
     }

@@ -1,0 +1,33 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    One field value, as the list view shows it (BackendUtility::
+    getProcessedValueExtra()). Single checkboxes become a Yes/No badge,
+    e-mail addresses a mailto link; empty values a dash that screen readers
+    announce as "No value".
+
+    Arguments: fieldData (entry of record.displayValues)
+</f:comment>
+
+<f:if condition="{fieldData.type} == 'boolean'">
+    <f:then>
+        <f:if condition="{fieldData.raw}">
+            <f:then><span class="badge badge-success"><f:translate key="records_list_types.messages:filter.option.yes" /></span></f:then>
+            <f:else><span class="badge badge-default"><f:translate key="records_list_types.messages:filter.option.no" /></span></f:else>
+        </f:if>
+    </f:then>
+    <f:else if="{fieldData.formatted}">
+        <f:switch expression="{fieldData.type}">
+            <f:case value="email"><a href="mailto:{fieldData.raw}">{fieldData.formatted}</a></f:case>
+            <f:case value="datetime"><span class="rlt-value-date">{fieldData.formatted}</span></f:case>
+            <f:case value="number"><span class="rlt-value-number">{fieldData.formatted}</span></f:case>
+            <f:defaultCase>{fieldData.formatted}</f:defaultCase>
+        </f:switch>
+    </f:else>
+    <f:else>
+        <span class="rlt-value-empty" aria-hidden="true">–</span><span class="visually-hidden"><f:translate key="records_list_types.messages:field.empty" /></span>
+    </f:else>
+</f:if>
+
+</html>

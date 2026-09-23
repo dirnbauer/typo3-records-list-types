@@ -1,321 +1,84 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
-      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
-    Grid View Card - Two-row header layout
-    
-    Card structure:
-    - Header Row 1: Title (full width, with drag handle and icon)
-    - Header Row 2: Compact action toolbar (visibility, edit, delete, more)
-    - Image: Optional FAL thumbnail (16:9 aspect ratio)
-    - Body: Type-aware field display (boolean badges, dates, relations, etc.)
-    - Footer: UID, PID, and language flag icon (bottom right)
-    
-    State indicators via header background color:
-    - Normal: default gray
-    - Hidden: amber/orange
-    - Workspace new: blue
-    - Workspace modified: purple
-    - Workspace moved: cyan
-    - Workspace deleted: red
-    
-    WCAG 2.1 Accessibility:
-    - role="option" when reorderable (part of listbox pattern)
-    - aria-grabbed for drag state
-    - Keyboard-accessible drag handle with role="button"
+    Grid view card, built from Core's card component: image, header with
+    selection, drag handle, record icon (context menu), title and state
+    badges, the field list, translations, and a footer with Core's controls.
+
+    Arguments: record, pageId, tableIdentifier, canReorder,
+    multiSelectEnabled, instructionsId
 </f:comment>
 
-<f:variable name="cardClasses">gridview-card{f:if(condition: record.hidden, then: ' gridview-card--hidden')}{f:if(condition: record.workspaceState, then: ' gridview-card--ws-{record.workspaceState}')}{f:if(condition: record.isFreeTranslation, then: ' gridview-card--free')}</f:variable>
-
-<div class="{cardClasses}"
-     draggable="{f:if(condition: canReorder, then: 'true', else: 'false')}"
-     data-table="{record.tableName}"
-     data-uid="{record.uid}"
-     data-pid="{record.pid}"
-     data-reorder-group="{record.reorderGroup}"
-     data-can-reorder="{f:if(condition: canReorder, then: '1', else: '0')}"
-     data-record-title="{record.title}"
-     {f:if(condition: canReorder, then: 'role="option" aria-grabbed="false"')}>
-    
-    <f:comment>Card Header - Two rows: Title + Actions</f:comment>
-    <div class="gridview-card__header">
-        <f:comment>Row 1: Title row with full width</f:comment>
-        <div class="gridview-card__header-title">
-            <f:if condition="{multiSelectEnabled}">
-                <label class="gridview-card__checkbox">
-                    <input class="form-check-input t3js-multi-record-selection-check"
-                           type="checkbox"
-                           name="CBC[{record.tableName}|{record.uid}]"
-                           value="1" />
-                </label>
-            </f:if>
-            <f:if condition="{canReorder}">
-                <div class="gridview-card__drag" 
-                     role="button"
-                     tabindex="0"
-                     aria-label="{f:translate(key: 'records_list_types.messages:drag.ariaLabel', arguments: {title: record.title})}"
-                     title="{f:translate(key: 'records_list_types.messages:drag.title')}">
-                    <core:icon identifier="actions-move" size="small" />
-                </div>
-            </f:if>
-            <div class="gridview-card__icon">
-                <core:icon identifier="{record.iconIdentifier}" size="small" />
-            </div>
-            <div class="gridview-card__title">
-                <f:if condition="{record.isFreeTranslation}">
-                    <span class="gridview-card__lang-chip gridview-card__lang-chip--free" title="{f:translate(key: 'records_list_types.messages:translation.free.title')}">
-                        <f:translate key="records_list_types.messages:translation.free" />
-                        <span>·</span>
-                        {record.languageTitle}
-                    </span>
-                </f:if>
-                <f:if condition="{record.permissions.canEdit}">
-                    <f:then>
-                        <typo3-backend-contextual-record-edit-trigger
-                            url="{record.contextualEditUrl}"
-                            edit-url="{record.editUrl}">
-                            <f:if condition="{record.title}">
-                                <f:then>{record.title}</f:then>
-                                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
-                            </f:if>
-                        </typo3-backend-contextual-record-edit-trigger>
-                    </f:then>
-                    <f:else>
-                        <f:if condition="{record.title}">
-                            <f:then>{record.title}</f:then>
-                            <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
-                        </f:if>
-                    </f:else>
-                </f:if>
-            </div>
-        </div>
-        
-        <f:comment>Row 2: Compact action toolbar</f:comment>
-        <div class="gridview-card__header-actions">
-            <f:comment>Visibility Toggle</f:comment>
-            <f:if condition="{record.permissions.canToggleVisibility}">
-                <f:if condition="{record.hidden}">
-                    <f:then>
-                        <button type="button"
-                                class="gridview-action-sm gridview-action-sm--warning"
-                                title="{f:translate(key: 'records_list_types.messages:action.unhide')}"
-                                aria-label="{f:translate(key: 'records_list_types.messages:action.unhide')}"
-                                data-gridview-action="show"
-                                data-table="{record.tableName}"
-                                data-uid="{record.uid}"
-                                data-hidden-field="{tableConfig.hiddenField}">
-                            <core:icon identifier="actions-toggle-off" size="small" />
-                        </button>
-                    </f:then>
-                    <f:else>
-                        <button type="button"
-                                class="gridview-action-sm gridview-action-sm--success"
-                                title="{f:translate(key: 'records_list_types.messages:action.hide')}"
-                                aria-label="{f:translate(key: 'records_list_types.messages:action.hide')}"
-                                data-gridview-action="hide"
-                                data-table="{record.tableName}"
-                                data-uid="{record.uid}"
-                                data-hidden-field="{tableConfig.hiddenField}">
-                            <core:icon identifier="actions-toggle-on" size="small" />
-                        </button>
-                    </f:else>
-                </f:if>
-                <span class="gridview-action-separator"></span>
-            </f:if>
-
-            <f:comment>Edit button</f:comment>
-            <f:if condition="{record.permissions.canEdit}">
-                <typo3-backend-contextual-record-edit-trigger
-                    url="{record.contextualEditUrl}"
-                    edit-url="{record.editUrl}"
-                    class="gridview-action-sm gridview-action-sm--primary"
-                    title="{f:translate(key: 'records_list_types.messages:action.edit')}"
-                    aria-label="{f:translate(key: 'records_list_types.messages:action.edit')}">
-                    <core:icon identifier="actions-open" size="small" />
-                </typo3-backend-contextual-record-edit-trigger>
-            </f:if>
-
-            <f:comment>Delete button</f:comment>
-            <f:if condition="{record.permissions.canDelete}">
-                <button type="button"
-                        class="gridview-action-sm gridview-action-sm--danger"
-                        title="{f:translate(key: 'records_list_types.messages:action.delete')}"
-                        aria-label="{f:translate(key: 'records_list_types.messages:action.delete')}"
-                        data-gridview-action="delete"
-                        data-table="{record.tableName}"
-                        data-uid="{record.uid}">
-                    <core:icon identifier="actions-edit-delete" size="small" />
-                </button>
-            </f:if>
-
-            <f:comment>More Actions popover</f:comment>
-            <f:render partial="RecordActionDropdown" arguments="{record: record, buttonClass: 'gridview-action-sm'}" />
-
-            <f:comment>
-                Workspace state chip: a single neutral-grey badge that only appears
-                when the record actually differs in the current workspace (new,
-                changed, moved, deleted). The workspace name is intentionally not
-                shown, and unchanged/live records render no badge at all —
-                record.workspaceState is null in both cases.
-            </f:comment>
-            <f:if condition="{record.workspaceState}">
-                <div class="gridview-card__workspace-badges">
-                    <span class="gridview-workspace-badge gridview-workspace-badge--state"
-                          title="{record.workspaceStateTitle}">
-                        <span class="gridview-workspace-badge__text">{record.workspaceStateLabel}</span>
-                    </span>
-                </div>
-            </f:if>
-        </div>
-    </div>
-
-    <f:comment>Card Image - Thumbnail from FAL field</f:comment>
+<f:variable name="titleId" value="rlt-title-{tableIdentifier}-{record.uid}" />
+<article class="card rlt-card{f:if(condition: record.hidden, then: ' rlt-card--hidden')}{f:if(condition: record.isDeletePlaceholder, then: ' rlt-card--deleted')}"
+         aria-labelledby="{titleId}"
+         data-table="{record.tableName}"
+         data-uid="{record.uid}"
+         data-pid="{record.pid}"
+         data-reorder-group="{record.reorderGroup}"
+         data-record-title="{record.title}"
+         {f:if(condition: canReorder, then: 'draggable="true"')}>
     <f:if condition="{record.thumbnailUrl}">
-        <div class="gridview-card__image">
-            <typo3-backend-contextual-record-edit-trigger
-                url="{record.contextualEditUrl}"
-                edit-url="{record.editUrl}">
-                <img src="{record.thumbnailUrl}" 
-                     alt="{record.title}" 
-                     loading="lazy"
-                     class="gridview-card__thumbnail" />
-            </typo3-backend-contextual-record-edit-trigger>
-        </div>
-        <div class="gridview-card__image-hint">
-            <core:icon identifier="actions-info" size="small" />
-            <f:translate key="records_list_types.messages:image.previewOnly" />
+        <div class="card-image rlt-card-image">
+            <img src="{record.thumbnailUrl}" alt="" loading="lazy" />
         </div>
     </f:if>
-
-    <f:comment>Card Body - Fields</f:comment>
-    <div class="gridview-card__body">
-        <f:if condition="{record.displayValues}">
-            <div class="gridview-card__fields">
+    <div class="card-header rlt-card-header">
+        <f:if condition="{multiSelectEnabled}">
+            <f:render partial="Record/Checkbox" arguments="{record: record}" />
+        </f:if>
+        <f:if condition="{canReorder}">
+            <f:render partial="Record/DragHandle" arguments="{record: record, instructionsId: instructionsId}" />
+        </f:if>
+        <div class="rlt-record-icon"><f:render partial="Record/Icon" arguments="{record: record}" /></div>
+        <div class="card-header-body">
+            <h2 class="card-title rlt-card-title" id="{titleId}">
+                <f:render partial="Record/Title" arguments="{record: record}" />
+            </h2>
+            <div class="rlt-badges"><f:render partial="Record/States" arguments="{record: record}" /></div>
+        </div>
+    </div>
+    <f:variable name="hasFields" value="0" />
+    <f:for each="{record.displayValues}" as="fieldData">
+        <f:if condition="!{fieldData.isLabelField}"><f:variable name="hasFields" value="1" /></f:if>
+    </f:for>
+    <f:if condition="{hasFields}">
+        <div class="card-body rlt-card-body">
+            <dl class="rlt-fields">
                 <f:for each="{record.displayValues}" as="fieldData">
                     <f:if condition="!{fieldData.isLabelField}">
-                        <div class="gridview-card__field" data-field="{fieldData.field}" data-type="{fieldData.type}">
-                            <span class="gridview-card__field-label">{fieldData.label}</span>
-                            <span class="gridview-card__field-value">
-                                <f:switch expression="{fieldData.type}">
-                                    
-                                    <f:case value="boolean">
-                                        <f:if condition="{fieldData.raw}">
-                                            <f:then>
-                                                <span class="gv-badge gv-badge--success">
-                                                    <core:icon identifier="actions-check" size="small" />
-                                                    <f:translate key="records_list_types.messages:filter.option.yes" />
-                                                </span>
-                                            </f:then>
-                                            <f:else>
-                                                <span class="gv-badge gv-badge--muted">
-                                                    <core:icon identifier="actions-close" size="small" />
-                                                    <f:translate key="records_list_types.messages:filter.option.no" />
-                                                </span>
-                                            </f:else>
-                                        </f:if>
-                                    </f:case>
-                                    
-                                    <f:case value="datetime">
-                                        <f:if condition="{fieldData.formatted}">
-                                            <f:then>
-                                                <span class="gv-datetime">{fieldData.formatted}</span>
-                                            </f:then>
-                                            <f:else>—</f:else>
-                                        </f:if>
-                                    </f:case>
-                                    
-                                    <f:case value="number">
-                                        <f:if condition="{fieldData.formatted}">
-                                            <f:then>
-                                                <span class="gv-number">{fieldData.formatted}</span>
-                                            </f:then>
-                                            <f:else>—</f:else>
-                                        </f:if>
-                                    </f:case>
-                                    
-                                    <f:case value="relation">
-                                        <f:if condition="{fieldData.formatted}">
-                                            <f:then>
-                                                <span class="gv-relation">
-                                                    <f:if condition="{fieldData.count}">
-                                                        <f:then>
-                                                            <span class="gv-relation__count">{fieldData.count}</span>
-                                                            <span>{fieldData.formatted}</span>
-                                                        </f:then>
-                                                        <f:else>
-                                                            {fieldData.formatted}
-                                                        </f:else>
-                                                    </f:if>
-                                                </span>
-                                            </f:then>
-                                            <f:else>—</f:else>
-                                        </f:if>
-                                    </f:case>
-                                    
-                                    <f:case value="email">
-                                        <f:if condition="{fieldData.formatted}">
-                                            <f:then>
-                                                <a href="mailto:{fieldData.raw}" class="gv-link">{fieldData.formatted}</a>
-                                            </f:then>
-                                            <f:else>—</f:else>
-                                        </f:if>
-                                    </f:case>
-                                    
-                                    <f:case value="link">
-                                        <f:if condition="{fieldData.formatted}">
-                                            <f:then>
-                                                <span class="gv-link">{fieldData.formatted -> f:format.crop(maxCharacters: 40, append: '…')}</span>
-                                            </f:then>
-                                            <f:else>—</f:else>
-                                        </f:if>
-                                    </f:case>
-                                    
-                                    <f:defaultCase>
-                                        <f:if condition="{fieldData.formatted}">
-                                            <f:then>{fieldData.formatted -> f:format.crop(maxCharacters: 80, append: '…')}</f:then>
-                                            <f:else>—</f:else>
-                                        </f:if>
-                                    </f:defaultCase>
-                                    
-                                </f:switch>
-                            </span>
+                        <div class="rlt-field rlt-field--{fieldData.type}" data-field="{fieldData.field}">
+                            <dt>{fieldData.label}</dt>
+                            <dd><f:render partial="Record/FieldValue" arguments="{fieldData: fieldData}" /></dd>
                         </div>
                     </f:if>
                 </f:for>
-            </div>
-        </f:if>
-    </div>
-
-    <f:comment>Translation strip: one slot per available site language</f:comment>
+            </dl>
+        </div>
+    </f:if>
     <f:if condition="{record.translations}">
         <f:render partial="TranslationStrip" arguments="{record: record}" />
     </f:if>
-
-    <f:comment>Card Footer: Language Flag | ID | PID | Free badge</f:comment>
-    <div class="gridview-card__footer">
-        <f:if condition="{record.languageFlagIdentifier}">
-            <span class="gridview-card__footer-lang" title="{record.languageTitle}">
-                <core:icon identifier="{record.languageFlagIdentifier}" size="small" />
+    <div class="card-footer rlt-card-footer">
+        <f:render partial="Record/Controls" arguments="{record: record}" />
+        <p class="rlt-meta">
+            <f:if condition="{record.languageFlagIdentifier}">
+                <span class="rlt-meta-language">
+                    <core:icon identifier="{record.languageFlagIdentifier}" size="small" />
+                    {record.languageTitle}
+                </span>
+            </f:if>
+            <span class="rlt-meta-id">
+                <f:translate key="records_list_types.messages:record.idLabel" />
+                {record.uid}
             </span>
-            <span class="gridview-card__footer-separator"></span>
-        </f:if>
-        <span class="gridview-card__footer-id">
-            <span class="gridview-card__footer-label"><f:translate key="records_list_types.messages:record.idLabel" /></span>
-            <span class="gridview-card__footer-uid">{record.uid}</span>
-        </span>
-        <f:if condition="{record.tableName} != 'pages'">
-            <span class="gridview-card__footer-separator"></span>
-            <span class="gridview-card__footer-pid"><f:translate key="records_list_types.messages:record.onPage" arguments="{pid: record.pid}" /></span>
-        </f:if>
-        <f:if condition="{record.isFreeTranslation}">
-            <span class="gridview-card__footer-separator"></span>
-            <span class="gridview-card__free-badge">
-                <f:translate key="records_list_types.messages:translation.free" />
-            </span>
-        </f:if>
+            <f:if condition="{record.tableName} != 'pages' && {record.pid} != {pageId}">
+                <span class="rlt-meta-page"><f:translate key="records_list_types.messages:record.onPage" arguments="{pid: record.pid}" /></span>
+            </f:if>
+        </p>
     </div>
-</div>
+</article>
 
 </html>

@@ -56,7 +56,8 @@ final readonly class ListSortingViewFactory implements SingletonInterface
         $ascLabel = $lang->sL('records_list_types.messages:sort.ascending');
         $descLabel = $lang->sL('records_list_types.messages:sort.descending');
 
-        $currentFieldLabel = $fieldModeLabel;
+        // Empty while the table keeps its default order.
+        $currentFieldLabel = '';
         foreach ($sortableFields as $field) {
             if (($field['field'] ?? '') === $currentSortField) {
                 $currentFieldLabel = $field['label'] ?? $currentSortField;
@@ -327,7 +328,7 @@ final readonly class ListSortingViewFactory implements SingletonInterface
             return null;
         }
 
-        $label = $this->getLanguageService()->sL('records_list_types.messages:action.editColumns');
+        $label = $this->getLanguageService()->sL('core.mod_web_list:editShownColumns');
 
         $baseParams = ['id' => $pageId, 'displayMode' => $viewMode];
         $baseParams = array_replace($baseParams, $this->requestParameterService->getPreservedListParameters($request));

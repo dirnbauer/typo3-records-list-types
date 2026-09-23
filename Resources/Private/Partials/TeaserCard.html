@@ -1,174 +1,66 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
-      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
-    Teaser Card - Modern minimal card with elegant status badges.
-    
-    Features:
-    - Clean, modern design with subtle shadows
-    - Prominent status pill for hidden records
-    - Accent bar for hidden state
-    - Hover interactions
-    
-    Expected fields in record.displayValues:
-    - Title (from labelField)
-    - datetime/crdate/tstamp for date
-    - teaser/abstract/bodytext for description
+    Teaser card: title, the date fields of record.displayValues, the first
+    text field as teaser, Core's controls and the translations.
+
+    Arguments: record, tableIdentifier, multiSelectEnabled
 </f:comment>
 
-<article class="teaserview-card{f:if(condition: record.hidden, then: ' teaserview-card--hidden')}{f:if(condition: record.isFreeTranslation, then: ' teaserview-card--free')}"
+<f:variable name="titleId" value="rlt-title-{tableIdentifier}-{record.uid}" />
+<article class="card rlt-teaser{f:if(condition: record.hidden, then: ' rlt-teaser--hidden')}{f:if(condition: record.isDeletePlaceholder, then: ' rlt-teaser--deleted')}"
+         aria-labelledby="{titleId}"
          data-table="{record.tableName}"
          data-uid="{record.uid}"
-         {f:if(condition: multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}>
-    
-    <div class="teaserview-card__body">
-        <div class="teaserview-card__header">
-            <f:comment>Main content area</f:comment>
-            <div class="teaserview-card__main">
-                <f:comment>Title row with icon, title, badges</f:comment>
-                <div class="teaserview-card__title-row">
-                    <f:if condition="{multiSelectEnabled}">
-                        <label class="teaserview-card__checkbox">
-                            <input class="form-check-input t3js-multi-record-selection-check"
-                                   type="checkbox"
-                                   name="CBC[{record.tableName}|{record.uid}]"
-                                   value="1" />
-                        </label>
-                    </f:if>
-                    <span class="teaserview-card__icon">
-                        <core:icon identifier="{record.iconIdentifier}" size="small" />
-                    </span>
-                    
-                    <h6 class="teaserview-card__title">
-                        <f:if condition="{record.isFreeTranslation}">
-                            <span class="teaserview-card__lang-chip teaserview-card__lang-chip--free" title="{f:translate(key: 'records_list_types.messages:translation.free.title')}">
-                                <f:translate key="records_list_types.messages:translation.free" />
-                                <span>·</span>
-                                {record.languageTitle}
-                            </span>
-                        </f:if>
-                        <f:if condition="{record.permissions.canEdit}">
-                            <f:then>
-                                <typo3-backend-contextual-record-edit-trigger
-                                    url="{record.contextualEditUrl}"
-                                    edit-url="{record.editUrl}">
-                                    <f:if condition="{record.title}">
-                                        <f:then>{record.title}</f:then>
-                                        <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
-                                    </f:if>
-                                </typo3-backend-contextual-record-edit-trigger>
-                            </f:then>
-                            <f:else>
-                                <f:if condition="{record.title}">
-                                    <f:then>{record.title}</f:then>
-                                    <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
-                                </f:if>
-                            </f:else>
-                        </f:if>
-                    </h6>
-                    
-                    <span class="teaserview-badge teaserview-badge--uid">#{record.uid}</span>
-                    
-                    <f:if condition="{record.hidden}">
-                        <span class="teaserview-badge teaserview-badge--hidden">
-                            <core:icon identifier="actions-toggle-off" size="small" />
-                            <f:translate key="records_list_types.messages:state.hidden" />
+         data-record-title="{record.title}">
+    <div class="card-body rlt-teaser-body">
+        <div class="rlt-teaser-lead">
+            <f:if condition="{multiSelectEnabled}">
+                <f:render partial="Record/Checkbox" arguments="{record: record}" />
+            </f:if>
+            <span class="rlt-record-icon"><f:render partial="Record/Icon" arguments="{record: record}" /></span>
+        </div>
+        <div class="rlt-teaser-main">
+            <h2 class="card-title rlt-teaser-title" id="{titleId}">
+                <f:render partial="Record/Title" arguments="{record: record}" />
+            </h2>
+            <p class="rlt-meta">
+                <f:for each="{record.displayValues}" as="fieldData">
+                    <f:if condition="{fieldData.type} == 'datetime' && {fieldData.formatted}">
+                        <span class="rlt-meta-date" title="{fieldData.label}">
+                            <core:icon identifier="actions-calendar" size="small" />
+                            {fieldData.formatted}
                         </span>
                     </f:if>
-                </div>
-                
-                <f:comment>Meta line with date</f:comment>
-                <div class="teaserview-card__meta">
-                    <f:for each="{record.displayValues}" as="fieldData">
-                        <f:if condition="{fieldData.type} == 'datetime' && !{fieldData.isEmpty}">
-                            <span class="teaserview-card__date">
-                                <core:icon identifier="actions-calendar" size="small" />
-                                {fieldData.formatted}
-                            </span>
-                        </f:if>
-                    </f:for>
-                </div>
-                
-                <f:comment>Teaser/Description text</f:comment>
-                <f:for each="{record.displayValues}" as="fieldData">
-                    <f:if condition="{fieldData.type} == 'text' && !{fieldData.isLabelField} && !{fieldData.isEmpty}">
-                        <p class="teaserview-card__teaser">
-                            {fieldData.formatted -> f:format.crop(maxCharacters: 180, append: '…')}
-                        </p>
-                    </f:if>
                 </f:for>
-            </div>
-            
-            <f:comment>Action buttons</f:comment>
-            <div class="teaserview-card__actions">
-                <f:comment>Visibility toggle</f:comment>
-                <f:if condition="{record.permissions.canToggleVisibility}">
-                    <f:if condition="{record.hidden}">
-                        <f:then>
-                            <button type="button"
-                                    class="teaserview-action teaserview-action--warning"
-                                    title="{f:translate(key: 'records_list_types.messages:action.unhide')}"
-                                    aria-label="{f:translate(key: 'records_list_types.messages:action.unhide')}"
-                                    data-gridview-action="show"
-                                    data-table="{record.tableName}"
-                                    data-uid="{record.uid}"
-                                    data-hidden-field="{tableConfig.hiddenField}">
-                                <core:icon identifier="actions-toggle-off" size="small" />
-                            </button>
-                        </f:then>
-                        <f:else>
-                            <button type="button"
-                                    class="teaserview-action teaserview-action--success"
-                                    title="{f:translate(key: 'records_list_types.messages:action.hide')}"
-                                    aria-label="{f:translate(key: 'records_list_types.messages:action.hide')}"
-                                    data-gridview-action="hide"
-                                    data-table="{record.tableName}"
-                                    data-uid="{record.uid}"
-                                    data-hidden-field="{tableConfig.hiddenField}">
-                                <core:icon identifier="actions-toggle-on" size="small" />
-                            </button>
-                        </f:else>
-                    </f:if>
+                <span class="rlt-meta-id">
+                    <f:translate key="records_list_types.messages:record.idLabel" />
+                    {record.uid}
+                </span>
+                <f:if condition="{record.languageFlagIdentifier}">
+                    <span class="rlt-meta-language">
+                        <core:icon identifier="{record.languageFlagIdentifier}" size="small" />
+                        {record.languageTitle}
+                    </span>
                 </f:if>
-
-                <f:comment>Edit button</f:comment>
-                <f:if condition="{record.permissions.canEdit}">
-                    <typo3-backend-contextual-record-edit-trigger
-                        class="teaserview-action teaserview-action--primary"
-                        title="{f:translate(key: 'records_list_types.messages:action.edit')}"
-                        url="{record.contextualEditUrl}"
-                        edit-url="{record.editUrl}">
-                        <core:icon identifier="actions-open" size="small" />
-                    </typo3-backend-contextual-record-edit-trigger>
+                <span class="rlt-badges"><f:render partial="Record/States" arguments="{record: record}" /></span>
+            </p>
+            <f:variable name="teaserShown" value="0" />
+            <f:for each="{record.displayValues}" as="fieldData">
+                <f:if condition="!{teaserShown} && {fieldData.type} == 'text' && !{fieldData.isLabelField} && {fieldData.formatted}">
+                    <p class="card-text rlt-teaser-text">{fieldData.formatted}</p>
+                    <f:variable name="teaserShown" value="1" />
                 </f:if>
-
-                <f:comment>Delete button</f:comment>
-                <f:if condition="{record.permissions.canDelete}">
-                    <button type="button"
-                            class="teaserview-action teaserview-action--danger"
-                            title="{f:translate(key: 'records_list_types.messages:action.delete')}"
-                            aria-label="{f:translate(key: 'records_list_types.messages:action.delete')}"
-                            data-gridview-action="delete"
-                            data-table="{record.tableName}"
-                            data-uid="{record.uid}">
-                        <core:icon identifier="actions-edit-delete" size="small" />
-                    </button>
-                </f:if>
-
-                <f:comment>More Actions dropdown</f:comment>
-                <f:render partial="RecordActionDropdown" arguments="{record: record, buttonClass: 'teaserview-action'}" />
-            </div>
+            </f:for>
+        </div>
+        <div class="rlt-teaser-controls">
+            <f:render partial="Record/Controls" arguments="{record: record}" />
         </div>
     </div>
-
-    <f:if condition="{record.isFreeTranslation}">
-        <div class="teaserview-card__footer-free">
-            <span class="teaserview-card__free-badge">
-                <f:translate key="records_list_types.messages:translation.free" />
-            </span>
-        </div>
+    <f:if condition="{record.translations}">
+        <f:render partial="TranslationStrip" arguments="{record: record}" />
     </f:if>
 </article>
 

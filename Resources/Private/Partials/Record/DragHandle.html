@@ -1,0 +1,26 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:comment>
+    Keyboard handle for reordering: Space or Enter grabs the record, the
+    arrow keys move it, Space or Enter drops it, Escape cancels. The pointer
+    alternative without dragging are Core's "Move up" and "Move down".
+
+    Arguments: record, instructionsId (id of the element that explains the keys)
+</f:comment>
+
+<f:variable name="recordTitle" value="{record.title}" />
+<f:if condition="!{record.title}">
+    <f:variable name="recordTitle" value="{f:translate(key: 'core.core:labels.no_title')}" />
+</f:if>
+<button type="button"
+        class="btn btn-sm btn-borderless rlt-drag-handle"
+        aria-label="{f:translate(key: 'records_list_types.messages:drag.ariaLabel', arguments: {title: recordTitle})}"
+        aria-describedby="{instructionsId}"
+        title="{f:translate(key: 'records_list_types.messages:drag.title')}"
+        data-rlt-drag-handle>
+    <core:icon identifier="actions-move" size="small" />
+</button>
+
+</html>

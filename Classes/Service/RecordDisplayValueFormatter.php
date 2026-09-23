@@ -4,51 +4,51 @@ declare(strict_types=1);
 
 namespace Webconsulting\RecordsListTypes\Service;
 
+use TYPO3\CMS\Backend\Utility\BackendUtility;
+
+/**
+ * Turns a raw field value into the text the list view shows for it.
+ *
+ * BackendUtility::getProcessedValueExtra() is what DatabaseRecordList uses:
+ * it resolves select and radio labels, the titles of related records and
+ * categories, formats dates with the backend's date format, shows the path
+ * for "pid", and crops text; rich text is reduced to plain text here.
+ */
 final class RecordDisplayValueFormatter
 {
     /**
-     * @param array<string, mixed> $tcaColumns
-     * @param (callable(string): string)|null $translateLabel
+     * @param array<string, mixed> $row The record row after the workspace overlay
      */
-    public function formatFieldValue(
-        mixed $value,
-        string $type,
-        string $field,
-        array $tcaColumns,
-        ?callable $translateLabel = null,
-    ): string {
-        if ($value === null || $value === '') {
+    public function formatFieldValue(string $table, string $field, array $row, int $maxLength = 100): string
+    {
+        $value = $row[$field] ?? null;
+        if (!is_scalar($value) || $value === '') {
             return '';
         }
 
-        switch ($type) {
-            case 'boolean':
-                return (bool)$value ? 'yes' : 'no';
-
-            case 'datetime':
-                if (is_numeric($value) && $value > 0) {
-                    return date('d.m.Y H:i', (int)$value);
-                }
-                return is_scalar($value) ? (string)$value : '';
-
-            case 'number':
-                return is_scalar($value) ? (string)$value : '';
-
-            case 'select':
-                return $this->formatSelectValue($value, $field, $tcaColumns, $translateLabel);
-
-            case 'relation':
-                if (is_numeric($value)) {
-                    return $value > 0 ? $value . ' item(s)' : '';
-                }
-                return is_scalar($value) ? (string)$value : '';
-
-            default:
-                $textInput = is_scalar($value) ? (string)$value : '';
-                $text = strip_tags(html_entity_decode($textInput));
-                $text = preg_replace('/\s+/', ' ', $text) ?? $text;
-                return trim($text);
+        $uid = is_numeric($row['uid'] ?? null) ? (int)$row['uid'] : 0;
+        $pid = is_numeric($row['pid'] ?? null) ? (int)$row['pid'] : 0;
+        $processed = BackendUtility::getProcessedValueExtra(
+            $table,
+            $field,
+            (string)$value,
+            $maxLength,
+            $uid,
+            true,
+            $table === 'pages' ? $uid : $pid,
+            $row,
+        );
+        if (!is_scalar($processed)) {
+            return '';
         }
+
+        // Core passes text through as stored; rich text still holds its tags
+        // and entities. Block boundaries become spaces so words stay apart.
+        $text = (string)$processed;
+        $text = preg_replace('#<(?:br\s*/?|/(?:p|div|li|h[1-6]|td|th|tr|blockquote|ul|ol))\s*>#i', '$0 ', $text) ?? $text;
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5);
+
+        return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
     }
 
     /**
@@ -66,52 +66,6 @@ final class RecordDisplayValueFormatter
         }
 
         $items = is_array($config['items'] ?? null) ? $config['items'] : [];
-        foreach ($items as $item) {
-            if (is_array($item) && isset($item['invertStateDisplay']) && (bool)$item['invertStateDisplay']) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param array<string, mixed> $tcaColumns
-     * @param (callable(string): string)|null $translateLabel
-     */
-    private function formatSelectValue(
-        mixed $value,
-        string $field,
-        array $tcaColumns,
-        ?callable $translateLabel,
-    ): string {
-        $fieldDef = is_array($tcaColumns[$field] ?? null) ? $tcaColumns[$field] : [];
-        $config = is_array($fieldDef['config'] ?? null) ? $fieldDef['config'] : [];
-        $items = is_array($config['items'] ?? null) ? $config['items'] : [];
-        $valueStr = is_scalar($value) ? (string)$value : '';
-
-        foreach ($items as $item) {
-            if (!is_array($item)) {
-                continue;
-            }
-            $itemValue = $item['value'] ?? $item[1] ?? null;
-            $itemValueStr = is_scalar($itemValue) ? (string)$itemValue : '';
-            if ($itemValueStr !== $valueStr) {
-                continue;
-            }
-
-            $itemLabelVal = $item['label'] ?? $item[0] ?? $valueStr;
-            $itemLabel = is_string($itemLabelVal) ? $itemLabelVal : $valueStr;
-            if (str_starts_with($itemLabel, 'LLL:')) {
-                if ($translateLabel !== null) {
-                    $translated = $translateLabel($itemLabel);
-                    return $translated !== '' ? $translated : $valueStr;
-                }
-                return $valueStr;
-            }
-            return $itemLabel;
-        }
-
-        return $valueStr;
+        return array_any($items, fn($item): bool => is_array($item) && isset($item['invertStateDisplay']) && (bool)$item['invertStateDisplay']);
     }
 }
