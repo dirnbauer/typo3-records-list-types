@@ -15,15 +15,15 @@
     ],
     "require": {
         "webconsulting/records-list-types": "dev-main",
-        "typo3/cms-install": "^14.3.6",
-        "typo3/cms-frontend": "^14.3.6",
-        "typo3/cms-fluid-styled-content": "^14.3.6",
-        "typo3/cms-rte-ckeditor": "^14.3.6",
-        "typo3/cms-workspaces": "^14.3.6",
-        "typo3/cms-belog": "^14.3.6",
-        "typo3/cms-info": "^14.3.6",
-        "typo3/cms-setup": "^14.3.6",
-        "typo3/cms-tstemplate": "^14.3.6"
+        "typo3/cms-install": "^14.3.7",
+        "typo3/cms-frontend": "^14.3.7",
+        "typo3/cms-fluid-styled-content": "^14.3.7",
+        "typo3/cms-rte-ckeditor": "^14.3.7",
+        "typo3/cms-workspaces": "^14.3.7",
+        "typo3/cms-belog": "^14.3.7",
+        "typo3/cms-info": "^14.3.7",
+        "typo3/cms-setup": "^14.3.7",
+        "typo3/cms-tstemplate": "^14.3.7"
     },
     "config": {
         "allow-plugins": {

@@ -9,124 +9,87 @@ on:
 permissions:
   contents: read
 
+env:
+  COMPOSER_INSTALL_FLAGS: --no-progress --prefer-dist --no-interaction
+
 jobs:
   lint:
     name: Lint and Composer checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           extensions: intl
           coverage: none
-
-      - name: Validate composer.json
-        run: composer validate --strict --no-check-lock
-
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist --no-interaction
-
+      - run: composer validate --strict --no-check-lock
+      - run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }}
+      # TYPO3 Core advisories cannot be fixed from this repository, so the
+      # audit reports but does not block the pipeline.
       - name: Security audit (report only)
-        # Advisories in TYPO3 Core itself cannot be fixed here before the next
-        # Core release, so the audit reports but does not block the pipeline.
         continue-on-error: true
         run: composer audit --abandoned=report
-
-      - name: PHP syntax and XLIFF well-formedness
-        run: Build/Scripts/runTests.sh -s lint
+      - run: Build/Scripts/runTests.sh -s lint
 
   cgl:
-    name: Coding guidelines (dry run)
+    name: Coding guidelines
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
-          php-version: '8.3'
-          coverage: none
-
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist --no-interaction
-
-      - name: PHP-CS-Fixer
-        run: Build/Scripts/runTests.sh -s cgl
-
-  phpstan:
-    name: PHPStan (level 8, strict rules, PHPat)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-        with:
-          persist-credentials: false
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
-        with:
-          php-version: '8.3'
+          php-version: '8.4'
           extensions: intl
           coverage: none
+      - run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }}
+      - run: Build/Scripts/runTests.sh -s cgl
 
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist --no-interaction
-
-      - name: PHPStan
-        run: Build/Scripts/runTests.sh -s phpstan
+  phpstan:
+    name: PHPStan level 8 (strict rules, PHPat)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: intl
+          coverage: none
+      - run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }}
+      - run: Build/Scripts/runTests.sh -s phpstan
 
   unit:
     name: Unit tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - php: '8.3'
-            experimental: false
-          - php: '8.4'
-            experimental: false
-          - php: '8.5'
-            experimental: true
+        php: ['8.4', '8.5']
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: ${{ matrix.php }}
           extensions: intl, pdo_sqlite
           coverage: none
-
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist --no-interaction
-
-      - name: Unit tests
-        run: Build/Scripts/runTests.sh -s unit -p ${{ matrix.php }}
+      - run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }}
+      - run: Build/Scripts/runTests.sh -s unit -p ${{ matrix.php }}
 
   functional:
     name: Functional tests (PHP ${{ matrix.php }}, MariaDB 10.11)
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - php: '8.3'
-            experimental: false
-          - php: '8.4'
-            experimental: false
-          - php: '8.5'
-            experimental: true
+        php: ['8.4', '8.5']
     services:
       mariadb:
         image: mariadb:10.11
@@ -148,19 +111,13 @@ jobs:
       typo3DatabasePassword: root
       typo3DatabaseName: typo3_test
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: ${{ matrix.php }}
           extensions: intl, mysqli, pdo_mysql
           coverage: none
-
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist --no-interaction
-
-      - name: Functional tests
-        run: Build/Scripts/runTests.sh -s functional -p ${{ matrix.php }}
+      - run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }}
+      - run: Build/Scripts/runTests.sh -s functional -p ${{ matrix.php }}
