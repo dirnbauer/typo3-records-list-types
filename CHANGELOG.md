@@ -2,6 +2,104 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.3.0 - 2026-09-23
+
+The views are rebuilt from the Records module's own parts: every record carries
+Core's control panel and context menu, the tables are framed like the List
+View, and the styles use TYPO3's design tokens only, so light and dark mode
+follow the backend.
+
+### Added
+
+- Core's control panel on every record (`DatabaseRecordList::makeControl()`):
+  edit, visibility, move up and down, delete, info, history, new record after,
+  copy and cut, and the actions other extensions add through
+  `ModifyRecordListRecordActionsEvent`. Its overflow menu opens as a popover, so
+  cards and scrolling tables cannot clip it.
+- The record icon shows its state overlays (hidden, scheduled, workspace) and
+  opens the context menu, as in the List View.
+- The page identity below the title (TYPO3 14.3.7), Core's "There are no
+  records on this page" message, the notices for tables that cannot be
+  versioned in a workspace, Core's lock symbol for records another user edits,
+  and the strike-through of records deleted in a workspace.
+- Collapsed tables stay collapsed after a reload, as in the List View.
+- "Move up" and "Move down" in ascending manual order: the pointer alternative
+  to dragging (WCAG 2.2, 2.5.7).
+- Text badges for hidden records, workspace states and free-mode translations,
+  in addition to the icon overlay.
+- The selection menu (check all, uncheck all, toggle) above the cards of the
+  grid, teaser and generic views.
+- Partials for custom templates: `Table/Section` frames a table like the List
+  View (filters, heading, selection bar, notices, pagination, empty state),
+  `Table/SelectionToggle`, and `Record/Icon`, `Record/Controls`,
+  `Record/Title`, `Record/States`, `Record/Checkbox`, `Record/FieldValue` and
+  `Record/DragHandle`. New record keys: `iconHtml`, `controlsHtml`,
+  `lockMessage`, `isDeletePlaceholder`; new table keys: `isCollapsed`,
+  `messages`, `isLanguageAware`.
+- A view type that renders a built-in template gets that template's
+  stylesheet without naming it in TSconfig.
+- Translated slots carry their own display values; the compact view shows them
+  in indented rows with the translation's controls.
+- Text filters name the fields they search (`filter.searchedFields`).
+- Labels `a11y.selectRecord`, `column.recordType`, `field.empty` and
+  `filter.searchedFields` in all five languages.
+- Unit tests for the stylesheet contract (no own colours, no `--bs-*`, no
+  `prefers-color-scheme`), popover menus, raw output and accessible names;
+  functional tests for Core's markup in every view, move buttons, collapsed
+  tables, list state in Core links and the value formatter.
+
+### Changed
+
+- Field values come from `BackendUtility::getProcessedValueExtra()`, like in
+  the List View: dates use the backend's date format instead of a hard-coded
+  `d.m.Y H:i`, relations and categories show record titles, select values
+  their labels. Multi-item checkboxes are no longer shown as yes/no; group and
+  category fields count as relations. `RecordDisplayValueFormatter::formatFieldValue()`
+  now takes the table, field and row.
+- Core's links (return URLs, redirects after delete and move, clipboard) keep
+  the view, its filters and its sorting; bookmarks open the same view.
+- The compact view follows the List View: Core's table markup and striping,
+  columns in the order selection, icon, ID, title, controls, localization,
+  fields, and the "Edit all shown fields" button in the control column header.
+- Card markup uses Core's card component; the teaser view is a list of wide
+  cards; menus open as popovers; the sorting mode marks the active mode with
+  `aria-current`; the table title link keeps its visible text in its
+  accessible name; checkboxes are named after their record.
+- The stylesheets shrank from about 4,500 to about 600 lines. They style
+  TYPO3's components with `--typo3-*` tokens only.
+- `GridViewActions.js` is a plain custom element whose listeners are bound to
+  its view. Before, every view on a screen (records and page translations)
+  registered document-wide handlers, and an action ran once per view.
+- The category filter is a native select; `RecordFilters.js` is gone.
+- The view preference is written only when it changes, not on every request
+  that carries `displayMode`.
+- Counting records uses the same search levels as listing them, so the
+  pagination always matches the list.
+- History opens like in the List View.
+- Dev tooling: PHPUnit 13.3, PHPStan 2.2, phpstan-typo3 3.1, typo3-rector 3.16,
+  PHP-CS-Fixer 3.95.27, testing-framework 9.7. CI runs every suite on PHP 8.4
+  and 8.5 (both required) with current, pinned actions; the Composer platform
+  pin is gone. PHP 8.4 idioms where they read better: typed class constants,
+  `new` without parentheses, `array_any()`, `Dom\HTMLDocument`.
+- The repository's DDEV setup uses PHP 8.4.
+
+### Removed
+
+- The `ElementHistoryController` XClass, `HistoryOverlay.js` and
+  `history-overlay.css`: history opens in the content frame, as from the List
+  View.
+- `view-mode-toggle.css`, which styled buttons that no longer exist, the unused
+  `Layouts/Default.html` and the `TranslationRowTeaser` partial.
+- Labels `historyOverlay.*`, `notification.visibilityEndpointMissing`,
+  `translation.edit`, `drag.endPosition`, and `table.expand` / `table.collapse`
+  (Core's `expandView` / `contractView` are used instead).
+- `aria-grabbed` and the `listbox` / `option` roles on reorderable cards, which
+  put interactive content inside options.
+
+### Fixed
+
+- CI failed since 1.2.0: jobs still ran PHP 8.3 against `"php": "^8.4"`.
+
 ## 1.2.0 - 2026-09-19
 
 Translation and UI pass over every view in English and German, one canonical TCA

@@ -138,27 +138,29 @@ toggle buttons:
 CSS customization
 =================
 
-Override styles in your extension:
+Override styles in your extension, with TYPO3's design tokens:
 
 ..  code-block:: css
     :caption: EXT:your_extension/Resources/Public/Css/custom.css
 
-    .recordlist-gridview-card {
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    .rlt-card {
+        border-radius: var(--typo3-component-border-radius);
+        box-shadow: var(--typo3-component-box-shadow-strong);
     }
 
 ..  important::
 
-    Always use CSS custom properties for colors to maintain dark mode
-    compatibility:
+    Use the ``--typo3-*`` tokens for every colour. They follow the colour
+    scheme editors choose in the backend. Hex values, ``--bs-*`` variables
+    and ``prefers-color-scheme`` queries do not: the backend sets its scheme
+    on ``<html>``, independent of the operating system.
 
     ..  code-block:: css
 
         .my-element {
-            /* Correct: adapts to dark mode */
-            background-color: var(--bs-body-bg);
-            color: var(--bs-body-color);
+            /* Correct: follows the backend colour scheme */
+            background-color: var(--typo3-surface-container-low);
+            color: var(--typo3-text-color-base);
 
             /* Wrong: breaks dark mode */
             /* background-color: #ffffff; */
@@ -169,15 +171,16 @@ Override styles in your extension:
 JavaScript
 ==========
 
-The shared action module is a Lit custom element. Custom templates that
-need drag-and-drop, record actions, sorting, pagination input handling,
-compact-view scroll shadows, or client-side search must wrap their
-rendered content:
+``GridViewActions.js`` registers the ``<records-list-types-actions>``
+element. Wrap a custom template in it to get visibility changes in place on
+cards, reordering, the page number input and the 1.x
+``data-gridview-action`` buttons. Core's scripts (context menu, selection,
+localization, clipboard) need no wrapper.
 
 ..  code-block:: html
     :caption: Resources/Private/Templates/MyView.html
 
-    <records-list-types-actions>
+    <records-list-types-actions class="rlt-view">
         <!-- custom view markup -->
     </records-list-types-actions>
 
@@ -186,8 +189,8 @@ rendered content:
 Troubleshooting
 ===============
 
-Grid View toggle not appearing
--------------------------------
+View dropdown not appearing
+---------------------------
 
 1.  Ensure the extension is activated
 2.  Check that ``mod.web_list.viewMode.allowed`` includes at least

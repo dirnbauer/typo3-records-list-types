@@ -6,14 +6,27 @@
 Architecture
 ============
 
-The extension hooks into the TYPO3 v14 Records module using PSR-14
-events and an XClass. It does not modify the core module but augments
-it with alternative visualizations.
+The extension hooks into the TYPO3 v14 Records module with PSR-14 events and
+one XClass, of :php:`TYPO3\CMS\Backend\Controller\RecordListController`.
+The List View stays Core's; the other views are rendered by the same
+controller flow (DocHeader, clipboard, search, page translations, record
+identity) with a different Fluid template for the records.
 
-The controller delegates table visibility and header actions to Core through
-:php:`AlternativeDatabaseRecordList`. It uses Core query builders for search,
-then applies workspace overlays before preparing data for Fluid. There is no
-parallel query cache or separate legacy search implementation.
+:php:`AlternativeDatabaseRecordList` extends Core's
+:php:`DatabaseRecordList` and hands the views what the List View renders:
+
+-   the tables to list, their heading actions and the selection bar
+-   per record :php:`renderRecordIcon()` (icon with state overlays and the
+    context menu trigger), :php:`renderRecordControls()` (Core's
+    :php:`makeControl()`, including the actions of
+    ``ModifyRecordListRecordActionsEvent`` listeners) and the lock message
+-   :php:`prepareManualSorting()`, the neighbour bookkeeping Core needs for
+    "Move up" and "Move down"
+
+Every Core link keeps the view, its filters and its sorting:
+:php:`setOverrideUrlParameters()` adds them to :php:`listURL()`, which Core
+uses for return URLs and redirects. Records are queried with Core query
+builders; workspace overlays are applied before the data reaches Fluid.
 
 .. _architecture-services:
 
@@ -60,6 +73,10 @@ Services
         -   Builds the sorting-mode toggle, the field-sorting dropdown, the
             sortable column headers and the bulk-edit header
 
+    *   -   :php:`RecordDisplayValueFormatter`
+        -   Turns a field value into the text the List View shows for it
+            (:php:`BackendUtility::getProcessedValueExtra()`)
+
     *   -   :php:`ThumbnailService`
         -   Generates backend thumbnails using TYPO3's ProcessedFile API
 
@@ -68,7 +85,7 @@ Services
 
     *   -   :php:`ArrayUtility`
         -   Normalizes TYPO3 TSconfig, request, and TCA arrays at typed
-            boundaries for PHPStan max
+            boundaries for PHPStan level 8
 
     *   -   :php:`DatabasePaginator`
         -   Paginator for pre-fetched database records, extending
@@ -131,120 +148,53 @@ integrations that need to read or change the preference.
 .. _architecture-css:
 
 CSS architecture
-=================
+================
 
-The extension uses a **base + view-specific** CSS pattern.
-``base.css`` is loaded automatically for all view modes (including
-custom types) and contains shared components:
+The views are built from TYPO3's own components -- ``.recordlist``,
+``.card``, ``.table``, ``.badge``, ``.list-group``, ``.pagination`` -- and
+style what is left with TYPO3's design tokens (``--typo3-*``) only. There is
+no colour of the extension's own and no ``prefers-color-scheme`` query, so
+light and dark mode follow the colour scheme chosen in the backend.
+:file:`Tests/Unit/Asset/StylesheetContractTest.php` keeps it that way.
 
--   **Recordlist heading** -- table header bar with title and action
-    buttons
--   **Pagination** -- Core list view navigation (record range, page
-    input, first/prev/next/last buttons)
--   **Sorting mode toggle** -- segmented control for manual vs.
-    field-based sorting
--   **Sorting dropdown** -- field sorting dropdown and disabled state
+-   ``base.css`` -- loaded for every view and with the filter panel:
+    toolbar, pagination bar, empty state, record parts (icon, badges,
+    controls, meta line), card translations, reordering, filters
+-   ``grid-view.css``, ``compact-view.css``, ``teaser-view.css`` -- the
+    layout of each built-in template
 
-View-specific files only contain styles unique to that view:
-
--   ``grid-view.css`` -- card layout, drag-drop, field type formatting,
-    workspace state indicators
--   ``compact-view.css`` -- table structure, sticky columns, zebra
-    striping, scroll shadows
--   ``teaser-view.css`` -- teaser cards, status badges, meta information
-
-``base.css`` is prepended by :php:`ViewTypeRegistry::getCssFiles()`.
-Custom view types receive it automatically -- they only need to provide
-their own view-specific CSS.
-
-.. _architecture-bootstrap:
-
-Bootstrap 5 integration
-========================
-
-The views use TYPO3 v14 backend components. Grid cards use CSS Grid with
-automatically fitted columns and a minimum width of 320 pixels (360 pixels
-on wide screens). Small screens use a single column. The legacy
-``gridView.cols`` setting does not control this layout.
-
-All CSS uses TYPO3's CSS custom properties (``--bs-body-bg``,
-``--bs-body-color``, ``--bs-border-color``) for automatic dark mode
-compatibility.
+:php:`ViewTypeRegistry::getCssFiles()` returns ``base.css``, then the
+stylesheet of the built-in template a view type renders, then the view
+type's own ``css``. A custom type that reuses ``CompactView`` therefore needs
+no ``css`` setting.
 
 .. _architecture-native-actions:
 
-Native TYPO3 14 action controls
-================================
+Native TYPO3 14 controls
+========================
 
-The alternative record list views deliberately reuse TYPO3 14's native
-backend action components instead of inventing a parallel edit-dialog
-system.
+The views reuse TYPO3's backend controls instead of a parallel set:
 
-Visible record edit affordances (title links, edit icons, translation
-edit links) use TYPO3's native contextual record edit web component:
+-   record actions: Core's control panel (:php:`makeControl()`); its
+    overflow menu is turned into a popover so a card cannot clip it
+-   record icon: :php:`IconFactory::getIconForRecord()` wrapped in Core's
+    context menu trigger
+-   title: ``typo3-backend-contextual-record-edit-trigger`` with
+    ``record.editUrl`` (FormEngine) and ``record.contextualEditUrl`` (the v14
+    contextual editor); the preference of the editor decides which opens
+-   missing translations: ``typo3-backend-localization-button``
+-   selection: Core's multi-record selection markup and bulk actions
+-   menus: ``.dropdown-menu[popover]`` with ``popovertarget``; Core's
+    :file:`dropdown.js` positions them and handles the keyboard
 
--   ``typo3-backend-contextual-record-edit-trigger``
-
-That component receives two URLs:
-
--   ``edit-url`` -- the full FormEngine route (``record_edit``)
--   ``url`` -- the contextual edit route (``record_edit_contextual``)
-
-This matches TYPO3 core behavior:
-
--   if the user preference for contextual editing is enabled, TYPO3 opens
-    the edit form in the native sheet-style contextual editor
--   if the preference is disabled, TYPO3 falls back to the regular content
-    frame edit view
-
-The controller precomputes both URLs in PHP for each record and grouped
-translation and exposes them as:
-
--   ``record.editUrl``
--   ``record.contextualEditUrl``
--   ``translation.editUrl``
--   ``translation.contextualEditUrl``
-
-This avoids fragile inline Fluid route construction for nested
-``edit[table][uid]=edit`` parameters.
-
-Additional modal-style actions use TYPO3-native backend controls as well:
-
--   ``typo3-backend-dispatch-modal-button`` for iframe-based modal tools
-    such as move/reposition dialogs
--   standard TYPO3 dispatch actions for info/history/window-manager
-    interactions
-
-Visibility toggles
-------------------
-
-Inline hide/show buttons do not submit handcrafted DataHandler
-``data[table][uid][hidden]`` payloads. They call TYPO3's core
-``record_toggle_visibility`` AJAX endpoint through
-``@typo3/core/ajax/ajax-request.js``.
-
-Before the POST request is sent, the shared action component adds TYPO3's
-``sudoModeInterceptor`` from
-``@typo3/backend/security/sudo-mode-interceptor.js``. This keeps the
-alternative views aligned with Core record-list behavior for protected
-tables or fields. Sensitive records such as backend users and backend user
-groups can therefore trigger TYPO3's password/sudo confirmation before the
-visibility toggle is executed.
-
-The request body contains only the Core endpoint's expected values:
-
--   ``table`` -- the table name
--   ``uid`` -- the record UID
--   ``action`` -- either ``hide`` or ``show``
-
-On success the component updates the record's visibility button, styling,
-and badge in place. For ``pages`` records it also dispatches the page-tree
-refresh event so the backend navigation reflects the changed state.
-
-Copy, cut, and delete delegate to Core's :js:`ContextMenuActions`. Record
-action dropdowns use the native HTML Popover API and TYPO3 dropdown styles,
-so menus can open above scrolling containers without custom positioning
-JavaScript.
+On table rows Core's :file:`recordlist.js` toggles visibility. Cards are no
+table rows, so :file:`GridViewActions.js` handles the visibility button there
+with the same endpoint (``record_toggle_visibility``, behind the
+``sudoModeInterceptor``) and updates the button, the record icon and the
+hidden badge in place. The module also handles reordering (drag and drop and
+keyboard), the page number input and the ``data-gridview-action`` buttons of
+templates written for 1.x. Its listeners are bound to its own element, so the
+records and the page translations on one screen never handle an event twice.
 
 .. _architecture-labels:
 

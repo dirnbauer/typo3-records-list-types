@@ -22,7 +22,7 @@ dependencies, data and credentials stay outside version control.
 
 On the first run TYPO3 asks for the backend administrator credentials. Open
 `the local TYPO3 backend <https://v14.records-list-types.ddev.site/typo3/>`__.
-The installation uses TYPO3 14.3.6 or later in v14, PHP 8.3 and MariaDB 10.11.
+The installation uses TYPO3 14.3.7 or later in v14, PHP 8.4 and MariaDB 10.11.
 
 After changing services or JavaScript, flush caches and reload the backend.
 TYPO3 caches service definitions and JavaScript import-map cache-busting URLs.

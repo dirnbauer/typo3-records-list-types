@@ -44,34 +44,57 @@ Quick start: 3 steps
 **Step 2 -- Create the Fluid template:**
 
 Copy :file:`EXT:records_list_types/Resources/Private/Templates/GenericView.html`
-to your sitepackage and customize it. The template receives ``tableData``
-with all records, ``paginator``/``pagination`` for paging, structured
-``tableHeading`` / ``sortingDropdown`` / ``sortingModeToggle`` data for
-extension-rendered heading/sorting UI, and TYPO3/core-generated
-``actionButtons`` fragments for the heading bar.
+to your sitepackage and change the list item. The template receives
+``tableData`` (one entry per table, with its ``records``) and renders each
+table through the ``Table/Section`` partial, which frames it like a table of
+the List View: filters, heading with the table actions, the selection bar,
+workspace notices, pagination, the empty state and "Expand table". Your
+template only renders the records, as the child content:
 
-For built-in templates, the current systematic is:
+..  code-block:: html
+    :caption: Resources/Private/Backend/Templates/TimelineView.html
 
--   **Structured data + Fluid partials** for extension-rendered heading and
-    sorting UI
--   **TYPO3 core** ``f:sanitize.html(build:
-    'records-list-types-backend-fragments')`` for backend fragment HTML that
-    still comes from TYPO3/core button and multi-selection APIs
+    <records-list-types-actions class="rlt-view">
+        <f:for each="{tableData}" as="table">
+            <f:render partial="Table/Section"
+                      arguments="{table: table, currentTable: currentTable, sortingControls: 1}"
+                      contentAs="body">
+                <ul class="my-timeline">
+                    <f:for each="{table.records}" as="record">
+                        <li data-uid="{record.uid}" data-multi-record-selection-element="true">
+                            <f:render partial="Record/Checkbox" arguments="{record: record}" />
+                            <f:render partial="Record/Icon" arguments="{record: record}" />
+                            <f:render partial="Record/Title" arguments="{record: record}" />
+                            <f:render partial="Record/States" arguments="{record: record}" />
+                            <f:render partial="Record/Controls" arguments="{record: record}" />
+                        </li>
+                    </f:for>
+                </ul>
+            </f:render>
+        </f:for>
+    </records-list-types-actions>
 
-The companion `Records List Examples
-<https://github.com/dirnbauer/typo3-records-list-examples>`__ repository
-still demonstrates a lighter TSconfig-only custom-template style for
-satellite extensions. The built-in templates in ``records_list_types``
-already use the newer structured heading/sorting approach described here.
+The ``Record/*`` partials render what the List View renders for a record:
 
-For record edit links in custom templates, use TYPO3 14's native
-contextual edit trigger instead of ``be:link.editRecord``. Records
-rendered by the extension already expose:
+-   ``Record/Icon`` -- the icon with its state overlays, opening the context
+    menu (``record.iconHtml``)
+-   ``Record/Controls`` -- Core's control panel with edit, visibility, move,
+    delete, info, history, clipboard and the actions of other extensions
+    (``record.controlsHtml``)
+-   ``Record/Title`` -- the title as contextual edit trigger, with Core's
+    lock symbol and the strike-through of records deleted in a workspace
+-   ``Record/States`` -- text badges for hidden, workspace state and
+    free-mode translations
+-   ``Record/Checkbox`` -- the selection checkbox, with an accessible name
+-   ``Record/FieldValue`` -- one entry of ``record.displayValues``, formatted
+    like the List View formats it
+-   ``Record/DragHandle`` -- the keyboard handle for reordering
+-   ``Table/SelectionToggle`` -- Core's "Check all / Uncheck all / Toggle"
+    menu (pass a unique ``id``)
+-   ``TranslationStrip`` -- the translations of a record
 
--   ``record.editUrl``
--   ``record.contextualEditUrl``
-
-Example:
+Records rendered by the extension also expose ``record.editUrl`` and
+``record.contextualEditUrl`` for links of your own:
 
 ..  code-block:: html
 
@@ -85,23 +108,23 @@ This mirrors TYPO3 core behavior: contextual editing opens the native
 sheet editor when enabled for the current backend user and otherwise
 falls back to the regular FormEngine in the content frame.
 
-Wrap custom templates in ``<records-list-types-actions>`` when they need
-the extension's shared interactions. The base ``GridViewActions.js``
-module registers that Lit custom element and initializes drag-and-drop,
-record actions, sorting, pagination input handling, scroll shadows, and
-client-side search inside it:
+Wrap the template in ``<records-list-types-actions>``. The element is
+registered by ``GridViewActions.js`` and adds visibility changes in place on
+non-table markup, drag-and-drop and keyboard reordering (for markup like the
+built-in grid), the page number input and the ``data-gridview-action``
+buttons of templates written for 1.x.
 
-..  code-block:: html
-    :caption: Resources/Private/Templates/TimelineView.html
+..  note::
 
-    <records-list-types-actions>
-        <!-- custom view markup -->
-    </records-list-types-actions>
+    The partials ``RecordActionDropdown`` and ``RecordActions`` of 1.x still
+    work; use ``Record/Controls`` in new templates, which also shows the
+    actions of other extensions.
 
 **Step 3 -- Add CSS (optional):**
 
-Your CSS file is loaded after ``base.css``, which already provides
-heading, pagination, and sorting styles.
+Your CSS file is loaded after ``base.css``, which already styles the parts
+all views share. Style with TYPO3's design tokens (``--typo3-*``) and Core's
+components so light and dark mode keep working.
 
 That's it. The new view appears in the view switcher and works with
 pagination, sorting, search, and all record actions.
@@ -338,8 +361,9 @@ Configuration reference
     :type: string
     :default: *(none)*
 
-    CSS file to load (``EXT:`` syntax). ``base.css`` is always loaded
-    automatically before this file.
+    CSS file to load (``EXT:`` syntax). ``base.css`` and, when the type
+    renders a built-in template (``GridView``, ``CompactView``,
+    ``TeaserView``), that template's stylesheet are loaded before it.
 
 ..  confval:: mod.web_list.viewMode.types.<id>.js
     :name: conf-type-js
@@ -456,11 +480,11 @@ What is loaded automatically
 
 Every view type automatically receives:
 
--   ``base.css`` -- shared heading, pagination, sorting styles
--   ``GridViewActions.js`` -- Lit custom element for drag-drop, record
-    actions, pagination input handling, sorting, scroll shadows, and
-    search
--   ``column-selector-button.js`` -- TYPO3 column selector web component
+-   ``base.css`` -- the parts all views share
+-   the stylesheet of the built-in template the type renders, if any
+-   ``GridViewActions.js`` -- the ``<records-list-types-actions>`` element
+-   Core's record list modules: context menu, multi-record selection,
+    column selector, localization, clipboard
 
 You only need to add assets for view-specific styling or behavior.
 
@@ -476,13 +500,15 @@ Add a CSS file via the ``css`` option. It loads **after** ``base.css``:
         css = EXT:my_sitepackage/Resources/Public/Css/kanban.css
     }
 
-Use TYPO3 CSS variables for automatic dark mode support:
+Use TYPO3's design tokens; they follow the colour scheme chosen in the
+backend. Avoid own colours and ``prefers-color-scheme`` queries:
 
 ..  code-block:: css
 
     .kanban-column {
-        background: var(--typo3-component-bg, #fff);
-        border: 1px solid var(--typo3-component-border-color, #d4d4d8);
+        background: var(--typo3-component-bg);
+        border: var(--typo3-component-border-width) solid var(--typo3-component-border-color);
+        border-radius: var(--typo3-component-border-radius);
     }
 
 JavaScript
@@ -565,9 +591,9 @@ Asset loading order
 --------------------
 
 1.  ``base.css`` -- always (shared components)
-2.  Your ``css`` file -- view-specific styles
-3.  ``GridViewActions.js`` -- always (Lit actions component)
-4.  ``column-selector-button.js`` -- always (TYPO3 component)
+2.  The stylesheet of the built-in template the type renders, if any
+3.  Your ``css`` file -- view-specific styles
+4.  ``GridViewActions.js`` -- always
 5.  Your ``js`` module -- custom behavior
 
 .. _custom-view-types-psr14:
