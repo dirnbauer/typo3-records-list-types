@@ -128,11 +128,10 @@ records-list-types-actions {
 
 /*
  * Core fills empty action slots with invisible placeholders so that the
- * buttons line up across table rows. Outside a table they only take space.
+ * buttons line up across table rows. Outside a table cell, in cards and in
+ * custom views, they only take space.
  */
-.rlt-card .rlt-controls .btn.disabled[aria-hidden="true"],
-.rlt-teaser .rlt-controls .btn.disabled[aria-hidden="true"],
-.rlt-generic .rlt-controls .btn.disabled[aria-hidden="true"] {
+:not(td) > .rlt-controls .btn.disabled[aria-hidden="true"] {
     display: none;
 }
 
