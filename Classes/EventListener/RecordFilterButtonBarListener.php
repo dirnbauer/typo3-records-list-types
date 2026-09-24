@@ -47,6 +47,7 @@ final readonly class RecordFilterButtonBarListener
         }
         $this->stateService->persistVisibilityPreferenceFromRequest($request);
         $this->pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/base.css');
+        $this->pageRenderer->loadJavaScriptModule('@webconsulting/records-list-types/RecordFilters.js');
 
         $lang = $this->getLanguageService();
         $label = $lang?->sL('records_list_types.messages:filter.show') ?? '';

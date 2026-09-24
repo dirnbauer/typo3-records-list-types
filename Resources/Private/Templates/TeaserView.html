@@ -1,29 +1,129 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
-    Teaser view: one wide card per record with title, dates and the teaser
-    text, for news, blog posts, events and similar records.
+    Teaser View - Minimal card layout showing only title, date, and teaser text.
+    Uses Bootstrap 5 styling for a clean, modern look.
+    Ideal for news, blog posts, and similar content types.
 </f:comment>
 
-<records-list-types-actions class="rlt-view rlt-view--teaser">
+<records-list-types-actions>
 <div class="recordlist-teaserview-container">
-    <f:for each="{tableData}" as="table">
-        <f:render partial="Table/Section" arguments="{table: table, currentTable: currentTable, sortingControls: 1}" contentAs="body">
-            <f:if condition="{table.multiSelectEnabled}">
-                <div class="rlt-toolbar"><f:render partial="Table/SelectionToggle" arguments="{id: 'rlt-selection-{table.tableIdentifier}'}" /></div>
-            </f:if>
-            <ul class="rlt-teasers" aria-label="{table.tableLabel}">
-                <f:for each="{table.records}" as="record">
-                    <li class="rlt-teasers-item"
-                        data-uid="{record.uid}"
-                        {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-element="true"')}>
-                        <f:render partial="TeaserCard" arguments="{record: record, tableIdentifier: table.tableIdentifier, multiSelectEnabled: table.multiSelectEnabled}" />
-                    </li>
-                </f:for>
-            </ul>
-        </f:render>
-    </f:for>
+
+    <f:if condition="{tableData}">
+        <f:then>
+            <f:for each="{tableData}" as="table">
+                <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
+                <div class="recordlist" id="t3-table-{table.tableName}"
+                     {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-identifier=\"t3-table-{table.tableName}\"')}>
+                    <form action="{table.formActionUrl}#t3-table-{table.tableName}" method="post" name="list-table-form-{table.tableName}">
+                    <input type="hidden" name="cmd_table" value="{table.tableName}" />
+                    <input type="hidden" name="cmd" />
+                    <f:comment>Table header - consistent with other view modes</f:comment>
+                    <div class="recordlist-heading{f:if(condition: table.multiSelectEnabled, then: ' multi-record-selection-panel')}">
+                        <div class="recordlist-heading-row">
+                            <div class="recordlist-heading-title">
+                                <f:render partial="TableHeading" arguments="{heading: table.tableHeading}" />
+                            </div>
+
+                            <div class="recordlist-heading-actions">
+                                <f:comment>Sorting dropdown - rendered via TYPO3 ComponentFactory API</f:comment>
+                                <f:if condition="{table.sortingDropdown}">
+                                    <div class="btn-group" role="group" aria-label="{f:translate(key: 'records_list_types.messages:sortingMode.label')}">
+                                        <f:render partial="SortingDropdown" arguments="{sortingDropdown: table.sortingDropdown}" />
+                                    </div>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.newRecordButton}">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
+                                </f:if>
+                                
+                                <f:if condition="{table.actionButtons.downloadButton}">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.downloadButton}</f:sanitize.html>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.columnSelectorButton}">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.collapseButton}">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.collapseButton}</f:sanitize.html>
+                                </f:if>
+                            </div>
+                        </div>
+
+                        <f:comment>Multi Record Selection action bar</f:comment>
+                        <f:if condition="{table.multiSelectEnabled} && {table.multiRecordSelectionActionsHtml}">
+                            <div class="recordlist-heading-row t3js-multi-record-selection-actions hidden">
+                                <div class="recordlist-heading-title d-flex flex-wrap align-items-baseline column-gap-2 row-gap-1">
+                                    <span class="t3js-multi-record-selection-table-title">
+                                        <f:render partial="TableHeading" arguments="{heading: table.tableHeading}" />
+                                    </span>
+                                    <strong class="text-nowrap"><f:translate key="core.core:labels.selection" /></strong>
+                                </div>
+                                <div class="recordlist-heading-actions">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.multiRecordSelectionActionsHtml}</f:sanitize.html>
+                                </div>
+                            </div>
+                        </f:if>
+                    </div>
+
+                    <f:comment>Teaser cards list</f:comment>
+                    <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
+                        <f:comment>Pagination - only in single table mode</f:comment>
+                        <f:if condition="{currentTable}">
+                            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
+                        </f:if>
+
+                        <div class="teaserview-list" {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-row-selection=\"true\"')}>
+                            <f:for each="{table.records}" as="record">
+                                <f:render partial="TeaserCard" arguments="{record: record, tableConfig: table.tableConfig, tableName: table.tableName, multiSelectEnabled: table.multiSelectEnabled}" />
+                                <f:if condition="{record.translations}">
+                                    <div class="teaserview-translations">
+                                        <f:for each="{record.translations}" as="translation">
+                                            <f:render partial="TranslationRowTeaser" arguments="{record: record, translation: translation, tableConfig: table.tableConfig}" />
+                                        </f:for>
+                                    </div>
+                                </f:if>
+                            </f:for>
+                        </div>
+                        <f:if condition="!{table.records}">
+                            <f:render partial="EmptyRecordsNotice" arguments="{table: table}" />
+                        </f:if>
+
+                        <f:comment>Expand table button - multi-table mode with more records</f:comment>
+                        <f:if condition="!{currentTable} && {table.hasMore}">
+                            <div class="text-center py-2 border-top">
+                                <a href="{table.singleTableUrl}" class="btn btn-sm btn-default">
+                                    <core:icon identifier="actions-caret-down" size="small" />
+                                    <f:translate key="core.core:labels.expandTable" />
+                                </a>
+                            </div>
+                        </f:if>
+
+                        <f:comment>Pagination - only in single table mode</f:comment>
+                        <f:if condition="{currentTable}">
+                            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
+                        </f:if>
+                    </div>
+                    </form>
+                </div>
+            </f:for>
+        </f:then>
+        <f:else>
+            <div class="callout callout-info">
+                <div class="callout-body">
+                    <core:icon identifier="actions-info" size="small" />
+                    <span class="ms-2">
+                        <f:translate key="records_list_types.messages:noRecords" />
+                    </span>
+                </div>
+            </div>
+        </f:else>
+    </f:if>
+
 </div>
 </records-list-types-actions>
 

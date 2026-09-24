@@ -40,6 +40,10 @@ services:
     alias: Webconsulting\RecordsListTypes\Controller\RecordListController
     public: true
 
+  Webconsulting\RecordsListTypes\Controller\ContentElement\ElementHistoryController:
+    public: true
+    tags: ['backend.controller']
+
   Webconsulting\RecordsListTypes\Controller\Ajax\ViewModeController:
     public: true
     tags: ['backend.controller']

@@ -149,44 +149,52 @@ parts of the extension's API.
 Accessibility of drag-and-drop reordering
 =========================================
 
-Dragging is never the only way to reorder records. Core's "Move up" and
-"Move down" buttons in every record's control panel work with a single
-pointer, the keyboard and assistive technology, as in the List View
-(WCAG 2.2 success criterion 2.5.7). The Grid View adds keyboard
-reordering on each card's handle. **This keyboard interaction has not been
-tested with a wide range of screen readers** and should be considered a
-best-effort implementation.
+The Grid View provides keyboard-based drag-and-drop reordering that
+aims for WCAG 2.1 compliance. However, **accessibility of the drag-and-drop
+interaction has not been tested with a wide range of assistive
+technologies** and should be considered a best-effort implementation.
 
 What is implemented
 -------------------
 
-- **Keyboard support**: Press :kbd:`Space` or :kbd:`Enter` on a card's
-  handle to grab the record, use the arrow keys, :kbd:`Home` and
-  :kbd:`End` to move it, press :kbd:`Space` or :kbd:`Enter` to drop, or
-  :kbd:`Escape` to cancel. Moving the focus away cancels as well.
-- **Semantics**: the cards are a list named after the table ("News
-  (reorderable list)"); the handle is a button named "Reorder ‹title›" and
-  described by screen-reader-only instructions.
-- **Announcements**: a polite live region announces grab, position
-  ("Position 3 of 12"), drop and cancel, and visibility changes.
-- **Focus management**: focus stays on the handle while moving and returns
-  to it after a cancel.
+- **Keyboard support**: Press :kbd:`Space` or :kbd:`Enter` on a drag
+  handle to grab a record, use arrow keys to move it, press
+  :kbd:`Space` or :kbd:`Enter` to drop, or :kbd:`Escape` to cancel.
+- **ARIA attributes**: ``role="listbox"`` on the grid container,
+  ``role="option"`` on cards, ``role="button"`` on drag handles,
+  and ``aria-grabbed`` state tracking.
+- **Live region announcements**: An ``aria-live="polite"`` region
+  announces grab, move ("Position 3 of 12"), drop, and cancel events.
+- **Focus management**: Focus returns to the drag handle after a
+  completed or cancelled reorder operation.
+- **Hidden instructions**: A screen-reader-only element describes the
+  keyboard interaction pattern.
 
 Known limitations
 -----------------
 
-- Keyboard reordering has been tested with keyboards in current Chrome,
-  Firefox and Safari; testing with NVDA, JAWS and VoiceOver has been
-  limited. Some screen readers may skip live region updates during rapid
-  key presses.
-- Touch-based assistive technologies do not reach the keyboard path; they
-  use the move buttons.
+- The drag-and-drop pattern has primarily been tested with keyboard
+  navigation in modern browsers (Chrome, Firefox, Safari). Testing
+  with dedicated screen readers (NVDA, JAWS, VoiceOver) has been
+  limited.
+- Some screen readers may not consistently announce live region
+  updates during rapid keyboard navigation.
+- The ``aria-grabbed`` attribute is deprecated in WAI-ARIA 1.1 but
+  remains in use as a pragmatic solution until broader support for
+  the ``aria-roledescription`` pattern is available.
+- Touch-based assistive technologies on tablets may not trigger the
+  keyboard drag-and-drop path.
 
 Recommendations for critical workflows
 ---------------------------------------
 
-Administrators can restrict available view modes per page via TSconfig to
-ensure only tested views are offered:
+If drag-and-drop reordering is essential for users who rely on
+assistive technology, consider using the standard List View as a
+fallback. The List View uses TYPO3 Core's native sorting mechanisms,
+which have undergone more extensive accessibility testing.
+
+Administrators can restrict available view modes per page via TSconfig
+to ensure only tested views are offered:
 
 .. code-block:: typoscript
 

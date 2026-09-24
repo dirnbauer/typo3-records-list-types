@@ -16,6 +16,7 @@ use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Localization\LanguageService;
+use TYPO3\CMS\Core\Page\PageRenderer;
 use Webconsulting\RecordsListTypes\Constants;
 use Webconsulting\RecordsListTypes\Service\RecordListRequestParameterService;
 use Webconsulting\RecordsListTypes\Service\ViewModeResolver;
@@ -35,6 +36,7 @@ final readonly class GridViewButtonBarListener
         private ViewModeResolver $viewModeResolver,
         private IconFactory $iconFactory,
         private UriBuilder $uriBuilder,
+        private PageRenderer $pageRenderer,
         private ComponentFactory $componentFactory,
         private RecordListRequestParameterService $requestParameterService,
     ) {}
@@ -51,6 +53,9 @@ final readonly class GridViewButtonBarListener
         $pageId = $this->getPageIdFromRequest($request);
         $tableName = $this->getTableNameFromRequest($request);
 
+        // Always load CSS for button styling
+        $this->pageRenderer->addCssFile('EXT:records_list_types/Resources/Public/Css/view-mode-toggle.css');
+
         // Check if toggle should be shown (requires at least 2 allowed modes)
         if (!$this->viewModeResolver->shouldShowToggle($pageId)) {
             return;
@@ -61,7 +66,7 @@ final readonly class GridViewButtonBarListener
         $viewModes = $this->viewModeResolver->getViewModesForDisplay($pageId);
 
         // Filter to only allowed modes
-        $allowedModes = array_filter($viewModes, fn(array $config): bool => $config['allowed']);
+        $allowedModes = array_filter($viewModes, fn(array $config) => $config['allowed']);
 
         // Need at least 2 modes to show a toggle
         if (count($allowedModes) < 2) {
@@ -99,7 +104,9 @@ final readonly class GridViewButtonBarListener
 
         // Get current mode config for the dropdown label
         $currentModeConfig = $allowedModes[$currentMode] ?? null;
-        $currentModeConfig ??= reset($allowedModes);
+        if ($currentModeConfig === null) {
+            $currentModeConfig = reset($allowedModes);
+        }
         if ($currentModeConfig === false) {
             return $this->componentFactory->createDropDownButton();
         }

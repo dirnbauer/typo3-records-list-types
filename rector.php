@@ -31,8 +31,10 @@ return RectorConfig::configure()
         ConvertImplicitVariablesToExplicitGlobalsRector::class,
         AddOverrideAttributeToOverriddenMethodsRector::class,
     ])
-    // Keep explicit boolean branches readable.
+    // Keep compact guard clauses and explicit boolean branches readable.
     ->withSkip([
+        \Rector\EarlyReturn\Rector\If_\ChangeOrIfContinueToMultiContinueRector::class,
+        \Rector\EarlyReturn\Rector\Return_\ReturnBinaryOrToEarlyReturnRector::class,
         \Rector\CodeQuality\Rector\If_\SimplifyIfReturnBoolRector::class,
     ])
     ->withImportNames(importShortClasses: false, removeUnusedImports: true);

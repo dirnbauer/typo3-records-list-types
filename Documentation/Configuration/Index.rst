@@ -54,8 +54,9 @@ View mode settings
 
         The pre-1.0 key :typoscript:`mod.web_list.allowedViews` is still
         read when :typoscript:`mod.web_list.viewMode.allowed` is not set,
-        but logs a deprecation once per request. It will be removed in
-        version 2.0.
+        but logs a deprecation once per request. It remains a compatibility
+        alias in version 2.0; use :typoscript:`viewMode.allowed` in new
+        configuration.
 
 .. _configuration-view-mode-table:
 

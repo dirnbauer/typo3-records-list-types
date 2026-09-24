@@ -1,32 +1,20 @@
 # Records List Types
 
-Grid, compact, teaser and custom Fluid views for the TYPO3 v14 backend
-**Records** module. Every view is built from the module's own parts, so
-editors keep the actions, states and shortcuts of the List View; only the
-arrangement of the records changes.
+Grid, compact, teaser and custom Fluid views for the TYPO3 backend **Records**
+module. Editors pick a view per table, filter records, reorder by drag and drop
+and use the native record actions; search, translations, workspaces and
+pagination share one record pipeline across all views.
 
 ## What it is
 
-- **List view** stays the Core table. **Grid** shows cards with thumbnails,
-  fields and translations, **Compact** is the record table in a denser form
-  with the record ID and missing translations, **Teaser** shows wide cards
-  with dates and teaser text.
-- **Core's controls in every view**: the record icon opens the context menu,
-  each record carries Core's control panel (edit, visibility, move up/down,
-  delete, info, history, clipboard and the actions other extensions add),
-  plus the selection bar, pagination, localization wizard, workspace states,
-  record locks and the page identity under the title.
-- **Reordering** by drag and drop, from the keyboard on a card's handle, or
-  with Core's "Move up" and "Move down".
-- **Custom views** are Page TSconfig plus a Fluid template, or the
-  `RegisterViewModesEvent` PSR-14 event. `Table/Section` and the `Record/*`
-  partials give a custom template the same frame and record parts.
+- **List view** stays the Core table; **Grid**, **Compact** and **Teaser** are
+  alternatives with thumbnails, dense rows or teaser cards.
+- **Custom views** are registered with Page TSconfig plus a Fluid template, or
+  through the `RegisterViewModesEvent` PSR-14 event.
 - **Record filters** for text, date range, visibility, select and category
-  fields, configured per table, also above the List View.
-- **Light and dark mode** from TYPO3's design tokens only; keyboard operable
-  and labelled for screen readers (WCAG 2.2 AA).
+  fields, configured per table.
 - Labels ship as XLIFF 2.0 (English source, German reviewed, French, Spanish
-  and Italian machine drafts).
+  and Italian machine drafts) and follow one terminology across all views.
 
 ## Requirements
 
@@ -37,7 +25,7 @@ arrangement of the records changes.
 ## Install
 
 ```bash
-composer require webconsulting/records-list-types:^1.3
+composer require webconsulting/records-list-types:^2.0
 vendor/bin/typo3 extension:setup -e records_list_types
 vendor/bin/typo3 cache:flush
 ```
@@ -71,16 +59,23 @@ mod.web_list.gridView.table.tt_content {
 
 Explicit view selection wins over table preferences, table defaults, the user's
 global preference and the page default. `mod.web_list.allowedViews` from
-pre-1.0 releases still works but is deprecated. Filters are documented in the
+pre-1.0 releases still works as a compatibility alias; use `viewMode.allowed`
+for new configuration. Filters are documented in the
 [filter reference](Documentation/Configuration/Filters.rst).
+
+Release `2.0.0` restores the classic Grid, Compact and Teaser markup from
+`1.2.0`. The List, Grid, Compact and Teaser choices remain in the module's
+**View** dropdown. Release it together with Records List Examples `2.0.0`;
+the companion package requires the exact matching version.
 
 ## Use
 
 Open **Content → Records** and choose a view from the **View** dropdown in the
 module header. Single-table views paginate; multi-table views show a preview
 with an *Expand table* link. Use **View → Show filters** to open the filter
-panel and the sorting mode buttons to switch between manual order and sorting
-by column.
+panel, the sorting mode toggle to switch between manual ordering and sorting by
+column, and the drag handle (mouse or keyboard: Space, arrow keys, Escape) to
+reorder records.
 
 ## Develop
 
@@ -91,12 +86,11 @@ typo3DatabaseDriver=pdo_sqlite Build/Scripts/runTests.sh -s functional
 ```
 
 PHPStan runs at level 8 with strict rules and PHPat, PHP-CS-Fixer uses the
-TYPO3 coding standards, and CI runs every suite on PHP 8.4 and 8.5, with
-functional tests on MariaDB 10.11. Labels live in
+TYPO3 coding standards, and CI covers PHP 8.3 and 8.4 (8.5 as an allowed
+failure) with functional tests on MariaDB 10.11. Labels live in
 `Resources/Private/Language/locallang.xlf`; reference them as
 `records_list_types.messages:key` in PHP and Fluid. The unit suite checks that
-every referenced key exists, that templates carry no hard-coded English, and
-that the stylesheets use TYPO3's design tokens only.
+every referenced key exists and that templates carry no hard-coded English.
 
 ## Docs
 

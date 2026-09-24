@@ -2,64 +2,69 @@
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
-<f:comment>
-    Sorting mode of a table with a manual sorting field: "Manual" (drag and
-    drop, move up/down) or "By column". The active mode opens a menu for the
-    direction or the column; the other one is a link that switches to it.
-
-    Arguments: toggle, sortingDropdown, id (unique prefix for the menu ids)
-</f:comment>
-
 <f:if condition="{toggle}">
-    <div class="btn-group rlt-sorting" role="group" aria-label="{toggle.headingLabel}">
-        <f:if condition="{toggle.manual.active}">
-            <f:then>
-                <div class="btn-group">
-                    <button type="button"
-                            class="btn btn-default dropdown-toggle active"
-                            popovertarget="{id}-manual"
-                            aria-current="true"
-                            title="{toggle.manual.title}">
-                        <core:icon identifier="actions-move" size="small" />
-                        {toggle.manual.label}
-                        <span class="visually-hidden">– {toggle.manual.stateLabel}</span>
-                    </button>
-                    <ul class="dropdown-menu" id="{id}-manual" popover>
-                        <li>
-                            <a class="dropdown-item{f:if(condition: toggle.manual.ascActive, then: ' active')}" href="{toggle.manual.ascUrl}"{f:if(condition: toggle.manual.ascActive, then: ' aria-current="true"')}>
-                                <core:icon identifier="actions-sort-amount-up" size="small" />
-                                {toggle.manual.ascLabel}
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item{f:if(condition: toggle.manual.descActive, then: ' active')}" href="{toggle.manual.descUrl}"{f:if(condition: toggle.manual.descActive, then: ' aria-current="true"')}>
-                                <core:icon identifier="actions-sort-amount-down" size="small" />
-                                {toggle.manual.descLabel}
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </f:then>
-            <f:else>
-                <a href="{toggle.manual.url}" class="btn btn-default" title="{toggle.manual.title}">
-                    <core:icon identifier="actions-move" size="small" />
-                    {toggle.manual.label}
-                </a>
-            </f:else>
-        </f:if>
-        <f:if condition="{toggle.field.active}">
-            <f:then>
-                <div class="btn-group">
-                    <f:render partial="SortingDropdown" arguments="{sortingDropdown: sortingDropdown, current: 1, id: '{id}-field'}" />
-                </div>
-            </f:then>
-            <f:else>
-                <a href="{toggle.field.url}" class="btn btn-default" title="{toggle.field.title}">
-                    <core:icon identifier="actions-filter" size="small" />
-                    {toggle.field.label}
-                </a>
-            </f:else>
-        </f:if>
+    <div class="gridview-sorting-wrapper me-2">
+        <span class="gridview-sorting-label">{toggle.headingLabel}</span>
+        <div class="gridview-sorting-controls d-flex align-items-center gap-2">
+            <div class="gridview-sorting-toggle btn-group" role="group" aria-label="{toggle.headingLabel}">
+                <f:if condition="{toggle.manual.active}">
+                    <f:then>
+                        <div class="btn-group gridview-sorting-toggle__group" role="group">
+                            <button type="button"
+                                    class="btn btn-default btn-sm gridview-sorting-toggle__btn gridview-sorting-toggle__btn--active dropdown-toggle"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    aria-pressed="true"
+                                    title="{toggle.manual.title}">
+                                <core:icon identifier="actions-move" size="small" />
+                                <span class="gridview-sorting-toggle__text">{toggle.manual.label}</span>
+                                <span class="gridview-sorting-toggle__value">{toggle.manual.stateLabel}</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item{f:if(condition: toggle.manual.ascActive, then: ' active')}" href="{toggle.manual.ascUrl}">
+                                        <core:icon identifier="actions-sort-amount-up" size="small" /> {toggle.manual.ascLabel}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item{f:if(condition: toggle.manual.descActive, then: ' active')}" href="{toggle.manual.descUrl}">
+                                        <core:icon identifier="actions-sort-amount-down" size="small" /> {toggle.manual.descLabel}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </f:then>
+                    <f:else>
+                        <a href="{toggle.manual.url}"
+                           class="btn btn-default btn-sm gridview-sorting-toggle__btn"
+                           role="button"
+                           aria-pressed="false"
+                           title="{toggle.manual.title}">
+                            <core:icon identifier="actions-move" size="small" />
+                            <span class="gridview-sorting-toggle__text">{toggle.manual.label}</span>
+                        </a>
+                    </f:else>
+                </f:if>
+
+                <f:if condition="{toggle.field.active}">
+                    <f:then>
+                        <div class="btn-group gridview-sorting-toggle__group" role="group">
+                            <f:render partial="SortingDropdown" arguments="{sortingDropdown: sortingDropdown, segmented: 1}" />
+                        </div>
+                    </f:then>
+                    <f:else>
+                        <a href="{toggle.field.url}"
+                           class="btn btn-default btn-sm gridview-sorting-toggle__btn"
+                           role="button"
+                           aria-pressed="false"
+                           title="{toggle.field.title}">
+                            <core:icon identifier="actions-filter" size="small" />
+                            <span class="gridview-sorting-toggle__text">{toggle.field.label}</span>
+                        </a>
+                    </f:else>
+                </f:if>
+            </div>
+        </div>
     </div>
 </f:if>
 

@@ -1,60 +1,127 @@
+import {LitElement, html} from 'lit-element';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
-import Icons from '@typo3/backend/icons.js';
-import {sudoModeInterceptor} from '@typo3/backend/security/sudo-mode-interceptor.js';
+import AjaxDataHandler from '@typo3/backend/ajax-data-handler.js';
+import ContextMenuActions from '@typo3/backend/context-menu-actions.js';
 
 /**
- * Modules needed only for some actions load on demand, so the element works
- * even before, or without, the modules behind them.
+ * Grid View Actions - ES Module for TYPO3 v14
+ * 
+ * Features:
+ * - Drag-and-drop reordering with CSS visual indicators
+ * - WCAG 2.1 compliant keyboard navigation for drag and drop
+ * - Screen reader support with ARIA live regions
+ * - Record actions (hide/show, delete, clipboard, info, history)
+ * - Core DataHandler move/delete actions
+ * - Pagination input handling
+ * - Scroll shadow detection for compact view
  */
-const load = async (name) => (await import(name)).default;
 
-/**
- * <records-list-types-actions> wraps one alternative view of the Records
- * module and adds what Core's own scripts do not cover there:
- *
- * - reordering cards by drag and drop, and from the keyboard on the card's
- *   handle (Space or Enter grabs, arrow keys move, Space or Enter drops,
- *   Escape cancels); Core's "Move up/down" buttons are the pointer
- *   alternative without dragging
- * - the visibility button of Core's controls on cards: Core updates table
- *   rows only
- * - the page number input of the pagination
- * - the legacy data-gridview-action buttons of custom templates
- *
- * Every listener is bound to the element itself, so several views on one
- * page (records and page translations) never handle an event twice.
- */
-class RecordsListTypesActions extends HTMLElement {
-    connectedCallback() {
-        if (this.liveRegion) {
+class GridViewActions extends LitElement {
+    constructor() {
+        super();
+
+        this.initialized = false;
+
+        // Mouse drag state
+        this.draggedCard = null;
+        this.draggedWrapper = null;
+        this.draggedTable = null;
+        this.draggedUid = null;
+        this.currentTarget = null;
+        this.currentTargetWrapper = null;
+        this.dropPosition = null;
+        
+        // Keyboard drag state
+        this.isKeyboardDragMode = false;
+        this.keyboardDragCard = null;
+        this.keyboardDragWrapper = null;
+        this.keyboardTargetIndex = null;
+        this.keyboardOriginalIndex = null;
+        
+        // Live region for screen reader announcements
+        this.liveRegion = null;
+
+        this.modulePromises = new Map();
+    }
+
+    render() {
+        return html`<slot></slot>`;
+    }
+
+    firstUpdated() {
+        this.init();
+    }
+    
+    init() {
+        if (this.initialized) {
             return;
         }
 
-        this.liveRegion = document.createElement('div');
-        this.liveRegion.className = 'visually-hidden';
-        this.liveRegion.setAttribute('role', 'status');
-        this.liveRegion.setAttribute('aria-live', 'polite');
-        this.append(this.liveRegion);
-
-        this.drag = null;
-        this.grab = null;
-
-        this.addEventListener('click', (event) => this.onClick(event));
-        this.addEventListener('keydown', (event) => this.onKeydown(event));
-        this.addEventListener('focusout', (event) => this.onFocusout(event));
-        this.addEventListener('dragstart', (event) => this.onDragStart(event));
-        this.addEventListener('dragover', (event) => this.onDragOver(event));
-        this.addEventListener('drop', (event) => this.onDrop(event));
-        this.addEventListener('dragend', () => this.endDrag());
+        this.initialized = true;
+        this.initializeLiveRegion();
+        this.initializeRecordActions();
+        this.initializeDragAndDrop();
+        this.initializeKeyboardDragDrop();
+        this.initializeScrollShadows();
+        this.initializePaginationInputs();
+        this.initializeCheckAllToggle();
     }
 
-    // -------------------------------------------------------------------------
-    // Labels and announcements
-    // -------------------------------------------------------------------------
+    loadModule(moduleName) {
+        if (!this.modulePromises.has(moduleName)) {
+            this.modulePromises.set(moduleName, import(moduleName));
+        }
+
+        return this.modulePromises.get(moduleName);
+    }
+
+    async getDefaultModule(moduleName) {
+        const module = await this.loadModule(moduleName);
+        return module.default || module;
+    }
+
+    // =========================================================================
+    // Screen Reader Support
+    // =========================================================================
 
     /**
-     * A label exported by the controller to TYPO3.lang, with ICU-style {name}
-     * placeholders replaced.
+     * Initialize the ARIA live region for screen reader announcements
+     */
+    initializeLiveRegion() {
+        this.liveRegion = document.getElementById('gridview-live-region');
+        if (!this.liveRegion) {
+            // Create live region if it doesn't exist in the HTML
+            this.liveRegion = document.createElement('div');
+            this.liveRegion.id = 'gridview-live-region';
+            this.liveRegion.className = 'visually-hidden';
+            this.liveRegion.setAttribute('aria-live', 'polite');
+            this.liveRegion.setAttribute('aria-atomic', 'true');
+            this.liveRegion.setAttribute('role', 'status');
+            document.body.appendChild(this.liveRegion);
+        }
+    }
+
+    /**
+     * Announce a message to screen readers via the live region
+     * @param {string} message - The message to announce
+     */
+    announce(message) {
+        if (this.liveRegion) {
+            // Clear and re-set to ensure announcement
+            this.liveRegion.textContent = '';
+            setTimeout(() => {
+                this.liveRegion.textContent = message;
+            }, 50);
+        }
+    }
+
+    /**
+     * Resolve a backend label registered via addInlineLanguageLabelFile()
+     * and substitute ICU-style {name} placeholders.
+     * @param {string} key - Label key (e.g. "drag.position")
+     * @param {string} fallback - Fallback text when the label is unavailable
+     * @param {Object<string, string|number>} [placeholders] - Values for {name} placeholders
+     * @returns {string}
      */
     lang(key, fallback, placeholders = {}) {
         const registered = window.TYPO3?.lang?.[key];
@@ -64,497 +131,1473 @@ class RecordsListTypesActions extends HTMLElement {
         ));
     }
 
-    announce(message) {
-        this.liveRegion.textContent = '';
-        window.setTimeout(() => {
-            this.liveRegion.textContent = message;
-        }, 50);
+    // =========================================================================
+    // Mouse Drag and Drop
+    // =========================================================================
+
+    /**
+     * Initialize mouse-based drag and drop
+     */
+    initializeDragAndDrop() {
+        const cards = document.querySelectorAll('.gridview-card[draggable="true"]');
+        
+        if (cards.length === 0) {
+            return;
+        }
+        
+        cards.forEach((card) => {
+            card.addEventListener('dragstart', this.onDragStart.bind(this));
+            card.addEventListener('dragend', this.onDragEnd.bind(this));
+            card.addEventListener('dragover', this.onDragOver.bind(this));
+            card.addEventListener('dragleave', this.onDragLeave.bind(this));
+            card.addEventListener('drop', this.onDrop.bind(this));
+        });
+
+        const grids = document.querySelectorAll('.gridview-card-grid[data-can-reorder="1"]');
+        grids.forEach((grid) => {
+            grid.addEventListener('dragover', this.onGridDragOver.bind(this));
+            grid.addEventListener('dragleave', this.onGridDragLeave.bind(this));
+            grid.addEventListener('drop', this.onGridDrop.bind(this));
+        });
+        
+        // Add event handlers for end dropzones (drop after last item)
+        const endDropzones = document.querySelectorAll('.gridview-end-dropzone');
+        endDropzones.forEach((dropzone) => {
+            dropzone.addEventListener('dragover', this.onEndDropzoneOver.bind(this));
+            dropzone.addEventListener('dragleave', this.onEndDropzoneLeave.bind(this));
+            dropzone.addEventListener('drop', this.onEndDropzoneDrop.bind(this));
+        });
     }
-
-    recordTitle(element) {
-        const record = element?.closest('[data-record-title]');
-        const title = record?.dataset.recordTitle?.trim();
-        return title || this.lang('labels.no_title', 'No title');
+    
+    onDragStart(e) {
+        const card = e.target.closest('.gridview-card');
+        if (!card) {
+            return;
+        }
+        
+        const wrapper = card.closest('.gridview-card-wrapper');
+        
+        this.draggedCard = card;
+        this.draggedWrapper = wrapper;
+        this.draggedTable = card.dataset.table;
+        this.draggedUid = card.dataset.uid;
+        
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.draggedUid);
+        
+        // Update ARIA state
+        card.setAttribute('aria-grabbed', 'true');
+        
+        // Add visual feedback after a tick (so drag image is captured)
+        setTimeout(() => {
+            card.classList.add('gridview-dragging');
+            document.body.classList.add('is-dragging');
+        }, 0);
     }
+    
+    onDragEnd(e) {
+        // Clean up all states
+        document.querySelectorAll('.gridview-dragging').forEach(el => el.classList.remove('gridview-dragging'));
+        document.querySelectorAll('.gridview-drop-before, .gridview-drop-after').forEach(el => {
+            el.classList.remove('gridview-drop-before', 'gridview-drop-after');
+        });
+        document.querySelectorAll('.gridview-end-dropzone').forEach(el => {
+            el.classList.remove('gridview-drop-active');
+        });
+        document.body.classList.remove('is-dragging');
+        
+        // Reset ARIA state
+        if (this.draggedCard) {
+            this.draggedCard.setAttribute('aria-grabbed', 'false');
+        }
+        
+        this.draggedCard = null;
+        this.draggedWrapper = null;
+        this.draggedTable = null;
+        this.draggedUid = null;
+        this.currentTarget = null;
+        this.currentTargetWrapper = null;
+        this.dropPosition = null;
+    }
+    
+    /**
+     * Handle dragover on end dropzone
+     */
+    onEndDropzoneOver(e) {
+        e.preventDefault();
+        
+        const dropzone = e.target.closest('.gridview-end-dropzone');
+        if (!dropzone) return;
+        if (dropzone.dataset.table !== this.draggedTable) return;
+        
+        e.dataTransfer.dropEffect = 'move';
+        
+        this.clearDropIndicators();
+        
+        // Activate this dropzone
+        dropzone.classList.add('gridview-drop-active');
+        this.currentTarget = null;
+        this.currentTargetWrapper = null;
+        this.dropPosition = 'end';
+    }
+    
+    /**
+     * Handle dragleave on end dropzone
+     */
+    onEndDropzoneLeave(e) {
+        const dropzone = e.target.closest('.gridview-end-dropzone');
+        if (!dropzone) return;
+        
+        // Only clear if actually leaving (not entering a child)
+        const related = e.relatedTarget;
+        if (related && dropzone.contains(related)) return;
+        
+        dropzone.classList.remove('gridview-drop-active');
+        if (this.dropPosition === 'end') {
+            this.dropPosition = null;
+        }
+    }
+    
+    /**
+     * Handle drop on end dropzone
+     */
+    onEndDropzoneDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const dropzone = e.target.closest('.gridview-end-dropzone');
+        if (!dropzone) return;
+        if (dropzone.dataset.table !== this.draggedTable) return;
 
-    // -------------------------------------------------------------------------
-    // Clicks
-    // -------------------------------------------------------------------------
+        const grid = this.getGridElement(dropzone);
+        const fallbackPid = this.draggedCard?.dataset.pid || this.keyboardDragCard?.dataset.pid || null;
+        const moveTarget = this.calculateEndMoveTarget(grid, fallbackPid);
 
-    onClick(event) {
-        const visibilityButton = event.target.closest('button[data-datahandler-action="visibility"]');
-        if (visibilityButton && this.contains(visibilityButton) && !visibilityButton.closest('tr')) {
-            // Core's recordlist.js handles table rows; cards are ours.
-            event.preventDefault();
-            event.stopPropagation();
-            this.toggleVisibility(visibilityButton);
+        if (moveTarget === null || moveTarget === '') {
+            console.error('[GridView] No move target found for end dropzone');
             return;
         }
 
-        const legacyButton = event.target.closest('[data-gridview-action]');
-        if (legacyButton && this.contains(legacyButton)) {
-            event.preventDefault();
-            this.runLegacyAction(legacyButton);
-        }
+        this.executeMove(this.draggedTable, this.draggedUid, moveTarget);
     }
 
-    async toggleVisibility(button) {
-        const record = button.closest('[data-table][data-uid]');
-        const table = record?.dataset.table;
-        const uid = Number.parseInt(record?.dataset.uid ?? '', 10);
-        const url = window.TYPO3?.settings?.ajaxUrls?.record_toggle_visibility;
-        if (!table || !uid || !url) {
+    /**
+     * Handle dragover on the grid itself so gaps and row ends are valid targets.
+     */
+    onGridDragOver(e) {
+        if (!this.draggedCard) {
             return;
         }
 
-        button.disabled = true;
-        const action = button.dataset.datahandlerStatus === 'visible' ? 'hide' : 'show';
-        try {
-            const response = await new AjaxRequest(url)
-                .addMiddleware(sudoModeInterceptor)
-                .post({table, uid, action});
-            const data = await response.resolve();
-            const hidden = !data.isVisible;
+        const grid = e.target.closest('.gridview-card-grid');
+        if (!grid || grid.dataset.table !== this.draggedTable) {
+            this.clearCurrentDropTarget();
+            return;
+        }
 
-            button.dataset.datahandlerStatus = hidden ? 'hidden' : 'visible';
-            button.title = hidden ? button.dataset.datahandlerHiddenLabel : button.dataset.datahandlerVisibleLabel;
-            await this.replaceIcon(button.querySelector('.t3js-icon'), hidden ? 'actions-edit-unhide' : 'actions-edit-hide');
-            this.replaceRecordIcon(record, data.icon);
-            this.updateHiddenState(record, hidden);
-            if (table === 'pages') {
-                top.document.dispatchEvent(new CustomEvent('typo3:pagetree:refresh'));
+        if (e.target.closest('.gridview-end-dropzone')) {
+            return;
+        }
+
+        const target = this.resolveGridDropTarget(grid, e.clientX, e.clientY);
+        if (!target) {
+            this.clearCurrentDropTarget();
+            return;
+        }
+
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.applyDropTarget(target.card, target.wrapper, target.position);
+    }
+
+    /**
+     * Clear the synthetic row-end target when the pointer leaves the grid.
+     */
+    onGridDragLeave(e) {
+        const grid = e.target.closest('.gridview-card-grid');
+        if (!grid) {
+            return;
+        }
+
+        const related = e.relatedTarget;
+        if (related && grid.contains(related)) {
+            return;
+        }
+
+        this.clearCurrentDropTarget();
+    }
+
+    /**
+     * Handle drops in grid gaps, including the empty space after the last card in a row.
+     */
+    onGridDrop(e) {
+        if (!this.draggedCard) {
+            return;
+        }
+
+        const grid = e.target.closest('.gridview-card-grid');
+        if (!grid || grid.dataset.table !== this.draggedTable) {
+            return;
+        }
+
+        if (e.target.closest('.gridview-end-dropzone')) {
+            return;
+        }
+
+        const target = this.resolveGridDropTarget(grid, e.clientX, e.clientY);
+        if (!target) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetCard = target.card;
+        if (!targetCard || targetCard === this.draggedCard) {
+            return;
+        }
+
+        const moveTarget = this.calculateMoveTarget(
+            targetCard,
+            target.position,
+            targetCard.dataset.uid,
+            targetCard.dataset.pid
+        );
+
+        this.executeMove(this.draggedTable, this.draggedUid, moveTarget);
+    }
+    
+    onDragOver(e) {
+        e.preventDefault();
+        
+        const card = e.target.closest('.gridview-card');
+        if (!card || card === this.draggedCard) return;
+        if (card.dataset.table !== this.draggedTable) {
+            this.clearCurrentDropTarget();
+            return;
+        }
+        if (!this.isCompatibleReorderTarget(card)) {
+            this.clearCurrentDropTarget();
+            return;
+        }
+
+        const wrapper = card.closest('.gridview-card-wrapper');
+
+        e.dataTransfer.dropEffect = 'move';
+
+        const position = this.resolveCardDropPosition(card, e.clientX, e.clientY);
+        this.applyDropTarget(card, wrapper, position);
+    }
+
+    onDragLeave(e) {
+        const card = e.target.closest('.gridview-card');
+        if (!card) return;
+        
+        const wrapper = card.closest('.gridview-card-wrapper');
+        
+        // Only clear if actually leaving (not entering a child)
+        const related = e.relatedTarget;
+        if (related && card.contains(related)) return;
+        
+        wrapper.classList.remove('gridview-drop-before', 'gridview-drop-after');
+        if (this.currentTargetWrapper === wrapper) {
+            this.currentTarget = null;
+            this.currentTargetWrapper = null;
+            this.dropPosition = null;
+        }
+    }
+    
+    onDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const targetCard = e.target.closest('.gridview-card');
+        
+        if (!targetCard) {
+            return;
+        }
+        if (targetCard === this.draggedCard) {
+            return;
+        }
+        if (targetCard.dataset.table !== this.draggedTable) {
+            return;
+        }
+        if (!this.isCompatibleReorderTarget(targetCard)) {
+            return;
+        }
+        
+        const targetUid = targetCard.dataset.uid;
+        const targetPid = targetCard.dataset.pid;
+        
+        // Default to 'after' if position wasn't determined
+        const position = this.resolveCardDropPosition(targetCard, e.clientX, e.clientY) || this.dropPosition || 'after';
+        
+        // Calculate TYPO3 move target
+        const moveTarget = this.calculateMoveTarget(targetCard, position, targetUid, targetPid);
+        
+        this.executeMove(this.draggedTable, this.draggedUid, moveTarget);
+    }
+
+    // =========================================================================
+    // Keyboard Drag and Drop (WCAG 2.1 Compliant)
+    // =========================================================================
+
+    /**
+     * Initialize keyboard-accessible drag and drop
+     */
+    initializeKeyboardDragDrop() {
+        const dragHandles = document.querySelectorAll('.gridview-card__drag[role="button"]');
+        
+        if (dragHandles.length === 0) {
+            return;
+        }
+        
+        dragHandles.forEach((handle) => {
+            // Handle keyboard events on drag handle
+            handle.addEventListener('keydown', this.onDragHandleKeydown.bind(this));
+        });
+        
+        // Global keyboard handler for arrow keys during drag mode
+        document.addEventListener('keydown', this.onGlobalKeydown.bind(this));
+    }
+
+    /**
+     * Handle keydown on drag handle (Space/Enter to start drag)
+     */
+    onDragHandleKeydown(e) {
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            // Do not let the document handler also drop a record just grabbed here.
+            e.stopPropagation();
+            
+            const handle = e.target.closest('.gridview-card__drag');
+            const card = handle?.closest('.gridview-card');
+            const wrapper = card?.closest('.gridview-card-wrapper');
+            
+            if (!card || !wrapper) return;
+            
+            if (this.isKeyboardDragMode && this.keyboardDragCard === card) {
+                // Already in drag mode for this card - drop it
+                this.keyboardDrop();
+            } else if (this.isKeyboardDragMode) {
+                // Cancel current drag and start new one
+                this.keyboardCancelDrag();
+                this.keyboardStartDrag(card, wrapper, handle);
+            } else {
+                // Start keyboard drag
+                this.keyboardStartDrag(card, wrapper, handle);
             }
-
-            const title = this.recordTitle(record);
-            this.announce(hidden
-                ? this.lang('a11y.recordHidden', '{title} is now hidden', {title})
-                : this.lang('a11y.recordVisible', '{title} is now visible', {title}));
-        } catch (error) {
-            await this.notifyError(this.lang('notification.updateFailed', 'Update failed'), error);
-        } finally {
-            button.disabled = false;
-        }
-    }
-
-    async replaceIcon(icon, identifier) {
-        if (!icon) {
-            return;
-        }
-        const markup = await Icons.getIcon(identifier, Icons.sizes.small);
-        icon.replaceWith(document.createRange().createContextualFragment(markup));
-    }
-
-    replaceRecordIcon(record, markup) {
-        const icon = record.querySelector('.rlt-record-icon .t3js-icon');
-        if (icon && typeof markup === 'string' && markup !== '') {
-            icon.replaceWith(document.createRange().createContextualFragment(markup));
-        }
-    }
-
-    updateHiddenState(record, hidden) {
-        for (const name of ['rlt-card', 'rlt-teaser']) {
-            if (record.classList.contains(name)) {
-                record.classList.toggle(`${name}--hidden`, hidden);
-            }
-        }
-
-        const badges = record.querySelector('.rlt-badges');
-        const badge = badges?.querySelector('[data-rlt-hidden-badge]');
-        if (hidden && badges && !badge) {
-            const newBadge = document.createElement('span');
-            newBadge.className = 'badge badge-warning';
-            newBadge.dataset.rltHiddenBadge = '';
-            newBadge.textContent = this.lang('state.hidden', 'Hidden');
-            badges.prepend(newBadge);
-        } else if (!hidden) {
-            badge?.remove();
         }
     }
 
     /**
-     * Buttons of templates written for records_list_types 1.x.
+     * Handle global keydown for arrow navigation during keyboard drag
+     * Note: wrappers.length is the number of card positions
+     * Index wrappers.length represents the "end" position (after last card)
      */
-    async runLegacyAction(button) {
-        const table = button.dataset.table;
-        const uid = button.dataset.uid;
-        const action = button.dataset.gridviewAction;
-        const ContextMenuActions = ['delete', 'copy', 'cut'].includes(action)
-            ? await load('@typo3/backend/context-menu-actions.js')
-            : null;
-        switch (action) {
-            case 'hide':
-            case 'show':
-                this.toggleVisibilityLegacy(table, uid, action, button);
-                break;
-            case 'delete':
-                ContextMenuActions.deleteRecord(table, uid, {
-                    title: this.lang('action.delete', 'Delete record'),
-                    message: this.lang('action.delete.confirm', 'Are you sure you want to delete “{title}”?', {title: this.recordTitle(button)}),
-                    buttonCloseText: this.lang('action.cancel', 'Cancel'),
-                    buttonOkText: this.lang('action.delete.confirmButton', 'Delete'),
-                });
-                break;
-            case 'copy':
-                ContextMenuActions.copy(table, uid);
-                break;
-            case 'cut':
-                ContextMenuActions.cut(table, uid);
-                break;
-            case 'info':
-                top.TYPO3?.InfoWindow?.showItem(table, uid);
-                break;
-            case 'history': {
-                const moduleUrl = top.TYPO3?.settings?.RecordHistory?.moduleUrl;
-                if (moduleUrl) {
-                    const url = new URL(moduleUrl, window.location.origin);
-                    url.searchParams.set('element', `${table}:${uid}`);
-                    url.searchParams.set('returnUrl', window.location.pathname + window.location.search);
-                    window.location.href = url.toString();
-                }
-                break;
-            }
-        }
-    }
-
-    async toggleVisibilityLegacy(table, uid, action, button) {
-        const url = window.TYPO3?.settings?.ajaxUrls?.record_toggle_visibility;
-        if (!url || !table || !uid) {
-            return;
-        }
-        button.disabled = true;
-        try {
-            const response = await new AjaxRequest(url)
-                .addMiddleware(sudoModeInterceptor)
-                .post({table, uid: Number.parseInt(uid, 10), action});
-            await response.resolve();
-            window.location.reload();
-        } catch (error) {
-            button.disabled = false;
-            await this.notifyError(this.lang('notification.updateFailed', 'Update failed'), error);
-        }
-    }
-
-    async notifyError(title, error) {
-        const Notification = await load('@typo3/backend/notification.js');
-        let messages = [];
-        if (typeof error?.resolve === 'function') {
-            try {
-                messages = (await error.resolve())?.messages ?? [];
-            } catch {
-                messages = [];
-            }
-        }
-        if (messages.length === 0) {
-            Notification.error(title, error?.message || this.lang('notification.requestFailed', 'Request failed'));
-            return;
-        }
-        for (const message of messages) {
-            Notification.error(message.title || title, message.message || this.lang('notification.unknownError', 'Unknown error'));
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Keyboard: pagination input and reordering
-    // -------------------------------------------------------------------------
-
-    onKeydown(event) {
-        const pageInput = event.target.closest('[data-pagination-input]');
-        if (pageInput && event.key === 'Enter') {
-            event.preventDefault();
-            this.goToPage(pageInput);
-            return;
-        }
-
-        if (this.grab) {
-            this.onGrabKeydown(event);
-            return;
-        }
-
-        const handle = event.target.closest('[data-rlt-drag-handle]');
-        if (handle && (event.key === ' ' || event.key === 'Enter')) {
-            event.preventDefault();
-            this.startGrab(handle);
-        }
-    }
-
-    onFocusout(event) {
-        if (this.grab && !this.grab.item.contains(event.relatedTarget)) {
-            this.cancelGrab(false);
-        }
-    }
-
-    goToPage(input) {
-        const page = Number.parseInt(input.value, 10);
-        const max = Number.parseInt(input.max, 10) || 1;
-        if (Number.isNaN(page) || page < 1 || page > max) {
-            input.value = input.defaultValue;
-            return;
-        }
-        const url = new URL(input.dataset.paginationUrl, window.location.origin);
-        url.searchParams.set(`pointer[${input.dataset.paginationTable}]`, String(page));
-        window.location.href = url.toString();
-    }
-
-    startGrab(handle) {
-        const item = handle.closest('.rlt-cards-item');
-        const list = item?.closest('.rlt-cards');
-        if (!item || !list) {
-            return;
-        }
-        const items = this.compatibleItems(list, item);
-        this.grab = {handle, item, list, items, from: items.indexOf(item), to: items.indexOf(item)};
-        item.classList.add('rlt-is-grabbed');
-        this.announce(this.lang('drag.grabbed', '{title} grabbed. Use the arrow keys to move it.', {title: this.recordTitle(handle)}));
-    }
-
-    onGrabKeydown(event) {
-        const {items} = this.grab;
-        let target = this.grab.to;
-        switch (event.key) {
+    onGlobalKeydown(e) {
+        if (!this.isKeyboardDragMode) return;
+        
+        const grid = this.keyboardDragWrapper?.closest('.gridview-card-grid');
+        if (!grid) return;
+        
+        const wrappers = this.getCompatibleReorderWrappers(grid);
+        const hasEndDropzone = grid.querySelector('.gridview-end-dropzone') !== null;
+        const maxIndex = hasEndDropzone ? wrappers.length : wrappers.length - 1;
+        const currentIndex = this.keyboardTargetIndex;
+        let newIndex = currentIndex;
+        
+        switch (e.key) {
             case 'ArrowUp':
             case 'ArrowLeft':
-                target = Math.max(0, target - 1);
+                e.preventDefault();
+                newIndex = Math.max(0, currentIndex - 1);
                 break;
             case 'ArrowDown':
             case 'ArrowRight':
-                target = Math.min(items.length - 1, target + 1);
+                e.preventDefault();
+                newIndex = Math.min(maxIndex, currentIndex + 1);
                 break;
             case 'Home':
-                target = 0;
+                e.preventDefault();
+                newIndex = 0;
                 break;
             case 'End':
-                target = items.length - 1;
+                e.preventDefault();
+                newIndex = maxIndex;
                 break;
             case 'Escape':
-                event.preventDefault();
-                this.cancelGrab(true);
+                e.preventDefault();
+                this.keyboardCancelDrag();
                 return;
             case ' ':
             case 'Enter':
-                event.preventDefault();
-                this.dropGrab();
+                e.preventDefault();
+                this.keyboardDrop();
                 return;
             default:
                 return;
         }
-        event.preventDefault();
-        if (target === this.grab.to) {
-            return;
+        
+        if (newIndex !== currentIndex) {
+            this.keyboardMoveTo(newIndex, wrappers);
         }
-        this.grab.to = target;
+    }
+
+    /**
+     * Start keyboard drag mode
+     */
+    keyboardStartDrag(card, wrapper, handle) {
+        const grid = wrapper.closest('.gridview-card-grid');
+        if (!grid) return;
+
+        this.keyboardDragCard = card;
+        this.keyboardDragWrapper = wrapper;
+        const wrappers = this.getCompatibleReorderWrappers(grid);
+        const index = wrappers.indexOf(wrapper);
+        
+        this.isKeyboardDragMode = true;
+        this.keyboardOriginalIndex = index;
+        this.keyboardTargetIndex = index;
+        
+        // Visual feedback
+        card.classList.add('gridview-keyboard-dragging');
+        card.setAttribute('aria-grabbed', 'true');
+        
+        // Announce to screen reader
+        const title = card.dataset.recordTitle || this.lang('labels.no_title', 'No title');
+        this.announce(this.lang('drag.grabbed', '{title} grabbed. Use the arrow keys to move it.', {title}));
+    }
+
+    /**
+     * Move to a new position during keyboard drag
+     * Note: newIndex can be wrappers.length to indicate "end" position
+     */
+    keyboardMoveTo(newIndex, wrappers) {
+        const grid = this.keyboardDragWrapper?.closest('.gridview-card-grid');
+        
         this.clearDropIndicators();
-        if (target !== this.grab.from) {
-            items[target].classList.add(target < this.grab.from ? 'rlt-drop-before' : 'rlt-drop-after');
+        document.querySelectorAll('.gridview-end-dropzone').forEach(el => {
+            el.classList.remove('gridview-keyboard-target');
+        });
+        
+        this.keyboardTargetIndex = newIndex;
+        
+        // Check if targeting end position
+        if (newIndex >= wrappers.length) {
+            // End position - highlight the end dropzone
+            const endDropzone = grid?.querySelector('.gridview-end-dropzone');
+            if (endDropzone) {
+                endDropzone.classList.add('gridview-keyboard-target');
+            }
+            // Announce "end" position
+            this.announce(this.lang('drag.endPosition', 'End of the list (after the last record)'));
+        } else {
+            // Show drop indicator on target wrapper
+            const targetWrapper = wrappers[newIndex];
+            if (targetWrapper && targetWrapper !== this.keyboardDragWrapper) {
+                // Determine if dropping before or after
+                if (newIndex < this.keyboardOriginalIndex) {
+                    targetWrapper.classList.add('gridview-drop-before');
+                } else {
+                    targetWrapper.classList.add('gridview-drop-after');
+                }
+            }
+            // Announce position
+            this.announce(this.lang('drag.position', 'Position {position} of {total}', {position: newIndex + 1, total: wrappers.length}));
         }
-        this.announce(this.lang('drag.position', 'Position {position} of {total}', {position: target + 1, total: items.length}));
     }
 
-    dropGrab() {
-        const {item, list, items, from, to} = this.grab;
-        this.releaseGrab();
-        if (to === from) {
-            this.announce(this.lang('drag.cancelled', 'Reordering cancelled'));
+    /**
+     * Drop the item at the current keyboard target position
+     * Note: targetIndex can be wrappers.length to indicate "end" position
+     */
+    keyboardDrop() {
+        if (!this.isKeyboardDragMode || !this.keyboardDragCard) return;
+        
+        const grid = this.keyboardDragWrapper.closest('.gridview-card-grid');
+        if (!grid) {
+            this.keyboardCancelDrag();
             return;
         }
-        const targetItem = items[to];
-        this.announce(this.lang('drag.moved', 'Record moved to position {position}', {position: to + 1}));
-        this.executeMove(item, this.moveTarget(list, item, targetItem, to < from ? 'before' : 'after'));
+        
+        const wrappers = this.getCompatibleReorderWrappers(grid);
+        const targetIndex = this.keyboardTargetIndex;
+        const originalIndex = this.keyboardOriginalIndex;
+        
+        // If dropped at same position, just cancel
+        if (targetIndex === originalIndex) {
+            this.keyboardCancelDrag();
+            return;
+        }
+        
+        const draggedCard = this.keyboardDragCard;
+        const table = draggedCard.dataset.table;
+        const uid = draggedCard.dataset.uid;
+        
+        let moveTarget;
+        let announcePosition;
+        
+        // Check if dropping at end position
+        if (targetIndex >= wrappers.length) {
+            moveTarget = this.calculateEndMoveTarget(grid, draggedCard.dataset.pid || null);
+            if (moveTarget === null || moveTarget === '') {
+                console.error('[GridView] No move target found on grid');
+                this.keyboardCancelDrag();
+                return;
+            }
+            announcePosition = 'end';
+        } else {
+            // Get the target card and calculate move target
+            const targetWrapper = wrappers[targetIndex];
+            const targetCard = targetWrapper?.querySelector('.gridview-card');
+            
+            if (!targetCard) {
+                this.keyboardCancelDrag();
+                return;
+            }
+            
+            const targetUid = targetCard.dataset.uid;
+            const targetPid = targetCard.dataset.pid;
+            
+            // Determine position (before or after target)
+            const position = targetIndex < originalIndex ? 'before' : 'after';
+            
+            // Calculate TYPO3 move target
+            moveTarget = this.calculateMoveTarget(targetCard, position, targetUid, targetPid);
+            announcePosition = targetIndex + 1;
+        }
+        
+        // Clean up keyboard drag state first
+        this.keyboardCleanup();
+        
+        // Announce and execute move
+        this.announce(announcePosition === 'end'
+            ? this.lang('drag.endPosition', 'End of the list (after the last record)')
+            : this.lang('drag.moved', 'Record moved to position {position}', {position: announcePosition}));
+        this.executeMove(table, uid, moveTarget);
     }
 
-    cancelGrab(announce) {
-        const handle = this.grab.handle;
-        this.releaseGrab();
-        if (announce) {
-            this.announce(this.lang('drag.cancelled', 'Reordering cancelled'));
+    /**
+     * Cancel keyboard drag operation
+     */
+    keyboardCancelDrag() {
+        if (!this.isKeyboardDragMode) return;
+        
+        // Focus back on the drag handle
+        const handle = this.keyboardDragCard?.querySelector('.gridview-card__drag');
+        
+        this.keyboardCleanup();
+        
+        this.announce(this.lang('drag.cancelled', 'Reordering cancelled'));
+        
+        // Return focus to handle
+        if (handle) {
             handle.focus();
         }
     }
 
-    releaseGrab() {
-        this.grab.item.classList.remove('rlt-is-grabbed');
-        this.clearDropIndicators();
-        this.grab = null;
-    }
-
-    // -------------------------------------------------------------------------
-    // Pointer: drag and drop
-    // -------------------------------------------------------------------------
-
-    onDragStart(event) {
-        const card = event.target.closest?.('.rlt-card[draggable="true"]');
-        const item = card?.closest('.rlt-cards-item');
-        const list = item?.closest('.rlt-cards[data-can-reorder="1"]');
-        if (!item || !list) {
-            return;
-        }
-        this.drag = {item, list, items: this.compatibleItems(list, item), target: null, position: null};
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', item.dataset.uid ?? '');
-        window.setTimeout(() => {
-            item.classList.add('rlt-is-dragging');
-            this.dropzone(list)?.removeAttribute('hidden');
-        }, 0);
-    }
-
-    onDragOver(event) {
-        if (!this.drag) {
-            return;
-        }
-        const dropzone = event.target.closest?.('[data-rlt-dropzone]');
-        if (dropzone && dropzone === this.dropzone(this.drag.list)) {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-            this.clearDropIndicators();
-            dropzone.classList.add('rlt-drop-active');
-            this.drag.target = null;
-            this.drag.position = 'end';
-            return;
-        }
-
-        const target = this.dropTarget(event.clientX, event.clientY);
-        if (!target) {
-            return;
-        }
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        if (target.item !== this.drag.target || target.position !== this.drag.position) {
-            this.clearDropIndicators();
-            target.item.classList.add(`rlt-drop-${target.position}`);
-            this.drag.target = target.item;
-            this.drag.position = target.position;
-        }
-    }
-
-    onDrop(event) {
-        if (!this.drag) {
-            return;
-        }
-        event.preventDefault();
-        const {item, list, target, position} = this.drag;
-        this.endDrag();
-        if (position === 'end') {
-            const items = this.compatibleItems(list, item);
-            const last = items[items.length - 1];
-            if (last && last !== item) {
-                this.executeMove(item, this.moveTarget(list, item, last, 'after'));
-            }
-            return;
-        }
-        if (target && target !== item) {
-            this.executeMove(item, this.moveTarget(list, item, target, position));
-        }
-    }
-
-    endDrag() {
-        if (!this.drag) {
-            return;
-        }
-        this.drag.item.classList.remove('rlt-is-dragging');
-        const dropzone = this.dropzone(this.drag.list);
-        dropzone?.setAttribute('hidden', '');
-        dropzone?.classList.remove('rlt-drop-active');
-        this.clearDropIndicators();
-        this.drag = null;
-    }
-
     /**
-     * The card under the pointer, or the closest one in the row the pointer is
-     * in, so gaps between cards and the end of a row are valid targets too.
+     * Clean up keyboard drag state
      */
-    dropTarget(x, y) {
-        const entries = this.drag.items
-            .filter((item) => item !== this.drag.item)
-            .map((item) => ({item, rect: item.getBoundingClientRect()}))
-            .filter(({rect}) => rect.width > 0);
-        if (entries.length === 0) {
+    keyboardCleanup() {
+        // Clear visual states
+        document.querySelectorAll('.gridview-keyboard-dragging').forEach(el => {
+            el.classList.remove('gridview-keyboard-dragging');
+            el.setAttribute('aria-grabbed', 'false');
+        });
+        document.querySelectorAll('.gridview-drop-before, .gridview-drop-after').forEach(el => {
+            el.classList.remove('gridview-drop-before', 'gridview-drop-after');
+        });
+        document.querySelectorAll('.gridview-end-dropzone').forEach(el => {
+            el.classList.remove('gridview-keyboard-target', 'gridview-drop-active');
+        });
+        
+        // Reset state
+        this.isKeyboardDragMode = false;
+        this.keyboardDragCard = null;
+        this.keyboardDragWrapper = null;
+        this.keyboardOriginalIndex = null;
+        this.keyboardTargetIndex = null;
+    }
+
+    // =========================================================================
+    // Shared Move Logic
+    // =========================================================================
+
+    applyDropTarget(card, wrapper, position) {
+        if (!card || !wrapper || !position) {
+            return;
+        }
+
+        if (this.currentTargetWrapper === wrapper && this.dropPosition === position) {
+            return;
+        }
+
+        this.clearDropIndicators();
+        this.currentTarget = card;
+        this.currentTargetWrapper = wrapper;
+        this.dropPosition = position;
+        wrapper.classList.add(`gridview-drop-${position}`);
+    }
+
+    getGridElement(element) {
+        if (!element || typeof element.closest !== 'function') {
             return null;
         }
-        const rtl = window.getComputedStyle(this.drag.list).direction === 'rtl';
-        const rowOf = (rect) => Math.round(rect.top);
-        const nearestRowTop = entries
-            .map(({rect}) => ({top: rowOf(rect), distance: y < rect.top ? rect.top - y : Math.max(0, y - rect.bottom)}))
-            .sort((a, b) => a.distance - b.distance)[0].top;
-        const row = entries
-            .filter(({rect}) => Math.abs(rowOf(rect) - nearestRowTop) <= 8)
-            .sort((a, b) => (rtl ? b.rect.left - a.rect.left : a.rect.left - b.rect.left));
-        for (const entry of row) {
-            const middle = entry.rect.left + entry.rect.width / 2;
-            if (rtl ? x > middle : x < middle) {
-                return {item: entry.item, position: 'before'};
-            }
+
+        return element.closest('.gridview-card-grid');
+    }
+
+    getActiveDraggedCard() {
+        return this.draggedCard || this.keyboardDragCard;
+    }
+
+    getReorderGroup(card) {
+        return card?.dataset?.reorderGroup || '';
+    }
+
+    isSameReorderContext(card, draggedCard = this.getActiveDraggedCard()) {
+        if (!card || !draggedCard) {
+            return false;
         }
-        return {item: row[row.length - 1].item, position: 'after'};
+
+        return card.dataset.table === draggedCard.dataset.table
+            && this.getReorderGroup(card) === this.getReorderGroup(draggedCard);
     }
 
-    /**
-     * DataHandler's move target: "-uid" puts a record after that record, a
-     * page id puts it first on the page. In descending order the visible
-     * order is the reverse of the sorting field.
-     */
-    moveTarget(list, item, targetItem, position) {
-        const items = this.compatibleItems(list, item).filter((candidate) => candidate !== item);
-        const index = items.indexOf(targetItem);
-        const descending = list.dataset.sortDirection === 'desc';
-        const after = descending ? position === 'before' : position === 'after';
-        if (after) {
-            return `-${targetItem.dataset.uid}`;
+    isCompatibleReorderTarget(card) {
+        const draggedCard = this.getActiveDraggedCard();
+        return card !== draggedCard && this.isSameReorderContext(card, draggedCard);
+    }
+
+    getCompatibleReorderWrappers(grid) {
+        const draggedCard = this.getActiveDraggedCard();
+        if (!grid || !draggedCard) {
+            return [];
         }
-        const neighbour = descending ? items[index + 1] : items[index - 1];
-        if (neighbour) {
-            return `-${neighbour.dataset.uid}`;
-        }
-        return item.querySelector('.rlt-card')?.dataset.pid || list.dataset.pageId;
-    }
 
-    /**
-     * Cards the dragged card may be dropped between: same table and, for
-     * content elements, the same column (DataHandler rejects other moves).
-     */
-    compatibleItems(list, item) {
-        const group = item.querySelector('.rlt-card')?.dataset.reorderGroup ?? '';
-        return Array.from(list.querySelectorAll(':scope > .rlt-cards-item'))
-            .filter((candidate) => (candidate.querySelector('.rlt-card')?.dataset.reorderGroup ?? '') === group);
-    }
-
-    dropzone(list) {
-        const sibling = list.nextElementSibling;
-        return sibling?.matches('[data-rlt-dropzone]') ? sibling : null;
-    }
-
-    clearDropIndicators() {
-        this.querySelectorAll('.rlt-drop-before, .rlt-drop-after').forEach((element) => {
-            element.classList.remove('rlt-drop-before', 'rlt-drop-after');
+        return Array.from(grid.querySelectorAll('.gridview-card-wrapper')).filter(wrapper => {
+            const card = wrapper.querySelector('.gridview-card');
+            return card === draggedCard || this.isCompatibleReorderTarget(card);
         });
     }
 
-    async executeMove(item, target) {
-        const card = item.querySelector('.rlt-card');
-        const table = card?.dataset.table;
-        const uid = card?.dataset.uid;
-        if (!table || !uid || !target) {
-            return;
-        }
-        item.classList.add('rlt-is-dragging');
-        try {
-            const AjaxDataHandler = await load('@typo3/backend/ajax-data-handler.js');
-            const data = await AjaxDataHandler.process({cmd: {[table]: {[uid]: {move: String(target)}}}});
-            if (data?.hasErrors) {
-                item.classList.remove('rlt-is-dragging');
+    getCompatibleReorderEntries(grid, includeDragged = false) {
+        return this.getCompatibleReorderWrappers(grid)
+            .filter(wrapper => includeDragged || wrapper !== this.draggedWrapper)
+            .map(wrapper => {
+                const card = wrapper.querySelector('.gridview-card');
+                return {
+                    wrapper,
+                    card,
+                    rect: wrapper.getBoundingClientRect()
+                };
+            })
+            .filter(entry => entry.card && entry.rect.width > 0 && entry.rect.height > 0);
+    }
+
+    isGridMultiColumn(grid) {
+        const columns = window.getComputedStyle(grid).gridTemplateColumns
+            .split(' ')
+            .filter(column => column && column !== 'none');
+
+        return columns.length > 1;
+    }
+
+    isRtlGrid(grid) {
+        return window.getComputedStyle(grid).direction === 'rtl';
+    }
+
+    getGridRows(entries) {
+        const rowTolerance = 8;
+        const rows = [];
+        const sortedEntries = entries.slice().sort((a, b) => a.rect.top - b.rect.top || a.rect.left - b.rect.left);
+
+        sortedEntries.forEach((entry) => {
+            const row = rows.find(candidate => Math.abs(candidate.top - entry.rect.top) <= rowTolerance);
+            if (row) {
+                row.entries.push(entry);
+                row.top = Math.min(row.top, entry.rect.top);
+                row.bottom = Math.max(row.bottom, entry.rect.bottom);
                 return;
             }
-            if (table === 'pages') {
-                top.document.dispatchEvent(new CustomEvent('typo3:pagetree:refresh'));
+
+            rows.push({
+                top: entry.rect.top,
+                bottom: entry.rect.bottom,
+                entries: [entry]
+            });
+        });
+
+        return rows.sort((a, b) => a.top - b.top);
+    }
+
+    getClosestGridRow(rows, clientY) {
+        let closestRow = null;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        rows.forEach((row) => {
+            let distance = 0;
+            if (clientY < row.top) {
+                distance = row.top - clientY;
+            } else if (clientY > row.bottom) {
+                distance = clientY - row.bottom;
             }
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestRow = row;
+            }
+        });
+
+        return closestRow;
+    }
+
+    resolveRowDropTarget(row, clientX, isRtl = false) {
+        if (!row || row.entries.length === 0) {
+            return null;
+        }
+
+        const entries = row.entries.slice().sort((a, b) => {
+            return isRtl ? b.rect.left - a.rect.left : a.rect.left - b.rect.left;
+        });
+
+        for (const entry of entries) {
+            const midpoint = entry.rect.left + entry.rect.width / 2;
+            const isBeforeEntry = isRtl ? clientX > midpoint : clientX < midpoint;
+
+            if (isBeforeEntry) {
+                return {
+                    wrapper: entry.wrapper,
+                    card: entry.card,
+                    position: 'before'
+                };
+            }
+        }
+
+        const lastEntry = entries[entries.length - 1];
+        return {
+            wrapper: lastEntry.wrapper,
+            card: lastEntry.card,
+            position: 'after'
+        };
+    }
+
+    resolveGridDropTarget(grid, clientX, clientY) {
+        const entries = this.getCompatibleReorderEntries(grid);
+        if (entries.length === 0) {
+            return null;
+        }
+
+        const rows = this.getGridRows(entries);
+        const row = this.getClosestGridRow(rows, clientY);
+
+        return this.resolveRowDropTarget(row, clientX, this.isRtlGrid(grid));
+    }
+
+    resolveCardDropPosition(card, clientX, clientY) {
+        const rect = card.getBoundingClientRect();
+        const grid = card.closest('.gridview-card-grid');
+
+        if (grid && this.isGridMultiColumn(grid)) {
+            const midpoint = rect.left + rect.width / 2;
+            return this.isRtlGrid(grid)
+                ? (clientX > midpoint ? 'before' : 'after')
+                : (clientX < midpoint ? 'before' : 'after');
+        }
+
+        const y = clientY - rect.top;
+        const wrapper = card.closest('.gridview-card-wrapper');
+        const allWrappers = grid ? this.getCompatibleReorderWrappers(grid) : [];
+        const visibleWrappers = allWrappers.filter(w => w !== this.draggedWrapper);
+        const isLastCard = visibleWrappers.length > 0 && visibleWrappers[visibleWrappers.length - 1] === wrapper;
+        const threshold = isLastCard ? rect.height * 0.25 : rect.height / 2;
+
+        return y < threshold ? 'before' : 'after';
+    }
+
+    getCompatibleReorderCards(grid, includeDragged = false) {
+        const draggedCard = this.getActiveDraggedCard();
+        if (!grid || !draggedCard) {
+            return [];
+        }
+
+        return Array.from(grid.querySelectorAll('.gridview-card')).filter(card => {
+            if (card === draggedCard) {
+                return includeDragged;
+            }
+
+            return this.isCompatibleReorderTarget(card);
+        });
+    }
+
+    clearDropIndicators() {
+        document.querySelectorAll('.gridview-drop-before, .gridview-drop-after').forEach(el => {
+            el.classList.remove('gridview-drop-before', 'gridview-drop-after');
+        });
+        document.querySelectorAll('.gridview-end-dropzone').forEach(el => {
+            el.classList.remove('gridview-drop-active');
+        });
+    }
+
+    clearCurrentDropTarget() {
+        this.clearDropIndicators();
+        this.currentTarget = null;
+        this.currentTargetWrapper = null;
+        this.dropPosition = null;
+    }
+
+    getSortDirection(element) {
+        const grid = this.getGridElement(element);
+        return grid?.dataset?.sortDirection === 'desc' ? 'desc' : 'asc';
+    }
+
+    isDescendingSortDirection(element) {
+        return this.getSortDirection(element) === 'desc';
+    }
+
+    calculateMoveTargetBeforeTarget(targetCard, targetPid, searchDirection = 'previous') {
+        const wrapper = targetCard.closest('.gridview-card-wrapper');
+        const siblingProperty = searchDirection === 'next' ? 'nextElementSibling' : 'previousElementSibling';
+        let adjacentWrapper = wrapper?.[siblingProperty] ?? null;
+        let adjacentCard = null;
+
+        while (adjacentWrapper) {
+            const candidate = adjacentWrapper.querySelector('.gridview-card');
+            if (this.isCompatibleReorderTarget(candidate)) {
+                adjacentCard = candidate;
+                break;
+            }
+            adjacentWrapper = adjacentWrapper[siblingProperty];
+        }
+
+        if (adjacentCard) {
+            return '-' + adjacentCard.dataset.uid;
+        }
+
+        return targetPid;
+    }
+
+    calculateEndMoveTarget(grid, fallbackPid = null) {
+        if (!grid) {
+            return null;
+        }
+
+        const compatibleCards = this.getCompatibleReorderCards(grid, true);
+        const lastCompatibleCard = compatibleCards[compatibleCards.length - 1] || null;
+        const draggedCard = this.getActiveDraggedCard();
+
+        if (!lastCompatibleCard) {
+            return null;
+        }
+
+        if (lastCompatibleCard === draggedCard) {
+            return '-' + draggedCard.dataset.uid;
+        }
+
+        if (this.isDescendingSortDirection(grid)) {
+            return grid.dataset.pageId || fallbackPid;
+        }
+
+        return '-' + lastCompatibleCard.dataset.uid;
+    }
+
+    /**
+     * Calculate the TYPO3 move target based on position
+     */
+    calculateMoveTarget(targetCard, position, targetUid, targetPid) {
+        if (this.isDescendingSortDirection(targetCard)) {
+            if (position === 'before') {
+                return '-' + targetUid;
+            }
+
+            return this.calculateMoveTargetBeforeTarget(targetCard, targetPid, 'next');
+        }
+
+        if (position === 'after') {
+            return '-' + targetUid;
+        }
+
+        return this.calculateMoveTargetBeforeTarget(targetCard, targetPid, 'previous');
+    }
+    
+    async executeMove(table, uid, target) {
+        const card = this.draggedCard || this.keyboardDragCard;
+        if (card) {
+            card.style.opacity = '0.3';
+        }
+        
+        if (!table || !uid || target === undefined || target === null) {
+            console.error('[GridView] Invalid move parameters');
+            if (card) card.style.opacity = '';
+            return;
+        }
+
+        let restoreCard = true;
+        try {
+            const data = await AjaxDataHandler.process({
+                cmd: {
+                    [table]: {
+                        [uid]: {
+                            move: String(target)
+                        }
+                    }
+                }
+            });
+
+            if (data?.hasErrors) {
+                console.error('[GridView] DataHandler errors:', data.messages);
+                this.showNotification(
+                    this.lang('notification.moveFailed', 'Move failed'),
+                    data.messages?.[0]?.message || this.lang('notification.unknownError', 'Unknown error'),
+                    'error'
+                );
+                return;
+            }
+
+            restoreCard = false;
+            this.refreshPageTreeIfNeeded(table);
             window.location.reload();
-        } catch (error) {
-            item.classList.remove('rlt-is-dragging');
-            await this.notifyError(this.lang('notification.moveFailed', 'Move failed'), error);
+        } catch (err) {
+            console.error('[GridView] Network error:', err);
+            this.showNotification(
+                this.lang('notification.moveFailed', 'Move failed'),
+                err.message || this.lang('notification.requestFailed', 'Request failed'),
+                'error'
+            );
+        } finally {
+            if (restoreCard && card) {
+                card.style.opacity = '';
+            }
         }
     }
+
+    /**
+     * Notify the backend page tree that a pages-table record changed.
+     * Mirrors TYPO3 core's context-menu-actions.js — dispatches on top.document
+     * so the event survives the iframe reload that follows.
+     */
+    refreshPageTreeIfNeeded(table) {
+        if (table !== 'pages') {
+            return;
+        }
+        const topDocument = (typeof top !== 'undefined' && top && top.document) ? top.document : document;
+        topDocument.dispatchEvent(new CustomEvent('typo3:pagetree:refresh'));
+    }
+
+    // =========================================================================
+    // Record Actions
+    // =========================================================================
+
+    /**
+     * Record actions (hide/show, delete)
+     */
+    initializeRecordActions() {
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-gridview-action]');
+            if (!btn) return;
+            
+            e.preventDefault();
+            
+            const action = btn.dataset.gridviewAction;
+            const table = btn.dataset.table;
+            const uid = btn.dataset.uid;
+            
+            switch (action) {
+                case 'hide':
+                case 'show':
+                    this.toggleHidden(table, uid, action, btn);
+                    break;
+                case 'delete':
+                    this.deleteRecord(table, uid, btn);
+                    break;
+                case 'copy':
+                    ContextMenuActions.copy(table, uid);
+                    break;
+                case 'cut':
+                    ContextMenuActions.cut(table, uid);
+                    break;
+                case 'info':
+                    this.showInfo(table, uid);
+                    break;
+                case 'history':
+                    this.showHistory(table, uid, btn);
+                    break;
+            }
+        });
+    }
+    
+    async toggleHidden(table, uid, action, btn) {
+        const url = TYPO3?.settings?.ajaxUrls?.record_toggle_visibility;
+        if (!url) {
+            this.showNotification(
+                this.lang('notification.updateFailed', 'Update failed'),
+                this.lang('notification.visibilityEndpointMissing', 'The TYPO3 endpoint for changing visibility is not available.'),
+                'error'
+            );
+            return;
+        }
+
+        if (!table || !uid || !['hide', 'show'].includes(action)) {
+            return;
+        }
+
+        btn.disabled = true;
+
+        try {
+            const {sudoModeInterceptor} = await this.loadModule('@typo3/backend/security/sudo-mode-interceptor.js');
+            const response = await new AjaxRequest(url)
+                .addMiddleware(sudoModeInterceptor)
+                .post({
+                    table,
+                    uid: Number.parseInt(uid, 10),
+                    action
+                });
+            const data = await response.resolve();
+
+            if (data.hasErrors) {
+                this.showAjaxMessages(this.lang('notification.updateFailed', 'Update failed'), data.messages);
+                return;
+            }
+
+            this.refreshPageTreeIfNeeded(table);
+            await this.updateVisibilityState(btn, action === 'hide');
+        } catch (err) {
+            await this.showAjaxError(this.lang('notification.updateFailed', 'Update failed'), err);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async updateVisibilityState(btn, hidden) {
+        const container = btn.closest(
+            '.gridview-card, .compactview-row, .teaserview-card, .teaserview-translation-row'
+        );
+
+        if (!container) {
+            return;
+        }
+
+        container.dataset.hidden = hidden ? '1' : '0';
+        container.classList.toggle('gridview-card--hidden', hidden);
+        container.classList.toggle('compactview-row--hidden', hidden);
+        container.classList.toggle('teaserview-card--hidden', hidden);
+        container.classList.toggle('teaserview-translation-row--hidden', hidden);
+
+        this.updateVisibilityButton(btn, hidden);
+        await this.updateTeaserHiddenBadge(container, hidden);
+
+        const title = container.dataset.recordTitle
+            || container.querySelector('.gridview-card__title, .compactview-row__title-link, .teaserview-card__title, .teaserview-translation-row__title')?.textContent?.trim()
+            || this.lang('labels.no_title', 'No title');
+        this.announce(hidden
+            ? this.lang('a11y.recordHidden', '{title} is now hidden', {title})
+            : this.lang('a11y.recordVisible', '{title} is now visible', {title}));
+    }
+
+    updateVisibilityButton(btn, hidden) {
+        btn.dataset.gridviewAction = hidden ? 'show' : 'hide';
+        const label = hidden
+            ? this.lang('action.unhide', 'Unhide record')
+            : this.lang('action.hide', 'Hide record');
+        btn.setAttribute('title', label);
+        btn.setAttribute('aria-label', label);
+
+        btn.classList.toggle('gridview-action-sm--warning', hidden);
+        btn.classList.toggle('gridview-action-sm--success', !hidden);
+        btn.classList.toggle('teaserview-action--warning', hidden);
+        btn.classList.toggle('teaserview-action--success', !hidden);
+        btn.classList.toggle('cv-toggle--hidden', hidden);
+        btn.classList.toggle('cv-toggle--visible', !hidden);
+
+        const iconEl = btn.querySelector('.icon, typo3-backend-icon');
+        if (iconEl) {
+            this.replaceIcon(iconEl, hidden ? 'actions-toggle-off' : 'actions-toggle-on');
+        }
+    }
+
+    async updateTeaserHiddenBadge(container, hidden) {
+        if (!container.classList.contains('teaserview-card')) {
+            return;
+        }
+
+        const titleRow = container.querySelector('.teaserview-card__title-row');
+        if (!titleRow) {
+            return;
+        }
+
+        const existingBadge = titleRow.querySelector('.teaserview-badge--hidden');
+        if (!hidden) {
+            existingBadge?.remove();
+            return;
+        }
+
+        if (existingBadge) {
+            return;
+        }
+
+        const badge = document.createElement('span');
+        badge.className = 'teaserview-badge teaserview-badge--hidden';
+        const icon = await this.createIconElement('actions-toggle-off');
+        if (icon) {
+            badge.appendChild(icon);
+        }
+        badge.appendChild(document.createTextNode(this.lang('state.hidden', 'Hidden')));
+
+        const uidBadge = titleRow.querySelector('.teaserview-badge--uid');
+        if (uidBadge?.nextSibling) {
+            uidBadge.parentNode.insertBefore(badge, uidBadge.nextSibling);
+            return;
+        }
+        titleRow.appendChild(badge);
+    }
+    
+    /**
+     * Let Core own confirmation, deletion, notifications, and module refresh.
+     */
+    deleteRecord(table, uid, btn) {
+        const record = btn.closest('.gridview-card, .compactview-row, .teaserview-card, .teaserview-translation-row');
+        const title = record?.dataset.recordTitle
+            || record?.querySelector('.gridview-card__title, .compactview-row__title-link, .teaserview-card__title, .teaserview-translation-row__title')?.textContent?.trim()
+            || uid;
+        const message = this.lang('action.delete.confirm', 'Are you sure you want to delete “{title}”?', {title});
+
+        ContextMenuActions.deleteRecord(table, uid, {
+            title: this.lang('action.delete', 'Delete record'),
+            message: html`${message}`,
+            buttonCloseText: this.lang('action.cancel', 'Cancel'),
+            buttonOkText: this.lang('action.delete.confirmButton', 'Delete')
+        });
+    }
+
+    /**
+     * Parse server-rendered icon markup into a DOM node.
+     * Uses DOMParser instead of innerHTML for safer HTML parsing.
+     */
+    parseIconMarkup(iconMarkup) {
+        const doc = new DOMParser().parseFromString(iconMarkup, 'text/html');
+        const icon = doc.body.firstElementChild;
+        return icon ? document.adoptNode(icon) : null;
+    }
+
+    /**
+     * Replace a TYPO3 icon element with a new icon.
+     */
+    replaceIcon(iconEl, newIdentifier) {
+        // For typo3-backend-icon web component
+        if (iconEl.tagName === 'TYPO3-BACKEND-ICON') {
+            iconEl.setAttribute('identifier', newIdentifier);
+            return;
+        }
+
+        this.getDefaultModule('@typo3/backend/icons.js')
+            .then(Icons => Icons.getIcon(newIdentifier, 'small'))
+            .then(iconMarkup => {
+                const newIcon = this.parseIconMarkup(iconMarkup);
+                if (newIcon && iconEl.parentNode) {
+                    iconEl.parentNode.replaceChild(newIcon, iconEl);
+                }
+            })
+            .catch(() => {
+                iconEl.dataset.identifier = newIdentifier;
+            });
+    }
+
+    async createIconElement(identifier) {
+        try {
+            const Icons = await this.getDefaultModule('@typo3/backend/icons.js');
+            const icon = this.parseIconMarkup(await Icons.getIcon(identifier, 'small'));
+            if (icon) {
+                return icon;
+            }
+        } catch {
+            // Fall through to the web component fallback below.
+        }
+        const icon = document.createElement('typo3-backend-icon');
+        icon.setAttribute('identifier', identifier);
+        icon.setAttribute('size', 'small');
+        return icon;
+    }
+    
+    /**
+     * Show info for a record in the content frame (like History).
+     * Uses URL/URLSearchParams for safe URL construction.
+     */
+    showInfo(table, uid) {
+        const returnUrl = window.location.pathname + window.location.search;
+        const moduleUrl = this.getTopTypo3Setting('ShowItem', 'moduleUrl');
+
+        if (moduleUrl) {
+            const infoUrl = new URL(moduleUrl, window.location.origin);
+            infoUrl.searchParams.set('table', table);
+            infoUrl.searchParams.set('uid', String(uid));
+            infoUrl.searchParams.set('returnUrl', returnUrl);
+            this.navigateInContentFrame(infoUrl);
+            return;
+        }
+
+        const infoWindow = this.getTopTypo3Property('InfoWindow', 'showItem');
+        if (typeof infoWindow === 'function') {
+            infoWindow(table, uid);
+        }
+    }
+    
+    /**
+     * Show history for a record.
+     * Uses URL/URLSearchParams for safe URL construction.
+     * Uses TYPO3's Viewport.ContentContainer.setUrl() - same as core context menu.
+     */
+    showHistory(table, uid, trigger = null) {
+        const element = `${table}:${uid}`;
+        const returnUrl = window.location.pathname + window.location.search;
+        const moduleUrl = this.getTopTypo3Setting('RecordHistory', 'moduleUrl');
+
+        if (moduleUrl) {
+            const historyUrl = new URL(moduleUrl, window.location.origin);
+            historyUrl.searchParams.set('element', element);
+            historyUrl.searchParams.set('returnUrl', returnUrl);
+            this.openHistoryModal(historyUrl, trigger?.title || trigger?.getAttribute('aria-label') || this.lang('action.history', 'History'));
+            return;
+        }
+
+        console.warn('[GridView] RecordHistory.moduleUrl not found in TYPO3.settings');
+    }
+
+    openHistoryModal(url, title) {
+        this.getDefaultModule('@typo3/backend/modal.js')
+            .then(Modal => {
+                Modal.advanced({
+                    content: url.toString(),
+                    title,
+                    size: Modal.sizes.full,
+                    type: Modal.types.iframe,
+                });
+            })
+            .catch(() => {
+                this.navigateInContentFrame(url);
+            });
+    }
+
+    getTopTypo3Setting(section, key) {
+        try {
+            return top?.TYPO3?.settings?.[section]?.[key];
+        } catch {
+            return null;
+        }
+    }
+
+    getTopTypo3Property(section, key) {
+        try {
+            return top?.TYPO3?.[section]?.[key];
+        } catch {
+            return null;
+        }
+    }
+
+    navigateInContentFrame(url) {
+        const urlString = url.toString();
+        this.getDefaultModule('@typo3/backend/viewport.js')
+            .then(Viewport => {
+                if (Viewport?.ContentContainer?.setUrl) {
+                    Viewport.ContentContainer.setUrl(urlString);
+                    return;
+                }
+                window.location.href = urlString;
+            })
+            .catch(() => {
+                window.location.href = urlString;
+            });
+    }
+    
+    /**
+     * Show notification using TYPO3's notification system
+     */
+    showNotification(title, message, severity = 'info') {
+        this.getDefaultModule('@typo3/backend/notification.js')
+            .then(Notification => {
+                switch (severity) {
+                    case 'success':
+                        Notification.success(title, message, 3);
+                        break;
+                    case 'error':
+                        Notification.error(title, message, 5);
+                        break;
+                    case 'warning':
+                        Notification.warning(title, message, 4);
+                        break;
+                    default:
+                        Notification.info(title, message, 3);
+                }
+            })
+            .catch(() => {
+                // Fallback: console log
+                console.log(`[GridView] ${severity.toUpperCase()}: ${title} - ${message}`);
+            });
+    }
+
+    /**
+     * Initialize scroll shadow indicators for compact view tables
+     * 
+     * Adds/removes CSS classes based on scroll position to show shadows
+     * on the edges of fixed columns when content is scrolled.
+     */
+    initializeScrollShadows() {
+        const scrollContainers = document.querySelectorAll('.compactview-table-wrapper');
+        
+        if (scrollContainers.length === 0) {
+            return;
+        }
+        
+        scrollContainers.forEach(container => {
+            // Update shadow state on scroll
+            const updateScrollState = () => {
+                const scrollLeft = container.scrollLeft;
+                const scrollWidth = container.scrollWidth;
+                const clientWidth = container.clientWidth;
+                const maxScroll = scrollWidth - clientWidth;
+                
+                // Has been scrolled from left
+                if (scrollLeft > 2) {
+                    container.classList.add('is-scrolled');
+                } else {
+                    container.classList.remove('is-scrolled');
+                }
+                
+                // Has more content on the right
+                if (scrollLeft < maxScroll - 2) {
+                    container.classList.add('has-right-scroll');
+                } else {
+                    container.classList.remove('has-right-scroll');
+                }
+            };
+            
+            // Initial state check
+            updateScrollState();
+            
+            // Listen for scroll events
+            container.addEventListener('scroll', updateScrollState, { passive: true });
+            
+            // Also update on window resize
+            window.addEventListener('resize', updateScrollState, { passive: true });
+        });
+    }
+
+    // =========================================================================
+    // Pagination Page Input
+    // =========================================================================
+
+    /**
+     * Initialize pagination page number inputs.
+     * Navigates to the entered page on Enter or blur.
+     */
+    initializePaginationInputs() {
+        const inputs = document.querySelectorAll('[data-pagination-input]');
+
+        if (inputs.length === 0) {
+            return;
+        }
+
+        inputs.forEach(input => {
+            const originalValue = input.value;
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.navigateToPage(input);
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                if (input.value !== originalValue) {
+                    this.navigateToPage(input);
+                }
+            });
+        });
+    }
+
+    /**
+     * Navigate to the page number entered in the pagination input.
+     * @param {HTMLInputElement} input - The pagination input element
+     */
+    navigateToPage(input) {
+        const page = parseInt(input.value, 10);
+        const min = parseInt(input.min, 10) || 1;
+        const max = parseInt(input.max, 10) || 1;
+
+        if (isNaN(page) || page < min || page > max) {
+            // Reset to current value on invalid input
+            input.value = input.defaultValue;
+            return;
+        }
+
+        const baseUrl = input.dataset.paginationUrl;
+        const table = input.dataset.paginationTable;
+
+        if (!baseUrl || !table) {
+            return;
+        }
+
+        const url = new URL(baseUrl, window.location.origin);
+        url.searchParams.set(`pointer[${table}]`, String(page));
+        window.location.href = url.toString();
+    }
+
+    /**
+     * Toggle all checkboxes when the header checkbox is clicked.
+     * The TYPO3 multi-record-selection dropdown doesn't fit the
+     * narrow compact view column, so we use a simple checkbox toggle.
+     */
+    initializeCheckAllToggle() {
+        document.querySelectorAll('.compactview-th--checkbox .form-check-input').forEach(toggle => {
+            toggle.addEventListener('change', () => {
+                const table = toggle.closest('table');
+                if (!table) return;
+
+                const checkboxes = table.querySelectorAll('.t3js-multi-record-selection-check');
+                checkboxes.forEach(cb => {
+                    cb.checked = toggle.checked;
+                    // Dispatch change event so TYPO3's module updates the action bar
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
+        });
+    }
+
+    showAjaxMessages(title, messages) {
+        if (!Array.isArray(messages) || messages.length === 0) {
+            this.showNotification(title, this.lang('notification.unknownError', 'Unknown error'), 'error');
+            return;
+        }
+
+        messages.forEach((message) => {
+            this.showNotification(
+                message.title || title,
+                message.message || this.lang('notification.unknownError', 'Unknown error'),
+                'error'
+            );
+        });
+    }
+
+    async showAjaxError(title, error) {
+        if (error && typeof error.resolve === 'function') {
+            try {
+                const data = await error.resolve();
+                this.showAjaxMessages(title, data.messages);
+                return;
+            } catch (resolveError) {
+                this.showNotification(title, resolveError.message || this.lang('notification.requestFailed', 'Request failed'), 'error');
+                return;
+            }
+        }
+
+        this.showNotification(title, error?.message || this.lang('notification.requestFailed', 'Request failed'), 'error');
+    }
+
 }
 
 if (!customElements.get('records-list-types-actions')) {
-    customElements.define('records-list-types-actions', RecordsListTypesActions);
+    customElements.define('records-list-types-actions', GridViewActions);
 }
 
-export default RecordsListTypesActions;
+export default GridViewActions;

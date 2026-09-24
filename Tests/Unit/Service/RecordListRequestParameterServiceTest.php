@@ -14,7 +14,7 @@ final class RecordListRequestParameterServiceTest extends TestCase
     #[Test]
     public function getPreservedListParametersMergesQueryAndBodyAndKeepsOnlyListState(): void
     {
-        $request = new ServerRequest('https://example.test/typo3/module/records')
+        $request = (new ServerRequest('https://example.test/typo3/module/records'))
             ->withQueryParams([
                 'id' => 123,
                 'table' => 'pages',
@@ -98,7 +98,7 @@ final class RecordListRequestParameterServiceTest extends TestCase
     #[Test]
     public function getCurrentPointerReturnsTableSpecificPointerFromQuery(): void
     {
-        $request = new ServerRequest('https://example.test/typo3/module/records')
+        $request = (new ServerRequest('https://example.test/typo3/module/records'))
             ->withQueryParams([
                 'pointer' => [
                     'tt_content' => '4',
@@ -111,7 +111,7 @@ final class RecordListRequestParameterServiceTest extends TestCase
     #[Test]
     public function getCurrentPointerFallsBackToOneForInvalidBodyPointer(): void
     {
-        $request = new ServerRequest('https://example.test/typo3/module/records')
+        $request = (new ServerRequest('https://example.test/typo3/module/records'))
             ->withParsedBody([
                 'pointer' => [
                     'tt_content' => 'invalid',

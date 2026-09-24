@@ -195,7 +195,7 @@ final class LabelCatalogTest extends TestCase
     public function javaScriptLabelPrefixesAreRegisteredForInlineExport(): void
     {
         $registered = [];
-        foreach (['Classes/Controller/RecordListController.php'] as $file) {
+        foreach (['Classes/Controller/RecordListController.php', 'Classes/Controller/ContentElement/ElementHistoryController.php'] as $file) {
             $php = (string)file_get_contents($this->root() . '/' . $file);
             preg_match_all('/addInlineLanguageLabelFile\([^)]*,\s*\'([a-zA-Z0-9]+\.)\'\)/', $php, $matches);
             $registered = array_merge($registered, $matches[1]);

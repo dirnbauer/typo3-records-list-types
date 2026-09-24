@@ -1,51 +1,1085 @@
-/*
- * Records List Types: compact view. Core's record table (.table-fit, .table,
- * col-* cells), denser, with one line per record; see base.css for the parts
- * all views share.
+/**
+ * Compact View CSS - Beautiful Table Design
+ * 
+ * Modern table with sticky columns, smooth scrolling, and elegant styling
+ * Inspired by Notion, Linear, and shadcn design systems
  */
 
-.rlt-compact-table .col-uid {
-    width: 1%;
-    color: var(--typo3-text-color-variant);
-    font-variant-numeric: tabular-nums;
-    text-align: end;
+/* =============================================================================
+   Design Tokens
+   ============================================================================= */
+
+.recordlist-compactview-container {
+    /* Colors - uses TYPO3 theme variables (auto-adapt light/dark) with fallbacks */
+    --cv-bg: var(--typo3-component-bg, #ffffff);
+    --cv-bg-muted: var(--typo3-surface-container-low, #fafafa);
+    --cv-bg-subtle: var(--typo3-surface-container-default, #f4f4f5);
+    /* Hidden state: amber tint matching grid + teaser view. Opaque hex is
+       required — hidden cells must mask scrolled content behind the sticky
+       columns. (surface-container-lowest was darker than the page in dark
+       mode, which made hidden rows read as black holes.) */
+    --cv-bg-hidden: #fffbeb;
+    --cv-border: #e4e4e7;
+    --cv-border-muted: #f0f0f2;
+    --cv-tree-line: color-mix(in srgb, var(--typo3-component-border-color, var(--cv-border)) 72%, transparent);
+    --cv-tree-line-width: 1px;
+    --cv-text: var(--typo3-text-color-base, #18181b);
+    --cv-text-muted: var(--typo3-component-color, #52525b);
+    --cv-text-subtle: var(--typo3-text-color-variant, #a1a1aa);
+    
+    /* Accent */
+    --cv-accent: var(--typo3-state-default-primary-color, #3b82f6);
+    --cv-accent-muted: #93c5fd;
+    --cv-accent-bg: var(--typo3-state-default-primary-bg, #eff6ff);
+    
+    /* Status */
+    --cv-success: var(--typo3-state-success-color, #22c55e);
+    --cv-success-bg: var(--typo3-state-success-bg, #f0fdf4);
+    --cv-danger: var(--typo3-state-danger-color, #ef4444);
+    --cv-danger-bg: var(--typo3-state-danger-bg, #fef2f2);
+    /* Fixed amber — --typo3-state-warning-color is a *text* color and goes
+       near-white in dark mode, which is wrong for the hidden state bar. */
+    --cv-warning: #f59e0b;
+    
+    /* Shadows */
+    --cv-shadow-sm: var(--typo3-shadow-1, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+    --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.08);
+    
+    /* Radius */
+    --cv-radius: var(--typo3-component-border-radius, 0.5rem);
+    --cv-radius-sm: 0.375rem;
+    
+    /* Typography */
+    --cv-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --cv-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    
+    /* Animation */
+    --cv-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --cv-transition-fast: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Fixed column widths */
+    --cv-col-checkbox: 36px;
+    --cv-col-icon: 34px;
+    --cv-col-uid: 60px;
+    --cv-col-title: 200px;
+    --cv-col-status: 28px;
+    --cv-col-action: 26px;
+
+    /* Icon sizes. Applied through core's `--icon-size` custom property, never
+       through width/height — a hard box leaves `.icon`'s line-height at the
+       core value and squeezes the artwork inside a taller line box.
+       Record icons stay at 16px: content-block icons are authored on a
+       16-unit viewBox (1:1, no sub-pixel strokes), the translation-row icon
+       cell only exposes 16px of content width, and 16px still fits the
+       19.5px line box so row height is unchanged. Chrome icons (sort, badge,
+       toggle, action) are core monochrome glyphs and stay deliberately
+       smaller. */
+    --cv-icon-size: 16px;
+    --cv-icon-size-chrome: 12px;
+
+    /* Horizontal center of the record-icon column. `.compactview-row__icon`
+       is a block-level flex container filling the cell's content box with
+       `justify-content: center`, so the icon's center is the column's
+       midpoint — the translation tree connectors align to this. */
+    --cv-tree-x: calc(var(--cv-col-icon) / 2);
+
+    /* Opaque accent background for hover + selected rows (light mode) */
+    --cv-accent-bg-opaque: #dbeafe;
+}
+
+/* Dark mode - only override values that TYPO3 vars don't auto-handle */
+[data-color-scheme="dark"] .recordlist-compactview-container {
+    --cv-border: #3f3f46;
+    --cv-border-muted: #2e2e33;
+    --cv-bg-hidden: #3e311b;
+    --cv-accent-bg-opaque: #1e2a3e;
+    --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .recordlist-compactview-container {
+        --cv-border: #3f3f46;
+        --cv-border-muted: #2e2e33;
+        --cv-bg-hidden: #3e311b;
+        --cv-accent-bg-opaque: #1e2a3e;
+        --cv-shadow-scroll: 0 0 12px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* =============================================================================
+   Container (heading base styles are in base.css)
+   ============================================================================= */
+
+.recordlist-compactview-container {
+    font-family: var(--cv-font-sans);
+    /* Container context so cqi units in descendants resolve
+       against the actual records content area, not the viewport */
+    container-type: inline-size;
+    container-name: compactview;
+}
+
+/* Sorting label should not wrap */
+.recordlist-compactview-container .gridview-sorting__label {
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.rlt-compact-table .col-title {
-    max-width: 24rem;
+/* =============================================================================
+   Table Wrapper - Horizontal Scroll Container
+   ============================================================================= */
+
+.compactview-table-wrapper {
+    /* Title column scales with the actual records frame width (cqi),
+       not the full viewport. 20cqi = 20% of the compactview container.
+       Resolves against .recordlist-compactview-container (container-type: inline-size). */
+    --cv-col-title: clamp(150px, 20cqi, 300px);
+
+    position: relative;
+    overflow-x: auto;
+    overflow-y: visible;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--typo3-component-bg, var(--cv-bg));
+    
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    
+    /* Custom scrollbar - Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: var(--typo3-component-border-color, var(--cv-border)) transparent;
 }
 
-.rlt-compact-table .col-title .rlt-badges {
-    margin-inline-start: 0.25rem;
+/* Custom scrollbar - Webkit */
+.compactview-table-wrapper::-webkit-scrollbar {
+    height: 8px;
 }
 
-.rlt-compact-table .col-localization {
+.compactview-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+}
+
+.compactview-table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--cv-text-subtle);
+    border-radius: 4px;
+    border: 2px solid var(--cv-bg);
+}
+
+.compactview-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--cv-accent);
+}
+
+/* =============================================================================
+   Table Structure
+   ============================================================================= */
+
+.compactview-table {
+    /* min-width: 100% fills container when few columns.
+       No explicit width — table grows naturally beyond 100%
+       when column min-widths exceed the container, enabling scroll. */
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.8125rem;
+    table-layout: auto;
+}
+
+/* =============================================================================
+   Table Header
+   ============================================================================= */
+
+.compactview-thead {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+}
+
+.compactview-th {
+    padding: var(--typo3-list-item-padding-y, 0.25rem) var(--typo3-list-item-padding-x, 0.375rem);
+    text-align: left;
+    font-weight: 600;
+    font-size: inherit;
+    color: var(--typo3-component-color, var(--cv-text));
+    background: var(--typo3-surface-container-default, var(--cv-bg-subtle));
+    border-bottom: var(--typo3-component-border-width, 1px) solid var(--typo3-component-border-color, var(--cv-border));
     white-space: nowrap;
+    vertical-align: middle;
 }
 
-.rlt-compact-table td:not(.col-title, .col-control) {
-    max-width: 16rem;
+.compactview-th:first-child {
+    border-top-left-radius: var(--cv-radius-sm);
+}
+
+.compactview-th:last-child {
+    border-top-right-radius: var(--cv-radius-sm);
+}
+
+/* =============================================================================
+   Sortable Header Dropdowns - Use TYPO3 native styling
+   ============================================================================= */
+
+/* 
+ * Let TYPO3's native dropdown-toggle-link styling work completely.
+ * The .dropdown-static and .dropdown-toggle-link classes from TYPO3 
+ * handle all button styling, chevron icons, and interactions.
+ */
+
+/* Ensure dropdown inherits table header font weight */
+.compactview-th .dropdown-toggle-link {
+    font-weight: inherit;
+}
+
+/* Legacy sortable header styling (for JavaScript-based sorting) */
+.compactview-th--sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--cv-transition-fast), color var(--cv-transition-fast);
+    position: relative;
+}
+
+.compactview-th--sortable:hover {
+    background: var(--cv-accent-bg);
+    color: var(--cv-accent);
+}
+
+.compactview-th--sortable.is-active {
+    color: var(--cv-accent);
+    font-weight: 700;
+}
+
+.compactview-th__sort-icon {
+    display: inline-flex;
+    margin-left: 0.25rem;
+    color: var(--cv-accent);
+    vertical-align: middle;
+}
+
+.compactview-th__sort-icon .icon {
+    --icon-size: var(--cv-icon-size-chrome);
+}
+
+/* Column widths:
+   - min-width enforces hard minimum (table-layout:auto can shrink width but not min-width)
+   - max-width prevents stretching when table has extra space
+   - title has NO max-width so it stretches to fill remaining space */
+.compactview-th--checkbox { width: var(--cv-col-checkbox); min-width: var(--cv-col-checkbox); max-width: var(--cv-col-checkbox); text-align: center; padding: 0 2px; }
+/* Compact dropdown toggle in checkbox header - matches TYPO3 core styling */
+.compactview-th--checkbox .btn-group { display: flex; justify-content: center; padding-left: 10px; }
+.compactview-th--checkbox .dropdown-toggle-link { line-height: 1; }
+.compactview-th--icon { width: var(--cv-col-icon); min-width: var(--cv-col-icon); max-width: var(--cv-col-icon); }
+.compactview-th--uid { width: var(--cv-col-uid); min-width: var(--cv-col-uid); max-width: var(--cv-col-uid); text-align: right; padding-right: 0.375rem; }
+.compactview-th--title { width: var(--cv-col-title); min-width: 150px; }
+.compactview-th--status { width: var(--cv-col-status); min-width: var(--cv-col-status); max-width: var(--cv-col-status); }
+.compactview-th--action { width: var(--cv-col-action); min-width: var(--cv-col-action); max-width: var(--cv-col-action); }
+
+/* =============================================================================
+   Sticky Fixed Columns
+   ============================================================================= */
+
+/* Fixed left columns - ensure proper stacking and masking */
+.compactview-th--fixed-left,
+.compactview-td--fixed-left {
+    position: sticky;
+    /* MUST be opaque solid color to mask scrolled content behind */
+    background-color: var(--cv-bg) !important;
+    z-index: 10;
+}
+
+.compactview-th--fixed-left {
+    background-color: var(--typo3-surface-container-default, var(--cv-bg-subtle)) !important;
+    z-index: 16;
+}
+
+/* ---- Left positions: WITHOUT clipboard (icon=1, uid=2, title=3) ---- */
+
+.compactview-th--fixed-left:nth-child(1),
+.compactview-td--fixed-left:nth-child(1) {
+    left: 0;
+}
+
+.compactview-th--fixed-left:nth-child(2),
+.compactview-td--fixed-left:nth-child(2) {
+    left: var(--cv-col-icon);
+}
+
+.compactview-th--fixed-left:nth-child(3),
+.compactview-td--fixed-left:nth-child(3) {
+    left: calc(var(--cv-col-icon) + var(--cv-col-uid));
+}
+
+/* Title column is always the last fixed-left column -- separator + shadow */
+.compactview-th--title,
+.compactview-td--title {
+    border-right: 1px solid var(--cv-border-muted);
+    box-shadow: none;
+    transition: box-shadow var(--cv-transition);
+}
+
+/* Left scroll shadow (light) */
+.compactview-table-wrapper.is-scrolled .compactview-td--title,
+.compactview-table-wrapper.is-scrolled .compactview-th--title {
+    box-shadow: 6px 0 16px -4px rgba(0, 0, 0, 0.2);
+}
+
+/* Left scroll shadow (dark - bright glow visible on dark backgrounds) */
+[data-color-scheme="dark"] .compactview-table-wrapper.is-scrolled .compactview-td--title,
+[data-color-scheme="dark"] .compactview-table-wrapper.is-scrolled .compactview-th--title {
+    box-shadow: 6px 0 24px -2px rgba(140, 160, 220, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .compactview-table-wrapper.is-scrolled .compactview-td--title,
+    html:not([data-color-scheme="light"]) .compactview-table-wrapper.is-scrolled .compactview-th--title {
+        box-shadow: 6px 0 24px -2px rgba(140, 160, 220, 0.3);
+    }
+}
+
+/* ---- Left positions: WITH clipboard (checkbox=1, icon=2, uid=3, title=4) ---- */
+
+.has-clipboard .compactview-th--fixed-left:nth-child(1),
+.has-clipboard .compactview-td--fixed-left:nth-child(1) {
+    left: 0;
+}
+
+.has-clipboard .compactview-th--fixed-left:nth-child(2),
+.has-clipboard .compactview-td--fixed-left:nth-child(2) {
+    left: var(--cv-col-checkbox);
+}
+
+.has-clipboard .compactview-th--fixed-left:nth-child(3),
+.has-clipboard .compactview-td--fixed-left:nth-child(3) {
+    left: calc(var(--cv-col-checkbox) + var(--cv-col-icon));
+}
+
+.has-clipboard .compactview-th--fixed-left:nth-child(4),
+.has-clipboard .compactview-td--fixed-left:nth-child(4) {
+    left: calc(var(--cv-col-checkbox) + var(--cv-col-icon) + var(--cv-col-uid));
+}
+
+/* ---- Fixed right columns (4 columns: status, edit, delete, more) ---- */
+
+.compactview-th--fixed-right,
+.compactview-td--fixed-right {
+    position: sticky;
+    /* MUST be opaque solid color to mask scrolled content behind */
+    background-color: var(--cv-bg) !important;
+    z-index: 10;
+}
+
+.compactview-th--fixed-right {
+    background-color: var(--typo3-surface-container-default, var(--cv-bg-subtle)) !important;
+    z-index: 16;
+}
+
+/* Right positions: more(1), delete(2), edit(3), status(4) from last */
+.compactview-th--fixed-right:nth-last-child(1),
+.compactview-td--fixed-right:nth-last-child(1) {
+    right: 0;
+}
+
+.compactview-th--fixed-right:nth-last-child(2),
+.compactview-td--fixed-right:nth-last-child(2) {
+    right: var(--cv-col-action);
+}
+
+.compactview-th--fixed-right:nth-last-child(3),
+.compactview-td--fixed-right:nth-last-child(3) {
+    right: calc(var(--cv-col-action) * 2);
+}
+
+/* Status column (4th from last) - separator + shadow */
+.compactview-th--fixed-right:nth-last-child(4),
+.compactview-td--fixed-right:nth-last-child(4) {
+    right: calc(var(--cv-col-action) * 3);
+}
+
+/* Status column is always the first fixed-right column -- separator + shadow */
+.compactview-th--status,
+.compactview-td--status {
+    border-left: 1px solid var(--cv-border-muted);
+    box-shadow: none;
+    transition: box-shadow var(--cv-transition);
+}
+
+/* Right scroll shadow (light) */
+.compactview-table-wrapper.has-right-scroll .compactview-td--status,
+.compactview-table-wrapper.has-right-scroll .compactview-th--status {
+    box-shadow: -6px 0 16px -4px rgba(0, 0, 0, 0.2);
+}
+
+/* Right scroll shadow (dark - bright glow visible on dark backgrounds) */
+[data-color-scheme="dark"] .compactview-table-wrapper.has-right-scroll .compactview-td--status,
+[data-color-scheme="dark"] .compactview-table-wrapper.has-right-scroll .compactview-th--status {
+    box-shadow: -6px 0 24px -2px rgba(140, 160, 220, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-color-scheme="light"]) .compactview-table-wrapper.has-right-scroll .compactview-td--status,
+    html:not([data-color-scheme="light"]) .compactview-table-wrapper.has-right-scroll .compactview-th--status {
+        box-shadow: -6px 0 24px -2px rgba(140, 160, 220, 0.3);
+    }
+}
+
+/* =============================================================================
+   Table Body & Rows
+   ============================================================================= */
+
+.compactview-tbody {
+    background: var(--cv-bg);
+}
+
+.compactview-row {
+    transition: background var(--cv-transition-fast);
+}
+
+.compactview-row:last-child .compactview-td:first-child {
+    border-bottom-left-radius: var(--cv-radius-sm);
+}
+
+.compactview-row:last-child .compactview-td:last-child {
+    border-bottom-right-radius: var(--cv-radius-sm);
+}
+
+/* Zebra striping runs per GROUP — a parent and all of its translations
+   share the same background, so the tree connector reads as one unit.
+   The parity class is pre-computed in PHP per enriched record.
+
+   Concrete hex values (not CSS variables) so the contrast is guaranteed
+   visible in every install regardless of which TYPO3 surface tokens a
+   project overrides. light-dark() keeps both themes consistent. */
+.compactview-row--group-even .compactview-td {
+    background-color: light-dark(#ececef, #2a2a2e);
+}
+
+.compactview-row--group-even .compactview-td--fixed-left,
+.compactview-row--group-even .compactview-td--fixed-right {
+    background-color: light-dark(#ececef, #2a2a2e) !important;
+}
+
+/* Hover state - all cells use the same opaque accent background.
+   Using --cv-accent-bg-opaque everywhere ensures a uniform highlight across
+   fixed and scrollable columns in both light and dark mode. */
+.compactview-row:hover .compactview-td {
+    background-color: var(--cv-accent-bg-opaque) !important;
+}
+
+/* Ensure headers have solid opaque background for proper masking */
+.compactview-thead .compactview-th--fixed-left,
+.compactview-thead .compactview-th--fixed-right {
+    background-color: var(--typo3-surface-container-default, var(--cv-bg-subtle)) !important;
+}
+
+/* =============================================================================
+   Table Cells
+   ============================================================================= */
+
+.compactview-td {
+    padding: 0.1875rem 0.375rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--cv-border-muted);
+    color: var(--cv-text-muted);
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    background: var(--cv-bg);
 }
 
-.rlt-compact-table .col-number,
-.rlt-compact-table .col-datetime {
+.compactview-row:last-child .compactview-td {
+    border-bottom: none;
+}
+
+/* Scrollable field columns: not fixed-left, not fixed-right.
+   min-width ensures each gets readable width;
+   when many columns exist, total exceeds 100% and the table scrolls. */
+.compactview-td[data-field] {
+    min-width: 120px;
+}
+
+.compactview-th:not(.compactview-th--fixed-left):not(.compactview-th--fixed-right) {
+    min-width: 120px;
+}
+
+/* Column-specific styling
+   Fixed-size columns use max-width to prevent table-layout:auto from
+   stretching them when few scrollable columns are present. */
+.compactview-td--checkbox {
+    width: var(--cv-col-checkbox);
+    min-width: var(--cv-col-checkbox);
+    max-width: var(--cv-col-checkbox);
+    text-align: center;
+    padding: 0.1875rem 0.25rem;
+}
+
+.compactview-td--icon {
+    width: var(--cv-col-icon);
+    min-width: var(--cv-col-icon);
+    max-width: var(--cv-col-icon);
+    /* Parent icon sits flush-left so the translation tree connector can
+       continue naturally from the icon's horizontal center.
+       Position is inherited from .compactview-td--fixed-left (sticky) —
+       DO NOT override here, or the cell drops out of the sticky layout. */
+    text-align: left;
+    padding: 0.1875rem 0;
+}
+
+/* When a parent row is followed by a translation row, draw the bottom
+   half of the vertical tree line from the icon's center (y=50%) to the
+   bottom of this cell. sticky already creates a positioning context, so
+   the absolutely-positioned ::after pins inside the td correctly. */
+.compactview-row:not(.compactview-row--translation):has(+ .compactview-row--translation) .compactview-td--icon::after {
+    content: "";
+    position: absolute;
+    left: var(--cv-tree-x);
+    top: 50%;
+    bottom: 0;
+    width: var(--cv-tree-line-width);
+    background: var(--cv-tree-line);
+    pointer-events: none;
+}
+
+.compactview-td--uid {
+    width: var(--cv-col-uid);
+    min-width: var(--cv-col-uid);
+    max-width: var(--cv-col-uid);
+    text-align: right;
+    padding-right: 0.375rem;
+}
+
+.compactview-td--title {
+    width: var(--cv-col-title);
+    min-width: 150px;
+    color: var(--cv-text);
+    /* Normal weight — hierarchy is conveyed by indent + tree connector, not bold */
+}
+
+/* Spacer column - no width constraints, absorbs all remaining space
+   so the right action columns are pushed to the edge */
+.compactview-th--spacer,
+.compactview-td--spacer {
+    width: auto;
+    padding: 0;
+}
+
+.compactview-td--status {
+    width: var(--cv-col-status);
+    min-width: var(--cv-col-status);
+    max-width: var(--cv-col-status);
+    text-align: center;
+    padding: 0.1875rem 0.125rem;
+    overflow: visible;
+}
+
+.compactview-td--action {
+    width: var(--cv-col-action);
+    min-width: var(--cv-col-action);
+    max-width: var(--cv-col-action);
+    text-align: center;
+    padding: 0.1875rem 0.125rem;
+    /* Override base td overflow:hidden so dropdown trigger + menu are not clipped */
+    overflow: visible;
+}
+
+/* =============================================================================
+   Row Elements
+   ============================================================================= */
+
+.compactview-row__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cv-text-subtle);
+    /* Sit above the tree connector pseudo so the line doesn't bleed
+       through the icon artwork. */
+    position: relative;
+    z-index: 2;
+}
+
+.compactview-row__icon .icon {
+    --icon-size: var(--cv-icon-size);
+}
+
+.compactview-row__uid {
+    font-family: var(--cv-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--cv-text-subtle);
+}
+
+.compactview-row__title-link {
+    color: var(--cv-text);
+    text-decoration: none;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--cv-transition-fast);
+}
+
+.compactview-row__title-link,
+typo3-backend-contextual-record-edit-trigger.compactview-row__title-link {
+    color: var(--cv-text);
+    text-decoration: none;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--cv-transition-fast);
+}
+
+.compactview-row__title-link:hover {
+    color: var(--cv-accent);
+}
+
+typo3-backend-contextual-record-edit-trigger.compactview-row__title-link:hover {
+    color: var(--cv-accent);
+}
+
+/* =============================================================================
+   Hidden Record Styling
+   ============================================================================= */
+
+.compactview-row--hidden .compactview-td {
+    background: var(--cv-bg-hidden);
+}
+
+/* Amber state bar — same "hidden" cue as grid cards and teaser cards.
+   inset box-shadow instead of border-left so the sticky column layout
+   and cell widths stay untouched. */
+.compactview-row--hidden .compactview-td:first-child {
+    box-shadow: inset 3px 0 0 var(--cv-warning);
+}
+
+/* Hidden rows: fixed columns MUST have opaque background to mask scrolled content */
+.compactview-row--hidden .compactview-td--fixed-left,
+.compactview-row--hidden .compactview-td--fixed-right {
+    background: var(--cv-bg-hidden) !important;
+}
+
+.compactview-row--hidden:nth-child(even) .compactview-td,
+.compactview-row--hidden:nth-child(even) .compactview-td--fixed-left,
+.compactview-row--hidden:nth-child(even) .compactview-td--fixed-right {
+    background: var(--cv-bg-hidden) !important;
+}
+
+/* Hidden row hover - same uniform opaque accent */
+.compactview-row--hidden:hover .compactview-td {
+    background: var(--cv-accent-bg-opaque) !important;
+}
+
+.compactview-row--hidden .compactview-row__title-link {
+    color: var(--cv-text-muted);
+}
+
+.compactview-row--hidden .compactview-row__icon {
+    opacity: 0.5;
+}
+
+/* =============================================================================
+   Field Type Styling - Using TYPO3 State Colors
+   ============================================================================= */
+
+.cv-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: var(--typo3-font-size-small, 0.75rem);
+}
+
+.cv-badge .icon {
+    --icon-size: var(--cv-icon-size-chrome);
+}
+
+/* Yes/True state - using TYPO3 success color */
+.cv-badge--yes { 
+    color: var(--typo3-state-success-color, var(--cv-success)); 
+}
+
+/* No/False state - subtle muted color */
+.cv-badge--no { 
+    color: var(--typo3-text-color-variant, var(--cv-text-subtle)); 
+}
+
+.cv-datetime {
+    font-family: var(--cv-font-mono);
+    font-size: 0.6875rem;
+    color: var(--cv-text-muted);
+    letter-spacing: -0.01em;
+}
+
+.cv-number {
+    font-family: var(--cv-font-mono);
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
 }
 
-.rlt-compact-table .rlt-controls {
-    flex-wrap: nowrap;
+.cv-relation {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--cv-text-muted);
 }
 
-.rlt-compact-table .col-control .btn {
-    --typo3-btn-padding-y: var(--typo3-input-sm-padding-y);
-    --typo3-btn-padding-x: var(--typo3-input-sm-padding-x);
-    --typo3-btn-font-size: var(--typo3-input-sm-font-size);
+.cv-relation__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0.9375rem;
+    height: 0.9375rem;
+    padding: 0 0.1875rem;
+    background: var(--cv-accent-bg);
+    color: var(--cv-accent);
+    border-radius: 0.1875rem;
+    font-family: var(--cv-font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
 }
 
-.rlt-row--missing .col-title {
+/* =============================================================================
+   Toggle & Action Buttons
+   ============================================================================= */
+
+.cv-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.1875rem;
+    cursor: pointer;
+    transition: all var(--cv-transition-fast);
+}
+
+.cv-toggle .icon {
+    --icon-size: var(--cv-icon-size-chrome);
+}
+
+.cv-toggle--visible {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #16a34a;
+}
+
+.cv-toggle--visible:hover {
+    background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+    transform: scale(1.05);
+}
+
+.cv-toggle--hidden {
+    background: var(--cv-bg-subtle);
+    color: var(--cv-text-muted);
+}
+
+.cv-toggle--hidden:hover {
+    background: var(--cv-border);
+    transform: scale(1.05);
+}
+
+.cv-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--cv-text-muted);
+    border-radius: 0.1875rem;
+    cursor: pointer;
+    transition: all var(--cv-transition-fast);
+    text-decoration: none;
+}
+
+.cv-action,
+typo3-backend-contextual-record-edit-trigger.cv-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--cv-text-muted);
+    border-radius: 0.1875rem;
+    cursor: pointer;
+    transition: all var(--cv-transition-fast);
+    text-decoration: none;
+}
+
+.cv-action .icon,
+typo3-backend-contextual-record-edit-trigger.cv-action .icon {
+    --icon-size: var(--cv-icon-size-chrome);
+}
+
+.cv-action:hover {
+    background: var(--cv-bg-subtle);
+    color: var(--cv-text);
+    transform: scale(1.05);
+}
+
+typo3-backend-contextual-record-edit-trigger.cv-action:hover {
+    background: var(--cv-bg-subtle);
+    color: var(--cv-text);
+    transform: scale(1.05);
+}
+
+.cv-action--primary:hover {
+    background: var(--cv-accent-bg);
+    color: var(--cv-accent);
+}
+
+typo3-backend-contextual-record-edit-trigger.cv-action--primary:hover {
+    background: var(--cv-accent-bg);
+    color: var(--cv-accent);
+}
+
+.cv-action--danger:hover {
+    background: var(--cv-danger-bg);
+    color: var(--cv-danger);
+}
+
+/* =============================================================================
+   Clipboard Checkbox
+   ============================================================================= */
+
+/* Multi Record Selection: highlight row when selected (TYPO3 adds .active class) */
+.compactview-row.active .compactview-td {
+    background-color: var(--cv-accent-bg-opaque) !important;
+}
+
+/* =============================================================================
+   Dropdown Menu in Table Rows
+   ============================================================================= */
+
+/* Dropdown inside action cells */
+.compactview-td .dropdown {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Fallback: if dropdown-menu stays inside the table (no JS) */
+.compactview-td .dropdown-menu {
+    z-index: 1050;
+    font-size: 0.8125rem;
+    min-width: 10rem;
+}
+
+/* Native popover-based action menu */
+.compactview-td .dropdown-menu[popover] {
+    margin: 0;
+    padding: 0.25rem;
+    border: 1px solid var(--typo3-component-border-color, var(--cv-border));
+    border-radius: 0.5rem;
+    background: var(--typo3-component-bg, var(--cv-bg));
+    box-shadow: var(--typo3-shadow-3, 0 10px 28px rgba(15, 23, 42, 0.16));
+    max-width: min(18rem, calc(100vw - 1rem));
+    position-anchor: auto;
+    position-area: block-end span-inline-end;
+    justify-self: anchor-center;
+}
+
+.compactview-td .dropdown-menu[popover]:popover-open {
+    display: block;
+}
+
+/* =============================================================================
+   Translation Rows (indented below parent, like standard List View)
+   ============================================================================= */
+
+.compactview-row--translation .compactview-td {
+    /* Same font size as parent rows — hierarchy is conveyed by the tree
+       connector + indent, not by a smaller type scale. Background comes
+       from the group-parity zebra so parent + translations share one
+       stripe. */
+    padding-top: 0.1875rem;
+    padding-bottom: 0.1875rem;
+}
+
+/* Translation-row icon cell: indent the record icon so the cell reads
+   like a tree branch, and draw a clear ├ / └ connector that starts at
+   the horizontal center of the parent icon. Position stays sticky — we
+   inherit it from the fixed-left base rule.
+
+   The parent icon is a centred flex child of the 34px icon column, so its
+   horizontal center is --cv-tree-x (17px) — that is where the connectors
+   are anchored, not at the cell's left edge.
+   Background intentionally NOT overridden here — we inherit whatever the
+   group-parity zebra set, so the whole group reads as one stripe. */
+.compactview-row--translation .compactview-td--icon {
+    padding-left: 1.125rem; /* 18px — leaves the translation icon clear of the tick */
+}
+
+/* Vertical line from top to the middle of the row (last-child shape └). */
+.compactview-row--translation .compactview-td--icon::before {
+    content: "";
+    position: absolute;
+    left: var(--cv-tree-x);
+    top: 0;
+    bottom: 50%;
+    width: var(--cv-tree-line-width);
+    background: var(--cv-tree-line);
+}
+
+/* Middle row in a group (followed by another translation) extends the
+   vertical line through the full row — reads as ├. */
+.compactview-row--translation:has(+ .compactview-row--translation) .compactview-td--icon::before {
+    bottom: 0;
+}
+
+/* Horizontal tick from the vertical line to the translation icon. */
+.compactview-row--translation .compactview-td--icon::after {
+    content: "";
+    position: absolute;
+    left: var(--cv-tree-x);
+    top: 50%;
+    width: 10px;
+    height: var(--cv-tree-line-width);
+    background: var(--cv-tree-line);
+}
+
+.compactview-row--translation .compactview-row__icon {
+    opacity: 0.55;
+    position: relative;
+    z-index: 1; /* sit above the branch connector */
+}
+
+.compactview-row--translation-untranslated .compactview-row__icon {
+    opacity: 0.3;
+}
+
+/* Inline flag icon sitting in front of a title (used by both parent
+   and translation rows — translations emphasise the target language,
+   parents show the record's own language). */
+.compactview-row__lang-flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--cv-icon-size);
+    height: var(--cv-icon-size);
+    margin-right: 0.375rem;
+    vertical-align: -3px;
+}
+
+.compactview-row__lang-flag .icon {
+    --icon-size: var(--cv-icon-size);
+}
+
+/* Keep flag + title on a single line. The base title-link is
+   `display: block`, so we opt out for any title cell that carries a
+   flag (parent or translation). inline-block keeps ellipsis truncation. */
+.compactview-td--title:has(.compactview-row__lang-flag) .compactview-row__title-link,
+.compactview-row--translation .compactview-row__title-link,
+.compactview-row--translation .compactview-row__title-placeholder {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 1.75rem);
+    vertical-align: middle;
+}
+
+.compactview-row--translation-untranslated .compactview-row__lang-flag {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+}
+
+/* FREE · {lang} chip for non-connected translation rows */
+.compactview-row__lang-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.375rem;
+    margin-right: 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cv-text-muted);
+    background: color-mix(in srgb, var(--cv-text-muted) 10%, transparent);
+    border-radius: 999px;
+    vertical-align: middle;
+}
+
+.compactview-row__lang-chip--free {
+    color: var(--cv-accent);
+    background: color-mix(in srgb, var(--cv-accent) 14%, transparent);
+}
+
+.compactview-row__lang-chip--free > span {
+    opacity: 0.55;
+}
+
+.compactview-row--translation .compactview-row__title-link {
+    color: var(--cv-text);
+    font-weight: 400;
+}
+
+.compactview-row--translation-untranslated .compactview-row__title-placeholder {
+    color: var(--cv-text-muted);
     font-style: italic;
+}
+
+.compactview-row--translation-untranslated .compactview-row__flag {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+}
+
+.compactview-row__uid--muted {
+    color: var(--cv-text-muted);
+    opacity: 0.5;
+}
+
+/* Localize-to button styling (mirrors other compact actions) */
+.cv-action--create {
+    color: var(--cv-accent);
+    border-color: color-mix(in srgb, var(--cv-accent) 30%, transparent);
+    background: color-mix(in srgb, var(--cv-accent) 10%, transparent);
+}
+
+.cv-action--create:hover {
+    color: var(--cv-accent);
+    border-color: var(--cv-accent);
+    background: color-mix(in srgb, var(--cv-accent) 18%, transparent);
+}
+
+/* Workspace state indicators on translation rows */
+.compactview-row--ws-new .compactview-td { border-left: 3px solid #3b82f6; }
+.compactview-row--ws-changed .compactview-td { border-left: 3px solid #8b5cf6; }
+.compactview-row--ws-move .compactview-td { border-left: 3px solid #06b6d4; }
+.compactview-row--ws-deleted .compactview-td { border-left: 3px solid #ef4444; }
+.compactview-row--ws-deleted .compactview-row__title-link { text-decoration: line-through; opacity: 0.6; }
+
+/* Only apply border-left to the first cell per row */
+.compactview-row--ws-new .compactview-td:not(:first-child),
+.compactview-row--ws-changed .compactview-td:not(:first-child),
+.compactview-row--ws-move .compactview-td:not(:first-child),
+.compactview-row--ws-deleted .compactview-td:not(:first-child) {
+    border-left: none;
+}
+
+/* Free translation row indicator */
+.compactview-row--free .compactview-td:first-child {
+    border-left: 3px dashed var(--cv-accent);
+}
+
+/* Dark-mode background override removed intentionally — translations
+   inherit the parent group's zebra stripe so the whole group reads as
+   one unit. */
+
+/* Note: Sorting toggle, pagination, and recordlist heading base styles
+   are in base.css which is loaded automatically for all view modes. */
+
+/* =============================================================================
+   Responsive
+   ============================================================================= */
+
+@media (max-width: 768px) {
+    .compactview-table-wrapper {
+        margin: 0.125rem 0.25rem;
+        border-radius: var(--cv-radius-sm);
+    }
 }

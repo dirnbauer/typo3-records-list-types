@@ -6,7 +6,7 @@
 Installation
 ============
 
-Requires TYPO3 14.3.7 or later in the v14 series and PHP 8.4 or 8.5.
+Requires TYPO3 14.3.7 or later in the v14 series and PHP 8.4–8.5.
 
 The extension is installed via Composer. If Composer cannot find the
 package on Packagist, add the GitHub repository as a VCS repository in
@@ -22,7 +22,7 @@ Run the following commands in your TYPO3 project root:
 ..  code-block:: bash
 
     composer config repositories.records-list-types vcs https://github.com/dirnbauer/typo3-records-list-types.git
-    composer require webconsulting/records-list-types:^1.3
+    composer require webconsulting/records-list-types:^2.0
 
 Then set up the extension and clear caches:
 
@@ -43,10 +43,10 @@ Verification
 ============
 
 After installation, navigate to :guilabel:`Content > Records` in the
-TYPO3 backend. The module header shows a :guilabel:`View` dropdown with
-List view, Grid view, Compact view and Teaser view.
+TYPO3 backend. You should see view mode toggle buttons (List, Grid,
+Compact, Teaser) in the module header.
 
-If the dropdown does not appear:
+If the toggle buttons do not appear:
 
 1.  Ensure the extension is activated in
     :guilabel:`Admin Tools > Extensions`

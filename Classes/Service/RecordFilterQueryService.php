@@ -457,7 +457,13 @@ final class RecordFilterQueryService implements SingletonInterface
         }
 
         $matchedUids = $this->getCategoryMatchedRecordUids($table, $field, $categoryUids);
-        return array_any($recordUids, fn($uid): bool => isset($matchedUids[$uid]));
+        foreach ($recordUids as $uid) {
+            if (isset($matchedUids[$uid])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -623,7 +629,13 @@ final class RecordFilterQueryService implements SingletonInterface
         if (!is_array($value)) {
             return false;
         }
-        return array_any($value, fn($nestedValue): bool => is_scalar($nestedValue) && trim((string)$nestedValue) !== '');
+        foreach ($value as $nestedValue) {
+            if (is_scalar($nestedValue) && trim((string)$nestedValue) !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function getCurrentWorkspaceId(): int

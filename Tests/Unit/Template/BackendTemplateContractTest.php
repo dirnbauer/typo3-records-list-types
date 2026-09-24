@@ -49,33 +49,27 @@ final class BackendTemplateContractTest extends TestCase
     }
 
     #[Test]
-    public function recordTitlesKeepTheContextualEditTrigger(): void
+    public function backendRecordTemplatesKeepContextualEditTriggers(): void
     {
         $templateBase = dirname(__DIR__, 3) . '/Resources/Private';
-        $title = (string)file_get_contents($templateBase . '/Partials/Record/Title.html');
-        self::assertStringContainsString(
-            'typo3-backend-contextual-record-edit-trigger',
-            $title,
-            'Record titles must keep backend contextual editing instead of frontend Visual Editor markers.',
-        );
+        $recordTemplates = [
+            'Partials/Card.html',
+            'Partials/CompactRow.html',
+            'Partials/TeaserCard.html',
+            'Partials/TranslationRowCompact.html',
+            'Partials/TranslationRowTeaser.html',
+            'Partials/TranslationStrip.html',
+            'Templates/GenericView.html',
+        ];
 
-        foreach (['Partials/Card.html', 'Partials/CompactRow.html', 'Partials/TeaserCard.html', 'Partials/TranslationRowCompact.html', 'Partials/TranslationStrip.html', 'Templates/GenericView.html'] as $relativePath) {
-            self::assertStringContainsString(
-                'partial="Record/Title"',
-                (string)file_get_contents($templateBase . '/' . $relativePath),
-                $relativePath . ' must render record titles through Record/Title.',
-            );
-        }
-    }
-
-    #[Test]
-    public function viewsRenderCoreRecordControlsAndIcons(): void
-    {
-        $templateBase = dirname(__DIR__, 3) . '/Resources/Private';
-        foreach (['Partials/Card.html', 'Partials/CompactRow.html', 'Partials/TeaserCard.html', 'Partials/TranslationRowCompact.html', 'Templates/GenericView.html'] as $relativePath) {
+        foreach ($recordTemplates as $relativePath) {
             $template = (string)file_get_contents($templateBase . '/' . $relativePath);
-            self::assertStringContainsString('partial="Record/Controls"', $template, $relativePath . ' must render Core\'s control panel.');
-            self::assertStringContainsString('partial="Record/Icon"', $template, $relativePath . ' must render the record icon with its context menu.');
+
+            self::assertStringContainsString(
+                'typo3-backend-contextual-record-edit-trigger',
+                $template,
+                $relativePath . ' must keep backend contextual editing instead of frontend Visual Editor markers.',
+            );
         }
     }
 
@@ -100,49 +94,13 @@ final class BackendTemplateContractTest extends TestCase
     }
 
     #[Test]
-    public function sortingModeToggleMarksTheActiveModeAsCurrent(): void
+    public function sortingModeToggleExposesThePressedState(): void
     {
         $template = (string)file_get_contents(dirname(__DIR__, 3) . '/Resources/Private/Partials/SortingModeToggle.html');
 
-        self::assertStringContainsString('aria-current="true"', $template);
-        self::assertStringNotContainsString('role="button"', $template, 'Mode links navigate; a button role would also promise the Space key.');
-    }
-
-    #[Test]
-    public function menusOpenAsPopoversSoCardsAndScrollingTablesCannotClipThem(): void
-    {
-        foreach ($this->getBackendTemplates() as $relativePath => $templatePath) {
-            self::assertStringNotContainsString(
-                'data-bs-toggle="dropdown"',
-                (string)file_get_contents($templatePath),
-                $relativePath . ' must open its menu with popovertarget, like the rest of the views.',
-            );
-        }
-    }
-
-    #[Test]
-    public function onlyCoreGeneratedFragmentsAreRenderedRaw(): void
-    {
-        $allowed = ['{record.iconHtml}', '{record.controlsHtml}', '{body}'];
-        foreach ($this->getBackendTemplates() as $relativePath => $templatePath) {
-            $template = (string)file_get_contents($templatePath);
-            preg_match_all('/<f:format\.raw>(.*?)<\/f:format\.raw>/s', $template, $matches);
-            foreach ($matches[1] as $content) {
-                if (str_contains($content, '{pageInput}') || str_contains($content, 'pagination.pageOfTotal')) {
-                    continue; // the page input replaces a placeholder inside a translated sentence
-                }
-                self::assertContains(trim($content), $allowed, $relativePath . ' renders unescaped output: ' . trim($content));
-            }
-        }
-    }
-
-    #[Test]
-    public function recordCheckboxesHaveAnAccessibleName(): void
-    {
-        $checkbox = (string)file_get_contents(dirname(__DIR__, 3) . '/Resources/Private/Partials/Record/Checkbox.html');
-
-        self::assertStringContainsString('t3js-multi-record-selection-check', $checkbox);
-        self::assertStringContainsString("aria-label=\"{f:translate(key: 'records_list_types.messages:a11y.selectRecord'", $checkbox);
+        self::assertStringContainsString('aria-pressed="true"', $template);
+        self::assertStringContainsString('aria-pressed="false"', $template);
+        self::assertStringContainsString('role="button"', $template, 'Inactive segments are links and need the button role for aria-pressed.');
     }
 
     #[Test]

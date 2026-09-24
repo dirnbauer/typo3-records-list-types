@@ -361,6 +361,15 @@
         <target>Hier ablegen</target>
       </segment>
     </unit>
+    <unit id="drag.endPosition">
+      <notes>
+        <note>Live region announcement when the end drop zone is targeted.</note>
+      </notes>
+      <segment state="final">
+        <source>End of the list (after the last record)</source>
+        <target>Ende der Liste (nach dem letzten Datensatz)</target>
+      </segment>
+    </unit>
     <unit id="a11y.reorderableList">
       <notes>
         <note>Accessible name of the drag-and-drop list; {table} is the table label.</note>
@@ -386,33 +395,6 @@
       <segment state="final">
         <source>{title} is now visible</source>
         <target>{title} ist jetzt sichtbar</target>
-      </segment>
-    </unit>
-    <unit id="a11y.selectRecord">
-      <notes>
-        <note>Accessible name of the checkbox that selects one record for the bulk actions. {title} is the record title.</note>
-      </notes>
-      <segment state="final">
-        <source>Select “{title}”</source>
-        <target>„{title}“ auswählen</target>
-      </segment>
-    </unit>
-    <unit id="column.recordType">
-      <notes>
-        <note>Accessible name of the table column that shows the record icon; screen readers only.</note>
-      </notes>
-      <segment state="final">
-        <source>Record type</source>
-        <target>Datensatztyp</target>
-      </segment>
-    </unit>
-    <unit id="field.empty">
-      <notes>
-        <note>Read by screen readers for a field without a value; sighted users see a dash.</note>
-      </notes>
-      <segment state="final">
-        <source>No value</source>
-        <target>Kein Wert</target>
       </segment>
     </unit>
     <unit id="notification.moveFailed">
@@ -449,6 +431,15 @@
       <segment state="final">
         <source>Request failed</source>
         <target>Anfrage fehlgeschlagen</target>
+      </segment>
+    </unit>
+    <unit id="notification.visibilityEndpointMissing">
+      <notes>
+        <note>Notification body when the Core AJAX route for toggling visibility is not registered.</note>
+      </notes>
+      <segment state="final">
+        <source>The TYPO3 endpoint for changing visibility is not available.</source>
+        <target>Der TYPO3-Endpunkt zum Ändern der Sichtbarkeit ist nicht verfügbar.</target>
       </segment>
     </unit>
     <unit id="pagination.regionTop">
@@ -530,6 +521,15 @@
       <segment state="final">
         <source>Translate to {language}</source>
         <target>Übersetzen nach {language}</target>
+      </segment>
+    </unit>
+    <unit id="translation.edit">
+      <notes>
+        <note>Tooltip of the edit link of an existing translation; {language} is the language title.</note>
+      </notes>
+      <segment state="final">
+        <source>Edit translation ({language})</source>
+        <target>Übersetzung bearbeiten ({language})</target>
       </segment>
     </unit>
     <unit id="translation.sectionLabel">
@@ -649,6 +649,24 @@
         <target>Gelöscht</target>
       </segment>
     </unit>
+    <unit id="historyOverlay.elementTab">
+      <notes>
+        <note>Tab of the record history modal that shows the history of the element itself.</note>
+      </notes>
+      <segment state="final">
+        <source>Element history</source>
+        <target>Elementverlauf</target>
+      </segment>
+    </unit>
+    <unit id="historyOverlay.pageTab">
+      <notes>
+        <note>Tab and frame title of the record history modal that shows the history of the parent page.</note>
+      </notes>
+      <segment state="final">
+        <source>Page history</source>
+        <target>Seitenverlauf</target>
+      </segment>
+    </unit>
     <unit id="filter.show">
       <notes>
         <note>Entry in the View dropdown of the module header that toggles the filter panel.</note>
@@ -683,15 +701,6 @@
       <segment state="final">
         <source>Reset</source>
         <target>Zurücksetzen</target>
-      </segment>
-    </unit>
-    <unit id="filter.searchedFields">
-      <notes>
-        <note>Hint below a text filter naming the fields it searches. {fields} is a comma-separated list of field labels.</note>
-      </notes>
-      <segment state="final">
-        <source>Searches {fields}</source>
-        <target>Durchsucht {fields}</target>
       </segment>
     </unit>
     <unit id="filter.option.any">
@@ -755,6 +764,24 @@
       <segment state="final">
         <source>Reset filters and search</source>
         <target>Filter und Suche zurücksetzen</target>
+      </segment>
+    </unit>
+    <unit id="table.expand">
+      <notes>
+        <note>Tooltip on the table heading link that narrows the list down to one table.</note>
+      </notes>
+      <segment state="final">
+        <source>List only this table</source>
+        <target>Nur diese Tabelle anzeigen</target>
+      </segment>
+    </unit>
+    <unit id="table.collapse">
+      <notes>
+        <note>Tooltip on the table heading link that returns to the list of all tables.</note>
+      </notes>
+      <segment state="final">
+        <source>List all tables</source>
+        <target>Alle Tabellen anzeigen</target>
       </segment>
     </unit>
     <unit id="viewMode.list.description">

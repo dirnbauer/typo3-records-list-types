@@ -7,36 +7,18 @@ Usage
 =====
 
 After installation, open :guilabel:`Content > Records` in the TYPO3
-backend. The extension adds a :guilabel:`View` dropdown to the module
-header when at least two view modes are allowed for the current page.
+backend. The extension adds a view-mode dropdown to the module header
+when at least two view modes are allowed for the current page.
 
 .. _usage-switch-view:
 
 Switch view mode
 ================
 
-Choose List view, Grid view, Compact view, Teaser view or a custom view in
-the :guilabel:`View` dropdown. The choice is remembered per user and, in
-the single-table view, per table. Bookmarks of a view open that view again.
-
-.. _usage-record-actions:
-
-Work with records
-=================
-
-Every record offers the actions of the List View, rendered by TYPO3 itself:
-edit, hide or unhide, move up and down, delete, and in the :guilabel:`More`
-menu info, history, new record after, copy and cut, plus the actions of
-other installed extensions. Clicking the record icon opens its context
-menu. The title opens the record in the contextual editor.
-
-Hidden records, workspace changes and free-mode translations carry a text
-badge in addition to the icon overlay. Records another user is editing show
-Core's lock symbol next to the title.
-
-Select records with their checkbox, or with the selection menu above the
-records (check all, uncheck all, toggle). The selection bar then offers
-Core's bulk actions: edit, edit columns, delete, and clipboard transfer.
+Use the view-mode dropdown in the DocHeader to switch between the
+standard List View and the alternative Grid, Compact, Teaser, or custom
+views. The selected mode is stored in the backend user configuration and
+used again on later visits.
 
 .. _usage-filter-records:
 
@@ -44,11 +26,10 @@ Filter records
 ==============
 
 Select a table and enable :guilabel:`View > Show filters` to display the
-configured filter panel. A text filter names the fields it searches below
-its input. In LIVE, filters use TYPO3's normal record-list query path. In
-workspaces, alternative view modes evaluate the module search term and
-active filters after :php:`BackendUtility::workspaceOL()` so draft text,
-visibility, date, select, and category changes can be found before
+configured filter panel. In LIVE, filters use TYPO3's normal record-list
+query path. In workspaces, alternative view modes evaluate the module search
+term and active filters after :php:`BackendUtility::workspaceOL()` so draft
+text, visibility, date, select, and category changes can be found before
 publishing.
 
 .. _usage-toggle-visibility:
@@ -56,36 +37,28 @@ publishing.
 Toggle visibility
 =================
 
-The visibility button is Core's, and so is the endpoint it calls
-(``record_toggle_visibility``, protected by the backend's sudo mode where
-TYPO3 requires a password confirmation). On cards the button, the record
-icon and the hidden badge change in place, and screen readers announce the
-new state. Changes to page visibility also refresh the page tree.
+Grid, Compact, and Teaser views provide inline hide/show actions for
+records that have a TCA disabled field. These actions use TYPO3's core
+``record_toggle_visibility`` AJAX endpoint.
+
+The JavaScript request is sent through TYPO3's backend
+``sudoModeInterceptor`` middleware. If TYPO3 protects the affected table or
+field with a password/sudo confirmation, for example for backend users or
+backend user groups, the Core confirmation flow is shown before the
+visibility change continues.
+
+After a successful toggle, the visibility button, record styling, and hidden
+badge update immediately. Changes to page visibility also refresh the page
+tree.
 
 .. _usage-sort-records:
 
 Sort and reorder records
 ========================
 
-Tables with a TCA ``sortby`` field are listed in manual order by default.
-In the Grid View, drag a card to its new place, or use the handle next to
-the checkbox with the keyboard: :kbd:`Space` or :kbd:`Enter` grabs the
-record, the arrow keys move it, :kbd:`Space` or :kbd:`Enter` drops it and
-:kbd:`Escape` cancels. Core's "Move up" and "Move down" buttons work in
-every view and need no dragging.
-
-Switch the sorting mode to :guilabel:`By column` to order records by a
-field instead; the move buttons are hidden then, as in the List View.
-
-.. _usage-translations:
-
-Translations
-============
-
-Select languages in the DocHeader language menu. Cards list one entry per
-selected language: existing translations with their icon (context menu),
-title and state, missing ones with a button that opens Core's localization
-wizard. The Compact View shows the same as indented rows below the record.
+Tables with a TCA ``sortby`` field support manual drag-and-drop
+reordering. Use the sorting mode toggle to switch to field-based sorting
+when you need to order records by a specific visible column.
 
 .. _usage-workspaces:
 
@@ -93,10 +66,9 @@ Work in workspaces
 ==================
 
 The alternative views respect TYPO3 workspace restrictions and overlay
-records with :php:`BackendUtility::workspaceOL()` before rendering. New,
-changed, moved and deleted records show their state as a badge and in the
-record icon; records deleted in the workspace are struck through. Tables
-that cannot be versioned show Core's notice above their records.
+records with :php:`BackendUtility::workspaceOL()` before rendering.
+Workspace changes are displayed with state colors for new, modified,
+moved, and deleted records.
 
 Search and configured filters in alternative views also run after this
 overlay when a workspace is active. A word added only in a draft record, for

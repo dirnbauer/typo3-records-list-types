@@ -1,0 +1,133 @@
+.records-list-types-history-document,
+.records-list-types-history-body {
+    height: 100%;
+}
+
+.records-list-types-history-body {
+    background: var(--module-bg, var(--typo3-surface-container-lowest));
+    overflow: hidden;
+}
+
+.records-list-types-history-view {
+    height: 100dvh;
+    min-height: 0;
+}
+
+.records-list-types-history-view .module-docheader {
+    display: none !important;
+}
+
+.records-list-types-history-view .module-body {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+.records-list-types-history-view .module-body-container {
+    height: 100%;
+    max-width: none;
+    overflow: auto;
+    padding: 1.25rem 1.5rem;
+}
+
+.records-list-types-history-view .records-list-types-history-tabs {
+    align-items: flex-end;
+    background: var(--module-bg, var(--typo3-surface-container-lowest));
+    border-bottom: 1px solid var(--typo3-component-border-color);
+    display: flex;
+    gap: .25rem;
+    margin: -1.25rem -1.5rem 1.25rem;
+    padding: .75rem 1.5rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.records-list-types-history-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--typo3-component-border-radius) var(--typo3-component-border-radius) 0 0;
+    color: var(--typo3-text-color-base);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    margin-bottom: -1px;
+    min-height: 2.25rem;
+    padding: .5rem .875rem;
+}
+
+.records-list-types-history-tab:hover {
+    background: var(--typo3-list-item-hover-bg, var(--typo3-component-hover-bg));
+}
+
+.records-list-types-history-tab:focus-visible {
+    outline: var(--typo3-outline-width) var(--typo3-outline-style) var(--typo3-outline-color, currentColor);
+    outline-offset: -2px;
+}
+
+.records-list-types-history-tab[aria-selected="true"] {
+    background: var(--typo3-component-bg);
+    border-color: var(--typo3-component-border-color);
+    border-bottom-color: var(--typo3-component-bg);
+    color: var(--typo3-component-color);
+}
+
+.records-list-types-history-panel[hidden] {
+    display: none !important;
+}
+
+.records-list-types-history-panel--page {
+    height: calc(100% - 3.75rem);
+    min-height: 32rem;
+}
+
+.records-list-types-history-page-frame {
+    background: var(--module-bg, var(--typo3-surface-container-lowest));
+    border: 0;
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.records-list-types-history-view .container-settings {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    margin-bottom: 1.5rem;
+    padding: 0;
+}
+
+.records-list-types-history-view h1 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    margin-top: 0;
+}
+
+.records-list-types-history-view h2 {
+    font-size: 1.25rem;
+}
+
+.records-list-types-history-view .table-fit {
+    margin-bottom: 1rem;
+}
+
+.records-list-types-history-view--embedded .module-body-container {
+    padding: 1.25rem;
+}
+
+@media (max-width: 767px) {
+    .records-list-types-history-view .module-body-container {
+        padding: 1rem;
+    }
+
+    .records-list-types-history-view .records-list-types-history-tabs {
+        margin: -1rem -1rem 1rem;
+        overflow-x: auto;
+        padding: .625rem 1rem 0;
+    }
+
+    .records-list-types-history-tab {
+        white-space: nowrap;
+    }
+}

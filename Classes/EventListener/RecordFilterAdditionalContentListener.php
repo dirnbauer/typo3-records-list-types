@@ -49,6 +49,7 @@ final readonly class RecordFilterAdditionalContentListener
         $view = $this->viewFactory->create(new ViewFactoryData(
             templateRootPaths: ['EXT:records_list_types/Resources/Private/Templates/'],
             partialRootPaths: ['EXT:records_list_types/Resources/Private/Partials/'],
+            layoutRootPaths: ['EXT:records_list_types/Resources/Private/Layouts/'],
             request: $request,
         ));
         $view->assign('filters', $filters);

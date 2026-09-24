@@ -1,52 +1,220 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
-    One record row of the compact view, marked up like a list view row so
-    Core's scripts (visibility toggle, selection, edit multiple) work on it.
-
-    Arguments: record, table
+    Compact View Row - Table row with fixed left/right columns
 </f:comment>
 
-<tr class="t3js-entity rlt-row{f:if(condition: record.hidden, then: ' rlt-row--hidden')}"
+<tr class="compactview-row {record.groupClass}{f:if(condition: record.hidden, then: ' compactview-row--hidden')}{f:if(condition: record.isFreeTranslation, then: ' compactview-row--free')}"
     data-table="{record.tableName}"
     data-uid="{record.uid}"
-    {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-element="true"')}>
-    <f:if condition="{table.multiSelectEnabled}">
-        <td class="col-checkbox"><f:render partial="Record/Checkbox" arguments="{record: record}" /></td>
+    {f:if(condition: multiSelectEnabled, then: 'data-multi-record-selection-element=\"true\"')}>
+
+    <f:if condition="{multiSelectEnabled}">
+        <f:comment>Fixed left: Multi Record Selection checkbox (TYPO3 core API)</f:comment>
+        <td class="compactview-td compactview-td--fixed-left compactview-td--checkbox">
+            <span class="form-check form-check-type-toggle">
+                <input class="form-check-input t3js-multi-record-selection-check"
+                       type="checkbox"
+                       name="CBC[{record.tableName}|{record.uid}]"
+                       value="1" />
+            </span>
+        </td>
     </f:if>
-    <td class="col-icon"><f:render partial="Record/Icon" arguments="{record: record}" /></td>
-    <f:for each="{table.sortableColumnHeaders}" as="header">
-        <f:switch expression="{header.type}">
-            <f:case value="uid">
-                <td class="col-uid">{record.uid}</td>
-            </f:case>
-            <f:case value="title">
-                <td class="col-title col-responsive">
-                    <f:render partial="Record/Title" arguments="{record: record}" />
-                    <f:render partial="Record/States" arguments="{record: record}" />
-                </td>
-                <td class="col-control"><f:render partial="Record/Controls" arguments="{record: record}" /></td>
-                <f:if condition="{table.isLanguageAware}">
-                    <td class="col-localization">
-                        <f:if condition="{record.languageFlagIdentifier}">
-                            <core:icon identifier="{record.languageFlagIdentifier}" size="small" />
-                        </f:if>
-                        {record.languageTitle}
-                    </td>
+    
+    <f:comment>Fixed left: Icon</f:comment>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--icon">
+        <span class="compactview-row__icon">
+            <core:icon identifier="{record.iconIdentifier}" size="small" />
+        </span>
+    </td>
+    
+    <f:comment>Fixed left: UID</f:comment>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--uid">
+        <span class="compactview-row__uid">{record.uid}</span>
+    </td>
+    
+    <f:comment>Fixed left: Title (clickable only when the user can edit).
+        Default-language rows get a leading flag too (same pattern as
+        translations) so the language is visible for every row. Free
+        translations additionally get a "FREE · {lang}" chip.</f:comment>
+    <td class="compactview-td compactview-td--fixed-left compactview-td--title">
+        <f:if condition="{record.sysLanguageUid} >= 0">
+            <span class="compactview-row__lang-flag compactview-row__lang-flag--original" title="{record.languageTitle}" aria-label="{record.languageTitle}">
+                <f:if condition="{record.languageFlagIdentifier}">
+                    <f:then>
+                        <core:icon identifier="{record.languageFlagIdentifier}" size="small" />
+                    </f:then>
+                    <f:else>
+                        <core:icon identifier="flags-multiple" size="small" />
+                    </f:else>
                 </f:if>
-            </f:case>
-            <f:defaultCase>
-                <f:variable name="fieldData" value="{record.displayValues.{header.field}}" />
-                <td class="col-{header.type}" data-field="{header.field}">
-                    <f:if condition="{fieldData}">
-                        <f:render partial="Record/FieldValue" arguments="{fieldData: fieldData}" />
-                    </f:if>
-                </td>
-            </f:defaultCase>
-        </f:switch>
+            </span>
+        </f:if>
+        <f:if condition="{record.isFreeTranslation}">
+            <span class="compactview-row__lang-chip compactview-row__lang-chip--free" title="{f:translate(key: 'records_list_types.messages:translation.free.title')}">
+                <f:translate key="records_list_types.messages:translation.free" />
+                <span>·</span>
+                {record.languageTitle}
+            </span>
+        </f:if>
+        <f:for each="{record.displayValues}" as="fieldData">
+            <f:if condition="{fieldData.isLabelField}">
+                <f:if condition="{record.permissions.canEdit}">
+                    <f:then>
+                        <typo3-backend-contextual-record-edit-trigger
+                            class="compactview-row__title-link"
+                            title="{fieldData.formatted}"
+                            edit-url="{record.editUrl}"
+                            url="{record.contextualEditUrl}">
+                            <f:if condition="{fieldData.formatted}">
+                                <f:then>{fieldData.formatted}</f:then>
+                                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
+                            </f:if>
+                        </typo3-backend-contextual-record-edit-trigger>
+                    </f:then>
+                    <f:else>
+                        <span class="compactview-row__title-link" title="{fieldData.formatted}">
+                            <f:if condition="{fieldData.formatted}">
+                                <f:then>{fieldData.formatted}</f:then>
+                                <f:else><em><f:translate key="core.core:labels.no_title" /></em></f:else>
+                            </f:if>
+                        </span>
+                    </f:else>
+                </f:if>
+            </f:if>
+        </f:for>
+    </td>
+    
+    <f:comment>Scrollable: Dynamic field columns</f:comment>
+    <f:for each="{record.displayValues}" as="fieldData">
+        <f:if condition="!{fieldData.isLabelField}">
+            <td class="compactview-td" data-field="{fieldData.field}" data-type="{fieldData.type}">
+                <f:switch expression="{fieldData.type}">
+                    
+                    <f:case value="boolean">
+                        <f:if condition="{fieldData.raw}">
+                            <f:then>
+                                <span class="cv-badge cv-badge--yes">
+                                    <core:icon identifier="actions-check" size="small" />
+                                </span>
+                            </f:then>
+                            <f:else>
+                                <span class="cv-badge cv-badge--no">
+                                    <core:icon identifier="actions-close" size="small" />
+                                </span>
+                            </f:else>
+                        </f:if>
+                    </f:case>
+                    
+                    <f:case value="datetime">
+                        <f:if condition="{fieldData.formatted}">
+                            <f:then><span class="cv-datetime">{fieldData.formatted}</span></f:then>
+                            <f:else>—</f:else>
+                        </f:if>
+                    </f:case>
+                    
+                    <f:case value="number">
+                        <f:if condition="{fieldData.formatted}">
+                            <f:then><span class="cv-number">{fieldData.formatted}</span></f:then>
+                            <f:else>—</f:else>
+                        </f:if>
+                    </f:case>
+                    
+                    <f:case value="relation">
+                        <f:if condition="{fieldData.formatted}">
+                            <f:then>
+                                <span class="cv-relation">
+                                    <f:if condition="{fieldData.count}">
+                                        <span class="cv-relation__count">{fieldData.count}</span>
+                                    </f:if>
+                                    <span>{fieldData.formatted -> f:format.crop(maxCharacters: 20, append: '…')}</span>
+                                </span>
+                            </f:then>
+                            <f:else>—</f:else>
+                        </f:if>
+                    </f:case>
+                    
+                    <f:defaultCase>
+                        <f:if condition="{fieldData.formatted}">
+                            <f:then>{fieldData.formatted -> f:format.crop(maxCharacters: 25, append: '…')}</f:then>
+                            <f:else>—</f:else>
+                        </f:if>
+                    </f:defaultCase>
+                    
+                </f:switch>
+            </td>
+        </f:if>
     </f:for>
+
+    <f:comment>Spacer - absorbs remaining width (hidden from screen readers)</f:comment>
+    <td class="compactview-td compactview-td--spacer" aria-hidden="true" role="presentation"></td>
+    
+    <f:comment>Fixed right: Visibility toggle (only when the user can toggle)</f:comment>
+    <td class="compactview-td compactview-td--fixed-right compactview-td--status">
+        <f:if condition="{record.permissions.canToggleVisibility}">
+            <f:if condition="{record.hidden}">
+                <f:then>
+                    <button type="button"
+                            class="cv-toggle cv-toggle--hidden"
+                            title="{f:translate(key: 'records_list_types.messages:action.unhide')}"
+                            aria-label="{f:translate(key: 'records_list_types.messages:action.unhide')}"
+                            data-gridview-action="show"
+                            data-table="{record.tableName}"
+                            data-uid="{record.uid}"
+                            data-hidden-field="{tableConfig.hiddenField}">
+                        <core:icon identifier="actions-toggle-off" size="small" />
+                    </button>
+                </f:then>
+                <f:else>
+                    <button type="button"
+                            class="cv-toggle cv-toggle--visible"
+                            title="{f:translate(key: 'records_list_types.messages:action.hide')}"
+                            aria-label="{f:translate(key: 'records_list_types.messages:action.hide')}"
+                            data-gridview-action="hide"
+                            data-table="{record.tableName}"
+                            data-uid="{record.uid}"
+                            data-hidden-field="{tableConfig.hiddenField}">
+                        <core:icon identifier="actions-toggle-on" size="small" />
+                    </button>
+                </f:else>
+            </f:if>
+        </f:if>
+    </td>
+
+    <f:comment>Fixed right: Edit</f:comment>
+    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
+        <f:if condition="{record.permissions.canEdit}">
+            <typo3-backend-contextual-record-edit-trigger
+                class="cv-action cv-action--primary"
+                title="{f:translate(key: 'records_list_types.messages:action.edit')}"
+                edit-url="{record.editUrl}"
+                url="{record.contextualEditUrl}">
+                <core:icon identifier="actions-open" size="small" />
+            </typo3-backend-contextual-record-edit-trigger>
+        </f:if>
+    </td>
+
+    <f:comment>Fixed right: Delete</f:comment>
+    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
+        <f:if condition="{record.permissions.canDelete}">
+            <button type="button" class="cv-action cv-action--danger"
+                    title="{f:translate(key: 'records_list_types.messages:action.delete')}"
+                    aria-label="{f:translate(key: 'records_list_types.messages:action.delete')}"
+                    data-gridview-action="delete"
+                    data-table="{record.tableName}"
+                    data-uid="{record.uid}">
+                <core:icon identifier="actions-edit-delete" size="small" />
+            </button>
+        </f:if>
+    </td>
+
+    <f:comment>Fixed right: More Actions dropdown</f:comment>
+    <td class="compactview-td compactview-td--fixed-right compactview-td--action">
+        <f:render partial="RecordActionDropdown" arguments="{record: record, buttonClass: 'cv-action'}" />
+    </td>
 </tr>
 
 </html>

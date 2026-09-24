@@ -1,58 +1,209 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
 <f:comment>
-    Generic view: the starting point for a view of your own. Copy this file,
-    register it in Page TSconfig and change the list item. Table/Section
-    frames each table like the list view (heading, table actions, selection
-    bar, pagination, empty state); the Record/* partials render what the
-    list view renders for a record.
-
-    Variables:
-    - tableData: one entry per table, with
-      - tableName, tableIdentifier, tableLabel, recordCount
-      - records: every record has uid, pid, tableName, title, hidden,
-        displayValues (field => {field, label, type, raw, formatted}),
-        editUrl, contextualEditUrl, iconHtml, controlsHtml, translations,
-        languageTitle, languageFlagIdentifier, workspaceState, permissions
-      - paginator, pagination, paginationUrl, sortingDropdown,
-        sortingModeToggle, actionButtons, filters, emptyState
-    - currentTable: the table of the single-table view, empty otherwise
-    - pageId, searchTerm, viewMode, viewConfig
+    Generic View Template
+    
+    This is a base template for custom view types registered via TSconfig.
+    Copy this template to create your own custom view.
+    
+    Available variables:
+    - pageId: Current page ID
+    - tableData: Array of table data, each containing:
+      - tableName: Database table name
+      - tableLabel: Human-readable table label
+      - tableIcon: Icon identifier for the table
+      - tableConfig: Table configuration from TSconfig
+      - records: Array of record data with displayValues
+      - recordCount: Number of records
+      - actionButtons: Rendered action button HTML
+      - singleTableUrl: URL to filter by this table
+      - clearTableUrl: URL to clear table filter
+      - displayColumns: Columns to display
+      - sortableFields: Fields available for sorting
+      - sortField: Current sort field
+      - sortDirection: Current sort direction (asc/desc)
+      - paginator: DatabasePaginator (TYPO3 Core PaginatorInterface)
+      - pagination: SlidingWindowPagination (TYPO3 Core PaginationInterface)
+      - paginationUrl: Base URL for pagination links
+    - currentTable: Currently filtered table (empty if showing all)
+    - searchTerm: Current search term
+    - viewMode: Current view mode identifier
+    - viewConfig: View type configuration from registry
 </f:comment>
 
-<records-list-types-actions class="rlt-view rlt-view--generic">
+<records-list-types-actions>
 <div class="recordlist-genericview-container">
-    <f:for each="{tableData}" as="table">
-        <f:render partial="Table/Section" arguments="{table: table, currentTable: currentTable, sortingControls: 1}" contentAs="body">
-            <f:if condition="{table.multiSelectEnabled}">
-                <div class="rlt-toolbar"><f:render partial="Table/SelectionToggle" arguments="{id: 'rlt-selection-{table.tableIdentifier}'}" /></div>
-            </f:if>
-            <ul class="list-group list-group-flush rlt-generic" aria-label="{table.tableLabel}">
-                <f:for each="{table.records}" as="record">
-                    <li class="list-group-item rlt-generic-item"
-                        data-table="{record.tableName}"
-                        data-uid="{record.uid}"
-                        {f:if(condition: table.multiSelectEnabled, then: 'data-multi-record-selection-element="true"')}>
-                        <f:if condition="{table.multiSelectEnabled}">
-                            <f:render partial="Record/Checkbox" arguments="{record: record}" />
+
+    <f:if condition="{tableData}">
+        <f:then>
+            <f:for each="{tableData}" as="table">
+                <f:render partial="RecordFilters" arguments="{filters: table.filters}" />
+                <div class="recordlist" id="t3-table-{table.tableName}">
+                    <f:comment>Table header</f:comment>
+                    <div class="recordlist-heading">
+                        <div class="recordlist-heading-row">
+                            <div class="recordlist-heading-title">
+                                <f:if condition="{currentTable}">
+                                    <f:then>
+                                        <a href="{table.clearTableUrl}">
+                                            {table.tableLabel} (<span>{table.recordCount}</span>)
+                                            <span class="ms-1"><core:icon identifier="actions-view-table-collapse" size="small" /></span>
+                                        </a>
+                                    </f:then>
+                                    <f:else>
+                                        <a href="{table.singleTableUrl}">
+                                            {table.tableLabel} (<span>{table.recordCount}</span>)
+                                            <span class="ms-1"><core:icon identifier="actions-view-table-expand" size="small" /></span>
+                                        </a>
+                                    </f:else>
+                                </f:if>
+                            </div>
+
+                            <div class="recordlist-heading-actions">
+                                <f:comment>Sorting dropdown rendered from structured data</f:comment>
+                                <f:if condition="{table.sortingDropdown}">
+                                    <div class="btn-group" role="group" aria-label="{f:translate(key: 'records_list_types.messages:sortingMode.label')}">
+                                        <f:render partial="SortingDropdown" arguments="{sortingDropdown: table.sortingDropdown}" />
+                                    </div>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.newRecordButton}">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.newRecordButton}</f:sanitize.html>
+                                </f:if>
+                                
+                                <f:if condition="{table.actionButtons.downloadButton}">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.downloadButton}</f:sanitize.html>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.columnSelectorButton}">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.columnSelectorButton}</f:sanitize.html>
+                                </f:if>
+
+                                <f:if condition="{table.actionButtons.collapseButton}">
+                                    <f:sanitize.html build="records-list-types-backend-fragments">{table.actionButtons.collapseButton}</f:sanitize.html>
+                                </f:if>
+                            </div>
+                        </div>
+                    </div>
+
+                    <f:comment>Records list - customize this section for your view type</f:comment>
+                    <div class="collapse show" data-state="expanded" id="recordlist-{table.tableName}">
+                        <f:comment>Pagination - only in single table mode</f:comment>
+                        <f:if condition="{currentTable}">
+                            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'top'}" />
                         </f:if>
-                        <span class="rlt-record-icon"><f:render partial="Record/Icon" arguments="{record: record}" /></span>
-                        <span class="rlt-generic-title">
-                            <f:render partial="Record/Title" arguments="{record: record}" />
-                            <f:render partial="Record/States" arguments="{record: record}" />
-                        </span>
-                        <f:for each="{record.displayValues}" as="fieldData">
-                            <f:if condition="!{fieldData.isLabelField} && {fieldData.formatted}">
-                                <span class="rlt-generic-value" title="{fieldData.label}">{fieldData.formatted}</span>
-                            </f:if>
-                        </f:for>
-                        <f:render partial="Record/Controls" arguments="{record: record}" />
-                    </li>
-                </f:for>
-            </ul>
-        </f:render>
-    </f:for>
+
+                        <div class="genericview-list p-3">
+                            <f:for each="{table.records}" as="record">
+                                <f:comment>
+                                    Replace this with your custom card/row partial:
+                                    <f:render partial="MyCustomCard" arguments="{record: record, tableConfig: table.tableConfig}" />
+                                </f:comment>
+                                
+                                <div class="genericview-item card mb-2">
+                                    <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+                                        <f:comment>Icon</f:comment>
+                                        <span class="text-muted">
+                                            <core:icon identifier="{record.iconIdentifier}" size="small" />
+                                        </span>
+                                        
+                                        <f:comment>UID</f:comment>
+                                        <span class="badge bg-secondary bg-opacity-25 text-muted">#{record.uid}</span>
+                                        
+                                        <f:comment>Title with native TYPO3 contextual edit trigger</f:comment>
+                                        <div class="flex-grow-1">
+                                            <f:if condition="{record.permissions.canEdit}">
+                                                <f:then>
+                                                    <typo3-backend-contextual-record-edit-trigger
+                                                        class="text-decoration-none fw-medium"
+                                                        edit-url="{record.editUrl}"
+                                                        url="{record.contextualEditUrl}">
+                                                        {record.title}
+                                                    </typo3-backend-contextual-record-edit-trigger>
+                                                </f:then>
+                                                <f:else>
+                                                    <span class="fw-medium">{record.title}</span>
+                                                </f:else>
+                                            </f:if>
+                                        </div>
+                                        
+                                        <f:comment>Display fields</f:comment>
+                                        <f:for each="{record.displayValues}" as="fieldData">
+                                            <f:if condition="!{fieldData.isLabelField} && !{fieldData.isEmpty}">
+                                                <span class="text-muted small" title="{fieldData.label}">
+                                                    {fieldData.formatted -> f:format.crop(maxCharacters: 30, append: '…')}
+                                                </span>
+                                            </f:if>
+                                        </f:for>
+                                        
+                                        <f:comment>Actions</f:comment>
+                                        <div class="btn-group btn-group-sm">
+                                            <f:if condition="{record.permissions.canEdit}">
+                                                <typo3-backend-contextual-record-edit-trigger
+                                                    class="btn btn-outline-primary btn-sm"
+                                                    title="{f:translate(key: 'records_list_types.messages:action.edit')}"
+                                                    aria-label="{f:translate(key: 'records_list_types.messages:action.edit')}"
+                                                    edit-url="{record.editUrl}"
+                                                    url="{record.contextualEditUrl}">
+                                                    <core:icon identifier="actions-open" size="small" />
+                                                </typo3-backend-contextual-record-edit-trigger>
+                                            </f:if>
+                                            <f:if condition="{record.permissions.canDelete}">
+                                                <button type="button"
+                                                        class="btn btn-outline-danger btn-sm"
+                                                        title="{f:translate(key: 'records_list_types.messages:action.delete')}"
+                                                        aria-label="{f:translate(key: 'records_list_types.messages:action.delete')}"
+                                                        data-gridview-action="delete"
+                                                        data-table="{record.tableName}"
+                                                        data-uid="{record.uid}">
+                                                    <core:icon identifier="actions-edit-delete" size="small" />
+                                                </button>
+                                            </f:if>
+                                        </div>
+                                    </div>
+                                    <f:if condition="{record.translations}">
+                                        <f:render partial="TranslationStrip" arguments="{record: record}" />
+                                    </f:if>
+                                </div>
+                            </f:for>
+                        </div>
+                        <f:if condition="!{table.records}">
+                            <f:render partial="EmptyRecordsNotice" arguments="{table: table}" />
+                        </f:if>
+
+                        <f:comment>Expand table button - multi-table mode with more records</f:comment>
+                        <f:if condition="!{currentTable} && {table.hasMore}">
+                            <div class="text-center py-2 border-top">
+                                <a href="{table.singleTableUrl}" class="btn btn-sm btn-default">
+                                    <core:icon identifier="actions-caret-down" size="small" />
+                                    <f:translate key="core.core:labels.expandTable" />
+                                </a>
+                            </div>
+                        </f:if>
+
+                        <f:comment>Pagination - only in single table mode</f:comment>
+                        <f:if condition="{currentTable}">
+                            <f:render partial="Pagination" arguments="{paginator: table.paginator, pagination: table.pagination, paginationUrl: table.paginationUrl, tableName: table.tableName, position: 'bottom'}" />
+                        </f:if>
+                    </div>
+                </div>
+            </f:for>
+        </f:then>
+        <f:else>
+            <div class="callout callout-info">
+                <div class="callout-body">
+                    <core:icon identifier="actions-info" size="small" />
+                    <span class="ms-2">
+                        <f:translate key="records_list_types.messages:noRecords" />
+                    </span>
+                </div>
+            </div>
+        </f:else>
+    </f:if>
+
 </div>
 </records-list-types-actions>
 

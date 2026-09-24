@@ -364,6 +364,15 @@
         <target>Suelta aquí</target>
       </segment>
     </unit>
+    <unit id="drag.endPosition">
+      <notes>
+        <note>Live region announcement when the end drop zone is targeted.</note>
+      </notes>
+      <segment state="translated">
+        <source>End of the list (after the last record)</source>
+        <target>Final de la lista (después del último registro)</target>
+      </segment>
+    </unit>
     <unit id="a11y.reorderableList">
       <notes>
         <note>Accessible name of the drag-and-drop list; {table} is the table label.</note>
@@ -389,33 +398,6 @@
       <segment state="translated">
         <source>{title} is now visible</source>
         <target>{title} ahora está visible</target>
-      </segment>
-    </unit>
-    <unit id="a11y.selectRecord">
-      <notes>
-        <note>Accessible name of the checkbox that selects one record for the bulk actions. {title} is the record title.</note>
-      </notes>
-      <segment state="translated">
-        <source>Select “{title}”</source>
-        <target>Seleccionar «{title}»</target>
-      </segment>
-    </unit>
-    <unit id="column.recordType">
-      <notes>
-        <note>Accessible name of the table column that shows the record icon; screen readers only.</note>
-      </notes>
-      <segment state="translated">
-        <source>Record type</source>
-        <target>Tipo de registro</target>
-      </segment>
-    </unit>
-    <unit id="field.empty">
-      <notes>
-        <note>Read by screen readers for a field without a value; sighted users see a dash.</note>
-      </notes>
-      <segment state="translated">
-        <source>No value</source>
-        <target>Sin valor</target>
       </segment>
     </unit>
     <unit id="notification.moveFailed">
@@ -452,6 +434,15 @@
       <segment state="translated">
         <source>Request failed</source>
         <target>Error en la solicitud</target>
+      </segment>
+    </unit>
+    <unit id="notification.visibilityEndpointMissing">
+      <notes>
+        <note>Notification body when the Core AJAX route for toggling visibility is not registered.</note>
+      </notes>
+      <segment state="translated">
+        <source>The TYPO3 endpoint for changing visibility is not available.</source>
+        <target>El punto de conexión de TYPO3 para cambiar la visibilidad no está disponible.</target>
       </segment>
     </unit>
     <unit id="pagination.regionTop">
@@ -533,6 +524,15 @@
       <segment state="translated">
         <source>Translate to {language}</source>
         <target>Traducir a {language}</target>
+      </segment>
+    </unit>
+    <unit id="translation.edit">
+      <notes>
+        <note>Tooltip of the edit link of an existing translation; {language} is the language title.</note>
+      </notes>
+      <segment state="translated">
+        <source>Edit translation ({language})</source>
+        <target>Editar traducción ({language})</target>
       </segment>
     </unit>
     <unit id="translation.sectionLabel">
@@ -652,6 +652,24 @@
         <target>Eliminado</target>
       </segment>
     </unit>
+    <unit id="historyOverlay.elementTab">
+      <notes>
+        <note>Tab of the record history modal that shows the history of the element itself.</note>
+      </notes>
+      <segment state="translated">
+        <source>Element history</source>
+        <target>Historial del elemento</target>
+      </segment>
+    </unit>
+    <unit id="historyOverlay.pageTab">
+      <notes>
+        <note>Tab and frame title of the record history modal that shows the history of the parent page.</note>
+      </notes>
+      <segment state="translated">
+        <source>Page history</source>
+        <target>Historial de la página</target>
+      </segment>
+    </unit>
     <unit id="filter.show">
       <notes>
         <note>Entry in the View dropdown of the module header that toggles the filter panel.</note>
@@ -686,15 +704,6 @@
       <segment state="translated">
         <source>Reset</source>
         <target>Restablecer</target>
-      </segment>
-    </unit>
-    <unit id="filter.searchedFields">
-      <notes>
-        <note>Hint below a text filter naming the fields it searches. {fields} is a comma-separated list of field labels.</note>
-      </notes>
-      <segment state="translated">
-        <source>Searches {fields}</source>
-        <target>Busca en {fields}</target>
       </segment>
     </unit>
     <unit id="filter.option.any">
@@ -758,6 +767,24 @@
       <segment state="translated">
         <source>Reset filters and search</source>
         <target>Restablecer filtros y búsqueda</target>
+      </segment>
+    </unit>
+    <unit id="table.expand">
+      <notes>
+        <note>Tooltip on the table heading link that narrows the list down to one table.</note>
+      </notes>
+      <segment state="translated">
+        <source>List only this table</source>
+        <target>Mostrar solo esta tabla</target>
+      </segment>
+    </unit>
+    <unit id="table.collapse">
+      <notes>
+        <note>Tooltip on the table heading link that returns to the list of all tables.</note>
+      </notes>
+      <segment state="translated">
+        <source>List all tables</source>
+        <target>Mostrar todas las tablas</target>
       </segment>
     </unit>
     <unit id="viewMode.list.description">

@@ -2,23 +2,15 @@
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
-<f:comment>
-    Why a table shows no records and, when the editor narrowed it down with
-    filters or a search, the way back to the full list.
-
-    Arguments: table (entry of tableData with emptyState {message, resetUrl, resetLabel})
-</f:comment>
-
-<div class="rlt-empty" role="status">
-    <f:be.infobox state="-1">
-        <p>{table.emptyState.message}</p>
-        <f:if condition="{table.emptyState.resetUrl}">
-            <a class="btn btn-default btn-sm" href="{table.emptyState.resetUrl}#t3-table-{table.tableIdentifier}">
-                <core:icon identifier="actions-close" size="small" />
-                {table.emptyState.resetLabel}
-            </a>
-        </f:if>
-    </f:be.infobox>
+<div class="recordlist-empty">
+    <core:icon identifier="actions-info" size="medium" />
+    <p class="recordlist-empty__message">{table.emptyState.message}</p>
+    <f:if condition="{table.emptyState.resetUrl}">
+        <a class="btn btn-default btn-sm" href="{table.emptyState.resetUrl}#t3-table-{table.tableName}">
+            <core:icon identifier="actions-close" size="small" />
+            {table.emptyState.resetLabel}
+        </a>
+    </f:if>
 </div>
 
 </html>
