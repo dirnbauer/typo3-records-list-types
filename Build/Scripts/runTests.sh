@@ -36,13 +36,11 @@ Suites:
   phpstan              Static analysis at PHPStan level 8 with strict rules and PHPat.
   cgl                  PHP-CS-Fixer dry run.
   composer             composer validate --strict (no lock file is committed).
-  audit                composer audit; advisories in dependencies are reported, CI does not block on them.
-  ci                   composer, lint, cgl, phpstan and unit (functional needs a DB, audit is report only).
+  audit                composer audit; fail on advisories or abandoned dependencies.
+  ci                   composer, lint, cgl, phpstan and unit (functional needs a DB, audit is required).
 
 Options:
-  -p <php>       Informational only: PHP version the suite is expected
-                 to run on (e.g. 8.3, 8.4, 8.5). The script uses whatever
-                 `php` resolves to in PATH.
+  -p <php>       Require the selected PHP runtime (e.g. 8.4 or 8.5).
   -h             Show this help.
 
 Environment:
@@ -64,8 +62,9 @@ if [[ -z "${SUITE}" ]]; then
     exit 64
 fi
 
-if [[ -n "${PHP_VERSION}" ]]; then
-    echo "# Target PHP version: ${PHP_VERSION} (informational)"
+if [[ -n "${PHP_VERSION}" && "$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" != "${PHP_VERSION}" ]]; then
+    echo "Run this command using PHP ${PHP_VERSION} in PATH." >&2
+    exit 1
 fi
 
 ensure_coverage_driver() {
@@ -154,7 +153,7 @@ run_composer() {
 }
 
 run_audit() {
-    composer audit --abandoned=report
+    composer audit --abandoned=fail
 }
 
 case "${SUITE}" in

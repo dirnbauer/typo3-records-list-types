@@ -85,23 +85,23 @@ final readonly class RecordTranslationGroupingService implements SingletonInterf
 
         $translationLanguages = $this->getTranslationLanguages($context);
 
-        foreach ($defaultRecords as &$record) {
-            $uidRaw = $record['uid'] ?? 0;
+        foreach ($defaultRecords as &$defaultRecord) {
+            $uidRaw = $defaultRecord['uid'] ?? 0;
             $uid = is_numeric($uidRaw) ? (int)$uidRaw : 0;
             $translated = $translatedByParent[$uid] ?? [];
-            $record['translations'] = $this->buildTranslationSlots(
+            $defaultRecord['translations'] = $this->buildTranslationSlots(
                 $tableName,
                 $uid,
                 $translated,
                 $translationLanguages,
             );
-            $record['translatedCount'] = count(array_filter(
-                $record['translations'],
+            $defaultRecord['translatedCount'] = count(array_filter(
+                $defaultRecord['translations'],
                 static fn(array $slot): bool => ($slot['state'] ?? '') === 'translated',
             ));
-            $record['untranslatedCount'] = count($record['translations']) - $record['translatedCount'];
+            $defaultRecord['untranslatedCount'] = count($defaultRecord['translations']) - $defaultRecord['translatedCount'];
         }
-        unset($record);
+        unset($defaultRecord);
 
         return array_merge($defaultRecords, $freeTranslations);
     }

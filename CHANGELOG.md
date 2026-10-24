@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.0.2 — 2026-10-24
+
+### Changed
+
+- Refresh compatible Composer development tools and dependency audit coverage.
+- Use the explicit dependency-resolution XML option supported by PHPUnit 12 and 13, removing the deprecated execution-order syntax.
+- Use a distinct default-record reference when enriching translations, satisfying the current strict PHPStan overwrite check.
+- Resolve development dependencies against the actual PHP runtime instead of a synthetic PHP 8.4.0 platform; retain the PHPUnit 12 fallback.
+- Pin current CI action releases and patched MariaDB images; require PHP 8.4 and 8.5 checks.
+
 ## 2.0.0 - 2026-09-24
 
 - Restore the 1.2.0 Records module interface after the 1.3.0 UI overhaul.

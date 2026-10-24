@@ -22,16 +22,16 @@
         "typo3/cms-fluid": "^14.3.7"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.95.2",
-        "phpat/phpat": "^0.12.2",
-        "phpstan/phpstan": "^2.1.55",
-        "phpstan/phpstan-phpunit": "^2.0",
-        "phpstan/phpstan-strict-rules": "^2.0.11",
-        "phpunit/phpunit": "^12.4 || ^13.0",
-        "saschaegerer/phpstan-typo3": "^3.0",
+        "friendsofphp/php-cs-fixer": "^3.95.27",
+        "phpat/phpat": "^0.12.5",
+        "phpstan/phpstan": "^2.3.1",
+        "phpstan/phpstan-phpunit": "^2.1.1",
+        "phpstan/phpstan-strict-rules": "^2.1.0",
+        "phpunit/phpunit": "^12.4 || ^13.4.3",
+        "saschaegerer/phpstan-typo3": "^3.1",
         "ssch/typo3-rector": "^3.0",
         "typo3/coding-standards": "^0.9",
-        "typo3/testing-framework": "^9.5"
+        "typo3/testing-framework": "^9.7"
     },
     "autoload": {
         "psr-4": {
@@ -46,7 +46,7 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "records_list_types",
-            "version": "2.0.1",
+            "version": "2.0.2",
             "web-dir": "public"
         }
     },
@@ -55,9 +55,6 @@
         "allow-plugins": {
             "typo3/class-alias-loader": true,
             "typo3/cms-composer-installers": true
-        },
-        "platform": {
-            "php": "8.4.0"
         }
     },
     "scripts": {
